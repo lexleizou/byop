@@ -139,6 +139,12 @@ func scanPluginRegistry(rootSpecs []pluginRootSpec) pluginRegistry {
 			entry.Description = manifest.Description
 			entry.Manifest = manifest
 			entry.ContributionCount = manifest.contributionCount()
+			if webViewError := validatePluginWebViewEntries(entry); webViewError != "" {
+				entry.Status = pluginInvalidManifest
+				entry.Error = webViewError
+				registry.Entries = append(registry.Entries, entry)
+				continue
+			}
 			if compatibilityError := pluginCompatibilityError(manifest); compatibilityError != "" {
 				entry.Status = pluginIncompatible
 				entry.Error = compatibilityError
@@ -159,6 +165,18 @@ func scanPluginRegistry(rootSpecs []pluginRootSpec) pluginRegistry {
 		return left.SourceDirectory < right.SourceDirectory
 	})
 	return registry
+}
+
+func validatePluginWebViewEntries(entry pluginRegistryEntry) string {
+	if entry.Manifest == nil {
+		return "plugin manifest is unavailable"
+	}
+	for _, webView := range entry.Manifest.Contributes.WebViews {
+		if _, _, err := resolvePluginPath(entry.SourceDirectory, webView.Entry); err != nil {
+			return fmt.Sprintf("webview %s entry: %v", webView.ID, err)
+		}
+	}
+	return ""
 }
 
 func pluginCompatibilityError(manifest *pluginManifest) string {

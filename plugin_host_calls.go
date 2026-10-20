@@ -136,7 +136,9 @@ func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, pa
 		if err := decodePluginHostParams(params, &request); err != nil {
 			return pluginHostFailure(pluginRPCInvalidParams, err.Error())
 		}
-		if _, ok := pluginViewByID(entry.Manifest, request.View); !ok {
+		_, nativeView := pluginViewByID(entry.Manifest, request.View)
+		_, webView := pluginWebViewContributionByID(entry.Manifest, request.View)
+		if !nativeView && !webView {
 			return h.denied(entry.ID, "view is not declared: "+request.View)
 		}
 		if h.onRefreshView != nil {

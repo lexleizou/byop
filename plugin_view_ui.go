@@ -10,14 +10,22 @@ import (
 )
 
 type pluginNavigationItem struct {
-	entry pluginRegistryEntry
-	nav   pluginNavigationContribution
-	view  pluginViewContribution
+	entry      pluginRegistryEntry
+	nav        pluginNavigationContribution
+	nativeView *pluginViewContribution
+	webView    *pluginWebViewContribution
 }
+
+type pluginViewKind string
+
+const (
+	pluginViewNative  pluginViewKind = "native"
+	pluginViewWebView pluginViewKind = "webview"
+)
 
 func (s *appState) pluginNavigationItems() []pluginNavigationItem {
 	var items []pluginNavigationItem
-	for _, entry := range s.pluginRegistry.Entries {
+	for _, entry := range s.pluginRegistrySnapshot().Entries {
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
 			continue
 		}
@@ -25,11 +33,21 @@ func (s *appState) pluginNavigationItems() []pluginNavigationItem {
 			if navigation.View == "" {
 				continue
 			}
-			view, ok := pluginViewByID(entry.Manifest, navigation.View)
-			if !ok || view.Location != "main" {
-				continue
+			if view, ok := pluginViewByID(entry.Manifest, navigation.View); ok &&
+				view.Location == "main" {
+				items = append(items, pluginNavigationItem{
+					entry:      entry,
+					nav:        navigation,
+					nativeView: &view,
+				})
+			} else if webView, ok := pluginWebViewContributionByID(entry.Manifest, navigation.View); ok &&
+				webView.Location == "main" {
+				items = append(items, pluginNavigationItem{
+					entry:   entry,
+					nav:     navigation,
+					webView: &webView,
+				})
 			}
-			items = append(items, pluginNavigationItem{entry: entry, nav: navigation, view: view})
 		}
 	}
 	return items
@@ -42,8 +60,18 @@ func (s *appState) openPluginView(entry pluginRegistryEntry, view pluginViewCont
 	s.page = pagePluginView
 	s.pluginViewPluginID = entry.ID
 	s.pluginViewID = view.ID
+	s.pluginViewKind = pluginViewNative
 	s.notice = ""
 	s.loadPluginViewByID(entry.ID, view.ID)
+}
+
+func (s *appState) openPluginNavigation(entry pluginRegistryEntry, item pluginNavigationItem) {
+	switch {
+	case item.nativeView != nil:
+		s.openPluginView(entry, *item.nativeView)
+	case item.webView != nil:
+		s.openPluginWebView(entry, *item.webView)
+	}
 }
 
 func (s *appState) loadPluginViewByID(pluginID, viewID string) {
@@ -66,7 +94,8 @@ func (s *appState) loadPluginViewByID(pluginID, viewID string) {
 		model, err := s.plugins.renderView(ctx, entry, viewID)
 		s.postUI(func() {
 			if epoch != s.pluginViewEpoch || s.page != pagePluginView ||
-				s.pluginViewPluginID != pluginID || s.pluginViewID != viewID {
+				s.pluginViewPluginID != pluginID || s.pluginViewID != viewID ||
+				s.pluginViewKind != pluginViewNative {
 				return
 			}
 			s.pluginViewLoading = false
@@ -84,12 +113,19 @@ func (s *appState) pluginViewStillRegistered() bool {
 	if !ok || entry.Manifest == nil {
 		return false
 	}
+	if s.pluginViewKind == pluginViewWebView {
+		_, ok = pluginWebViewContributionByID(entry.Manifest, s.pluginViewID)
+		return ok
+	}
+	if s.pluginViewKind != pluginViewNative {
+		return false
+	}
 	_, ok = pluginViewByID(entry.Manifest, s.pluginViewID)
 	return ok
 }
 
 func (s *appState) registeredPluginEntry(pluginID string) (pluginRegistryEntry, bool) {
-	for _, entry := range s.pluginRegistry.Entries {
+	for _, entry := range s.pluginRegistrySnapshot().Entries {
 		if entry.ID == pluginID && entry.Status == pluginRegistered {
 			return entry, true
 		}
@@ -102,6 +138,10 @@ func pluginViewCacheKey(pluginID, viewID string) string {
 }
 
 func (s *appState) pluginViewPage(c *ui.Context, p palette) {
+	if s.pluginViewKind == pluginViewWebView {
+		s.pluginWebViewPage(c, p)
+		return
+	}
 	pluginID := s.pluginViewPluginID
 	viewID := s.pluginViewID
 	entry, ok := s.registeredPluginEntry(pluginID)
@@ -160,6 +200,7 @@ func (s *appState) pluginViewUnavailable(
 		s.page = pagePlugins
 		s.pluginViewPluginID = ""
 		s.pluginViewID = ""
+		s.pluginViewKind = ""
 		s.pluginViewLoading = false
 		s.pluginViewError = ""
 	})

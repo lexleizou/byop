@@ -130,7 +130,8 @@ func TestLoadPluginManifestRejectsMalformedAndMultipleJSONValues(t *testing.T) {
 
 func TestScanPluginRegistryRegistersCompatibleManifest(t *testing.T) {
 	root := t.TempDir()
-	writePluginManifest(t, root, "example", validPluginManifestMap())
+	manifestPath := writePluginManifest(t, root, "example", validPluginManifestMap())
+	writePluginWebViewFixture(t, filepath.Dir(manifestPath))
 
 	registry := scanPluginRegistry([]pluginRootSpec{{Path: root}})
 	if registry.registeredCount() != 1 || registry.contributionCount() != 6 || registry.problemCount() != 0 {
@@ -149,12 +150,14 @@ func TestScanPluginRegistryMarksIncompatiblePlugins(t *testing.T) {
 	apiManifest := validPluginManifestMap()
 	apiManifest["id"] = "example.future-api"
 	apiManifest["compatibility"].(map[string]any)["pluginApi"] = "2"
-	writePluginManifest(t, root, "api", apiManifest)
+	apiManifestPath := writePluginManifest(t, root, "api", apiManifest)
+	writePluginWebViewFixture(t, filepath.Dir(apiManifestPath))
 
 	hostManifest := validPluginManifestMap()
 	hostManifest["id"] = "example.future-host"
 	hostManifest["compatibility"].(map[string]any)["host"] = ">=1.0.0 <2.0.0"
-	writePluginManifest(t, root, "host", hostManifest)
+	hostManifestPath := writePluginManifest(t, root, "host", hostManifest)
+	writePluginWebViewFixture(t, filepath.Dir(hostManifestPath))
 
 	registry := scanPluginRegistry([]pluginRootSpec{{Path: root}})
 	if registry.registeredCount() != 0 || registry.problemCount() != 2 {
@@ -169,8 +172,10 @@ func TestScanPluginRegistryMarksIncompatiblePlugins(t *testing.T) {
 
 func TestScanPluginRegistryMarksDuplicatePluginIDs(t *testing.T) {
 	root := t.TempDir()
-	writePluginManifest(t, root, "first", validPluginManifestMap())
-	writePluginManifest(t, root, "second", validPluginManifestMap())
+	firstPath := writePluginManifest(t, root, "first", validPluginManifestMap())
+	secondPath := writePluginManifest(t, root, "second", validPluginManifestMap())
+	writePluginWebViewFixture(t, filepath.Dir(firstPath))
+	writePluginWebViewFixture(t, filepath.Dir(secondPath))
 
 	registry := scanPluginRegistry([]pluginRootSpec{{Path: root}})
 	if len(registry.Entries) != 2 || registry.registeredCount() != 1 || registry.problemCount() != 1 {
@@ -187,8 +192,10 @@ func TestScanPluginRegistryMarksCrossPluginContributionConflicts(t *testing.T) {
 	first["id"] = "example.first"
 	second := validPluginManifestMap()
 	second["id"] = "example.second"
-	writePluginManifest(t, root, "first", first)
-	writePluginManifest(t, root, "second", second)
+	firstPath := writePluginManifest(t, root, "first", first)
+	secondPath := writePluginManifest(t, root, "second", second)
+	writePluginWebViewFixture(t, filepath.Dir(firstPath))
+	writePluginWebViewFixture(t, filepath.Dir(secondPath))
 
 	registry := scanPluginRegistry([]pluginRootSpec{{Path: root}})
 	if len(registry.Entries) != 2 || registry.registeredCount() != 1 || registry.problemCount() != 1 {
@@ -305,7 +312,10 @@ func validPluginManifestMap() map[string]any {
 				map[string]any{"id": "git.settings", "title": "Git"},
 			},
 			"webviews": []any{
-				map[string]any{"id": "git.diff", "title": "Git diff", "location": "main"},
+				map[string]any{
+					"id": "git.diff", "title": "Git diff", "location": "main",
+					"entry": "web/index.html",
+				},
 			},
 		},
 		"activation": map[string]any{
@@ -332,6 +342,18 @@ func writePluginManifest(t *testing.T, root, directory string, manifest map[stri
 		t.Fatal(err)
 	}
 	return filename
+}
+
+func writePluginWebViewFixture(t *testing.T, pluginDirectory string) {
+	t.Helper()
+	webDirectory := filepath.Join(pluginDirectory, "web")
+	if err := os.MkdirAll(webDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(webDirectory, "index.html"),
+		[]byte("<!doctype html><title>Fixture</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func marshalPluginManifest(t *testing.T, manifest map[string]any) string {

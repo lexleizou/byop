@@ -9,14 +9,14 @@ import (
 )
 
 func (s *appState) pluginsPage(c *ui.Context, p palette) {
-	registry := s.pluginRegistry
+	registry := s.pluginRegistrySnapshot()
 	entries := s.filteredPluginEntries()
 	ui.Scroll(c).Fill().Children(func() {
 		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
 			ui.Column(c).Grow(1).MaxWidth(880).Gap(22).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.End).Gap(16).Children(func() {
 					ui.Column(c).Grow(1).Children(func() {
-						pageHeader(c, p, "WORKBENCH", "Plugins", "Discover local plugins and open native views backed by typed JSON-RPC models. Native and Node runtimes start lazily, exchange settings, and call a capability-checked host API.")
+						pageHeader(c, p, "WORKBENCH", "Plugins", "Discover local plugins, open typed native views, or host isolated HTML in a capability-checked WebView. Native and Node runtimes start lazily and share the same host API.")
 					})
 					primaryAction(c, p, "plugins-scan", "Scan plugins", "package", func() {
 						s.scanPlugins(true)
@@ -57,16 +57,18 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 				sectionLabel(c, p, "PLUGIN CONTRACT PREVIEW")
 				ui.Column(c).FillWidth().Gap(10).Padding(14).Radius(11).
 					Border(1, p.border).Background(p.surface).Children(func() {
-					ui.Text(c, fmt.Sprintf("Host %s validates schema %d and plugin API %s. P4.2 activates native and Node plugins on demand, renders typed native views, persists plugin settings, and enforces host API capabilities. Node also runs with the built-in permission model; WebView hosting remains P5.",
+					ui.Text(c, fmt.Sprintf("Host %s validates schema %d and plugin API %s. P5 activates native and Node plugins on demand, renders typed native views, and hosts isolated WebViews through the byop-plugin scheme with a strict CSP. Page calls cross one identity-checked bridge into the same capability-checked host API.",
 						registry.HostVersion, pluginManifestSchemaVersion, registry.PluginAPI)).
 						FontSize(fontBody).LineHeight(1.5).TextColor(p.text)
 					ui.Row(c).Wrap().Gap(7).Children(func() {
 						contractChip(c, p, "commands")
 						contractChip(c, p, "views")
+						contractChip(c, p, "webviews")
 						contractChip(c, p, "tasks")
 						contractChip(c, p, "settings")
 						contractChip(c, p, "host calls")
 						contractChip(c, p, "node permissions")
+						contractChip(c, p, "custom scheme CSP")
 					})
 				})
 			})
@@ -76,11 +78,12 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 
 func (s *appState) filteredPluginEntries() []pluginRegistryEntry {
 	query := strings.ToLower(strings.TrimSpace(s.pluginSearch))
+	registry := s.pluginRegistrySnapshot()
 	if query == "" {
-		return s.pluginRegistry.Entries
+		return registry.Entries
 	}
-	entries := make([]pluginRegistryEntry, 0, len(s.pluginRegistry.Entries))
-	for _, entry := range s.pluginRegistry.Entries {
+	entries := make([]pluginRegistryEntry, 0, len(registry.Entries))
+	for _, entry := range registry.Entries {
 		text := strings.ToLower(strings.Join([]string{
 			entry.ID,
 			entry.Name,
@@ -199,6 +202,11 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 				LineHeight(1.35).TextColor(p.muted)
 			ui.Text(c, pluginEnforcementLine(entry.Manifest.Runtime)).FontSize(fontCaption).
 				LineHeight(1.35).TextColor(p.muted)
+			for _, webView := range entry.Manifest.Contributes.WebViews {
+				ui.Text(c, fmt.Sprintf("%s · %s · Isolated · byop-plugin scheme · CSP",
+					fallback(webView.Title, webView.ID), webView.Entry)).
+					FontSize(fontCaption).LineHeight(1.35).TextColor(p.muted)
+			}
 			var secondaryViews []string
 			for _, view := range entry.Manifest.Contributes.Views {
 				if view.Location == "secondary" {
@@ -255,6 +263,16 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 				secondaryAction(c, p, "plugin-open-view-"+entry.ID+"-"+view.ID,
 					"Open "+fallback(view.Title, view.ID), func() {
 						s.openPluginView(entry, view)
+					})
+			}
+			for _, webView := range entry.Manifest.Contributes.WebViews {
+				webView := webView
+				if webView.Location != "main" {
+					continue
+				}
+				secondaryAction(c, p, "plugin-open-webview-"+entry.ID+"-"+webView.ID,
+					"Open "+fallback(webView.Title, webView.ID), func() {
+						s.openPluginWebView(entry, webView)
 					})
 			}
 		})
@@ -320,10 +338,9 @@ func (s *appState) runPluginCommandWithArgs(
 				return
 			}
 			s.showNotice(title + " · " + pluginResultSummary(result))
-			if s.page == pagePluginView && s.pluginViewPluginID == entry.ID {
-				if _, ok := pluginViewByID(entry.Manifest, s.pluginViewID); ok {
-					s.loadPluginViewByID(entry.ID, s.pluginViewID)
-				}
+			if s.page == pagePluginView && s.pluginViewPluginID == entry.ID &&
+				s.pluginViewID != "" && s.pluginViewKind != "" {
+				s.refreshPluginView(entry.ID, s.pluginViewID)
 			}
 		})
 	}()
@@ -331,6 +348,7 @@ func (s *appState) runPluginCommandWithArgs(
 
 func (s *appState) deactivatePlugin(entry pluginRegistryEntry) {
 	name := fallback(entry.Name, entry.ID)
+	s.destroyPluginWebViews(entry.ID)
 	go func() {
 		err := s.plugins.deactivate(entry.ID)
 		s.postUI(func() {
@@ -420,115 +438,6 @@ func contractChip(c *ui.Context, p palette, label string) {
 	})
 }
 
-func (s *appState) libraryPage(c *ui.Context, p palette) {
-	ui.Scroll(c).Fill().Children(func() {
-		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
-			ui.Column(c).Grow(1).MaxWidth(880).Gap(22).Children(func() {
-				ui.Row(c).FillWidth().AlignItems(ui.End).Gap(16).Children(func() {
-					ui.Column(c).Grow(1).Children(func() {
-						pageHeader(c, p, "LIBRARY", "Library", "A source-aware index for files, sessions, artifacts, and references supplied by Pi or installed plugins.")
-					})
-					primaryAction(c, p, "library-import", "Import reference", "plus", func() {
-						s.showNotice("Import is not connected yet. The file picker and index arrive after the plugin contract.")
-					})
-				})
-
-				ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-					ui.Column(c).Width(300).MinWidth(180).Children(func() {
-						searchField(c, p, "library-search", &s.librarySearch, "Search library")
-					})
-					ui.Spacer(c)
-					statusPill(c, p, "INDEX OFFLINE", p.warning)
-				})
-
-				ui.Row(c).Wrap().GapX(12).GapY(12).Children(func() {
-					s.libraryCard(c, p, "project-notes", "Research notes", "Document", "Example document", "Sample")
-					s.libraryCard(c, p, "shell-spec", "Native shell specification", "File", "12 sections", "Sample")
-					s.libraryCard(c, p, "session-index", "Pi session index", "Database", "Read-only session references", "Planned")
-					s.libraryCard(c, p, "webview-proof", "Embedded view concept", "Folder", "Complex plugin surfaces", "Reserved for P5")
-				})
-
-				ui.Column(c).Gap(8).Padding(14).Radius(11).Background(p.surface).
-					Border(1, p.border).Children(func() {
-					ui.Text(c, "Library boundary").FontSize(fontBody).FontWeight(650).TextColor(p.text)
-					ui.Text(c, "BYOP will store references and rebuildable indexes. Pi remains the source of truth for session JSONL and credentials.").
-						FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
-				})
-			})
-		})
-	})
-}
-
-func (s *appState) libraryCard(c *ui.Context, p palette, key, title, iconName, detail, badge string) {
-	card := ui.ButtonBase(c.Key("library-"+key)).Width(260).Grow(1).MinWidth(210).
-		Column().AlignItems(ui.Start).Gap(12).Padding(14).Radius(11).
-		Border(1, p.border).Background(p.surface).Cursor(ui.CursorPointer).
-		Label(title).Tooltip("Library item preview")
-	if card.Hovered() {
-		card.Background(p.surfaceHover)
-	}
-	card.Children(func() {
-		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
-			ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
-				ui.Icon(c, icon(iconName)).Size(17, 17).TextColor(p.accent)
-			})
-			ui.Spacer(c)
-			statusPill(c, p, badge, p.muted)
-		})
-		ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
-		ui.Text(c, detail).FontSize(fontCaption).TextColor(p.muted)
-	})
-	if card.Clicked() {
-		s.showNotice(title + " is a sample item. No file or session was opened.")
-	}
-}
-
-func (s *appState) documentPage(c *ui.Context, p palette) {
-	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Height(58).FillWidth().Padding(0, 24).AlignItems(ui.Center).
-			BorderWidth(0, 0, 1, 0).BorderColor(p.border).Children(func() {
-			ui.Column(c).Gap(1).Grow(1).Children(func() {
-				ui.Text(c, "Document").FontSize(fontUILarge).FontWeight(650).TextColor(p.text)
-				ui.Text(c, "BYOP working surface").FontSize(fontCaption).TextColor(p.muted)
-			})
-			secondaryAction(c, p, "document-export", "Export", func() {
-				s.showNotice("Export is not connected yet.")
-			})
-			ui.Spacer(c)
-			statusPill(c, p, "UNSAVED SAMPLE", p.warning)
-		})
-
-		ui.Row(c).Grow(1).FillWidth().Justify(ui.Center).Padding(24).Children(func() {
-			ui.Column(c).Grow(1).MaxWidth(720).FillHeight().Gap(12).Children(func() {
-				ui.Column(c).Gap(6).Children(func() {
-					ui.Text(c, "BYOP Native Shell Notes").FontSize(fontPageTitle).FontWeight(650).TextColor(p.text)
-					ui.Text(c, "A complex document remains an optional WebView plugin surface. The native host keeps navigation, tasks, and shared chrome.").
-						FontSize(fontBody).TextColor(p.muted)
-				})
-				ui.Box(c).Grow(1).FillWidth().MinHeight(260).Radius(12).
-					Border(1, p.border).Background(p.surface).Padding(26).Children(func() {
-					ui.Column(c).Gap(15).Children(func() {
-						documentHeading(c, p, "1. Host-owned shell")
-						documentParagraph(c, p, "The window, navigation, command surface, task bar, theme, and plugin lifecycle are native MyGo views. Plugins do not replace the workbench frame.")
-						documentHeading(c, p, "2. External Pi")
-						documentParagraph(c, p, "Pi stays installed separately. BYOP communicates through a long-lived CLI RPC adapter and never copies credentials or rewrites session JSONL.")
-						documentHeading(c, p, "3. Complex views")
-						documentParagraph(c, p, "Editors, diagrams, and rich previews can use a declared WebView contribution while keeping a native fallback for unsupported capabilities.")
-					})
-				})
-			})
-		})
-	})
-}
-
-func documentHeading(c *ui.Context, p palette, text string) {
-	ui.Text(c, text).FontSize(fontBodyLarge).FontWeight(650).TextColor(p.text)
-}
-
-func documentParagraph(c *ui.Context, p palette, text string) {
-	ui.Text(c, text).Selectable().FontSize(fontBody).LineHeight(1.55).TextColor(p.muted)
-}
-
 func (s *appState) automationsPage(c *ui.Context, p palette) {
 	ui.Scroll(c).Fill().Children(func() {
 		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
@@ -543,7 +452,7 @@ func (s *appState) automationsPage(c *ui.Context, p palette) {
 				})
 
 				ui.Row(c).Wrap().Gap(12).Children(func() {
-					s.automationCard(c, p, "Morning brief", "Weekdays · 08:30", "Library + Chat", true)
+					s.automationCard(c, p, "Morning brief", "Weekdays · 08:30", "Chat", true)
 					s.automationCard(c, p, "Repository digest", "On demand", "Git plugin", false)
 				})
 
@@ -582,6 +491,7 @@ func (s *appState) automationCard(c *ui.Context, p palette, title, schedule, own
 }
 
 func (s *appState) settingsPage(c *ui.Context, p palette) {
+	registry := s.pluginRegistrySnapshot()
 	ui.Scroll(c).Fill().Children(func() {
 		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
 			ui.Column(c).Grow(1).MaxWidth(820).Gap(22).Children(func() {
@@ -627,9 +537,10 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						settingsValue(c, p, "Native runtime", "MyGo · fixed baseline")
 						settingsValue(c, p, "RPC transport", "Strict JSONL over stdin/stdout")
 						settingsValue(c, p, "Pi ownership", "Sessions, models, credentials, extensions")
-						settingsValue(c, p, "Plugin registry", fmt.Sprintf("%d registered · %d contribution(s)", s.pluginRegistry.registeredCount(), s.pluginRegistry.contributionCount()))
-						settingsValue(c, p, "Plugin runtime", "Native + Node · views · settings · host calls")
-						settingsValue(c, p, "Complex UI", "Native first, declared WebView fallback")
+						settingsValue(c, p, "Plugin registry", fmt.Sprintf("%d registered · %d contribution(s)",
+							registry.registeredCount(), registry.contributionCount()))
+						settingsValue(c, p, "Plugin runtime", "Native + Node · native and WebView surfaces")
+						settingsValue(c, p, "WebView boundary", "byop-plugin · strict CSP · locked navigation")
 					})
 				})
 
@@ -638,7 +549,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P4.2 plugin views · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P5 isolated WebViews · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})

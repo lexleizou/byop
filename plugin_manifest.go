@@ -16,7 +16,7 @@ import (
 const (
 	pluginManifestSchemaVersion = 1
 	pluginAPIVersion            = "1"
-	pluginHostVersion           = "0.4.2"
+	pluginHostVersion           = "0.5.0"
 	pluginManifestFilename      = "plugin.json"
 	maxPluginManifestBytes      = 1 << 20
 	maxPluginSettingFields      = 50
@@ -97,6 +97,7 @@ type pluginWebViewContribution struct {
 	ID       string `json:"id"`
 	Title    string `json:"title"`
 	Location string `json:"location"`
+	Entry    string `json:"entry"`
 }
 
 type pluginActivation struct {
@@ -183,8 +184,14 @@ func validatePluginManifest(manifest *pluginManifest) error {
 	add(strings.TrimSpace(manifest.Compatibility.PluginAPI) == "", "compatibility.pluginApi is required")
 
 	seenContributions := make(map[string]struct{})
-	declaredViews := make(map[string]struct{}, len(manifest.Contributes.Views))
+	declaredViews := make(map[string]struct{},
+		len(manifest.Contributes.Views)+len(manifest.Contributes.WebViews))
 	for _, contribution := range manifest.Contributes.Views {
+		if contribution.ID != "" {
+			declaredViews[contribution.ID] = struct{}{}
+		}
+	}
+	for _, contribution := range manifest.Contributes.WebViews {
 		if contribution.ID != "" {
 			declaredViews[contribution.ID] = struct{}{}
 		}
@@ -243,8 +250,12 @@ func validatePluginManifest(manifest *pluginManifest) error {
 	}
 	for _, contribution := range manifest.Contributes.WebViews {
 		validateContribution("webview", contribution.ID, contribution.Title)
-		if !validPluginSurfaceLocation(contribution.Location) {
+		if contribution.Location != "main" {
 			issues = append(issues, "webview contribution location is invalid: "+contribution.ID)
+		}
+		if !validPluginWebViewEntry(contribution.Entry) {
+			issues = append(issues, "webview entry must be a clean relative HTML path inside the plugin folder: "+
+				contribution.ID)
 		}
 	}
 	for _, event := range manifest.Activation.Events {
@@ -412,6 +423,18 @@ func safePluginRelativePath(value string) bool {
 func validPluginSurfaceLocation(location string) bool {
 	switch location {
 	case "main", "secondary":
+		return true
+	default:
+		return false
+	}
+}
+
+func validPluginWebViewEntry(entry string) bool {
+	if !safePluginRelativePath(entry) || path.Clean(entry) != entry {
+		return false
+	}
+	switch strings.ToLower(path.Ext(entry)) {
+	case ".html", ".htm":
 		return true
 	default:
 		return false

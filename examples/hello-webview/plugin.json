@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "example.hello-webview",
+  "name": "Hello WebView",
+  "version": "0.1.0",
+  "description": "Contract fixture for BYOP P5 isolated WebView hosting and the page bridge.",
+  "runtime": "node",
+  "entry": "plugin.mjs",
+  "icon": "plugins",
+  "compatibility": {
+    "host": ">=0.5.0 <1.0.0",
+    "pluginApi": "1"
+  },
+  "contributes": {
+    "navigation": [
+      {
+        "id": "hello-web",
+        "title": "Hello WebView",
+        "icon": "plugins",
+        "view": "hello.web"
+      }
+    ],
+    "webviews": [
+      {
+        "id": "hello.web",
+        "title": "Hello WebView",
+        "location": "main",
+        "entry": "web/index.html"
+      }
+    ]
+  },
+  "activation": {
+    "events": [
+      "onWebView:hello.web"
+    ]
+  },
+  "capabilities": {
+    "workspace": "read",
+    "files": "none",
+    "network": false,
+    "process": "none"
+  }
+}

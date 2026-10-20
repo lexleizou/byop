@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -22,8 +23,13 @@ const (
 func main() {
 	state := newAppState()
 	mygo.Theme.SetSource(themeSource(state.themeMode))
+	if err := mygo.Protocol.Handle(pluginWebViewScheme, newPluginWebViewSchemeHandler(state)); err != nil {
+		log.Fatal(err)
+	}
+	mygo.BindAs("BYOPWebView", &pluginWebViewBridge{state: state})
 
 	mygo.App.WhenReady(func() {
+		state.syncPluginWebViewTheme(currentAppearanceDark())
 		win := mygo.NewWindow(mygo.WindowOptions{
 			Title:           appTitle,
 			Width:           1180,
@@ -54,8 +60,6 @@ type pageID string
 const (
 	pageChat        pageID = "chat"
 	pagePlugins     pageID = "plugins"
-	pageLibrary     pageID = "library"
-	pageDocument    pageID = "document"
 	pageAutomations pageID = "automations"
 	pageSettings    pageID = "settings"
 	pagePluginView  pageID = "plugin-view"
@@ -148,17 +152,23 @@ type appState struct {
 	notice             string
 	composerDraft      string
 	pluginSearch       string
-	librarySearch      string
 	pluginRegistry     pluginRegistry
+	pluginRegistryMu   sync.RWMutex
 	plugins            *pluginHost
 	pluginSettingForms map[string]*pluginSettingForm
 	pluginTasks        map[string]pluginTaskUpdate
 	pluginViewPluginID string
 	pluginViewID       string
+	pluginViewKind     pluginViewKind
 	pluginViewModels   map[string]pluginViewModel
 	pluginViewLoading  bool
 	pluginViewError    string
 	pluginViewEpoch    uint64
+	pluginWebViews     map[string]*pluginWebViewState
+	pluginWebViewsMu   sync.RWMutex
+	pluginWebViewDark  bool
+	pluginBridgeSlots  map[string]chan struct{}
+	pluginBridgeMu     sync.Mutex
 
 	window        *mygo.Window
 	closed        atomic.Bool
@@ -198,16 +208,15 @@ type appState struct {
 
 func newAppState() *appState {
 	s := &appState{
-		page:               pageChat,
+		page:               configuredPage(),
 		themeMode:          themeSystem,
 		piConn:             piDisconnected,
 		run:                runIdle,
 		pluginSettingForms: make(map[string]*pluginSettingForm),
 		pluginTasks:        make(map[string]pluginTaskUpdate),
 		pluginViewModels:   make(map[string]pluginViewModel),
-	}
-	if p := pageID(strings.ToLower(os.Getenv("BYOP_PAGE"))); validPage(p) {
-		s.page = p
+		pluginWebViews:     make(map[string]*pluginWebViewState),
+		pluginBridgeSlots:  make(map[string]chan struct{}),
 	}
 	switch themeMode(strings.ToLower(os.Getenv("BYOP_THEME"))) {
 	case themeLight:
@@ -241,13 +250,14 @@ func newAppState() *appState {
 		}),
 		pluginHostRefreshHandler(func(pluginID, viewID string) {
 			s.postUI(func() {
-				if s.page == pagePluginView && s.pluginViewPluginID == pluginID && s.pluginViewID == viewID {
-					s.loadPluginViewByID(pluginID, viewID)
+				if s.page == pagePluginView && s.pluginViewPluginID == pluginID &&
+					s.pluginViewID == viewID && s.pluginViewKind != "" {
+					s.refreshPluginView(pluginID, viewID)
 				}
 			})
 		}),
 	)
-	s.pluginRegistry = scanPluginRegistry(defaultPluginRoots())
+	s.setPluginRegistry(scanPluginRegistry(defaultPluginRoots()))
 	s.plugins.invalidateSettingsCache()
 	s.syncPluginSettingForms()
 	return s
@@ -262,7 +272,8 @@ func (s *appState) scanPlugins(announce bool) {
 		}()
 		return
 	}
-	s.pluginRegistry = scanPluginRegistry(defaultPluginRoots())
+	s.setPluginRegistry(scanPluginRegistry(defaultPluginRoots()))
+	s.reconcilePluginWebViews()
 	s.prunePluginState()
 	s.plugins.invalidateSettingsCache()
 	s.syncPluginSettingForms()
@@ -270,13 +281,15 @@ func (s *appState) scanPlugins(announce bool) {
 		s.page = pagePlugins
 		s.pluginViewPluginID = ""
 		s.pluginViewID = ""
+		s.pluginViewKind = ""
 	}
 	if !announce {
 		return
 	}
-	registered := s.pluginRegistry.registeredCount()
-	contributions := s.pluginRegistry.contributionCount()
-	problems := s.pluginRegistry.problemCount()
+	registry := s.pluginRegistrySnapshot()
+	registered := registry.registeredCount()
+	contributions := registry.contributionCount()
+	problems := registry.problemCount()
 	switch {
 	case problems > 0:
 		s.notice = fmt.Sprintf("Plugin scan found %d registered plugin(s), %d contribution(s), and %d issue(s).",
@@ -291,7 +304,7 @@ func (s *appState) scanPlugins(announce bool) {
 
 func (s *appState) prunePluginState() {
 	registered := make(map[string]struct{})
-	for _, entry := range s.pluginRegistry.Entries {
+	for _, entry := range s.pluginRegistrySnapshot().Entries {
 		if entry.Status == pluginRegistered {
 			registered[entry.ID] = struct{}{}
 		}
@@ -369,11 +382,19 @@ func (s *appState) seedToolDemo() {
 
 func validPage(p pageID) bool {
 	switch p {
-	case pageChat, pagePlugins, pageLibrary, pageDocument, pageAutomations, pageSettings:
+	case pageChat, pagePlugins, pageAutomations, pageSettings:
 		return true
 	default:
 		return false
 	}
+}
+
+func configuredPage() pageID {
+	p := pageID(strings.ToLower(strings.TrimSpace(os.Getenv("BYOP_PAGE"))))
+	if validPage(p) {
+		return p
+	}
+	return pageChat
 }
 
 func themeSource(mode themeMode) mygo.ThemeSource {
@@ -393,6 +414,7 @@ func (s *appState) setTheme(mode themeMode) {
 	}
 	s.themeMode = mode
 	mygo.Theme.SetSource(themeSource(mode))
+	s.syncPluginWebViewTheme(currentAppearanceDark())
 }
 
 func (s *appState) setPage(p pageID) {
@@ -491,6 +513,7 @@ func (s *appState) reconnectPi() {
 
 func (s *appState) shutdownPi() {
 	s.closed.Store(true)
+	s.destroyAllPluginWebViews()
 	if s.pi != nil {
 		s.pi.Close()
 		s.pi = nil

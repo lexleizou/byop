@@ -22,7 +22,7 @@ type pluginSettingForm struct {
 
 func (s *appState) syncPluginSettingForms() {
 	index := make(map[string]struct{})
-	for _, entry := range s.pluginRegistry.Entries {
+	for _, entry := range s.pluginRegistrySnapshot().Entries {
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
 			continue
 		}
@@ -78,7 +78,7 @@ func (s *appState) syncPluginSettingForms() {
 
 func (s *appState) pluginSettingsSection(c *ui.Context, p palette) {
 	hasSettings := false
-	for _, entry := range s.pluginRegistry.Entries {
+	for _, entry := range s.pluginRegistrySnapshot().Entries {
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
 			continue
 		}

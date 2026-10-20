@@ -17,13 +17,13 @@ type navItem struct {
 var navItems = []navItem{
 	{pageChat, "Chat", "chat"},
 	{pagePlugins, "Plugins", "plugins"},
-	{pageLibrary, "Library", "library"},
-	{pageDocument, "Document", "document"},
 	{pageAutomations, "Automations", "automations"},
 }
 
 func (s *appState) view(c *ui.Context) {
-	t, p := nativeTheme(currentAppearanceDark())
+	dark := currentAppearanceDark()
+	s.syncPluginWebViewTheme(dark)
+	t, p := nativeTheme(dark)
 	c.SetTheme(t)
 	c.Root().Background(p.background)
 
@@ -60,7 +60,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P4.2 · PLUGIN VIEWS", p.accent)
+		statusPill(c, p, "P5 · ISOLATED WEBVIEWS", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
@@ -118,15 +118,16 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 }
 
 func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigationItem) {
+	viewID := item.nav.View
 	selected := s.page == pagePluginView && s.pluginViewPluginID == item.entry.ID &&
-		s.pluginViewID == item.view.ID
+		s.pluginViewID == viewID
 	bg := ui.Color{}
 	text := p.muted
 	if selected {
 		bg = p.surfaceHover
 		text = p.text
 	}
-	label := fallback(item.nav.Title, item.view.Title)
+	label := fallback(item.nav.Title, viewID)
 	key := "nav-plugin-" + item.entry.ID + "-" + item.nav.ID
 	btn := ui.ButtonBase(c.Key(key)).Height(38).FillWidth().Padding(0, 10).
 		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(label)
@@ -158,7 +159,7 @@ func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigati
 		})
 	}
 	if btn.Clicked() {
-		s.openPluginView(item.entry, item.view)
+		s.openPluginNavigation(item.entry, item)
 	}
 }
 
@@ -246,10 +247,6 @@ func (s *appState) main(c *ui.Context, p palette) {
 		switch s.page {
 		case pagePlugins:
 			s.pluginsPage(c, p)
-		case pageLibrary:
-			s.libraryPage(c, p)
-		case pageDocument:
-			s.documentPage(c, p)
 		case pageAutomations:
 			s.automationsPage(c, p)
 		case pageSettings:
@@ -322,7 +319,7 @@ func (s *appState) pluginTaskKeys() []string {
 }
 
 func (s *appState) pluginRegistryTaskDetail() string {
-	registry := s.pluginRegistry
+	registry := s.pluginRegistrySnapshot()
 	active := 0
 	if s.plugins != nil {
 		active = s.plugins.activeCount()
@@ -332,7 +329,7 @@ func (s *appState) pluginRegistryTaskDetail() string {
 }
 
 func (s *appState) pluginRegistryTaskLabel() string {
-	registry := s.pluginRegistry
+	registry := s.pluginRegistrySnapshot()
 	switch {
 	case registry.problemCount() > 0:
 		return "ATTENTION"

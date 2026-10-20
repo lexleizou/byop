@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P4.2 插件平台：在 P4 清单注册表与 P4.1 native 生命周期基础上，BYOP 支持 native 与 Node runtime、懒激活、类型化原生视图、插件设置注入、双向 JSON-RPC 宿主调用和能力检查。Node 插件同时受 Node permission model 和宿主 API 检查约束；native 插件没有进程级沙箱，宿主调用仍按清单检查。WebView 仍属于 P5。Chat 继续使用 Onevra 原生组件和外部 Pi CLI JSONL RPC；BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P5 插件平台：在 P4.2 native/Node runtime、类型化视图、设置和宿主调用的基础上，BYOP 新增按插件视图隔离的 WebView、安全资源 scheme、页面身份校验、导航锁、主题桥和失败回退。Node 插件同时受 Node permission model 和宿主 API 检查约束；native 插件没有进程级沙箱，宿主调用仍按清单检查。Chat 继续使用 Onevra 原生组件和外部 Pi CLI JSONL RPC；BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -12,9 +12,9 @@
 
 ## 当前能力
 
-- MyGo 原生窗口，无 React、Next.js 或内置 WebView；
+- MyGo 原生窗口与按插件视图懒创建的隔离 WebView；
 - Onevra 语义色、间距、圆角和 14 px 默认正文；Chat 输入框也调整为 14 px；
-- Chat、Plugins、Library、Document、Automations、Settings 导航骨架；
+- Chat、Plugins、Automations、Settings 导航；
 - Light、Dark、System 三种主题；
 - 默认收起的右侧任务栏；
 - 外部 `pi --mode rpc --no-session` 进程适配器；
@@ -43,7 +43,7 @@
 - 固定 20 px 导航图标槽位，展开与收起状态保持左边缘对齐；
 - 扫描 `~/.byop/plugins` 与 `<cwd>/.byop/plugins`，也可通过 `BYOP_PLUGINS_DIR` 指定一个或多个目录；
 - 严格解析 schema 1 `plugin.json`，拒绝未知字段、尾随 JSON、超过 1 MiB 的清单和不安全 entry 路径；
-- 检查宿主版本 `0.4.2` 与 Plugin API `1` 兼容性；
+- 检查宿主版本 `0.5.0` 与 Plugin API `1` 兼容性；
 - 标记插件 ID、跨插件贡献 ID 和同插件内重复贡献 ID；
 - Plugins 页面支持搜索、空状态、问题提示、重新扫描，以及 navigation、command、view、task panel、setting 和 WebView 元数据预览；
 - native 与 Node 插件按声明的 `onCommand:<id>`、`onView:<id>` 或 `lazy: true` 懒启动；两者都拒绝越出插件目录的 entry（含符号链接），native 还要求可执行文件，Node 只接受 `.js`、`.mjs`、`.cjs`；
@@ -52,14 +52,20 @@
 - 插件可以向宿主请求主题、设置、工作区与文件读写，显示通知、更新任务卡和刷新当前视图；宿主按清单与 capabilities 拒绝越权请求；
 - 设置页按插件声明生成 string、number、boolean、select 字段，保存到 `~/.byop/plugin-settings/<pluginId>.json`，目录权限 `0700`、文件权限 `0600`；
 - 主视图使用类型化 block 模型渲染 heading、text、notice、keyValue、list、code 和 button；未知 block 显示为 Unsupported block，未声明命令的按钮禁用；
-- 带 navigation 的主视图进入侧栏 `PLUGINS` 区域；插件页面支持打开任意主视图，secondary 视图只在卡片中列出；
+- 带 navigation 的 native view 或 WebView 进入侧栏 `PLUGINS` 区域；插件页面支持打开任意主视图，secondary 视图只在卡片中列出；
 - 插件卡片显示 runtime、能力行、执行边界、inactive / starting / active / running / stopped / failed 生命周期状态、命令按钮、最近结果或错误，并提供 Open view 与 Deactivate；
 - 视图在 UI goroutine 外渲染，支持 Refresh、Retry、自动刷新、错误态和重新扫描后的失效回退；
+- 每个 WebView 视图最多复用一个 MyGo `ui.WebView` 实例；通过 `byop-plugin://<pluginId>/<relative-path>` 读取插件根目录内的静态文件，只允许同插件导航，并拒绝 `window.open` 与所有浏览器权限；
+- WebView 响应使用 5 MiB 文件上限、`nosniff`、`no-store` 和严格 CSP；只有 `network: true` 时把 `connect-src` 放宽为 `https:`；
+- WebView bridge 通过 `mygo.CallerPage(ctx)` 反查唯一的插件视图，不信任页面传入的插件 ID；每次调用都重新检查当前 URL、插件注册状态、视图声明以及清单/根目录指纹；
+- `host.*` 与 Node/native 插件共用同一套能力检查；`plugin.postMessage` 限制 64 KiB，并按插件限制并发；
+- WebView 提供 Light/Dark CSS 变量、运行时主题事件和固定 14 px 正文字号；加载或渲染进程失败时显示原生错误卡，可 Reload 或返回 Plugins；
+- 重新扫描、停用、进程停止和关闭窗口时销毁相关 WebView；离开页面只隐藏实例；
 - 重新扫描和关闭窗口前会停用全部插件进程；插件意外退出时标记为 failed 并保留 stderr 尾部摘要。
 
-Library、Document 和 Automations 目前仍是可运行的原生视觉骨架。WebView 视图、插件安装、附件、模型选择、会话历史与切换仍属于后续阶段；输入框中的附件按钮和模型标签目前只做展示。
+Automations 目前仍是可运行的原生视觉骨架。插件安装、附件、模型选择、会话历史与切换仍属于后续阶段；输入框中的附件按钮和模型标签目前只做展示。
 
-**Plugin development hold：** P4.2 后插件平台功能已就绪，但在 Lex 明确要求前不开发功能插件；此前 Library 与 Document 的设计不得转为插件。`examples/` 只放契约 fixture，Library 与 Document 页面保持现状。
+**Plugin development hold：** P5 后插件平台功能已就绪，但在 Lex 明确要求前不开发功能插件；此前 Library 与 Document 的页面和导航占位已在 P5 移除，其设计不得转为插件。`examples/` 只放契约 fixture。
 
 ## 架构
 
@@ -77,8 +83,9 @@ flowchart LR
     H --> N[native 插件进程]
     H --> J[Node 插件进程]
     H --> V[类型化原生视图]
+    H --> W[隔离 WebView]
     H --> C[设置与宿主调用]
-    G -. 后续 P5 .-> W[声明式 WebView]
+    W --> S1[byop-plugin 资源与 bridge]
 ```
 
 职责边界：
@@ -89,9 +96,9 @@ flowchart LR
 | 插件清单、目录扫描、贡献点和冲突状态 | BYOP |
 | 模型、provider、OAuth、凭据 | Pi |
 | 会话 JSONL、扩展、Skills、工具执行 | Pi |
-| native / Node 插件生命周期、命令和视图 | BYOP Plugin Host（P4.2） |
-| 插件设置、宿主调用和能力检查 | BYOP Plugin Host（P4.2） |
-| 复杂 WebView 界面 | 后续阶段 P5 |
+| native / Node 插件生命周期、命令和视图 | BYOP Plugin Host（P5） |
+| 插件设置、宿主调用和能力检查 | BYOP Plugin Host（P5） |
+| WebView 静态资源、导航隔离、bridge 与生命周期 | BYOP Plugin Host（P5） |
 
 计划中的插件契约和迁移边界见 [Architecture](docs/architecture.md)。
 
@@ -143,7 +150,7 @@ BYOP_PLUGINS_DIR="$PWD/examples" BYOP_PAGE=plugins BYOP_PI_CONNECT=0 go run .
 
 点击卡片上的 **Say hello** 会启动插件并显示结果；点击 **Deactivate** 会停用插件并结束进程。
 
-P4.2 契约 fixture 使用无依赖的 Node 文件：
+P4.2 与 P5 契约 fixture 使用无依赖的 Node 文件和本地静态资源：
 
 ```sh
 BYOP_PLUGINS_DIR="$PWD/examples" \
@@ -152,7 +159,7 @@ BYOP_PI_CONNECT=0 \
 go run .
 ```
 
-从侧栏打开 **Hello Node** 可检查类型化视图、设置、任务更新、通知、README 宿主读取和 `settingsChanged → refreshView` 流程。该目录只是契约 fixture，不是功能插件。
+从侧栏打开 **Hello Node** 可检查类型化视图、设置、任务更新、通知、README 宿主读取和 `settingsChanged → refreshView` 流程。打开 **Hello WebView** 可检查隔离页面、主题变量、能力拒绝、插件回传和被拦截的外部链接。两个目录都只是契约 fixture，不是功能插件。
 
 截图和本地走查参数：
 
@@ -160,15 +167,19 @@ go run .
 BYOP_THEME=dark BYOP_PAGE=plugins BYOP_TASKS=1 go run .
 ```
 
-`BYOP_THEME` 支持 `system`、`light`、`dark`；`BYOP_PAGE` 支持 `chat`、`plugins`、`library`、`document`、`automations`、`settings`；`BYOP_TASKS=1` 默认展开任务栏；`BYOP_DEMO_TOOLS=1` 载入不连接 Pi 的隔离演示时间线。
+`BYOP_THEME` 支持 `system`、`light`、`dark`；`BYOP_PAGE` 支持 `chat`、`plugins`、`automations`、`settings`；`BYOP_TASKS=1` 默认展开任务栏；`BYOP_DEMO_TOOLS=1` 载入不连接 Pi 的隔离演示时间线。
 
 ## 验证
 
 ```sh
-gofmt -w *.go
+gofmt -l .
 go build -o byop .
 go vet ./...
 go test ./...
+git diff --check
+node --check examples/hello-webview/plugin.mjs
+node --check examples/hello-webview/web/app.js
+python3 -m json.tool examples/hello-webview/plugin.json
 jq empty design-system/onevra/tokens.json
 jq empty design-system/pi-workbench/tokens.extensions.json
 ```
@@ -183,7 +194,7 @@ BYOP_PI_INTEGRATION=1 go test \
 
 该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，要求 Pi 连续执行两次安全的 `bash` 命令，并调用一次手动压缩 RPC。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
 
-验证记录见 [P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
+验证记录见 [P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
 
 ## 设计系统
 

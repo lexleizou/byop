@@ -1,10 +1,10 @@
 # BYOP Workbench Architecture
 
-Status: P4.2 native shell, external Pi RPC loop, ordered timelines, transient
+Status: P5 native shell, external Pi RPC loop, ordered timelines, transient
 runtime diagnostics, a strict plugin manifest registry, native and Node plugin
-lazy activation, typed native views, plugin settings, bidirectional host calls
-and capability enforcement are implemented; Chat renders through Onevra
-v0.2026.13 components. WebView hosting remains future work.
+lazy activation, typed native views, plugin settings, bidirectional host calls,
+capability enforcement and isolated WebView hosting are implemented; Chat
+renders through Onevra v0.2026.13 components.
 
 ## Runtime Boundary
 
@@ -19,6 +19,8 @@ flowchart TB
         Broker[Contribution broker]
         PluginHost[Plugin host]
         Views[Typed views]
+        WebViews[Isolated WebViews]
+        Protocol[byop-plugin protocol]
         Settings[Plugin settings]
     end
 
@@ -49,6 +51,9 @@ flowchart TB
     Broker --> Tasks
     PluginHost --> Registry
     PluginHost --> Views
+    PluginHost --> WebViews
+    Protocol --> Registry
+    WebViews --> Protocol
     PluginHost --> Settings
 ```
 
@@ -79,7 +84,7 @@ permanent turn completed, stopped or failed.
 | Session persistence and credentials | Pi | Pi-owned; BYOP does not rewrite files |
 | Tools, Skills and extensions | Pi | Delegated |
 | Long-running task activity | BYOP plus adapters | P3.3a projects the latest tool and transient runtime diagnostics into the task panel |
-| Complex editor or visualizer UI | Plugin and WebView | Reserved for P5; typed native views are implemented |
+| Complex editor or visualizer UI | Plugin and BYOP WebView host | Declared WebViews are served from `byop-plugin://` and retain the plugin's existing capability boundary |
 
 BYOP should persist references and rebuildable indexes rather than duplicate
 Pi session bodies or secrets. A future session browser should discover
@@ -97,7 +102,7 @@ The parser accepts one JSON object up to 1 MiB and rejects unknown fields,
 trailing JSON values and unsafe entry paths. The host records registered,
 invalid, incompatible, duplicate plugin ID and duplicate contribution ID
 states. Scanning never opens or executes entry files. The current host version
-is `0.4.2`; manifest schema and Plugin API version are both `1`.
+is `0.5.0`; manifest schema and Plugin API version are both `1`.
 
 Each plugin is an independent local package with a manifest, a runtime entry
 point and declared contribution points.
@@ -132,7 +137,12 @@ point and declared contribution points.
         }
       ]
     }],
-    "webviews": [{ "id": "git.diff", "location": "main" }]
+    "webviews": [{
+      "id": "git.diff",
+      "title": "Git diff",
+      "location": "main",
+      "entry": "web/diff.html"
+    }]
   },
   "activation": {
     "events": ["onCommand:git.refresh", "onView:git.status"],
@@ -147,7 +157,8 @@ point and declared contribution points.
 }
 ```
 
-Navigation contributions may point to a view declared by the same manifest.
+Navigation contributions may point to a native view or WebView declared by the
+same manifest. IDs are unique across both view types.
 Setting field keys are unique across the plugin. The supported field types are
 `string`, `boolean`, `number` and `select`; a plugin may declare at most 50
 setting fields. Select fields require unique, non-empty options. Missing
@@ -204,8 +215,10 @@ uses `settingsChanged` after a saved setting changes while the plugin process
 is active.
 
 `examples/hello-node` is the P4.2 contract fixture for the complete Node,
-view, settings and host-call surface. `examples/hello-native` remains the
-small native lifecycle example.
+view, settings and host-call surface. `examples/hello-webview` is the P5
+contract fixture for isolated static content, theme, bridge calls and plugin
+message delivery. `examples/hello-native` remains the small native lifecycle
+example.
 
 ## Node Runtime
 
@@ -310,6 +323,79 @@ The `workspace`, `files`, `network` and `process` values on native plugins are
 declarative. They appear in the plugin card but cannot sandbox an arbitrary
 native executable.
 
+## P5 WebView Hosting
+
+The host registers the `byop-plugin` scheme with MyGo before creating the
+window. Each WebView is created lazily from a navigation click and reused for
+the life of its registered contribution.
+
+```text
+byop-plugin://<pluginId>/<relative-path>
+```
+
+The handler looks up the plugin in the current, mutex-protected registry
+snapshot. It serves only GET and HEAD requests for regular files inside the
+resolved plugin root. Path traversal, encoded paths, directory targets,
+symlink escapes, unknown plugins and files over 5 MiB return 404. Responses set
+`Content-Type`, `X-Content-Type-Options: nosniff` and `Cache-Control: no-store`.
+
+Every response uses this base policy:
+
+```text
+default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline';
+img-src 'self' data:; font-src 'self'; connect-src 'none';
+media-src 'self'; frame-src 'none'; object-src 'none';
+base-uri 'none'; form-action 'none'
+```
+
+Only a plugin with `capabilities.network: true` receives `connect-src https:`;
+WebView declarations do not add capabilities. Inline scripts and inline event
+handlers remain blocked.
+
+Each page is locked to the same plugin host. `OnWillNavigate` rejects every
+other scheme or plugin identity, `SetWindowOpenHandler` returns nil, and
+`SetPermissionHandler` denies all requests. External links therefore cannot
+navigate or open a child window.
+
+The bridge is one MyGo service, `BYOPWebView`. Its `Call` method resolves the
+calling page with `mygo.CallerPage(ctx)`, then finds the unique WebView state
+whose `Page()` matches. It does not accept a plugin identity from the page. On
+every call it also verifies:
+
+- the current URL still uses the mapped plugin host and a safe path;
+- the plugin remains registered;
+- the mapped view and entry are still declared;
+- the manifest/root fingerprint still matches the instance.
+
+Plugin pages obtain host business capabilities only through the bridge.
+`host.*` calls use the same `handleHostCall` dispatcher and capability checks as
+native and Node plugins. `plugin.postMessage` accepts one JSON message up to
+64 KiB, activates the plugin for `onWebView:<viewID>`, and invokes the
+`webviewMessage` JSONL method. Each plugin has a shared bridge semaphore.
+
+`Protocol.Handle` makes `byop-plugin` pages trusted to MyGo. MyGo v0.5.5
+therefore exposes the built-in `mygo:window` service on every handled scheme,
+and `window.mygo` is non-configurable. A plugin page can close, minimize or
+toggle fullscreen on the host window and change its title without using the
+bridge. Closing the window also triggers BYOP shutdown. Upstream follow-up:
+request a per-page or per-scheme way to disable `mygo:window`, or a way to
+expose only selected `BindAs` services on handled custom schemes.
+
+The preload script exposes `window.byop.call`, `postMessage`, `onTheme` and
+`theme`. It maps the host palette to `--byop-*` CSS variables, keeps
+`--byop-font-body` at 14 px and updates `color-scheme`. Theme changes update
+the WebView background and emit the `byop.theme` event to each live page. Each
+completed page load also emits the current theme to that page so reloads and
+same-plugin navigation do not retain the theme captured when the WebView was
+created.
+
+`NewWebView`, load and render-process failures switch the view to a native
+warning card with Reload and Back to Plugins actions. Rescanning destroys
+instances whose plugin, contribution, entry or manifest/root fingerprint no
+longer matches. Deactivation, plugin stopping and window close also destroy
+the affected WebViews. Leaving the view hides the instance and keeps it
+available for reuse.
+
 ## Planned Plugin Runtime Contract
 
 The methods below remain future work.
@@ -317,35 +403,15 @@ The methods below remain future work.
 | Direction | Method | Purpose |
 |---|---|---|
 | Host → Plugin | `cancel` | Cancel one long-running operation |
-| Plugin → Host | `host.openWebView` | Open a declared WebView contribution |
 | Plugin → Host | `host.emit` | Notify the registry of an event |
-
-The host validates manifests, owns lifecycle state, resolves icons from a
-shared asset registry, and rejects undeclared contribution points. Rich
-editors, diagrams, document canvases and third-party dashboards can opt into
-WebView hosting, with a native fallback for errors and unsupported platforms.
 
 ## Plugin Development Hold
 
-After P4.2, the plugin platform is functionally ready for local native and Node
-plugins. No feature plugin will be developed until Lex explicitly asks. The
-earlier Library and Document designs must not be implemented as plugins.
-`examples/` contains contract fixtures only. The existing Library and Document
-pages remain untouched native visual skeletons.
-
-## WebView Boundary
-
-WebView is reserved for complex surfaces and must remain inside the BYOP shell.
-The planned host contract supplies:
-
-- a unique view ID and plugin identity;
-- shared light/dark semantic token values;
-- lifecycle events for visibility, focus and disposal;
-- a narrow message bridge for declared capabilities;
-- crash and navigation recovery back to a native fallback;
-- no direct access to Pi credentials or arbitrary local files.
-
-The exact MyGo `ui.WebView` behavior still needs P5 platform validation.
+After P5, the plugin platform is functionally ready for local native, Node and
+declared WebView surfaces. No feature plugin will be developed until Lex
+explicitly asks. The earlier Library and Document placeholder pages and
+navigation entries were removed in P5 and must not be implemented as feature
+plugins. `examples/` contains contract fixtures only.
 
 ## Migration Map
 
@@ -372,7 +438,7 @@ The exact MyGo `ui.WebView` behavior still needs P5 platform validation.
 | P4 | Strict manifest validation, local root discovery, registry search and duplicate/conflict reporting |
 | P4.1 | Native lazy activation, lifecycle states, declared command routing, deactivate and shutdown cleanup |
 | P4.2 | Node runtime, typed view/settings invocation, plugin-to-host calls and permission enforcement |
-| P5 | WebView proof, theme bridge, crash fallback and complex view sandbox |
+| P5 | Isolated WebView scheme, bridge identity and capability reuse, theme bridge, navigation lock, lifecycle and native fallback (implemented) |
 | P6 | Read-only session discovery, model and thinking-level selectors |
 | P7 | Automation and Loop contributions |
 | P8 | Import old desktop preferences and migration verification |

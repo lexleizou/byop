@@ -486,27 +486,9 @@ func pluginActivatesOn(manifest *pluginManifest, event string) bool {
 // resolvePluginEntry returns the real path of an entry that stays inside the
 // plugin directory after resolving symbolic links.
 func resolvePluginEntry(directory, entry, runtime string) (string, error) {
-	if !safePluginRelativePath(entry) {
-		return "", errors.New("entry must be a safe relative path inside the plugin folder")
-	}
-	root, err := filepath.EvalSymlinks(directory)
+	target, info, err := resolvePluginPath(directory, entry)
 	if err != nil {
-		return "", fmt.Errorf("resolve plugin folder: %w", err)
-	}
-	target, err := filepath.EvalSymlinks(filepath.Join(root, filepath.FromSlash(entry)))
-	if err != nil {
-		return "", fmt.Errorf("resolve entry: %w", err)
-	}
-	relative, err := filepath.Rel(root, target)
-	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return "", errors.New("entry resolves outside the plugin folder")
-	}
-	info, err := os.Stat(target)
-	if err != nil {
-		return "", fmt.Errorf("read entry: %w", err)
-	}
-	if !info.Mode().IsRegular() {
-		return "", errors.New("entry is not a regular file")
+		return "", err
 	}
 	switch runtime {
 	case "node":
@@ -523,6 +505,34 @@ func resolvePluginEntry(directory, entry, runtime string) (string, error) {
 		return "", fmt.Errorf("runtime %s is not supported", runtime)
 	}
 	return target, nil
+}
+
+// resolvePluginPath returns the real path and metadata of a regular file that
+// stays inside the plugin directory after resolving symbolic links.
+func resolvePluginPath(directory, entry string) (string, os.FileInfo, error) {
+	if !safePluginRelativePath(entry) {
+		return "", nil, errors.New("entry must be a safe relative path inside the plugin folder")
+	}
+	root, err := filepath.EvalSymlinks(directory)
+	if err != nil {
+		return "", nil, fmt.Errorf("resolve plugin folder: %w", err)
+	}
+	target, err := filepath.EvalSymlinks(filepath.Join(root, filepath.FromSlash(entry)))
+	if err != nil {
+		return "", nil, fmt.Errorf("resolve entry: %w", err)
+	}
+	relative, err := filepath.Rel(root, target)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", nil, errors.New("entry resolves outside the plugin folder")
+	}
+	info, err := os.Stat(target)
+	if err != nil {
+		return "", nil, fmt.Errorf("read entry: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return "", nil, errors.New("entry is not a regular file")
+	}
+	return target, info, nil
 }
 
 func resolveNativePluginEntry(directory, entry string) (string, error) {
