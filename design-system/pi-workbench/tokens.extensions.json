@@ -1,0 +1,1522 @@
+{
+  "$description": "BYOP (Build You Own Pi) design-only extensions. Merge by unique token path with ../onevra/tokens.json. Values cite Onevra/MyGo source file:line or are marked product extension. The workbench.* namespace keeps its earlier name for compatibility. Not yet synchronized to CSS or Penpot.",
+  "meta": {
+    "name": "BYOP Extensions",
+    "product": "Build You Own Pi",
+    "productAbbreviation": "BYOP",
+    "version": "0.2.1",
+    "updated": "2026-10-20",
+    "base": "../onevra/tokens.json",
+    "baseVersion": "1.0.0",
+    "status": "design source; P2 native Go currently consumes a subset",
+    "format": "project DTCG-style; not a formal schema conformance claim"
+  },
+  "workbench": {
+    "color": {
+      "light": {
+        "danger": {
+          "$type": "color",
+          "$value": "{onevra.color.light.danger}",
+          "$description": "Business status alias; do not use color alone."
+        },
+        "warning": {
+          "$type": "color",
+          "$value": "{onevra.color.light.warning}",
+          "$description": "Business status alias; do not use color alone."
+        },
+        "success": {
+          "$type": "color",
+          "$value": "{onevra.color.light.success}",
+          "$description": "Business status alias; do not use color alone."
+        }
+      },
+      "dark": {
+        "danger": {
+          "$type": "color",
+          "$value": "{onevra.color.dark.danger}",
+          "$description": "Business status alias; do not use color alone."
+        },
+        "warning": {
+          "$type": "color",
+          "$value": "{onevra.color.dark.warning}",
+          "$description": "Business status alias; do not use color alone."
+        },
+        "success": {
+          "$type": "color",
+          "$value": "{onevra.color.dark.success}",
+          "$description": "Business status alias; do not use color alone."
+        }
+      }
+    },
+    "dimension": {
+      "navRailWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 56,
+          "unit": "px"
+        },
+        "$description": "Collapsed global navigation rail."
+      },
+      "navCollapseBelow": {
+        "$type": "dimension",
+        "$value": {
+          "value": 960,
+          "unit": "px"
+        },
+        "$description": "Viewport width threshold for navigation folding."
+      },
+      "taskPanelMinMainWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 560,
+          "unit": "px"
+        },
+        "$description": "Main area required beside the 320px docked global task panel."
+      },
+      "minContentWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 360,
+          "unit": "px"
+        },
+        "$description": "Local document/preview width target before switching to stacked or overlay layout; not a hard window limit."
+      },
+      "pagePadding": {
+        "$type": "dimension",
+        "$value": {
+          "value": 24,
+          "unit": "px"
+        },
+        "$description": "General workspaces; Chat keeps its own 20px horizontal padding."
+      },
+      "sectionGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$description": "Gap between peer workspace sections."
+      },
+      "compactGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Compact inline elements."
+      },
+      "rowHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 36,
+          "unit": "px"
+        },
+        "$description": "Default one-line resource list row; text scaling can grow it."
+      },
+      "controlHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 32,
+          "unit": "px"
+        },
+        "$description": "General workspace control; does not replace Chat 26px controls."
+      },
+      "libraryListMinWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 320,
+          "unit": "px"
+        },
+        "$description": "Minimum list width when showing adjacent preview."
+      },
+      "documentTreeWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 240,
+          "unit": "px"
+        },
+        "$description": "Preferred local document tree width."
+      },
+      "documentContextRailWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 60,
+          "unit": "px"
+        },
+        "$description": "Local document context rail, distinct from closed global task panel width 0."
+      },
+      "documentContextPanelWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 320,
+          "unit": "px"
+        },
+        "$description": "Expanded local document context panel; independent of global task panel."
+      },
+      "focusRingWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        },
+        "$description": "Visible focus outline target; contrast still needs rendered validation."
+      }
+    },
+    "typography": {
+      "displaySize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 32,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Chat empty-state display text."
+      },
+      "pageTitleSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 30,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Workspace and document page titles; deliberate increase from the Onevra ece5cd9 source value of 18."
+      },
+      "pageTitleWeight": {
+        "$type": "fontWeight",
+        "$value": 650,
+        "$description": "BYOP product override for the enlarged page-title hierarchy."
+      },
+      "titleSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 18,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Dialog and compact section titles."
+      },
+      "uiLargeSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. App bar and page-header titles."
+      },
+      "bodyLargeSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 15,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Emphasized body and panel headings."
+      },
+      "bodySize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "BYOP product default. Body text, navigation labels, inputs, and general native workbench content on every platform."
+      },
+      "bodyLineHeight": {
+        "$type": "number",
+        "$value": "{onevra.typography.native.bodyLineHeight}",
+        "$description": "General body line height; do not inherit local Penpot 1.2 clipping fix."
+      },
+      "embeddedWebFontFamily": {
+        "$type": "fontFamily",
+        "$value": "{onevra.typography.native.fontFamily}",
+        "$description": "System font default for embedded workspaces."
+      },
+      "codeFontFamily": {
+        "$type": "fontFamily",
+        "$value": [
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "monospace"
+        ],
+        "$description": "Code fallback without requiring an additional web font."
+      },
+      "pageDescriptionSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Page descriptions use the 14px body size and TextMuted."
+      },
+      "microSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Reserved for short status pills and keyboard hints, never running prose."
+      },
+      "captionSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 11,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Metadata and secondary descriptions; integer pixel value for MyGo native rendering."
+      },
+      "labelSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Small controls, tool metadata, chips, and action labels."
+      },
+      "labelMediumWeight": {
+        "$type": "fontWeight",
+        "$value": 500,
+        "$description": "Onevra ece5cd9 source/components/chat/chat.go:198-205,219-222,251-260; picker.go:98. Fold, working, activity group and picker group labels."
+      },
+      "labelStrongWeight": {
+        "$type": "fontWeight",
+        "$value": 650,
+        "$description": "BYOP product override. Emphasized action and tool labels."
+      },
+      "pickerLabelSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Picker rows share the compact label tier."
+      },
+      "secondaryLabelSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 15,
+          "unit": "px"
+        },
+        "$description": "BYOP product override. Fold rows and working labels use the emphasized body tier."
+      },
+      "noteSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/quota/quota.go:89."
+      },
+      "monoSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/chat/chat.go:337-348 activity detail monospace."
+      },
+      "navHeadingScale": {
+        "$type": "number",
+        "$value": 0.7857142857,
+        "$description": "BYOP product override. At the 14px body size this resolves to 11px for navigation group headings."
+      },
+      "navHeadingWeight": {
+        "$type": "fontWeight",
+        "$value": 700,
+        "$description": "Onevra ece5cd9 source/components/sidebar/sidebar.go:30-31 Bold, TextMuted."
+      },
+      "navLabelSize": {
+        "$type": "dimension",
+        "$value": "{workbench.typography.bodySize}",
+        "$description": "BYOP product override. Navigation uses the 14px body size on every platform."
+      }
+    },
+    "layout": {
+      "todoThreeColumnMinWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 840,
+          "unit": "px"
+        },
+        "$description": "Actual Todo component width, after shell and panels."
+      },
+      "todoTwoColumnMinWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 600,
+          "unit": "px"
+        },
+        "$description": "Actual Todo component width; below this use one column."
+      }
+    },
+    "icon": {
+      "small": {
+        "$type": "dimension",
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$description": "Inline icon size."
+      },
+      "navigation": {
+        "$type": "dimension",
+        "$value": {
+          "value": 18,
+          "unit": "px"
+        },
+        "$description": "Navigation icon size."
+      },
+      "action": {
+        "$type": "dimension",
+        "$value": {
+          "value": 20,
+          "unit": "px"
+        },
+        "$description": "Primary action icon size."
+      },
+      "viewBoxSize": {
+        "$type": "number",
+        "$value": 24,
+        "$description": "Canonical square viewBox target."
+      },
+      "strokeWidth": {
+        "$type": "number",
+        "$value": 2,
+        "$description": "Stroke units within canonical viewBox; icons inherit foreground."
+      },
+      "chatInline": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/chat/chat.go:286-301 activity icon; chip.go:40-61 chip icon."
+      },
+      "chipLeading": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chip.go:40-61 leading icon or image."
+      },
+      "chipCaret": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10.5,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chip.go:40-61 ChevronDown, tertiary alpha .7."
+      },
+      "activityChevron": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:251-260."
+      },
+      "foldChevron": {
+        "$type": "dimension",
+        "$value": {
+          "value": 11.5,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:198-205."
+      },
+      "jumpArrow": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:476-477 ArrowDown."
+      }
+    },
+    "motion": {
+      "hoverDuration": {
+        "$type": "duration",
+        "$value": {
+          "value": 120,
+          "unit": "ms"
+        },
+        "$description": "Subtle state transition; not execution delay."
+      },
+      "expandDuration": {
+        "$type": "duration",
+        "$value": {
+          "value": 180,
+          "unit": "ms"
+        },
+        "$description": "Panel/detail transition; not execution delay."
+      },
+      "reducedDuration": {
+        "$type": "duration",
+        "$value": {
+          "value": 0,
+          "unit": "ms"
+        },
+        "$description": "Reduced-motion transition duration."
+      },
+      "waveDotsPeriod": {
+        "$type": "duration",
+        "$value": {
+          "value": 1200,
+          "unit": "ms"
+        },
+        "$description": "Onevra ece5cd9 source/components/chat/chat.go:229-242."
+      },
+      "waveDotsFrameInterval": {
+        "$type": "duration",
+        "$value": {
+          "value": 50,
+          "unit": "ms"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:229-242 redraw."
+      },
+      "pulseDotPeriod": {
+        "$type": "duration",
+        "$value": {
+          "value": 1000,
+          "unit": "ms"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:355-363."
+      },
+      "pulseDotFrameInterval": {
+        "$type": "duration",
+        "$value": {
+          "value": 50,
+          "unit": "ms"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:355-363 redraw."
+      },
+      "switchKnobDuration": {
+        "$type": "duration",
+        "$value": {
+          "value": 140,
+          "unit": "ms"
+        },
+        "$description": "Onevra ece5cd9 source/components/chip/chip.go:81 switch chip knob."
+      },
+      "effortTransitionDuration": {
+        "$type": "duration",
+        "$value": {
+          "value": 900,
+          "unit": "ms"
+        },
+        "$description": "Onevra ece5cd9 source/components/effort/effort.go:35."
+      }
+    },
+    "markdown": {
+      "fontSize": {
+        "$type": "dimension",
+        "$value": "{chat.typography.bodyFontSize}",
+        "$description": "Product decision: Chat Markdown fixed at 14 on all platforms. MyGo 4d8673c ui/markdown/theme.go:102,134 defaults to theme size (13 on macOS)."
+      },
+      "lineHeight": {
+        "$type": "number",
+        "$value": "{chat.typography.bodyLineHeight}",
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:105."
+      },
+      "codeLineHeight": {
+        "$type": "number",
+        "$value": 1.4,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:106."
+      },
+      "strongWeight": {
+        "$type": "fontWeight",
+        "$value": 600,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:111."
+      },
+      "codeSizeEm": {
+        "$type": "number",
+        "$value": 0.875,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:114; em of Markdown font size."
+      },
+      "codeBackgroundAlpha": {
+        "$type": "number",
+        "$value": 0.07,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:113; Text alpha."
+      },
+      "blockSpacingEm": {
+        "$type": "number",
+        "$value": 0.75,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:115."
+      },
+      "itemSpacingEm": {
+        "$type": "number",
+        "$value": 0.25,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:116."
+      },
+      "listIndentEm": {
+        "$type": "number",
+        "$value": 1.6,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:117."
+      },
+      "quoteBarWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 3,
+          "unit": "px"
+        },
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:120; Border color, TextMuted text."
+      },
+      "quotePaddingStartEm": {
+        "$type": "number",
+        "$value": 0.85,
+        "$description": "MyGo 4d8673c ui/markdown/view.go:333."
+      },
+      "codeBlockBackgroundAlpha": {
+        "$type": "number",
+        "$value": 0.04,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:122; Text alpha, Border outline."
+      },
+      "codeBlockRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "px"
+        },
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:124 Radius+2 with Onevra radius 8."
+      },
+      "codeBlockPaddingEm": {
+        "$type": "number",
+        "$value": 0.85,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:125."
+      },
+      "tableHeaderAlpha": {
+        "$type": "number",
+        "$value": 0.04,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:128; Text alpha."
+      },
+      "tableCellPaddingXEm": {
+        "$type": "number",
+        "$value": 0.6,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:129."
+      },
+      "tableCellPaddingYEm": {
+        "$type": "number",
+        "$value": 0.4,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:129."
+      },
+      "tableMaxColumnEm": {
+        "$type": "number",
+        "$value": 24,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:130."
+      },
+      "markColor": {
+        "$type": "color",
+        "$value": "#FACC1559",
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:131 rgba(250,204,21,.35); same in both modes."
+      },
+      "headingTopEm": {
+        "$type": "number",
+        "$value": 1.4,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:140."
+      },
+      "headingBottomEm": {
+        "$type": "number",
+        "$value": 0.55,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:140."
+      },
+      "h1SizeEm": {
+        "$type": "number",
+        "$value": 1.6,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:137."
+      },
+      "h1Weight": {
+        "$type": "fontWeight",
+        "$value": 700,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:138."
+      },
+      "h2SizeEm": {
+        "$type": "number",
+        "$value": 1.35,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:137."
+      },
+      "h2Weight": {
+        "$type": "fontWeight",
+        "$value": 650,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:138."
+      },
+      "h3SizeEm": {
+        "$type": "number",
+        "$value": 1.15,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:137."
+      },
+      "h3Weight": {
+        "$type": "fontWeight",
+        "$value": 600,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:138."
+      },
+      "h4SizeEm": {
+        "$type": "number",
+        "$value": 1,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:137."
+      },
+      "h4Weight": {
+        "$type": "fontWeight",
+        "$value": 600,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:138."
+      },
+      "h5SizeEm": {
+        "$type": "number",
+        "$value": 0.95,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:137."
+      },
+      "h5Weight": {
+        "$type": "fontWeight",
+        "$value": 600,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:138."
+      },
+      "h6SizeEm": {
+        "$type": "number",
+        "$value": 0.9,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:137. h6 uses TextMuted (theme.go:142)."
+      },
+      "h6Weight": {
+        "$type": "fontWeight",
+        "$value": 600,
+        "$description": "MyGo 4d8673c ui/markdown/theme.go:138."
+      }
+    },
+    "chat": {
+      "composerMinLines": {
+        "$type": "number",
+        "$value": 1,
+        "$description": "Onevra ece5cd9 source/components/chat/chat.go:540-625 TextBox Lines(1,10); MyGo 4d8673c ui/api_gen.go:4356-4358."
+      },
+      "composerMaxLines": {
+        "$type": "number",
+        "$value": 10,
+        "$description": "Same source; maximum height derives from 10 lines of font metrics, replacing the fixed 280px draft limit."
+      },
+      "composerCardPaddingY": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/chat/chat.go:540-625 card padding (10,0)."
+      },
+      "composerInputPaddingTop": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625 TextBox padding (2,14,0,14)."
+      },
+      "composerInputPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625."
+      },
+      "composerAttachmentGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625 attachments row wrap, padding (0,10,6,10)."
+      },
+      "composerAccessoryTopMargin": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625."
+      },
+      "composerAccessoryPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625."
+      },
+      "composerAccessoryGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625 accessory row and trailing gap."
+      },
+      "composerAccessoryInnerGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625."
+      },
+      "composerPillPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:614-622 pillAction; height/radius use chat.dimension.composerControl*."
+      },
+      "composerFooterPaddingTop": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625 footer outside card, padding (4,10,0,10)."
+      },
+      "composerFooterGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625."
+      },
+      "composerShadow": {
+        "$type": "shadow",
+        "$value": {
+          "color": "#0000000A",
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 2,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 8,
+            "unit": "px"
+          },
+          "spread": {
+            "value": 0,
+            "unit": "px"
+          }
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:540-625 rgba(0,0,0,.04)."
+      },
+      "bubbleGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 7,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/chat/chat.go:403."
+      },
+      "actionsGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:189; wraps."
+      },
+      "foldRowHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 24,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:198-205."
+      },
+      "foldRowGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:198-205."
+      },
+      "foldButtonPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:198-205."
+      },
+      "foldButtonGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 5,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:198-205."
+      },
+      "workingRowHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 22,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:219-222."
+      },
+      "workingRowGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:219-222."
+      },
+      "activityGroupGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:251-260."
+      },
+      "activityHeaderHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 26,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:251-260 group header button."
+      },
+      "activityHeaderGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:251-260."
+      },
+      "activityListMarginStart": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:275."
+      },
+      "activityListPaddingStart": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:275 with 1px Border left rule."
+      },
+      "activityListPaddingBottom": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:275."
+      },
+      "activityListGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:275."
+      },
+      "activityCardHeaderPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:286-301; height and radius use chat.dimension.toolHeader*."
+      },
+      "activityCardHeaderGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:286-301."
+      },
+      "activityBodyPaddingY": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:337-348."
+      },
+      "activityBodyPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:337-348."
+      },
+      "activityBodyGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:337-348."
+      },
+      "activityDetailMaxHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 400,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:48; auto-follows while running."
+      },
+      "jumpButtonSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 28,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:476-477."
+      },
+      "jumpButtonRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:476-477."
+      },
+      "jumpButtonMargin": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:476-477."
+      }
+    },
+    "tone": {
+      "secondaryMix": {
+        "$type": "number",
+        "$value": 0.45,
+        "$description": "Onevra ece5cd9 source/components/chat/chat.go:370-376 secondary = Text.Mix(TextMuted,.45)."
+      },
+      "strongBorderMix": {
+        "$type": "number",
+        "$value": 0.08,
+        "$description": "Onevra ece5cd9 source/chat.go:370-376 strongBorder = Border.Mix(Text,.08)."
+      },
+      "overlayAlpha": {
+        "$type": "number",
+        "$value": 0.05,
+        "$description": "Onevra ece5cd9 source/chat.go:370-376 overlay = Text alpha."
+      },
+      "overlayStrongAlpha": {
+        "$type": "number",
+        "$value": 0.09,
+        "$description": "Onevra ece5cd9 source/chat.go:370-376 overlayStrong = Text alpha."
+      },
+      "bubbleSurfaceMix": {
+        "$type": "number",
+        "$value": 0.06,
+        "$description": "Onevra ece5cd9 source/chat.go:403 Background.Mix(Text,.06)."
+      },
+      "activitySurfaceMix": {
+        "$type": "number",
+        "$value": 0.035,
+        "$description": "Onevra ece5cd9 source/chat.go:286-301 and attachment.go:74-75 Background.Mix(Text,.035)."
+      },
+      "dragBorderAlpha": {
+        "$type": "number",
+        "$value": 0.7,
+        "$description": "Onevra ece5cd9 source/chat.go:540-625 Accent alpha on drag-over."
+      },
+      "dragSurfaceMix": {
+        "$type": "number",
+        "$value": 0.09,
+        "$description": "Onevra ece5cd9 source/chat.go:540-625 Surface.Mix(Text,.09) on drag-over."
+      },
+      "stopSurfaceAlpha": {
+        "$type": "number",
+        "$value": 0.14,
+        "$description": "Onevra ece5cd9 source/chat.go:540-625 Danger alpha behind Stop."
+      },
+      "pressedOpacity": {
+        "$type": "number",
+        "$value": 0.8,
+        "$description": "Onevra ece5cd9 source/chat.go:614-622 pillAction pressed."
+      },
+      "hoverOpacity": {
+        "$type": "number",
+        "$value": 0.9,
+        "$description": "Onevra ece5cd9 source/chat.go:614-622 pillAction hover."
+      },
+      "disabledOpacity": {
+        "$type": "number",
+        "$value": 0.7,
+        "$description": "Onevra ece5cd9 source/components/chip/chip.go:40-61."
+      },
+      "navSelectedAlpha": {
+        "$type": "number",
+        "$value": 0.1,
+        "$description": "Onevra ece5cd9 source/components/sidebar/sidebar.go:101-109 Text alpha; hover keeps face."
+      }
+    },
+    "component": {
+      "chipHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 26,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/chip/chip.go:40-61."
+      },
+      "chipPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 7,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chip.go:40-61."
+      },
+      "chipRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chip.go:40-61."
+      },
+      "chipGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chip.go:40-61."
+      },
+      "chipImageRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 3,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chip.go:40-61."
+      },
+      "pickerWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 260,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/picker/picker.go:64-66."
+      },
+      "pickerSearchThreshold": {
+        "$type": "number",
+        "$value": 8,
+        "$description": "Onevra ece5cd9 source/picker.go:64-66; show search at 8 or more items."
+      },
+      "pickerSearchPadding": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:75 padding (8,8,0,8)."
+      },
+      "pickerEmptyPadding": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:90."
+      },
+      "pickerListMaxHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 348,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:94."
+      },
+      "pickerListPadding": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:94."
+      },
+      "pickerListGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 1,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:94."
+      },
+      "pickerGroupPaddingTop": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:98 padding (8,8,3,8)."
+      },
+      "pickerGroupPaddingBottom": {
+        "$type": "dimension",
+        "$value": {
+          "value": 3,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:98."
+      },
+      "pickerRowPaddingY": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:114."
+      },
+      "pickerRowPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:114."
+      },
+      "pickerRowRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/picker.go:114."
+      },
+      "attachmentMaxWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 220,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/attachment/attachment.go:74-75."
+      },
+      "attachmentHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 30,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/attachment.go:74-75."
+      },
+      "attachmentGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/attachment.go:74-75."
+      },
+      "attachmentPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/attachment.go:74-75."
+      },
+      "attachmentRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 7,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/attachment.go:74-75."
+      },
+      "attachmentBadgeSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 18,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/attachment.go:40,95 badge and remove button."
+      },
+      "attachmentBadgeRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 5,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/attachment.go:40."
+      },
+      "attachmentRemoveRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/attachment.go:95."
+      },
+      "sidebarPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/sidebar/sidebar.go:11 padding (0,12,12,12)."
+      },
+      "sidebarPaddingBottom": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/sidebar.go:11."
+      },
+      "sidebarGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/sidebar.go:11."
+      },
+      "sidebarSectionGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/sidebar.go:27."
+      },
+      "sidebarHeadingPaddingY": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/sidebar.go:30-31."
+      },
+      "sidebarHeadingPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/sidebar.go:30-31."
+      },
+      "sidebarItemPaddingY": {
+        "$type": "dimension",
+        "$value": {
+          "value": 7,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/sidebar.go:101-109."
+      },
+      "sidebarItemPaddingX": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/sidebar.go:101-109."
+      },
+      "sidebarItemGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/sidebar.go:101-109."
+      },
+      "sidebarItemRadius": {
+        "$type": "dimension",
+        "$value": "{onevra.dimension.controlRadius}",
+        "$description": "Onevra ece5cd9 source/sidebar.go:101-109 t.Radius."
+      },
+      "headerMinHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 48,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/shells/plain/shell.go:150; shells/sidebar/shell.go:214 max(48, titlebar, Rem(3))."
+      },
+      "iconButtonMinSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 32,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/shells/sidebar/icon_button.go:19; shells/plain/shell.go:201 max(32, Rem(2))."
+      },
+      "windowMinWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 820,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/examples/desktop/app.go:74 default and minimum."
+      },
+      "windowMinHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 740,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/examples/desktop/app.go:74 default and minimum."
+      },
+      "onevraSidebarDefaultWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 220,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/shells/sidebar shell_width_test; reference only. Workbench uses workbench.dimension.navWidth 200 as a documented deviation."
+      },
+      "onevraSidebarMinWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 120,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/shells/sidebar shell_width_test."
+      }
+    },
+    "indicator": {
+      "waveDotsWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 18,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/components/chat/chat.go:229-242."
+      },
+      "waveDotsHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:229-242."
+      },
+      "waveDotSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:229-242 three dots."
+      },
+      "waveDotPitch": {
+        "$type": "dimension",
+        "$value": {
+          "value": 6,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:229-242."
+      },
+      "waveDotRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:229-242."
+      },
+      "waveDotMinAlpha": {
+        "$type": "number",
+        "$value": 0.35,
+        "$description": "Onevra ece5cd9 source/chat.go:229-242 alpha .35+.65*max(0,sin); reduced motion holds .35."
+      },
+      "waveDotPhaseOffset": {
+        "$type": "number",
+        "$value": 0.15,
+        "$description": "Onevra ece5cd9 source/chat.go:229-242 per-dot phase offset."
+      },
+      "pulseDotSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 5,
+          "unit": "px"
+        },
+        "$description": "Onevra ece5cd9 source/chat.go:355-363."
+      },
+      "pulseDotMinAlpha": {
+        "$type": "number",
+        "$value": 0.45,
+        "$description": "Onevra ece5cd9 source/chat.go:355-363 alpha .45-1; reduced motion holds 1."
+      }
+    },
+    "loop": {
+      "minIntervalMinutes": {
+        "$type": "number",
+        "$value": 5,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17 MIN_INTERVAL; cron.ts:40. Applies to interval/cron rules; sessionLoop afterSettled chaining is bounded by end conditions instead."
+      },
+      "defaultMaxDurationMinutes": {
+        "$type": "number",
+        "$value": 30,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17."
+      },
+      "maxDurationMinutes": {
+        "$type": "number",
+        "$value": 1440,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17; task-input.ts:88."
+      },
+      "maxConsecutiveFailures": {
+        "$type": "number",
+        "$value": 5,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17; scheduler.ts:348 auto-pause."
+      },
+      "autoDispatchConcurrency": {
+        "$type": "number",
+        "$value": 2,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17; scheduler.ts:180. Schedule, catch-up and loop dispatch only; manual sends uncapped."
+      },
+      "onTimeGraceMinutes": {
+        "$type": "number",
+        "$value": 2,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17; catch-up.ts:42."
+      },
+      "catchUpWindowDays": {
+        "$type": "number",
+        "$value": 7,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17; catch-up.ts:45."
+      },
+      "runsKeptPerTask": {
+        "$type": "number",
+        "$value": 200,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17; store.ts:167-168, older runs move to <taskId>.archive.jsonl."
+      },
+      "tickSeconds": {
+        "$type": "number",
+        "$value": 30,
+        "$description": "sync-074 lib/scheduled-tasks/scheduler tick with scheduler.lock lease (lease.ts)."
+      },
+      "maxPromptChars": {
+        "$type": "number",
+        "$value": 100000,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17."
+      },
+      "maxNameChars": {
+        "$type": "number",
+        "$value": 120,
+        "$description": "sync-074 lib/scheduled-tasks/types.ts:4-17."
+      },
+      "defaultMissedPolicy": {
+        "$type": "string",
+        "$value": "catchUpLatest",
+        "$description": "Product decision carrying over sync-074 lib/scheduled-tasks/catch-up.ts:42,45; alternative value skip."
+      },
+      "defaultToolPreset": {
+        "$type": "string",
+        "$value": "read-only",
+        "$description": "sync-074 lib/scheduled-tasks/task-input.ts:106-110; write presets keep existing acknowledgeUnattendedWrites."
+      },
+      "defaultDailyTime": {
+        "$type": "string",
+        "$value": "09:00",
+        "$description": "sync-074 lib/scheduled-tasks/schedule-presets.ts:18,22-26."
+      }
+    }
+  }
+}

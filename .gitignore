@@ -1,0 +1,6 @@
+/byop
+/byop-prototype
+*.log
+.DS_Store
+.idea/
+.vscode/
