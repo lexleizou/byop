@@ -58,6 +58,7 @@ const (
 	pageDocument    pageID = "document"
 	pageAutomations pageID = "automations"
 	pageSettings    pageID = "settings"
+	pagePluginView  pageID = "plugin-view"
 )
 
 type themeMode string
@@ -140,16 +141,24 @@ type chatMessage struct {
 }
 
 type appState struct {
-	page           pageID
-	themeMode      themeMode
-	navCollapsed   bool
-	tasksOpen      bool
-	notice         string
-	composerDraft  string
-	pluginSearch   string
-	librarySearch  string
-	pluginRegistry pluginRegistry
-	plugins        *pluginHost
+	page               pageID
+	themeMode          themeMode
+	navCollapsed       bool
+	tasksOpen          bool
+	notice             string
+	composerDraft      string
+	pluginSearch       string
+	librarySearch      string
+	pluginRegistry     pluginRegistry
+	plugins            *pluginHost
+	pluginSettingForms map[string]*pluginSettingForm
+	pluginTasks        map[string]pluginTaskUpdate
+	pluginViewPluginID string
+	pluginViewID       string
+	pluginViewModels   map[string]pluginViewModel
+	pluginViewLoading  bool
+	pluginViewError    string
+	pluginViewEpoch    uint64
 
 	window        *mygo.Window
 	closed        atomic.Bool
@@ -189,10 +198,13 @@ type appState struct {
 
 func newAppState() *appState {
 	s := &appState{
-		page:      pageChat,
-		themeMode: themeSystem,
-		piConn:    piDisconnected,
-		run:       runIdle,
+		page:               pageChat,
+		themeMode:          themeSystem,
+		piConn:             piDisconnected,
+		run:                runIdle,
+		pluginSettingForms: make(map[string]*pluginSettingForm),
+		pluginTasks:        make(map[string]pluginTaskUpdate),
+		pluginViewModels:   make(map[string]pluginViewModel),
 	}
 	if p := pageID(strings.ToLower(os.Getenv("BYOP_PAGE"))); validPage(p) {
 		s.page = p
@@ -215,8 +227,29 @@ func newAppState() *appState {
 	case "1", "true", "on":
 		s.seedToolDemo()
 	}
-	s.plugins = newPluginHost(pluginHostVersion, func() { s.postUI(func() {}) })
+	s.plugins = newPluginHost(pluginHostVersion, func() { s.postUI(func() {}) },
+		pluginHostTheme(currentAppearanceDark),
+		pluginHostNoticeHandler(func(pluginID, pluginName, text, tone string) {
+			s.postUI(func() {
+				s.notice = pluginName + ": " + text
+			})
+		}),
+		pluginHostTaskHandler(func(update pluginTaskUpdate) {
+			s.postUI(func() {
+				s.pluginTasks[update.PluginID+"\x00"+update.TaskID] = update
+			})
+		}),
+		pluginHostRefreshHandler(func(pluginID, viewID string) {
+			s.postUI(func() {
+				if s.page == pagePluginView && s.pluginViewPluginID == pluginID && s.pluginViewID == viewID {
+					s.loadPluginViewByID(pluginID, viewID)
+				}
+			})
+		}),
+	)
 	s.pluginRegistry = scanPluginRegistry(defaultPluginRoots())
+	s.plugins.invalidateSettingsCache()
+	s.syncPluginSettingForms()
 	return s
 }
 
@@ -230,6 +263,14 @@ func (s *appState) scanPlugins(announce bool) {
 		return
 	}
 	s.pluginRegistry = scanPluginRegistry(defaultPluginRoots())
+	s.prunePluginState()
+	s.plugins.invalidateSettingsCache()
+	s.syncPluginSettingForms()
+	if s.page == pagePluginView && !s.pluginViewStillRegistered() {
+		s.page = pagePlugins
+		s.pluginViewPluginID = ""
+		s.pluginViewID = ""
+	}
 	if !announce {
 		return
 	}
@@ -245,6 +286,27 @@ func (s *appState) scanPlugins(announce bool) {
 	default:
 		s.notice = fmt.Sprintf("Plugin scan found %d registered plugin(s) and %d contribution(s).",
 			registered, contributions)
+	}
+}
+
+func (s *appState) prunePluginState() {
+	registered := make(map[string]struct{})
+	for _, entry := range s.pluginRegistry.Entries {
+		if entry.Status == pluginRegistered {
+			registered[entry.ID] = struct{}{}
+		}
+	}
+	for key := range s.pluginTasks {
+		pluginID, _, _ := strings.Cut(key, "\x00")
+		if _, ok := registered[pluginID]; !ok {
+			delete(s.pluginTasks, key)
+		}
+	}
+	for key := range s.pluginViewModels {
+		pluginID, _, _ := strings.Cut(key, "\x00")
+		if _, ok := registered[pluginID]; !ok {
+			delete(s.pluginViewModels, key)
+		}
 	}
 }
 

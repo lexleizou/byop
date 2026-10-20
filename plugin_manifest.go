@@ -16,9 +16,10 @@ import (
 const (
 	pluginManifestSchemaVersion = 1
 	pluginAPIVersion            = "1"
-	pluginHostVersion           = "0.4.1"
+	pluginHostVersion           = "0.4.2"
 	pluginManifestFilename      = "plugin.json"
 	maxPluginManifestBytes      = 1 << 20
+	maxPluginSettingFields      = 50
 )
 
 type pluginManifest struct {
@@ -54,6 +55,7 @@ type pluginNavigationContribution struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
 	Icon  string `json:"icon"`
+	View  string `json:"view,omitempty"`
 }
 
 type pluginCommandContribution struct {
@@ -75,8 +77,20 @@ type pluginTaskPanelContribution struct {
 }
 
 type pluginSettingContribution struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
+	ID          string               `json:"id"`
+	Title       string               `json:"title"`
+	Description string               `json:"description,omitempty"`
+	Fields      []pluginSettingField `json:"fields,omitempty"`
+}
+
+type pluginSettingField struct {
+	Key         string          `json:"key"`
+	Label       string          `json:"label"`
+	Type        string          `json:"type"`
+	Description string          `json:"description,omitempty"`
+	Default     json.RawMessage `json:"default,omitempty"`
+	Options     []string        `json:"options,omitempty"`
+	Placeholder string          `json:"placeholder,omitempty"`
 }
 
 type pluginWebViewContribution struct {
@@ -100,6 +114,7 @@ type pluginCapabilities struct {
 var (
 	pluginIDPattern        = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,126}[a-z0-9]$`)
 	contributionIDPattern  = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9._-]{0,126}[a-z0-9])?$`)
+	settingKeyPattern      = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9._-]{0,63}$`)
 	pluginVersionPattern   = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 	iconPattern            = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
 	controlCharacterFilter = regexp.MustCompile(`[\x00-\x1f\x7f]`)
@@ -168,6 +183,12 @@ func validatePluginManifest(manifest *pluginManifest) error {
 	add(strings.TrimSpace(manifest.Compatibility.PluginAPI) == "", "compatibility.pluginApi is required")
 
 	seenContributions := make(map[string]struct{})
+	declaredViews := make(map[string]struct{}, len(manifest.Contributes.Views))
+	for _, contribution := range manifest.Contributes.Views {
+		if contribution.ID != "" {
+			declaredViews[contribution.ID] = struct{}{}
+		}
+	}
 	validateContribution := func(kind, id, title string) {
 		label := kind + " contribution"
 		if !contributionIDPattern.MatchString(id) {
@@ -187,6 +208,13 @@ func validatePluginManifest(manifest *pluginManifest) error {
 		validateContribution("navigation", contribution.ID, contribution.Title)
 		if !iconPattern.MatchString(contribution.Icon) {
 			issues = append(issues, "navigation contribution icon is invalid: "+contribution.ID)
+		}
+		if contribution.View != "" {
+			if !contributionIDPattern.MatchString(contribution.View) {
+				issues = append(issues, "navigation view id is invalid: "+contribution.ID)
+			} else if _, exists := declaredViews[contribution.View]; !exists {
+				issues = append(issues, "navigation view is not declared: "+contribution.View)
+			}
 		}
 	}
 	for _, contribution := range manifest.Contributes.Commands {
@@ -209,6 +237,9 @@ func validatePluginManifest(manifest *pluginManifest) error {
 	}
 	for _, contribution := range manifest.Contributes.Settings {
 		validateContribution("setting", contribution.ID, contribution.Title)
+		if pluginTextInvalid(contribution.Description, 300) {
+			issues = append(issues, "setting contribution description is too long: "+contribution.ID)
+		}
 	}
 	for _, contribution := range manifest.Contributes.WebViews {
 		validateContribution("webview", contribution.ID, contribution.Title)
@@ -231,11 +262,125 @@ func validatePluginManifest(manifest *pluginManifest) error {
 		manifest.Capabilities.Process != "execute" {
 		issues = append(issues, "capabilities.process must be empty, none, or execute")
 	}
+	validatePluginSettingFields(manifest, &issues)
 
 	if len(issues) > 0 {
 		return errors.New(strings.Join(issues, "; "))
 	}
 	return nil
+}
+
+func validatePluginSettingFields(manifest *pluginManifest, issues *[]string) {
+	seenKeys := make(map[string]struct{})
+	fieldCount := 0
+	for _, contribution := range manifest.Contributes.Settings {
+		for _, field := range contribution.Fields {
+			fieldCount++
+			label := "setting field " + contribution.ID + "." + fallback(field.Key, "<missing>")
+			if !settingKeyPattern.MatchString(field.Key) {
+				*issues = append(*issues, label+" key is invalid")
+			} else if _, exists := seenKeys[field.Key]; exists {
+				*issues = append(*issues, "setting field key is duplicated: "+field.Key)
+			} else {
+				seenKeys[field.Key] = struct{}{}
+			}
+			if pluginRequiredTextInvalid(field.Label, 80) {
+				*issues = append(*issues, label+" label must contain 1-80 printable characters")
+			}
+			switch field.Type {
+			case "string", "boolean", "number", "select":
+			default:
+				*issues = append(*issues, label+" type must be string, boolean, number, or select")
+			}
+			if pluginTextInvalid(field.Description, 300) {
+				*issues = append(*issues, label+" description is too long")
+			}
+			if pluginTextInvalid(field.Placeholder, 120) {
+				*issues = append(*issues, label+" placeholder is too long")
+			}
+			if field.Type == "select" {
+				if len(field.Options) == 0 {
+					*issues = append(*issues, label+" select options are required")
+				}
+				optionSeen := make(map[string]struct{}, len(field.Options))
+				for _, option := range field.Options {
+					if pluginRequiredTextInvalid(option, 80) {
+						*issues = append(*issues, label+" select option must contain 1-80 printable characters")
+						continue
+					}
+					if _, exists := optionSeen[option]; exists {
+						*issues = append(*issues, label+" select options must be unique")
+					}
+					optionSeen[option] = struct{}{}
+				}
+			} else if len(field.Options) > 0 {
+				*issues = append(*issues, label+" options are only valid for select fields")
+			}
+			if _, err := pluginSettingDefaultValue(field); err != nil {
+				*issues = append(*issues, label+" default "+err.Error())
+			}
+		}
+	}
+	if fieldCount > maxPluginSettingFields {
+		*issues = append(*issues, fmt.Sprintf("plugin declares %d setting fields; maximum is %d",
+			fieldCount, maxPluginSettingFields))
+	}
+}
+
+func pluginSettingDefaultValue(field pluginSettingField) (any, error) {
+	if len(field.Default) == 0 {
+		switch field.Type {
+		case "string":
+			return "", nil
+		case "boolean":
+			return false, nil
+		case "number":
+			return float64(0), nil
+		case "select":
+			if len(field.Options) == 0 {
+				return nil, errors.New("requires a select option")
+			}
+			return field.Options[0], nil
+		default:
+			return nil, nil
+		}
+	}
+	if bytes.Equal(bytes.TrimSpace(field.Default), []byte("null")) {
+		return nil, errors.New("must not be null")
+	}
+	switch field.Type {
+	case "string":
+		var value string
+		if err := json.Unmarshal(field.Default, &value); err != nil {
+			return nil, errors.New("must be a string")
+		}
+		return value, nil
+	case "boolean":
+		var value bool
+		if err := json.Unmarshal(field.Default, &value); err != nil {
+			return nil, errors.New("must be a boolean")
+		}
+		return value, nil
+	case "number":
+		var value float64
+		if err := json.Unmarshal(field.Default, &value); err != nil {
+			return nil, errors.New("must be a number")
+		}
+		return value, nil
+	case "select":
+		var value string
+		if err := json.Unmarshal(field.Default, &value); err != nil {
+			return nil, errors.New("must be a select option")
+		}
+		for _, option := range field.Options {
+			if option == value {
+				return value, nil
+			}
+		}
+		return nil, errors.New("must be one of the select options")
+	default:
+		return nil, nil
+	}
 }
 
 func pluginTextInvalid(value string, maximum int) bool {

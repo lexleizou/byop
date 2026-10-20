@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/egoist/mygo/ui"
@@ -59,7 +60,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P4.1 · PLUGIN LIFECYCLE", p.accent)
+		statusPill(c, p, "P4.2 · PLUGIN VIEWS", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
@@ -97,6 +98,16 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 				for _, item := range navItems {
 					s.navButton(c, p, item)
 				}
+				pluginItems := s.pluginNavigationItems()
+				if len(pluginItems) > 0 {
+					if !s.navCollapsed {
+						ui.Text(c, "PLUGINS").FontSize(fontCaption).FontWeight(700).
+							TextColor(p.muted).Padding(8, 10, 4, 10)
+					}
+					for _, item := range pluginItems {
+						s.pluginNavButton(c, p, item)
+					}
+				}
 			})
 			ui.Spacer(c)
 			ui.Divider(c).MarginY(8)
@@ -104,6 +115,51 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 			ui.Spacer(c)
 			s.integrationStatus(c, p)
 		})
+}
+
+func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigationItem) {
+	selected := s.page == pagePluginView && s.pluginViewPluginID == item.entry.ID &&
+		s.pluginViewID == item.view.ID
+	bg := ui.Color{}
+	text := p.muted
+	if selected {
+		bg = p.surfaceHover
+		text = p.text
+	}
+	label := fallback(item.nav.Title, item.view.Title)
+	key := "nav-plugin-" + item.entry.ID + "-" + item.nav.ID
+	btn := ui.ButtonBase(c.Key(key)).Height(38).FillWidth().Padding(0, 10).
+		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(label)
+	if s.navCollapsed {
+		btn.Tooltip(label)
+		btn.Justify(ui.Center)
+	} else {
+		btn.Justify(ui.Start)
+	}
+	if !selected && btn.Hovered() {
+		btn.Background(p.surfaceHover)
+	}
+	btn.Children(func() {
+		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+			ui.Row(c).Size(20, 20).Shrink(0).Center().Children(func() {
+				ic := ui.Icon(c, iconOr(item.nav.Icon, "plugins")).Size(17, 17).TextColor(text)
+				if selected {
+					ic.TextColor(p.accent)
+				}
+			})
+			if !s.navCollapsed {
+				ui.Text(c, label).FontSize(fontBody).FontWeight(550).TextColor(text)
+			}
+		})
+	})
+	if selected {
+		btn.Draw(func(painter *ui.Painter, r ui.Rect) {
+			painter.Fill(ui.Rect{X: 0, Y: (r.H - 18) / 2, W: 3, H: 18}, p.accent, 2)
+		})
+	}
+	if btn.Clicked() {
+		s.openPluginView(item.entry, item.view)
+	}
 }
 
 func (s *appState) navButton(c *ui.Context, p palette, item navItem) {
@@ -198,6 +254,8 @@ func (s *appState) main(c *ui.Context, p palette) {
 			s.automationsPage(c, p)
 		case pageSettings:
 			s.settingsPage(c, p)
+		case pagePluginView:
+			s.pluginViewPage(c, p)
 		default:
 			s.chatPage(c, p)
 		}
@@ -237,6 +295,12 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 					s.taskCard(c, p, "Current run", s.currentRunTaskDetail(), s.runLabel(), s.runTone(p))
 					s.taskCard(c, p, "Runtime diagnostics", s.runtimeDiagnosticDetail(), s.runtimeDiagnosticLabel(), s.runtimeDiagnosticTone(p))
 					s.taskCard(c, p, "Plugin registry", s.pluginRegistryTaskDetail(), s.pluginRegistryTaskLabel(), s.pluginRegistryTaskTone(p))
+					for _, key := range s.pluginTaskKeys() {
+						update := s.pluginTasks[key]
+						status := fallback(update.Status, strings.ToUpper(update.Tone))
+						s.taskCard(c, p, update.Title, update.Detail, status,
+							pluginBlockTone(p, update.Tone))
+					}
 				})
 			})
 
@@ -246,6 +310,15 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 				ui.Text(c, "Pi owns sessions, credentials, models, and extensions").FontSize(fontCaption).TextColor(p.muted)
 			})
 		})
+}
+
+func (s *appState) pluginTaskKeys() []string {
+	keys := make([]string, 0, len(s.pluginTasks))
+	for key := range s.pluginTasks {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func (s *appState) pluginRegistryTaskDetail() string {

@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "id": "example.hello-node",
+  "name": "Hello Node",
+  "version": "0.1.0",
+  "description": "Contract fixture for the P4.2 Node runtime, native views, settings, and host calls.",
+  "runtime": "node",
+  "entry": "plugin.mjs",
+  "icon": "plugins",
+  "compatibility": {
+    "host": ">=0.4.2 <1.0.0",
+    "pluginApi": "1"
+  },
+  "contributes": {
+    "navigation": [
+      {
+        "id": "hello",
+        "title": "Hello Node",
+        "icon": "plugins",
+        "view": "hello.panel"
+      }
+    ],
+    "commands": [
+      {
+        "id": "hello.greet",
+        "title": "Say hello",
+        "description": "Show a notice and update the fixture task panel."
+      },
+      {
+        "id": "hello.readme",
+        "title": "Read README",
+        "description": "Read the first line of the workspace README through the host API."
+      }
+    ],
+    "views": [
+      {
+        "id": "hello.panel",
+        "title": "Hello",
+        "location": "main",
+        "view": "native"
+      }
+    ],
+    "taskPanels": [
+      {
+        "id": "hello.tasks",
+        "title": "Hello Node tasks"
+      }
+    ],
+    "settings": [
+      {
+        "id": "hello.settings",
+        "title": "Hello Node",
+        "description": "Values passed to the plugin on activation and refreshed after Save.",
+        "fields": [
+          {
+            "key": "greeting",
+            "label": "Greeting",
+            "type": "string",
+            "description": "Text included in the view and greeting command.",
+            "default": "Hello",
+            "placeholder": "Hello"
+          },
+          {
+            "key": "showDetails",
+            "label": "Show details",
+            "type": "boolean",
+            "description": "Include the saved tone in the view details.",
+            "default": true
+          },
+          {
+            "key": "tone",
+            "label": "Tone",
+            "type": "select",
+            "default": "calm",
+            "options": [
+              "calm",
+              "bright"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "activation": {
+    "events": [
+      "onView:hello.panel",
+      "onCommand:hello.greet",
+      "onCommand:hello.readme"
+    ]
+  },
+  "capabilities": {
+    "workspace": "read",
+    "files": "read",
+    "network": false,
+    "process": "none"
+  }
+}

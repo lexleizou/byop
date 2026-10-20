@@ -16,7 +16,7 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 			ui.Column(c).Grow(1).MaxWidth(880).Gap(22).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.End).Gap(16).Children(func() {
 					ui.Column(c).Grow(1).Children(func() {
-						pageHeader(c, p, "WORKBENCH", "Plugins", "Discover and validate local plugin manifests. Native plugins start lazily on their first declared command, then run initialize, activate, command, and deactivate over JSONL JSON-RPC.")
+						pageHeader(c, p, "WORKBENCH", "Plugins", "Discover local plugins and open native views backed by typed JSON-RPC models. Native and Node runtimes start lazily, exchange settings, and call a capability-checked host API.")
 					})
 					primaryAction(c, p, "plugins-scan", "Scan plugins", "package", func() {
 						s.scanPlugins(true)
@@ -47,7 +47,7 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 				if len(entries) == 0 {
 					s.emptyPluginRegistry(c, p)
 				} else {
-					ui.Row(c).Wrap().GapX(12).GapY(12).Children(func() {
+					ui.Row(c).Wrap().AlignItems(ui.Start).GapX(12).GapY(12).Children(func() {
 						for _, entry := range entries {
 							s.pluginCard(c, p, entry)
 						}
@@ -57,15 +57,16 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 				sectionLabel(c, p, "PLUGIN CONTRACT PREVIEW")
 				ui.Column(c).FillWidth().Gap(10).Padding(14).Radius(11).
 					Border(1, p.border).Background(p.surface).Children(func() {
-					ui.Text(c, fmt.Sprintf("Host %s validates schema %d and plugin API %s. P4.1 activates native plugins on demand and routes declared commands; Node runtime, views, settings, permissions, and WebView hosting remain disabled.",
+					ui.Text(c, fmt.Sprintf("Host %s validates schema %d and plugin API %s. P4.2 activates native and Node plugins on demand, renders typed native views, persists plugin settings, and enforces host API capabilities. Node also runs with the built-in permission model; WebView hosting remains P5.",
 						registry.HostVersion, pluginManifestSchemaVersion, registry.PluginAPI)).
 						FontSize(fontBody).LineHeight(1.5).TextColor(p.text)
 					ui.Row(c).Wrap().Gap(7).Children(func() {
 						contractChip(c, p, "commands")
 						contractChip(c, p, "views")
-						contractChip(c, p, "webviews")
 						contractChip(c, p, "tasks")
 						contractChip(c, p, "settings")
+						contractChip(c, p, "host calls")
+						contractChip(c, p, "node permissions")
 					})
 				})
 			})
@@ -190,9 +191,25 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 			meta = "v" + entry.Version + " · " + meta
 		}
 		if entry.Manifest != nil {
-			meta = entry.Manifest.Runtime + " · " + meta
+			meta = "runtime " + entry.Manifest.Runtime + " · " + meta
 		}
 		ui.Text(c, meta).FontSize(fontCaption).TextColor(p.muted)
+		if entry.Manifest != nil {
+			ui.Text(c, pluginPermissionsLine(entry.Manifest)).FontSize(fontCaption).
+				LineHeight(1.35).TextColor(p.muted)
+			ui.Text(c, pluginEnforcementLine(entry.Manifest.Runtime)).FontSize(fontCaption).
+				LineHeight(1.35).TextColor(p.muted)
+			var secondaryViews []string
+			for _, view := range entry.Manifest.Contributes.Views {
+				if view.Location == "secondary" {
+					secondaryViews = append(secondaryViews, fallback(view.Title, view.ID))
+				}
+			}
+			if len(secondaryViews) > 0 {
+				ui.Text(c, "Secondary views · "+strings.Join(secondaryViews, ", ")).
+					FontSize(fontCaption).LineHeight(1.35).TextColor(p.muted)
+			}
+		}
 		if entry.Error != "" {
 			ui.Text(c, summarizeLine(entry.Error, 240)).FontSize(fontCaption).
 				LineHeight(1.4).TextColor(p.danger)
@@ -208,6 +225,14 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 			ui.Text(c, summarizeLine(runtime.LastError, 240)).FontSize(fontCaption).
 				LineHeight(1.4).TextColor(p.danger)
 		}
+		if runtime.HostCalls > 0 {
+			ui.Text(c, fmt.Sprintf("%d host call(s)", runtime.HostCalls)).FontSize(fontCaption).
+				TextColor(p.muted)
+		}
+		if runtime.DeniedCalls > 0 {
+			ui.Text(c, fmt.Sprintf("Denied: %s", summarizeLine(runtime.LastDenied, 180))).
+				FontSize(fontCaption).LineHeight(1.35).TextColor(p.danger)
+		}
 		busy := runtime.State == pluginStateStarting || runtime.State == pluginStateRunning ||
 			runtime.State == pluginStateStopping
 		ui.Row(c).Wrap().GapX(6).GapY(6).Children(func() {
@@ -222,8 +247,37 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 					s.deactivatePlugin(entry)
 				})
 			}
+			for _, view := range entry.Manifest.Contributes.Views {
+				view := view
+				if view.Location != "main" {
+					continue
+				}
+				secondaryAction(c, p, "plugin-open-view-"+entry.ID+"-"+view.ID,
+					"Open "+fallback(view.Title, view.ID), func() {
+						s.openPluginView(entry, view)
+					})
+			}
 		})
 	})
+}
+
+func pluginPermissionsLine(manifest *pluginManifest) string {
+	workspace := fallback(manifest.Capabilities.Workspace, "none")
+	files := fallback(manifest.Capabilities.Files, "none")
+	network := "off"
+	if manifest.Capabilities.Network {
+		network = "on"
+	}
+	process := fallback(manifest.Capabilities.Process, "none")
+	return fmt.Sprintf("workspace %s · files %s · network %s · process %s",
+		workspace, files, network, process)
+}
+
+func pluginEnforcementLine(runtime string) string {
+	if runtime == "node" {
+		return "Node permission model + host checks"
+	}
+	return "Host checks only · process unsandboxed"
 }
 
 func pluginCommandButton(c *ui.Context, p palette, key string, command pluginCommandContribution, busy bool, click func()) {
@@ -246,18 +300,31 @@ func pluginCommandButton(c *ui.Context, p palette, key string, command pluginCom
 }
 
 func (s *appState) runPluginCommand(entry pluginRegistryEntry, command pluginCommandContribution) {
+	s.runPluginCommandWithArgs(entry, command, map[string]any{})
+}
+
+func (s *appState) runPluginCommandWithArgs(
+	entry pluginRegistryEntry,
+	command pluginCommandContribution,
+	args map[string]any,
+) {
 	title := fallback(command.Title, command.ID)
 	s.showNotice("Running " + title + "…")
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), pluginLifecycleTimeout+pluginCommandTimeout)
 		defer cancel()
-		result, err := s.plugins.invokeCommand(ctx, entry, command.ID, map[string]any{})
+		result, err := s.plugins.invokeCommand(ctx, entry, command.ID, args)
 		s.postUI(func() {
 			if err != nil {
 				s.showNotice(title + " failed: " + summarizeLine(err.Error(), 200))
 				return
 			}
 			s.showNotice(title + " · " + pluginResultSummary(result))
+			if s.page == pagePluginView && s.pluginViewPluginID == entry.ID {
+				if _, ok := pluginViewByID(entry.Manifest, s.pluginViewID); ok {
+					s.loadPluginViewByID(entry.ID, s.pluginViewID)
+				}
+			}
 		})
 	}()
 }
@@ -552,13 +619,16 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 					}
 				})
 
-				settingsCard(c, p, "Workbench preferences", "Layout, drafts, and plugin view state will be stored by BYOP. Window bounds already use MyGo StateKey.", func() {
+				sectionLabel(c, p, "PLUGIN SETTINGS")
+				s.pluginSettingsSection(c, p)
+
+				settingsCard(c, p, "Workbench preferences", "Layout, external Pi, and plugin platform status for this native workbench.", func() {
 					ui.Column(c).Gap(8).Children(func() {
 						settingsValue(c, p, "Native runtime", "MyGo · fixed baseline")
 						settingsValue(c, p, "RPC transport", "Strict JSONL over stdin/stdout")
 						settingsValue(c, p, "Pi ownership", "Sessions, models, credentials, extensions")
 						settingsValue(c, p, "Plugin registry", fmt.Sprintf("%d registered · %d contribution(s)", s.pluginRegistry.registeredCount(), s.pluginRegistry.contributionCount()))
-						settingsValue(c, p, "Plugin runtime", "Native lazy activation · declared commands")
+						settingsValue(c, p, "Plugin runtime", "Native + Node · views · settings · host calls")
 						settingsValue(c, p, "Complex UI", "Native first, declared WebView fallback")
 					})
 				})
@@ -568,7 +638,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P4.1 plugin lifecycle · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P4.2 plugin views · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})

@@ -46,29 +46,119 @@ type pluginRuntimeStatus struct {
 	LastResult       string
 	LastError        string
 	Invocations      int
+	HostCalls        int
+	DeniedCalls      int
+	LastDenied       string
 	UpdatedAt        time.Time
 }
 
 // pluginHost owns lazy activation, lifecycle state and command routing for
-// native plugins. Each plugin runs as a child process speaking JSONL JSON-RPC.
+// local plugin processes. Each plugin communicates over JSONL JSON-RPC.
 type pluginHost struct {
-	hostVersion string
-	onChange    func()
+	hostVersion   string
+	onChange      func()
+	onNotice      func(pluginID, pluginName, text, tone string)
+	onTaskUpdate  func(update pluginTaskUpdate)
+	onRefreshView func(pluginID, viewID string)
+	themeDark     func() bool
 
-	mu        sync.Mutex
-	processes map[string]*pluginProcess
-	statuses  map[string]pluginRuntimeStatus
-	starting  map[string]*sync.Mutex
+	workspaceRoot string
+	settings      *pluginSettingsStore
+
+	mu               sync.Mutex
+	processes        map[string]*pluginProcess
+	statuses         map[string]pluginRuntimeStatus
+	starting         map[string]*sync.Mutex
+	settingsMu       sync.Mutex
+	settingsByPlugin map[string]map[string]any
+
+	nodeMu      sync.Mutex
+	nodeChecked bool
+	nodePath    string
+	nodeVersion string
+	nodeErr     error
 }
 
-func newPluginHost(hostVersion string, onChange func()) *pluginHost {
-	return &pluginHost{
-		hostVersion: hostVersion,
-		onChange:    onChange,
-		processes:   make(map[string]*pluginProcess),
-		statuses:    make(map[string]pluginRuntimeStatus),
-		starting:    make(map[string]*sync.Mutex),
+type pluginHostOption func(*pluginHost)
+
+func pluginHostWorkspace(root string) pluginHostOption {
+	return func(host *pluginHost) {
+		host.workspaceRoot = root
 	}
+}
+
+func pluginHostSettings(store *pluginSettingsStore) pluginHostOption {
+	return func(host *pluginHost) {
+		host.settings = store
+	}
+}
+
+func pluginHostNoticeHandler(handler func(pluginID, pluginName, text, tone string)) pluginHostOption {
+	return func(host *pluginHost) {
+		host.onNotice = handler
+	}
+}
+
+func pluginHostTaskHandler(handler func(update pluginTaskUpdate)) pluginHostOption {
+	return func(host *pluginHost) {
+		host.onTaskUpdate = handler
+	}
+}
+
+func pluginHostRefreshHandler(handler func(pluginID, viewID string)) pluginHostOption {
+	return func(host *pluginHost) {
+		host.onRefreshView = handler
+	}
+}
+
+func pluginHostTheme(dark func() bool) pluginHostOption {
+	return func(host *pluginHost) {
+		host.themeDark = dark
+	}
+}
+
+func newPluginHost(hostVersion string, onChange func(), options ...pluginHostOption) *pluginHost {
+	workspace, err := os.Getwd()
+	if configured := strings.TrimSpace(os.Getenv("BYOP_WORKSPACE")); configured != "" {
+		workspace = configured
+	}
+	if err == nil {
+		if absolute, absoluteErr := filepath.Abs(workspace); absoluteErr == nil {
+			workspace = absolute
+		}
+		if resolved, resolveErr := filepath.EvalSymlinks(workspace); resolveErr == nil {
+			workspace = resolved
+		}
+	}
+	configDir, configErr := pluginConfigDir()
+	if configErr != nil {
+		configDir = filepath.Join(os.TempDir(), "byop-config")
+	}
+	host := &pluginHost{
+		hostVersion:      hostVersion,
+		onChange:         onChange,
+		processes:        make(map[string]*pluginProcess),
+		statuses:         make(map[string]pluginRuntimeStatus),
+		starting:         make(map[string]*sync.Mutex),
+		workspaceRoot:    workspace,
+		settings:         newPluginSettingsStore(configDir),
+		settingsByPlugin: make(map[string]map[string]any),
+		themeDark:        func() bool { return false },
+	}
+	for _, option := range options {
+		if option != nil {
+			option(host)
+		}
+	}
+	if host.workspaceRoot != "" {
+		if absolute, absoluteErr := filepath.Abs(host.workspaceRoot); absoluteErr == nil {
+			host.workspaceRoot = absolute
+		}
+		if resolved, resolveErr := filepath.EvalSymlinks(host.workspaceRoot); resolveErr == nil {
+			host.workspaceRoot = resolved
+		}
+	}
+	return host
 }
 
 func (h *pluginHost) status(pluginID string) pluginRuntimeStatus {
@@ -183,7 +273,7 @@ func (h *pluginHost) ensureActive(ctx context.Context, entry pluginRegistryEntry
 		status.LastError = ""
 		status.PID = 0
 	})
-	process, err := startPluginProcess(entry)
+	process, err := startPluginProcess(entry, h)
 	if err != nil {
 		h.failStart(entry.ID, err)
 		return nil, err
@@ -195,10 +285,17 @@ func (h *pluginHost) ensureActive(ctx context.Context, entry pluginRegistryEntry
 
 	lifecycleCtx, cancel := context.WithTimeout(ctx, pluginLifecycleTimeout)
 	defer cancel()
+	settings, err := h.settingsFor(entry)
+	if err != nil {
+		h.abortStart(entry.ID, process, fmt.Errorf("settings: %w", err))
+		return nil, fmt.Errorf("load settings %s: %w", entry.ID, err)
+	}
 	if _, err := process.call(lifecycleCtx, "initialize", map[string]any{
-		"pluginApi":   pluginAPIVersion,
-		"hostVersion": h.hostVersion,
-		"pluginId":    entry.ID,
+		"pluginApi":    pluginAPIVersion,
+		"hostVersion":  h.hostVersion,
+		"pluginId":     entry.ID,
+		"settings":     settings,
+		"capabilities": entry.Manifest.Capabilities,
 	}); err != nil {
 		h.abortStart(entry.ID, process, fmt.Errorf("initialize: %w", err))
 		return nil, fmt.Errorf("initialize %s: %w", entry.ID, err)
@@ -212,6 +309,65 @@ func (h *pluginHost) ensureActive(ctx context.Context, entry pluginRegistryEntry
 		status.PID = process.pid()
 	})
 	return process, nil
+}
+
+func (h *pluginHost) settingsFor(entry pluginRegistryEntry) (map[string]any, error) {
+	h.settingsMu.Lock()
+	defer h.settingsMu.Unlock()
+	if values, ok := h.settingsByPlugin[entry.ID]; ok {
+		return clonePluginSettings(values), nil
+	}
+	values, err := h.settings.load(entry.Manifest)
+	if err != nil {
+		return nil, err
+	}
+	h.settingsByPlugin[entry.ID] = clonePluginSettings(values)
+	return values, nil
+}
+
+func (h *pluginHost) settingsWarning(pluginID string) string {
+	if h.settings == nil {
+		return ""
+	}
+	return h.settings.warning(pluginID)
+}
+
+func (h *pluginHost) savePluginSettings(entry pluginRegistryEntry, values map[string]any) error {
+	current, err := h.settingsFor(entry)
+	if err != nil {
+		return err
+	}
+	allValues := clonePluginSettings(current)
+	for key, value := range values {
+		allValues[key] = value
+	}
+	merged, err := h.settings.save(entry.Manifest, allValues)
+	if err != nil {
+		return err
+	}
+	h.settingsMu.Lock()
+	h.settingsByPlugin[entry.ID] = clonePluginSettings(merged)
+	h.settingsMu.Unlock()
+	if process := h.process(entry.ID); process != nil && !process.exited() {
+		if err := process.notify("settingsChanged", map[string]any{"settings": merged}); err != nil {
+			return fmt.Errorf("settings saved, but notify plugin: %w", err)
+		}
+	}
+	return nil
+}
+
+func (h *pluginHost) invalidateSettingsCache() {
+	h.settingsMu.Lock()
+	h.settingsByPlugin = make(map[string]map[string]any)
+	h.settingsMu.Unlock()
+}
+
+func clonePluginSettings(values map[string]any) map[string]any {
+	clone := make(map[string]any, len(values))
+	for key, value := range values {
+		clone[key] = value
+	}
+	return clone
 }
 
 func (h *pluginHost) failStart(pluginID string, err error) {
@@ -327,9 +483,9 @@ func pluginActivatesOn(manifest *pluginManifest, event string) bool {
 	return false
 }
 
-// resolveNativePluginEntry returns the real path of an executable entry that
-// stays inside the plugin directory after resolving symbolic links.
-func resolveNativePluginEntry(directory, entry string) (string, error) {
+// resolvePluginEntry returns the real path of an entry that stays inside the
+// plugin directory after resolving symbolic links.
+func resolvePluginEntry(directory, entry, runtime string) (string, error) {
 	if !safePluginRelativePath(entry) {
 		return "", errors.New("entry must be a safe relative path inside the plugin folder")
 	}
@@ -352,10 +508,34 @@ func resolveNativePluginEntry(directory, entry string) (string, error) {
 	if !info.Mode().IsRegular() {
 		return "", errors.New("entry is not a regular file")
 	}
-	if info.Mode().Perm()&0o111 == 0 {
-		return "", errors.New("entry is not executable")
+	switch runtime {
+	case "node":
+		switch strings.ToLower(filepath.Ext(target)) {
+		case ".js", ".mjs", ".cjs":
+		default:
+			return "", errors.New("Node entry must end in .js, .mjs, or .cjs")
+		}
+	case "native":
+		if info.Mode().Perm()&0o111 == 0 {
+			return "", errors.New("entry is not executable")
+		}
+	default:
+		return "", fmt.Errorf("runtime %s is not supported", runtime)
 	}
 	return target, nil
+}
+
+func resolveNativePluginEntry(directory, entry string) (string, error) {
+	executable, err := resolvePluginEntry(directory, entry, "native")
+	if err != nil {
+		return "", err
+	}
+	if info, err := os.Stat(executable); err != nil {
+		return "", err
+	} else if info.Mode().Perm()&0o111 == 0 {
+		return "", errors.New("entry is not executable")
+	}
+	return executable, nil
 }
 
 type pluginRPCError struct {
@@ -366,6 +546,7 @@ type pluginRPCError struct {
 type pluginRPCMessage struct {
 	ID     json.RawMessage `json:"id,omitempty"`
 	Method string          `json:"method,omitempty"`
+	Params json.RawMessage `json:"params,omitempty"`
 	Result json.RawMessage `json:"result,omitempty"`
 	Error  *pluginRPCError `json:"error,omitempty"`
 }
@@ -378,9 +559,12 @@ type pluginRPCResult struct {
 type pluginProcess struct {
 	pluginID string
 	cmd      *exec.Cmd
+	entry    pluginRegistryEntry
+	host     *pluginHost
 
-	writeMu sync.Mutex
-	stdin   io.WriteCloser
+	writeMu   sync.Mutex
+	stdin     io.WriteCloser
+	hostSlots chan struct{}
 
 	mu       sync.Mutex
 	pending  map[string]chan pluginRPCResult
@@ -391,19 +575,37 @@ type pluginProcess struct {
 	done     chan struct{}
 }
 
-func startPluginProcess(entry pluginRegistryEntry) (*pluginProcess, error) {
-	if entry.Manifest.Runtime != "native" {
-		return nil, fmt.Errorf("runtime %s is not supported in P4.1; only native plugins can be activated", entry.Manifest.Runtime)
+func startPluginProcess(entry pluginRegistryEntry, host *pluginHost) (*pluginProcess, error) {
+	if host == nil {
+		return nil, errors.New("plugin host is unavailable")
 	}
-	executable, err := resolveNativePluginEntry(entry.SourceDirectory, entry.Manifest.Entry)
+	executable, err := resolvePluginEntry(entry.SourceDirectory, entry.Manifest.Entry, entry.Manifest.Runtime)
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(executable)
+	var cmd *exec.Cmd
+	switch entry.Manifest.Runtime {
+	case "native":
+		cmd = exec.Command(executable)
+	case "node":
+		nodePath, nodeErr := host.nodeRuntime()
+		if nodeErr != nil {
+			return nil, nodeErr
+		}
+		pluginRoot, rootErr := filepath.EvalSymlinks(entry.SourceDirectory)
+		if rootErr != nil {
+			return nil, fmt.Errorf("resolve plugin folder: %w", rootErr)
+		}
+		args := nodePermissionArgs(entry.Manifest, pluginRoot, host.workspaceRoot, executable)
+		cmd = exec.Command(nodePath, args...)
+	default:
+		return nil, fmt.Errorf("runtime %s is not supported", entry.Manifest.Runtime)
+	}
 	cmd.Dir = filepath.Dir(entry.ManifestPath)
 	cmd.Env = append(cleanPiEnv(os.Environ()),
 		"BYOP_PLUGIN_ID="+entry.ID,
 		"BYOP_PLUGIN_API="+pluginAPIVersion,
+		"BYOP_PLUGIN_RUNTIME="+entry.Manifest.Runtime,
 	)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -421,11 +623,14 @@ func startPluginProcess(entry pluginRegistryEntry) (*pluginProcess, error) {
 		return nil, fmt.Errorf("start plugin: %w", err)
 	}
 	process := &pluginProcess{
-		pluginID: entry.ID,
-		cmd:      cmd,
-		stdin:    stdin,
-		pending:  make(map[string]chan pluginRPCResult),
-		done:     make(chan struct{}),
+		pluginID:  entry.ID,
+		cmd:       cmd,
+		entry:     entry,
+		host:      host,
+		stdin:     stdin,
+		hostSlots: make(chan struct{}, pluginHostConcurrentRequests),
+		pending:   make(map[string]chan pluginRPCResult),
+		done:      make(chan struct{}),
 	}
 	var readers sync.WaitGroup
 	readers.Add(2)
@@ -516,6 +721,18 @@ func (p *pluginProcess) call(ctx context.Context, method string, params any) (js
 	}
 }
 
+func (p *pluginProcess) notify(method string, params any) error {
+	line, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"method":  method,
+		"params":  params,
+	})
+	if err != nil {
+		return err
+	}
+	return p.writeLine(line)
+}
+
 func (p *pluginProcess) forget(id string) {
 	p.mu.Lock()
 	delete(p.pending, id)
@@ -531,8 +748,27 @@ func (p *pluginProcess) readStdout(r io.Reader) {
 			continue
 		}
 		var message pluginRPCMessage
-		if err := json.Unmarshal([]byte(line), &message); err != nil || len(message.ID) == 0 {
-			// Plugin-to-host notifications are reserved for later phases.
+		if err := json.Unmarshal([]byte(line), &message); err != nil {
+			continue
+		}
+		if message.Method != "" {
+			p.host.updateStatus(p.pluginID, func(status *pluginRuntimeStatus) {
+				status.HostCalls++
+			})
+			select {
+			case p.hostSlots <- struct{}{}:
+				go p.dispatchHostCall(message)
+			default:
+				if len(message.ID) > 0 {
+					id := append(json.RawMessage(nil), message.ID...)
+					go func() {
+						_ = p.writeHostError(id, pluginRPCOtherHostError, "host busy")
+					}()
+				}
+			}
+			continue
+		}
+		if len(message.ID) == 0 {
 			continue
 		}
 		id := string(message.ID)
@@ -556,6 +792,49 @@ func (p *pluginProcess) readStdout(r io.Reader) {
 		p.appendStderr([]byte("stdout: " + err.Error()))
 		p.kill()
 	}
+}
+
+func (p *pluginProcess) dispatchHostCall(message pluginRPCMessage) {
+	defer func() { <-p.hostSlots }()
+	result := p.host.handleHostCall(p.entry, message.Method, message.Params)
+	if len(message.ID) == 0 {
+		return
+	}
+	if result.Err != nil {
+		_ = p.writeHostError(message.ID, result.Err.Code, result.Err.Message)
+		return
+	}
+	_ = p.writeRPC(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      message.ID,
+		"result":  result.Value,
+	})
+}
+
+func (p *pluginProcess) writeHostError(id json.RawMessage, code int, message string) error {
+	return p.writeRPC(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      id,
+		"error": map[string]any{
+			"code":    code,
+			"message": message,
+		},
+	})
+}
+
+func (p *pluginProcess) writeRPC(value any) error {
+	line, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return p.writeLine(line)
+}
+
+func (p *pluginProcess) writeLine(line []byte) error {
+	p.writeMu.Lock()
+	defer p.writeMu.Unlock()
+	_, err := p.stdin.Write(append(line, '\n'))
+	return err
 }
 
 func (p *pluginProcess) readStderr(r io.Reader) {

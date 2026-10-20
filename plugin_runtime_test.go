@@ -22,16 +22,47 @@ func TestPluginHelperProcess(t *testing.T) {
 	}
 	logPath := os.Getenv("BYOP_TEST_PLUGIN_LOG")
 	scanner := bufio.NewScanner(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
+	var pendingInvokeID string
+	const themeRequestID = "helper-theme-1"
 	for scanner.Scan() {
 		var request struct {
 			ID     string          `json:"id"`
 			Method string          `json:"method"`
 			Params json.RawMessage `json:"params"`
+			Result json.RawMessage `json:"result"`
 		}
 		if err := json.Unmarshal(scanner.Bytes(), &request); err != nil {
 			continue
 		}
-		appendPluginHelperLog(logPath, request.Method+" "+string(request.Params))
+		if request.Method == "" {
+			if request.ID == themeRequestID && pendingInvokeID != "" {
+				var theme struct {
+					Mode string `json:"mode"`
+				}
+				if err := json.Unmarshal(request.Result, &theme); err != nil || theme.Mode == "" {
+					response := map[string]any{
+						"jsonrpc": "2.0",
+						"id":      pendingInvokeID,
+						"error":   map[string]any{"message": "host.getTheme returned no mode"},
+					}
+					_ = encoder.Encode(response)
+				} else {
+					response := map[string]any{
+						"jsonrpc": "2.0",
+						"id":      pendingInvokeID,
+						"result":  map[string]any{"message": "Hello from native plugin"},
+					}
+					_ = encoder.Encode(response)
+				}
+				pendingInvokeID = ""
+			}
+			continue
+		}
+		appendPluginHelperLog(logPath, request.Method)
+		if request.ID == "" {
+			continue
+		}
 		response := map[string]any{"jsonrpc": "2.0", "id": request.ID}
 		switch request.Method {
 		case "initialize":
@@ -39,12 +70,28 @@ func TestPluginHelperProcess(t *testing.T) {
 		case "activate", "deactivate":
 			response["result"] = map[string]any{}
 		case "invokeCommand":
-			response["result"] = map[string]any{"message": "Hello from native plugin"}
+			pendingInvokeID = request.ID
+			if err := encoder.Encode(map[string]any{
+				"jsonrpc": "2.0",
+				"id":      themeRequestID,
+				"method":  "host.getTheme",
+				"params":  map[string]any{},
+			}); err != nil {
+				os.Exit(1)
+			}
+			continue
+		case "renderView":
+			response["result"] = map[string]any{
+				"title": "Helper view",
+				"blocks": []any{
+					map[string]any{"type": "heading", "text": "Hello from helper"},
+					map[string]any{"type": "text", "text": "Rendered through JSON-RPC."},
+				},
+			}
 		default:
 			response["error"] = map[string]any{"message": "unknown method"}
 		}
-		data, _ := json.Marshal(response)
-		fmt.Println(string(data))
+		_ = encoder.Encode(response)
 	}
 	appendPluginHelperLog(logPath, "exit")
 	os.Exit(0)
@@ -82,10 +129,12 @@ func writeNativeHelperPlugin(t *testing.T, events []string, lazy bool) (pluginRe
 		Version:       "0.1.0",
 		Runtime:       "native",
 		Entry:         "bin/plugin",
-		Compatibility: pluginCompatibility{Host: ">=0.4.1 <1.0.0", PluginAPI: "1"},
+		Compatibility: pluginCompatibility{Host: ">=0.4.2 <1.0.0", PluginAPI: "1"},
 		Contributes: pluginContributions{Commands: []pluginCommandContribution{
 			{ID: "hello.say", Title: "Say hello"},
 			{ID: "hello.other", Title: "Other"},
+		}, Views: []pluginViewContribution{
+			{ID: "hello.main", Title: "Hello", Location: "main", View: "native"},
 		}},
 		Activation: pluginActivation{Events: events, Lazy: lazy},
 	}
@@ -117,7 +166,7 @@ func readPluginHelperLog(t *testing.T, path string) []string {
 
 func TestPluginHostLazyActivationCommandAndDeactivate(t *testing.T) {
 	entry, logPath := writeNativeHelperPlugin(t, []string{"onCommand:hello.say"}, false)
-	host := newPluginHost(pluginHostVersion, nil)
+	host := newTestPluginHost(t)
 
 	if state := host.status(entry.ID).State; state != pluginStateInactive {
 		t.Fatalf("initial state = %s, want inactive", state)
@@ -130,7 +179,8 @@ func TestPluginHostLazyActivationCommandAndDeactivate(t *testing.T) {
 	defer cancel()
 	result, err := host.invokeCommand(ctx, entry, "hello.say", map[string]any{})
 	if err != nil {
-		t.Fatalf("invoke command: %v", err)
+		log, _ := os.ReadFile(logPath)
+		t.Fatalf("invoke command: %v; helper log:\n%s", err, log)
 	}
 	if got := pluginResultSummary(result); got != "Hello from native plugin" {
 		t.Fatalf("result = %q", got)
@@ -146,6 +196,16 @@ func TestPluginHostLazyActivationCommandAndDeactivate(t *testing.T) {
 	if host.status(entry.ID).PID != status.PID {
 		t.Fatal("second command restarted the plugin process")
 	}
+	view, err := host.renderView(ctx, entry, "hello.main")
+	if err != nil {
+		t.Fatalf("render view: %v", err)
+	}
+	if view.Title != "Helper view" || len(view.Blocks) != 2 {
+		t.Fatalf("view = %#v", view)
+	}
+	if got := host.status(entry.ID).HostCalls; got != 2 {
+		t.Fatalf("host calls = %d, want 2", got)
+	}
 
 	if err := host.deactivate(entry.ID); err != nil {
 		t.Fatalf("deactivate: %v", err)
@@ -153,7 +213,7 @@ func TestPluginHostLazyActivationCommandAndDeactivate(t *testing.T) {
 	if state := host.status(entry.ID).State; state != pluginStateStopped || host.activeCount() != 0 {
 		t.Fatalf("after deactivate state = %s active = %d", state, host.activeCount())
 	}
-	want := []string{"initialize", "activate", "invokeCommand", "invokeCommand", "deactivate", "exit"}
+	want := []string{"initialize", "activate", "invokeCommand", "invokeCommand", "renderView", "deactivate", "exit"}
 	if got := readPluginHelperLog(t, logPath); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("lifecycle = %v, want %v", got, want)
 	}
@@ -161,7 +221,7 @@ func TestPluginHostLazyActivationCommandAndDeactivate(t *testing.T) {
 
 func TestPluginHostRejectsUndeclaredAndInactiveCommands(t *testing.T) {
 	entry, logPath := writeNativeHelperPlugin(t, []string{"onCommand:hello.say"}, false)
-	host := newPluginHost(pluginHostVersion, nil)
+	host := newTestPluginHost(t)
 	ctx := context.Background()
 
 	if _, err := host.invokeCommand(ctx, entry, "hello.missing", nil); err == nil ||
@@ -177,14 +237,14 @@ func TestPluginHostRejectsUndeclaredAndInactiveCommands(t *testing.T) {
 	}
 }
 
-func TestPluginHostRejectsUnsupportedOrUnsafeEntries(t *testing.T) {
-	host := newPluginHost(pluginHostVersion, nil)
+func TestPluginHostRejectsInvalidOrUnsafeEntries(t *testing.T) {
+	host := newTestPluginHost(t)
 	ctx := context.Background()
 
 	nodeEntry, _ := writeNativeHelperPlugin(t, nil, true)
 	nodeEntry.Manifest.Runtime = "node"
 	if _, err := host.invokeCommand(ctx, nodeEntry, "hello.say", nil); err == nil ||
-		!strings.Contains(err.Error(), "not supported") {
+		!strings.Contains(err.Error(), "Node entry must end") {
 		t.Fatalf("node runtime error = %v", err)
 	}
 
@@ -220,7 +280,7 @@ func TestPluginHostRejectsUnsupportedOrUnsafeEntries(t *testing.T) {
 
 func TestPluginHostStopAllEndsActiveProcesses(t *testing.T) {
 	entry, logPath := writeNativeHelperPlugin(t, nil, true)
-	host := newPluginHost(pluginHostVersion, nil)
+	host := newTestPluginHost(t)
 	if _, err := host.invokeCommand(context.Background(), entry, "hello.other", nil); err != nil {
 		t.Fatalf("lazy invoke: %v", err)
 	}
