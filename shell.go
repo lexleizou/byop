@@ -59,7 +59,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P3.3a · RUNTIME STATUS", p.accent)
+		statusPill(c, p, "P4 · PLUGIN REGISTRY", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
@@ -236,7 +236,7 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 					s.taskCard(c, p, "Pi JSONL RPC", s.piSecondaryLabel(), s.connectionStateLabel(), s.piTone(p))
 					s.taskCard(c, p, "Current run", s.currentRunTaskDetail(), s.runLabel(), s.runTone(p))
 					s.taskCard(c, p, "Runtime diagnostics", s.runtimeDiagnosticDetail(), s.runtimeDiagnosticLabel(), s.runtimeDiagnosticTone(p))
-					s.taskCard(c, p, "Plugin registry", "Reserved for P4", "Not started", p.muted)
+					s.taskCard(c, p, "Plugin registry", s.pluginRegistryTaskDetail(), s.pluginRegistryTaskLabel(), s.pluginRegistryTaskTone(p))
 				})
 			})
 
@@ -246,6 +246,35 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 				ui.Text(c, "Pi owns sessions, credentials, models, and extensions").FontSize(fontCaption).TextColor(p.muted)
 			})
 		})
+}
+
+func (s *appState) pluginRegistryTaskDetail() string {
+	registry := s.pluginRegistry
+	return fmt.Sprintf("%d registered · %d contribution(s) · %d issue(s)",
+		registry.registeredCount(), registry.contributionCount(), registry.problemCount())
+}
+
+func (s *appState) pluginRegistryTaskLabel() string {
+	registry := s.pluginRegistry
+	switch {
+	case registry.problemCount() > 0:
+		return "ATTENTION"
+	case registry.registeredCount() > 0:
+		return "REGISTERED"
+	default:
+		return "EMPTY"
+	}
+}
+
+func (s *appState) pluginRegistryTaskTone(p palette) ui.Color {
+	switch s.pluginRegistryTaskLabel() {
+	case "ATTENTION":
+		return p.warning
+	case "REGISTERED":
+		return p.success
+	default:
+		return p.muted
+	}
 }
 
 func (s *appState) taskCard(c *ui.Context, p palette, title, detail, status string, statusColor ui.Color) {

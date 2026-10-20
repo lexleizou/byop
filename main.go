@@ -140,14 +140,15 @@ type chatMessage struct {
 }
 
 type appState struct {
-	page          pageID
-	themeMode     themeMode
-	navCollapsed  bool
-	tasksOpen     bool
-	notice        string
-	composerDraft string
-	pluginSearch  string
-	librarySearch string
+	page           pageID
+	themeMode      themeMode
+	navCollapsed   bool
+	tasksOpen      bool
+	notice         string
+	composerDraft  string
+	pluginSearch   string
+	librarySearch  string
+	pluginRegistry pluginRegistry
 
 	window        *mygo.Window
 	closed        atomic.Bool
@@ -213,7 +214,28 @@ func newAppState() *appState {
 	case "1", "true", "on":
 		s.seedToolDemo()
 	}
+	s.pluginRegistry = scanPluginRegistry(defaultPluginRoots())
 	return s
+}
+
+func (s *appState) scanPlugins(announce bool) {
+	s.pluginRegistry = scanPluginRegistry(defaultPluginRoots())
+	if !announce {
+		return
+	}
+	registered := s.pluginRegistry.registeredCount()
+	contributions := s.pluginRegistry.contributionCount()
+	problems := s.pluginRegistry.problemCount()
+	switch {
+	case problems > 0:
+		s.notice = fmt.Sprintf("Plugin scan found %d registered plugin(s), %d contribution(s), and %d issue(s).",
+			registered, contributions, problems)
+	case registered == 0:
+		s.notice = "Plugin scan completed. No plugin manifests were found."
+	default:
+		s.notice = fmt.Sprintf("Plugin scan found %d registered plugin(s) and %d contribution(s).",
+			registered, contributions)
+	}
 }
 
 func (s *appState) seedToolDemo() {

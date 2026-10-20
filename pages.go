@@ -1,19 +1,24 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/egoist/mygo/ui"
 )
 
 func (s *appState) pluginsPage(c *ui.Context, p palette) {
+	registry := s.pluginRegistry
+	entries := s.filteredPluginEntries()
 	ui.Scroll(c).Fill().Children(func() {
 		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
 			ui.Column(c).Grow(1).MaxWidth(880).Gap(22).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.End).Gap(16).Children(func() {
 					ui.Column(c).Grow(1).Children(func() {
-						pageHeader(c, p, "WORKBENCH", "Plugins", "Independent tools contribute navigation entries, panels, commands, settings, and optional WebView views through one registry.")
+						pageHeader(c, p, "WORKBENCH", "Plugins", "Discover and validate local plugin manifests. P4 registers declared navigation, commands, views, task panels, settings, and WebView surfaces without executing plugin code.")
 					})
 					primaryAction(c, p, "plugins-scan", "Scan plugins", "package", func() {
-						s.showNotice("Plugin discovery is not connected yet. No files or packages were scanned.")
+						s.scanPlugins(true)
 					})
 				})
 
@@ -21,27 +26,38 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 					ui.Column(c).Width(300).MinWidth(180).Children(func() {
 						searchField(c, p, "plugin-search", &s.pluginSearch, "Search plugins")
 					})
-					statusPill(c, p, "0 CONNECTED", p.muted)
+					tone := p.success
+					if registry.problemCount() > 0 {
+						tone = p.warning
+					}
+					statusPill(c, p, fmt.Sprintf("%d REGISTERED · %d CONTRIBUTIONS",
+						registry.registeredCount(), registry.contributionCount()), tone)
 					ui.Spacer(c)
 					secondaryAction(c, p, "plugin-dir", "Plugin folders", func() {
-						s.showNotice("Plugin folder settings are reserved for P4. Nothing was opened.")
+						s.showNotice("Plugin roots · " + strings.Join(registry.Roots, " · "))
 					})
 				})
 
-				sectionLabel(c, p, "STARTER CONTRIBUTIONS")
-				ui.Row(c).Wrap().GapX(12).GapY(12).Children(func() {
-					s.pluginCard(c, p, "Git Workspace", "git", "Repository status, diffs, branches, and review actions.",
-						"Chat + side panel + commands", p.accent)
-					s.pluginCard(c, p, "Document Studio", "document", "Structured writing, annotations, and document previews.",
-						"Main view + WebView", p.success)
-					s.pluginCard(c, p, "Run Inspector", "automations", "Inspect long-running processes, logs, and artifacts.",
-						"Task bar + dashboard", p.warning)
-				})
+				if len(registry.Issues) > 0 {
+					s.pluginRegistryIssues(c, p, registry.Issues)
+				}
+
+				sectionLabel(c, p, "DISCOVERED PLUGINS")
+				if len(entries) == 0 {
+					s.emptyPluginRegistry(c, p)
+				} else {
+					ui.Row(c).Wrap().GapX(12).GapY(12).Children(func() {
+						for _, entry := range entries {
+							s.pluginCard(c, p, entry)
+						}
+					})
+				}
 
 				sectionLabel(c, p, "PLUGIN CONTRACT PREVIEW")
 				ui.Column(c).FillWidth().Gap(10).Padding(14).Radius(11).
 					Border(1, p.border).Background(p.surface).Children(func() {
-					ui.Text(c, "A plugin supplies a manifest, runtime entry point, and declared contributions. The host owns permissions, lifecycle, shared theme tokens, navigation, and task state.").
+					ui.Text(c, fmt.Sprintf("Host %s validates schema %d and plugin API %s. Manifests are metadata-only in P4; Node/native execution, activation, permissions, and WebView hosting remain disabled.",
+						registry.HostVersion, pluginManifestSchemaVersion, registry.PluginAPI)).
 						FontSize(fontBody).LineHeight(1.5).TextColor(p.text)
 					ui.Row(c).Wrap().Gap(7).Children(func() {
 						contractChip(c, p, "commands")
@@ -56,29 +72,186 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 	})
 }
 
-func (s *appState) pluginCard(c *ui.Context, p palette, title, iconName, description, surface string, tone ui.Color) {
-	card := ui.ButtonBase(c.Key("plugin-"+title)).Width(260).Grow(1).MinWidth(220).
+func (s *appState) filteredPluginEntries() []pluginRegistryEntry {
+	query := strings.ToLower(strings.TrimSpace(s.pluginSearch))
+	if query == "" {
+		return s.pluginRegistry.Entries
+	}
+	entries := make([]pluginRegistryEntry, 0, len(s.pluginRegistry.Entries))
+	for _, entry := range s.pluginRegistry.Entries {
+		text := strings.ToLower(strings.Join([]string{
+			entry.ID,
+			entry.Name,
+			entry.Version,
+			entry.Description,
+			string(entry.Status),
+		}, " "))
+		if entry.Manifest != nil {
+			text += " " + strings.ToLower(pluginContributionSearchText(entry.Manifest))
+		}
+		if strings.Contains(text, query) {
+			entries = append(entries, entry)
+		}
+	}
+	return entries
+}
+
+func pluginContributionSearchText(manifest *pluginManifest) string {
+	var parts []string
+	for _, contribution := range manifest.Contributes.Navigation {
+		parts = append(parts, contribution.ID, contribution.Title)
+	}
+	for _, contribution := range manifest.Contributes.Commands {
+		parts = append(parts, contribution.ID, contribution.Title, contribution.Description)
+	}
+	for _, contribution := range manifest.Contributes.Views {
+		parts = append(parts, contribution.ID, contribution.Title)
+	}
+	for _, contribution := range manifest.Contributes.TaskPanels {
+		parts = append(parts, contribution.ID, contribution.Title)
+	}
+	for _, contribution := range manifest.Contributes.Settings {
+		parts = append(parts, contribution.ID, contribution.Title)
+	}
+	for _, contribution := range manifest.Contributes.WebViews {
+		parts = append(parts, contribution.ID, contribution.Title)
+	}
+	return strings.Join(parts, " ")
+}
+
+func (s *appState) pluginRegistryIssues(c *ui.Context, p palette, issues []pluginRegistryIssue) {
+	ui.Column(c).FillWidth().Gap(8).Padding(14).Radius(11).
+		Border(1, p.border).Background(p.surface).Children(func() {
+		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+			ui.Icon(c, icon("x")).Size(14, 14).TextColor(p.danger)
+			ui.Text(c, "Registry scan issues").FontSize(fontBody).FontWeight(650).TextColor(p.text)
+		})
+		for _, issue := range issues {
+			ui.Text(c, issue.Path+" · "+issue.Message).Font("monospace").FontSize(fontCaption).
+				TextColor(p.danger).Selectable()
+		}
+	})
+}
+
+func (s *appState) emptyPluginRegistry(c *ui.Context, p palette) {
+	message := "No plugin.json manifests were found in the configured roots."
+	if strings.TrimSpace(s.pluginSearch) != "" {
+		message = "No registered plugin matches “" + s.pluginSearch + "”."
+	}
+	ui.Column(c).FillWidth().Gap(10).Padding(18).Radius(11).
+		Border(1, p.border).Background(p.surface).Children(func() {
+		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+			ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
+				ui.Icon(c, icon("package")).Size(17, 17).TextColor(p.muted)
+			})
+			ui.Column(c).Gap(2).Grow(1).Children(func() {
+				ui.Text(c, "Registry is empty").FontSize(fontBody).FontWeight(650).TextColor(p.text)
+				ui.Text(c, message).FontSize(fontSmall).TextColor(p.muted)
+			})
+		})
+	})
+}
+
+func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntry) {
+	tone := s.pluginStatusTone(p, entry.Status)
+	title := fallback(entry.Name, entry.ID)
+	description := fallback(entry.Description, "No description declared.")
+	surface := "Manifest rejected"
+	iconName := "plugins"
+	if entry.Manifest != nil {
+		surface = pluginContributionSummary(entry.Manifest)
+		if entry.Manifest.Icon != "" {
+			iconName = entry.Manifest.Icon
+		}
+	}
+	card := ui.ButtonBase(c.Key("plugin-"+entry.SourceDirectory+"-"+string(entry.Status))).Width(260).MinWidth(220).
 		Column().AlignItems(ui.Start).Gap(10).Padding(14).Radius(11).
 		Border(1, p.border).Background(p.surface).Cursor(ui.CursorPointer).
-		Label(title).Tooltip("Preview plugin card")
+		Label(title).Tooltip("Plugin registry entry")
 	if card.Hovered() {
 		card.Background(p.surfaceHover)
 	}
 	card.Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
 			ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
-				ui.Icon(c, icon(iconName)).Size(17, 17).TextColor(tone)
+				ui.Icon(c, iconOr(iconName, "plugins")).Size(17, 17).TextColor(tone)
 			})
 			ui.Spacer(c)
-			statusPill(c, p, "PREVIEW", p.muted)
+			statusPill(c, p, pluginStatusLabel(entry.Status), tone)
 		})
 		ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
 		ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
+		ui.Text(c, entry.ID).Font("monospace").FontSize(fontCaption).TextColor(p.muted)
 		ui.Text(c, surface).FontSize(fontCaption).TextColor(tone)
+		meta := fmt.Sprintf("%d contribution(s)", entry.ContributionCount)
+		if entry.Version != "" {
+			meta = "v" + entry.Version + " · " + meta
+		}
+		ui.Text(c, meta).FontSize(fontCaption).TextColor(p.muted)
+		if entry.Error != "" {
+			ui.Text(c, summarizeLine(entry.Error, 240)).FontSize(fontCaption).
+				LineHeight(1.4).TextColor(p.danger)
+		}
 	})
 	if card.Clicked() {
-		s.showNotice(title + " is a preview card. Plugin installation and execution are not connected.")
+		if entry.Status == pluginRegistered {
+			s.showNotice(title + " is registered as metadata. Plugin activation and execution are not enabled in P4.")
+		} else {
+			s.showNotice(title + " is not registered: " + entry.Error)
+		}
 	}
+}
+
+func pluginStatusLabel(status pluginRegistryStatus) string {
+	switch status {
+	case pluginRegistered:
+		return "REGISTERED"
+	case pluginInvalidManifest:
+		return "INVALID"
+	case pluginIncompatible:
+		return "INCOMPATIBLE"
+	case pluginDuplicateID:
+		return "DUPLICATE ID"
+	case pluginDuplicateContribution:
+		return "CONFLICT"
+	default:
+		return "UNKNOWN"
+	}
+}
+
+func (s *appState) pluginStatusTone(p palette, status pluginRegistryStatus) ui.Color {
+	switch status {
+	case pluginRegistered:
+		return p.success
+	case pluginIncompatible:
+		return p.warning
+	default:
+		return p.danger
+	}
+}
+
+func pluginContributionSummary(manifest *pluginManifest) string {
+	var parts []string
+	appendPart := func(count int, singular, plural string) {
+		if count == 0 {
+			return
+		}
+		label := plural
+		if count == 1 {
+			label = singular
+		}
+		parts = append(parts, fmt.Sprintf("%d %s", count, label))
+	}
+	appendPart(len(manifest.Contributes.Navigation), "navigation", "navigation")
+	appendPart(len(manifest.Contributes.Commands), "command", "commands")
+	appendPart(len(manifest.Contributes.Views), "native view", "native views")
+	appendPart(len(manifest.Contributes.TaskPanels), "task panel", "task panels")
+	appendPart(len(manifest.Contributes.Settings), "setting", "settings")
+	appendPart(len(manifest.Contributes.WebViews), "WebView", "WebViews")
+	if len(parts) == 0 {
+		return "No contributions declared"
+	}
+	return strings.Join(parts, " · ")
 }
 
 func contractChip(c *ui.Context, p palette, label string) {
@@ -293,7 +466,8 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						settingsValue(c, p, "Native runtime", "MyGo · fixed baseline")
 						settingsValue(c, p, "RPC transport", "Strict JSONL over stdin/stdout")
 						settingsValue(c, p, "Pi ownership", "Sessions, models, credentials, extensions")
-						settingsValue(c, p, "Plugin permission model", "Planned for P4")
+						settingsValue(c, p, "Plugin registry", fmt.Sprintf("%d registered · %d contribution(s)", s.pluginRegistry.registeredCount(), s.pluginRegistry.contributionCount()))
+						settingsValue(c, p, "Plugin runtime", "Manifest metadata only; activation deferred")
 						settingsValue(c, p, "Complex UI", "Native first, declared WebView fallback")
 					})
 				})
@@ -303,7 +477,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P3.2 ordered session timeline · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P4 manifest registry · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})

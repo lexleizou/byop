@@ -28,6 +28,13 @@ func icon(name string) *ui.SVG {
 	panic(fmt.Sprintf("unknown UI icon %q", name))
 }
 
+func iconOr(name, fallbackName string) *ui.SVG {
+	if svg := iconSet[strings.ToLower(name)]; svg != nil {
+		return svg
+	}
+	return icon(fallbackName)
+}
+
 func lucide(elements string) string {
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">` +
 		elements + `</svg>`

@@ -1,9 +1,9 @@
 # BYOP Workbench Architecture
 
-Status: P3.3a native shell, external Pi RPC loop, ordered text/tool
-timelines and transient runtime diagnostics are implemented; Chat renders
-through Onevra v0.2026.13 components. Plugin registry, plugin runtime and
-WebView hosting remain design targets for P4/P5.
+Status: P4 native shell, external Pi RPC loop, ordered timelines, transient
+runtime diagnostics and a strict plugin manifest registry are implemented;
+Chat renders through Onevra v0.2026.13 components. Plugin execution,
+activation and WebView hosting remain future work.
 
 ## Runtime Boundary
 
@@ -65,22 +65,33 @@ permanent turn completed, stopped or failed.
 |---|---|---|
 | Window, navigation, themes | BYOP | Implemented natively |
 | Chat transcript projection | BYOP plus Onevra components | Ordered text/tool timeline rendered as Onevra turns, activity groups and glass composer |
-| Plugin metadata and contributions | BYOP | Planned |
+| Plugin metadata and contributions | BYOP | P4 validates manifests, scans local roots and records contribution conflicts without executing entry code |
 | Model calls and provider auth | Pi | Delegated |
 | Session persistence and credentials | Pi | Pi-owned; BYOP does not rewrite files |
 | Tools, Skills and extensions | Pi | Delegated |
-| Long-running task activity | BYOP plus adapters | P3.2 projects the latest active or most recent tool into the task panel |
+| Long-running task activity | BYOP plus adapters | P3.3a projects the latest tool and transient runtime diagnostics into the task panel |
 | Complex editor or visualizer UI | Plugin and WebView | Not implemented |
 
 BYOP should persist references and rebuildable indexes rather than duplicate
 Pi session bodies or secrets. A future session browser should discover
 sessions read-only and use Pi RPC for switching and mutations.
 
-## Planned Plugin Contract
+## Plugin Manifest Registry
+
+P4 treats `plugin.json` as a versioned metadata contract. The host scans each
+directory below `~/.byop/plugins` and `<cwd>/.byop/plugins`, or the explicit
+path list in `BYOP_PLUGINS_DIR`. A missing implicit root is ignored; a missing
+explicit root becomes a visible scan issue. A child directory without a
+manifest is ignored.
+
+The parser accepts one JSON object up to 1 MiB and rejects unknown fields,
+trailing JSON values and unsafe entry paths. The host records registered,
+invalid, incompatible, duplicate plugin ID and duplicate contribution ID
+states. Entry files are not opened or executed in P4. The current host version
+is `0.4.0`; manifest schema and Plugin API version are both `1`.
 
 Each plugin is an independent local package with a manifest, a runtime entry
-point and declared contribution points. This is a design contract, not an SDK
-shipped in P2.
+point and declared contribution points.
 
 ```json
 {
@@ -115,8 +126,11 @@ shipped in P2.
 }
 ```
 
-Host-to-plugin and plugin-to-host messages should use a versioned JSON-RPC
-envelope over the plugin runtime's transport. Minimum methods:
+## Planned Plugin Runtime Contract
+
+Host-to-plugin and plugin-to-host messages will use a versioned JSON-RPC
+envelope over the plugin runtime's transport. This runtime is planned; P4 only
+registers the declarations below.
 
 | Direction | Method | Purpose |
 |---|---|---|
@@ -173,7 +187,8 @@ The exact MyGo `ui.WebView` behavior still needs P5 platform validation.
 | P3.2 | Ordered text/tool timeline, in-place lifecycle updates and automatic folding |
 | P3.2a | Onevra Chat reading area, turn summaries, activity rows and glass composer; task panel collapsed by default |
 | P3.3a | Queue, compaction, retry, extension-error and Stop-during-retry diagnostics |
-| P4 | Manifest validation, registry, lazy activation, command and settings contributions |
+| P4 | Strict manifest validation, local root discovery, registry search and duplicate/conflict reporting |
+| P4.1 | Lazy activation, lifecycle broker, typed command/view/settings invocation and permission enforcement |
 | P5 | WebView proof, theme bridge, crash fallback and complex view sandbox |
 | P6 | Read-only session discovery, model and thinking-level selectors |
 | P7 | Automation and Loop contributions |
