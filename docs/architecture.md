@@ -1,8 +1,9 @@
 # BYOP Workbench Architecture
 
-Status: P3.2a native shell, external Pi RPC loop and ordered text/tool
-timelines are implemented; Chat renders through Onevra v0.2026.13 components. Plugin registry, plugin runtime and WebView hosting are
-design targets for P4/P5 and are not available in the current binary.
+Status: P3.3a native shell, external Pi RPC loop, ordered text/tool
+timelines and transient runtime diagnostics are implemented; Chat renders
+through Onevra v0.2026.13 components. Plugin registry, plugin runtime and
+WebView hosting remain design targets for P4/P5.
 
 ## Runtime Boundary
 
@@ -49,6 +50,14 @@ command and inbound event uses one JSON object per LF-terminated line. Request
 IDs correlate command responses. The UI treats `agent_settled` as the end of
 a run because retries, compaction, steering, follow-ups and queued work may
 continue after an earlier `agent_end` event.
+
+P3.3a projects the following Pi session events into host-only transient state:
+`queue_update`, `compaction_start`, `compaction_end`, `auto_retry_start`,
+`auto_retry_end`, `agent_end` and `extension_error`. Queue details, retry
+countdowns, compaction token estimates and extension failures appear in the
+collapsed-by-default task panel. Provider errors from failed retry attempts do
+not become assistant text blocks; only `agent_settled` decides whether a
+permanent turn completed, stopped or failed.
 
 ## Ownership
 
@@ -163,7 +172,7 @@ The exact MyGo `ui.WebView` behavior still needs P5 platform validation.
 | P3.1 | Structured tool lifecycle, native cards and active-tool task state |
 | P3.2 | Ordered text/tool timeline, in-place lifecycle updates and automatic folding |
 | P3.2a | Onevra Chat reading area, turn summaries, activity rows and glass composer; task panel collapsed by default |
-| P3.3 | Run diagnostics, retry/compaction visibility and richer chat state |
+| P3.3a | Queue, compaction, retry, extension-error and Stop-during-retry diagnostics |
 | P4 | Manifest validation, registry, lazy activation, command and settings contributions |
 | P5 | WebView proof, theme bridge, crash fallback and complex view sandbox |
 | P6 | Read-only session discovery, model and thinking-level selectors |

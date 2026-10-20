@@ -21,16 +21,23 @@ import (
 type piEventKind string
 
 const (
-	piEventResponse    piEventKind = "response"
-	piEventRunStarted  piEventKind = "run_started"
-	piEventText        piEventKind = "text"
-	piEventMessage     piEventKind = "message"
-	piEventToolStart   piEventKind = "tool_start"
-	piEventToolUpdate  piEventKind = "tool_update"
-	piEventToolEnd     piEventKind = "tool_end"
-	piEventSettled     piEventKind = "settled"
-	piEventProcessExit piEventKind = "process_exit"
-	piEventParseError  piEventKind = "parse_error"
+	piEventResponse     piEventKind = "response"
+	piEventRunStarted   piEventKind = "run_started"
+	piEventText         piEventKind = "text"
+	piEventMessage      piEventKind = "message"
+	piEventToolStart    piEventKind = "tool_start"
+	piEventToolUpdate   piEventKind = "tool_update"
+	piEventToolEnd      piEventKind = "tool_end"
+	piEventSettled      piEventKind = "settled"
+	piEventQueueUpdate  piEventKind = "queue_update"
+	piEventCompactStart piEventKind = "compaction_start"
+	piEventCompactEnd   piEventKind = "compaction_end"
+	piEventRetryStart   piEventKind = "auto_retry_start"
+	piEventRetryEnd     piEventKind = "auto_retry_end"
+	piEventAgentEnd     piEventKind = "agent_end"
+	piEventExtensionErr piEventKind = "extension_error"
+	piEventProcessExit  piEventKind = "process_exit"
+	piEventParseError   piEventKind = "parse_error"
 )
 
 type piSessionState struct {
@@ -40,6 +47,11 @@ type piSessionState struct {
 	IsCompacting        bool   `json:"isCompacting"`
 	PendingMessageCount int    `json:"pendingMessageCount"`
 	MessageCount        int    `json:"messageCount"`
+	ThinkingLevel       string `json:"thinkingLevel"`
+	SteeringMode        string `json:"steeringMode"`
+	FollowUpMode        string `json:"followUpMode"`
+	AutoCompaction      bool   `json:"autoCompactionEnabled"`
+	SessionFile         string `json:"sessionFile"`
 	Model               struct {
 		Provider string `json:"provider"`
 		ID       string `json:"id"`
@@ -66,6 +78,23 @@ type piEvent struct {
 	Aborted        bool
 	Session        *piSessionState
 	StderrTail     string
+
+	QueueSteering  []string
+	QueueFollowUp  []string
+	CompactReason  string
+	CompactSummary string
+	CompactBefore  int64
+	CompactAfter   int64
+	CompactError   string
+	CompactAborted bool
+	WillRetry      bool
+	RetryAttempt   int
+	RetryMax       int
+	RetryDelayMS   int64
+	RetryError     string
+	RetrySucceeded bool
+	ExtensionPath  string
+	ExtensionEvent string
 }
 
 type piRPCResponse struct {
@@ -218,7 +247,20 @@ func (p *piClient) Prompt(message string) (string, error) {
 	return id, err
 }
 
-func (p *piClient) Stop(ctx context.Context) (string, error) {
+func (p *piClient) Compact(ctx context.Context, instructions string) error {
+	payload := map[string]any{"type": "compact"}
+	if strings.TrimSpace(instructions) != "" {
+		payload["customInstructions"] = instructions
+	}
+	_, err := p.request(ctx, payload)
+	return err
+}
+
+func (p *piClient) Stop(ctx context.Context, abortRetry bool) (string, error) {
+	var retryErr error
+	if abortRetry {
+		_, retryErr = p.request(ctx, map[string]any{"type": "abort_retry"})
+	}
 	clearData, clearErr := p.request(ctx, map[string]any{"type": "clear_queue"})
 	var clearNote string
 	if clearErr == nil {
@@ -234,6 +276,9 @@ func (p *piClient) Stop(ctx context.Context) (string, error) {
 	}
 
 	_, abortErr := p.request(ctx, map[string]any{"type": "abort"})
+	if retryErr == nil && abortRetry {
+		clearNote = strings.TrimPrefix(clearNote+" · retry stopped", " · ")
+	}
 	switch {
 	case clearErr != nil && abortErr != nil:
 		return "", fmt.Errorf("clear queue failed: %v; abort failed: %w", clearErr, abortErr)
@@ -241,6 +286,8 @@ func (p *piClient) Stop(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("abort sent, but queue state is unknown because clear_queue failed: %w", clearErr)
 	case abortErr != nil:
 		return clearNote, fmt.Errorf("%s; abort failed: %w", fallback(clearNote, "queue cleared"), abortErr)
+	case retryErr != nil:
+		return clearNote, fmt.Errorf("%s; abort_retry failed: %w", fallback(clearNote, "queue cleared"), retryErr)
 	default:
 		return clearNote, nil
 	}
@@ -423,12 +470,117 @@ func (p *piClient) handleRecord(line []byte) {
 		}
 		_ = json.Unmarshal(line, &event)
 		p.emit(piEvent{Kind: piEventSettled, Aborted: event.Aborted})
+	case "queue_update":
+		var event struct {
+			Steering []string `json:"steering"`
+			FollowUp []string `json:"followUp"`
+		}
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi queue update: " + err.Error()})
+			return
+		}
+		p.emit(piEvent{
+			Kind:          piEventQueueUpdate,
+			QueueSteering: event.Steering,
+			QueueFollowUp: event.FollowUp,
+		})
+	case "compaction_start":
+		var event struct {
+			Reason string `json:"reason"`
+		}
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi compaction start: " + err.Error()})
+			return
+		}
+		p.emit(piEvent{Kind: piEventCompactStart, CompactReason: event.Reason})
+	case "compaction_end":
+		var event struct {
+			Reason string `json:"reason"`
+			Result *struct {
+				Summary              string `json:"summary"`
+				TokensBefore         int64  `json:"tokensBefore"`
+				EstimatedTokensAfter int64  `json:"estimatedTokensAfter"`
+			} `json:"result"`
+			Aborted      bool   `json:"aborted"`
+			WillRetry    bool   `json:"willRetry"`
+			ErrorMessage string `json:"errorMessage"`
+		}
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi compaction end: " + err.Error()})
+			return
+		}
+		result := piEvent{
+			Kind:           piEventCompactEnd,
+			CompactReason:  event.Reason,
+			CompactAborted: event.Aborted,
+			WillRetry:      event.WillRetry,
+			CompactError:   event.ErrorMessage,
+		}
+		if event.Result != nil {
+			result.CompactSummary = event.Result.Summary
+			result.CompactBefore = event.Result.TokensBefore
+			result.CompactAfter = event.Result.EstimatedTokensAfter
+		}
+		p.emit(result)
+	case "auto_retry_start":
+		var event struct {
+			Attempt      int    `json:"attempt"`
+			MaxAttempts  int    `json:"maxAttempts"`
+			DelayMS      int64  `json:"delayMs"`
+			ErrorMessage string `json:"errorMessage"`
+		}
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi retry start: " + err.Error()})
+			return
+		}
+		p.emit(piEvent{
+			Kind:         piEventRetryStart,
+			RetryAttempt: event.Attempt,
+			RetryMax:     event.MaxAttempts,
+			RetryDelayMS: event.DelayMS,
+			RetryError:   event.ErrorMessage,
+		})
+	case "auto_retry_end":
+		var event struct {
+			Success    bool   `json:"success"`
+			Attempt    int    `json:"attempt"`
+			FinalError string `json:"finalError"`
+		}
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi retry end: " + err.Error()})
+			return
+		}
+		p.emit(piEvent{
+			Kind:           piEventRetryEnd,
+			RetrySucceeded: event.Success,
+			RetryAttempt:   event.Attempt,
+			RetryError:     event.FinalError,
+		})
+	case "agent_end":
+		var event struct {
+			WillRetry bool `json:"willRetry"`
+		}
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi agent end: " + err.Error()})
+			return
+		}
+		p.emit(piEvent{Kind: piEventAgentEnd, WillRetry: event.WillRetry})
 	case "extension_error":
 		var event struct {
-			Error string `json:"error"`
+			ExtensionPath string `json:"extensionPath"`
+			Event         string `json:"event"`
+			Error         string `json:"error"`
 		}
-		_ = json.Unmarshal(line, &event)
-		p.emit(piEvent{Kind: piEventParseError, Error: fallback(event.Error, "Pi extension error")})
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi extension error: " + err.Error()})
+			return
+		}
+		p.emit(piEvent{
+			Kind:           piEventExtensionErr,
+			ExtensionPath:  event.ExtensionPath,
+			ExtensionEvent: event.Event,
+			Error:          fallback(event.Error, "Pi extension error"),
+		})
 	}
 }
 
@@ -504,9 +656,6 @@ func (p *piClient) handleMessageEnd(line []byte) {
 	if text == "" && event.Message.ErrorMessage == "" {
 		p.resetStream()
 		return
-	}
-	if text == "" {
-		text = event.Message.ErrorMessage
 	}
 	p.emit(piEvent{
 		Kind:  piEventMessage,

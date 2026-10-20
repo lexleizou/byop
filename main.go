@@ -166,6 +166,23 @@ type appState struct {
 	activeRequest string
 	chat          []chatMessage
 	chatView      chatPresentation
+
+	queueSteeringCount int
+	queueFollowUpCount int
+	compacting         bool
+	compactionReason   string
+	compactionResult   string
+	compactionError    string
+	retrying           bool
+	retryAttempt       int
+	retryMax           int
+	retryDelayMS       int64
+	retryStartedAt     time.Time
+	retryError         string
+	extensionError     string
+	extensionPath      string
+	extensionEvent     string
+	agentWillRetry     bool
 }
 
 func newAppState() *appState {
@@ -355,6 +372,7 @@ func (s *appState) connectPi() {
 			s.piSessionID = state.SessionID
 			s.piModel = strings.TrimSpace(strings.Join(nonEmpty(state.Model.Provider, state.Model.Name), " / "))
 			s.piError = ""
+			s.resetRuntimeDiagnostics()
 			s.notice = "External Pi CLI connected."
 		})
 	}()
@@ -365,6 +383,7 @@ func (s *appState) reconnectPi() {
 		s.markOpenTools(toolCallInterrupted)
 		s.setAssistantStatus("Interrupted")
 	}
+	s.resetRuntimeDiagnostics()
 	if s.pi != nil {
 		old := s.pi
 		s.pi = nil
@@ -406,8 +425,10 @@ func (s *appState) sendPrompt() {
 		s.showNotice("Could not send to Pi: " + err.Error())
 		return
 	}
+	s.resetRuntimeDiagnostics()
 	s.composerDraft = ""
 	s.notice = ""
+	s.piError = ""
 	s.run = runSubmitting
 	s.runID = requestID
 	s.activeRequest = requestID
@@ -425,16 +446,36 @@ func (s *appState) sendPrompt() {
 	)
 }
 
+func (s *appState) resetRuntimeDiagnostics() {
+	s.queueSteeringCount = 0
+	s.queueFollowUpCount = 0
+	s.compacting = false
+	s.compactionReason = ""
+	s.compactionResult = ""
+	s.compactionError = ""
+	s.retrying = false
+	s.retryAttempt = 0
+	s.retryMax = 0
+	s.retryDelayMS = 0
+	s.retryStartedAt = time.Time{}
+	s.retryError = ""
+	s.extensionError = ""
+	s.extensionPath = ""
+	s.extensionEvent = ""
+	s.agentWillRetry = false
+}
+
 func (s *appState) stopPrompt() {
 	if s.pi == nil || (s.run != runSubmitting && s.run != runStreaming) {
 		return
 	}
 	client := s.pi
+	abortRetry := s.retrying
 	s.run = runStopping
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		note, err := client.Stop(ctx)
+		note, err := client.Stop(ctx, abortRetry)
 		s.postUI(func() {
 			if err != nil {
 				s.piError = err.Error()
@@ -487,6 +528,63 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		if event.Error != "" {
 			s.piError = event.Error
 		}
+	case piEventQueueUpdate:
+		s.queueSteeringCount = len(event.QueueSteering)
+		s.queueFollowUpCount = len(event.QueueFollowUp)
+	case piEventCompactStart:
+		s.compacting = true
+		s.compactionReason = event.CompactReason
+		s.compactionResult = ""
+		s.compactionError = ""
+		if s.runActive() {
+			s.run = runStreaming
+		}
+	case piEventCompactEnd:
+		s.compacting = false
+		s.compactionReason = fallback(event.CompactReason, s.compactionReason)
+		s.compactionError = event.CompactError
+		s.agentWillRetry = event.WillRetry
+		s.compactionResult = compactionResultLabel(event)
+		if event.CompactError != "" {
+			s.piError = event.CompactError
+		}
+		if s.runActive() {
+			s.run = runStreaming
+		}
+	case piEventRetryStart:
+		s.retrying = true
+		s.retryAttempt = event.RetryAttempt
+		s.retryMax = event.RetryMax
+		s.retryDelayMS = event.RetryDelayMS
+		s.retryStartedAt = time.Now()
+		s.retryError = event.RetryError
+		s.piError = event.RetryError
+		if s.runActive() {
+			s.run = runStreaming
+		}
+	case piEventRetryEnd:
+		s.retrying = false
+		s.retryAttempt = event.RetryAttempt
+		if event.RetrySucceeded {
+			s.retryError = ""
+			s.piError = ""
+		} else {
+			s.retryError = fallback(event.RetryError, s.retryError)
+			s.piError = s.retryError
+		}
+		if s.runActive() {
+			s.run = runStreaming
+		}
+	case piEventAgentEnd:
+		s.agentWillRetry = event.WillRetry
+		if s.runActive() {
+			s.run = runStreaming
+		}
+	case piEventExtensionErr:
+		s.extensionError = event.Error
+		s.extensionPath = event.ExtensionPath
+		s.extensionEvent = event.ExtensionEvent
+		s.notice = "Pi extension error: " + event.Error
 	case piEventToolStart:
 		s.run = runStreaming
 		s.startToolCall(event)
@@ -499,11 +597,21 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 	case piEventSettled:
 		s.activeRequest = ""
 		s.activePrompt = ""
+		s.queueSteeringCount = 0
+		s.queueFollowUpCount = 0
+		s.compacting = false
+		s.retrying = false
+		s.agentWillRetry = false
 		if event.Aborted || s.run == runStopping {
 			s.run = runStopped
 			s.markOpenTools(toolCallCancelled)
 			s.ensureAssistantFallback("Pi stopped before adding response text.")
 			s.setAssistantStatus("Stopped")
+		} else if s.piError != "" {
+			s.run = runFailed
+			s.markOpenTools(toolCallFailed)
+			s.ensureAssistantFallback("Pi stopped after an error. See runtime details for the error.")
+			s.setAssistantStatus("failed")
 		} else {
 			s.run = runCompleted
 			s.ensureAssistantFallback("Pi completed without assistant text.")
@@ -520,6 +628,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.piConnecting = false
 		s.piConn = piDisconnected
 		s.piError = fallback(event.StderrTail, event.Error)
+		s.resetRuntimeDiagnostics()
 		if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
 			s.run = runInterrupted
 			s.markOpenTools(toolCallInterrupted)

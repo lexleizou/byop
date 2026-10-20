@@ -1,3 +1,48 @@
+# BYOP P3.3a Validation
+
+验证日期：2026-10-20
+
+## 范围
+
+P3.3a 只补充 Pi 1.3.0 运行时诊断与停止语义。它不改变 Chat 布局、14 px
+正文、右侧任务栏默认收起状态，也不引入会话历史、插件执行或 WebView。
+
+## 实现
+
+- 解析 `queue_update`、`compaction_start/end`、`auto_retry_start/end`、
+  `agent_end` 与 `extension_error`；
+- steering 和 follow-up 队列数量进入任务栏运行时诊断；
+- 上下文压缩显示触发原因和压缩前后估算 token，不展示压缩摘要正文；
+- 自动重试显示 attempt、maxAttempts、延迟和错误摘要；
+- Composer 状态优先级为 Stopping、Retrying、Compacting、Pi is working；
+- provider 错误不进入助手永久文字块，失败轮次显示通用错误说明；
+- `agent_end(willRetry:true)` 继续维持运行态，只有 `agent_settled` 结束轮次；
+- 重试等待中 Stop 先调用 `abort_retry`，随后调用 `clear_queue` 和 `abort`；
+- 扩展错误保存扩展文件名、事件和错误摘要，与 JSONL 解析错误分开；
+- 重连、进程退出和新提示会清理上一轮的临时诊断状态。
+
+## 自动化验证
+
+| 检查 | 结果 |
+|---|---|
+| `gofmt -w *.go` | 通过 |
+| `go build -o byop .` | 通过 |
+| `go vet ./...` | 通过 |
+| `go test ./...` | 11 个单元测试通过 |
+| 真实 Pi：普通回复、Stop、Tool、Timeline | 4 个测试通过 |
+| 真实 Pi：手动 Compact RPC | 通过 |
+| 设计 token JSON 解析 | 通过 |
+
+单元测试覆盖新 JSONL 事件字段、运行时状态投影、扩展错误分类、
+`willRetry` 不提前完结，以及 provider 错误不写入助手正文。
+
+## 限制
+
+- 自动重试由真实 provider 错误触发，本轮没有故意制造远端故障；
+- 临时诊断已在任务栏和 Composer 接通，尚未增加独立运行日志页；
+- 手动压缩目前只验证 RPC，未增加面向用户的压缩按钮；
+- Dark 主题、窄窗口和 Linux / Windows 本轮未重新截图验证。
+
 # BYOP P3.2a Validation
 
 验证日期：2026-10-20

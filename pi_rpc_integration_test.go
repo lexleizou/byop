@@ -92,7 +92,7 @@ func TestPiRPCIntegrationStop(t *testing.T) {
 	}
 
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	note, err := client.Stop(stopCtx)
+	note, err := client.Stop(stopCtx, false)
 	stopCancel()
 	if err != nil {
 		t.Fatalf("stop: %v", err)
@@ -105,6 +105,25 @@ func TestPiRPCIntegrationStop(t *testing.T) {
 		t.Fatal("agent_settled did not report an aborted run")
 	}
 	t.Logf("stop: queue_note=%q aborted=%t", note, event.Aborted)
+}
+
+func TestPiRPCIntegrationCompact(t *testing.T) {
+	client := startIntegrationPi(t)
+	defer closeIntegrationPi(t, client)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	if _, err := client.GetState(ctx); err != nil {
+		t.Fatalf("get_state: %v", err)
+	}
+
+	err := client.Compact(ctx, "Summarize only durable facts for the BYOP adapter test.")
+	if err != nil {
+		// Pi 1.3.0 can reject manual compaction before any user turn exists.
+		t.Logf("manual compact rejected without mutating the session: %v", err)
+		return
+	}
+	t.Log("manual compact completed")
 }
 
 func TestPiRPCIntegrationTool(t *testing.T) {

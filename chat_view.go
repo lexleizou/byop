@@ -350,6 +350,10 @@ func (s *appState) chatComposer(c *ui.Context) {
 			switch {
 			case s.run == runStopping:
 				chat.Shimmer(c, "Stopping Pi", 12.5, t.TextMuted, t.Text)
+			case s.retrying:
+				chat.Shimmer(c, s.retryStatusLabel(c), 12.5, t.TextMuted, t.Text)
+			case s.compacting:
+				chat.Shimmer(c, "Compacting context", 12.5, t.TextMuted, t.Text)
 			case s.runActive():
 				chat.Shimmer(c, "Pi is working", 12.5, t.TextMuted, t.Text)
 			}
@@ -362,6 +366,24 @@ func (s *appState) chatComposer(c *ui.Context) {
 	if result.Stop {
 		s.stopPrompt()
 	}
+}
+
+func (s *appState) retryStatusLabel(c *ui.Context) string {
+	label := "Retrying"
+	if s.retryAttempt > 0 {
+		label += fmt.Sprintf(" %d", s.retryAttempt)
+		if s.retryMax > 0 {
+			label += fmt.Sprintf("/%d", s.retryMax)
+		}
+	}
+	if s.retryDelayMS <= 0 || s.retryStartedAt.IsZero() {
+		return label
+	}
+	remaining := s.retryDelayMS - c.Now().Sub(s.retryStartedAt).Milliseconds()
+	if remaining < 0 {
+		remaining = 0
+	}
+	return fmt.Sprintf("%s · %ds", label, (remaining+999)/1000)
 }
 
 func messageText(message *chatMessage) string {

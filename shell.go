@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/egoist/mygo/ui"
 )
 
@@ -56,7 +59,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P3.2a · ONEVRA CHAT", p.accent)
+		statusPill(c, p, "P3.3a · RUNTIME STATUS", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
@@ -232,6 +235,7 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 				ui.Column(c).Gap(9).Children(func() {
 					s.taskCard(c, p, "Pi JSONL RPC", s.piSecondaryLabel(), s.connectionStateLabel(), s.piTone(p))
 					s.taskCard(c, p, "Current run", s.currentRunTaskDetail(), s.runLabel(), s.runTone(p))
+					s.taskCard(c, p, "Runtime diagnostics", s.runtimeDiagnosticDetail(), s.runtimeDiagnosticLabel(), s.runtimeDiagnosticTone(p))
 					s.taskCard(c, p, "Plugin registry", "Reserved for P4", "Not started", p.muted)
 				})
 			})
@@ -523,5 +527,105 @@ func (s *appState) runTone(p palette) ui.Color {
 			return p.success
 		}
 		return p.muted
+	}
+}
+
+func (s *appState) runtimeDiagnosticDetail() string {
+	parts := make([]string, 0, 5)
+	queued := s.queueSteeringCount + s.queueFollowUpCount
+	if queued > 0 {
+		parts = append(parts, fmt.Sprintf("Queued %d steering and %d follow-up message(s)", s.queueSteeringCount, s.queueFollowUpCount))
+	}
+	if s.retrying {
+		retry := "Retrying"
+		if s.retryAttempt > 0 {
+			retry += fmt.Sprintf(" %d", s.retryAttempt)
+			if s.retryMax > 0 {
+				retry += fmt.Sprintf("/%d", s.retryMax)
+			}
+		}
+		if s.retryError != "" {
+			retry += " · " + summarizeLine(s.retryError, 120)
+		}
+		parts = append(parts, retry)
+	} else if s.retryError != "" {
+		parts = append(parts, "Retry failed · "+summarizeLine(s.retryError, 120))
+	}
+	if s.compacting {
+		parts = append(parts, "Compacting context · "+fallback(s.compactionReason, "automatic"))
+	} else if s.compactionResult != "" {
+		parts = append(parts, s.compactionResult)
+	}
+	if s.compactionError != "" {
+		parts = append(parts, "Compaction error · "+summarizeLine(s.compactionError, 120))
+	}
+	if s.extensionError != "" {
+		source := extensionDisplayName(s.extensionPath)
+		if source != "" && s.extensionEvent != "" {
+			source += " · " + s.extensionEvent
+		}
+		parts = append(parts, "Extension error · "+fallback(source, "unknown extension")+" · "+summarizeLine(s.extensionError, 120))
+	}
+	if len(parts) == 0 {
+		return "No queue, compaction, retry, or extension events in this run"
+	}
+	return strings.Join(parts, "\n")
+}
+
+func (s *appState) runtimeDiagnosticLabel() string {
+	switch {
+	case s.extensionError != "" || s.compactionError != "" || (s.retryError != "" && !s.retrying):
+		return "ATTENTION"
+	case s.retrying || s.compacting || s.queueSteeringCount+s.queueFollowUpCount > 0:
+		return "ACTIVE"
+	default:
+		return "CLEAR"
+	}
+}
+
+func (s *appState) runtimeDiagnosticTone(p palette) ui.Color {
+	switch s.runtimeDiagnosticLabel() {
+	case "ATTENTION":
+		return p.danger
+	case "ACTIVE":
+		return p.warning
+	default:
+		return p.success
+	}
+}
+
+func extensionDisplayName(path string) string {
+	path = strings.TrimRight(path, `/\`)
+	if index := strings.LastIndexAny(path, `/\`); index >= 0 {
+		return path[index+1:]
+	}
+	return path
+}
+
+func compactionResultLabel(event piEvent) string {
+	if event.CompactError != "" {
+		return ""
+	}
+	if event.CompactAborted {
+		return "Context compaction cancelled"
+	}
+	if event.CompactBefore <= 0 && event.CompactAfter <= 0 {
+		if event.CompactSummary != "" {
+			return "Context compacted"
+		}
+		return ""
+	}
+	return fmt.Sprintf("Context compacted · %s → %s tokens",
+		formatTokenCount(event.CompactBefore), formatTokenCount(event.CompactAfter))
+}
+
+func formatTokenCount(tokens int64) string {
+	switch {
+	case tokens >= 1_000_000:
+		return fmt.Sprintf("%.1fm", float64(tokens)/1_000_000)
+	case tokens >= 1_000:
+		return fmt.Sprintf("%.1fk", float64(tokens)/1_000)
+	default:
+		return fmt.Sprintf("%d", tokens)
 	}
 }

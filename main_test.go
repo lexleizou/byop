@@ -204,6 +204,137 @@ func TestToolErrorProjection(t *testing.T) {
 	}
 }
 
+func TestPiClientParsesRuntimeEventShapes(t *testing.T) {
+	events := make(chan piEvent, 8)
+	client := &piClient{events: func(event piEvent) {
+		events <- event
+	}}
+	lines := []string{
+		`{"type":"queue_update","steering":["adjust"],"followUp":["after"]}`,
+		`{"type":"compaction_start","reason":"threshold"}`,
+		`{"type":"compaction_end","reason":"threshold","result":{"summary":"kept","tokensBefore":12000,"estimatedTokensAfter":2400},"aborted":false,"willRetry":true}`,
+		`{"type":"auto_retry_start","attempt":2,"maxAttempts":3,"delayMs":1500,"errorMessage":"provider overloaded"}`,
+		`{"type":"auto_retry_end","success":false,"attempt":2,"finalError":"provider unavailable"}`,
+		`{"type":"agent_end","willRetry":true}`,
+		`{"type":"extension_error","extensionPath":"/tmp/demo-extension.ts","event":"tool_call","error":"bad tool output"}`,
+	}
+	for _, line := range lines {
+		client.handleRecord([]byte(line))
+	}
+
+	queue := <-events
+	if queue.Kind != piEventQueueUpdate || len(queue.QueueSteering) != 1 || len(queue.QueueFollowUp) != 1 {
+		t.Fatalf("unexpected queue event: %#v", queue)
+	}
+	compactStart := <-events
+	if compactStart.Kind != piEventCompactStart || compactStart.CompactReason != "threshold" {
+		t.Fatalf("unexpected compaction start: %#v", compactStart)
+	}
+	compactEnd := <-events
+	if compactEnd.Kind != piEventCompactEnd || compactEnd.CompactBefore != 12000 ||
+		compactEnd.CompactAfter != 2400 || !compactEnd.WillRetry || compactEnd.CompactSummary != "kept" {
+		t.Fatalf("unexpected compaction end: %#v", compactEnd)
+	}
+	retryStart := <-events
+	if retryStart.Kind != piEventRetryStart || retryStart.RetryAttempt != 2 ||
+		retryStart.RetryMax != 3 || retryStart.RetryDelayMS != 1500 ||
+		retryStart.RetryError != "provider overloaded" {
+		t.Fatalf("unexpected retry start: %#v", retryStart)
+	}
+	retryEnd := <-events
+	if retryEnd.Kind != piEventRetryEnd || retryEnd.RetrySucceeded ||
+		retryEnd.RetryAttempt != 2 || retryEnd.RetryError != "provider unavailable" {
+		t.Fatalf("unexpected retry end: %#v", retryEnd)
+	}
+	agentEnd := <-events
+	if agentEnd.Kind != piEventAgentEnd || !agentEnd.WillRetry {
+		t.Fatalf("unexpected agent end: %#v", agentEnd)
+	}
+	extensionError := <-events
+	if extensionError.Kind != piEventExtensionErr ||
+		extensionError.ExtensionPath != "/tmp/demo-extension.ts" ||
+		extensionError.ExtensionEvent != "tool_call" ||
+		extensionError.Error != "bad tool output" {
+		t.Fatalf("unexpected extension error: %#v", extensionError)
+	}
+}
+
+func TestRuntimeDiagnosticsProjection(t *testing.T) {
+	state := projectionTestState()
+	state.handlePiEvent(piEvent{
+		Kind:          piEventQueueUpdate,
+		QueueSteering: []string{"steer"},
+		QueueFollowUp: []string{"follow"},
+	}, 0)
+	state.handlePiEvent(piEvent{
+		Kind:         piEventRetryStart,
+		RetryAttempt: 1,
+		RetryMax:     3,
+		RetryDelayMS: 2000,
+		RetryError:   "rate limited",
+	}, 0)
+	if !state.retrying || state.runtimeDiagnosticLabel() != "ACTIVE" {
+		t.Fatalf("retry state was not projected: %#v", state)
+	}
+
+	state.handlePiEvent(piEvent{
+		Kind:           piEventCompactEnd,
+		CompactReason:  "overflow",
+		CompactBefore:  12000,
+		CompactAfter:   2400,
+		CompactSummary: "summary",
+	}, 0)
+	state.handlePiEvent(piEvent{
+		Kind:           piEventExtensionErr,
+		ExtensionPath:  "/tmp/demo-extension.ts",
+		ExtensionEvent: "tool_call",
+		Error:          "bad tool output",
+	}, 0)
+
+	if state.compactionResult != "Context compacted · 12.0k → 2.4k tokens" {
+		t.Fatalf("unexpected compaction label: %q", state.compactionResult)
+	}
+	if state.extensionError != "bad tool output" || state.extensionPath != "/tmp/demo-extension.ts" {
+		t.Fatalf("extension error was not kept separate: %#v", state)
+	}
+	if state.runtimeDiagnosticLabel() != "ATTENTION" ||
+		!strings.Contains(state.runtimeDiagnosticDetail(), "Extension error · demo-extension.ts · tool_call") {
+		t.Fatalf("unexpected runtime diagnostics: %s", state.runtimeDiagnosticDetail())
+	}
+}
+
+func TestMessageErrorStaysOutOfAssistantBody(t *testing.T) {
+	events := make(chan piEvent, 1)
+	client := &piClient{events: func(event piEvent) {
+		events <- event
+	}}
+	client.handleRecord([]byte(
+		`{"type":"message_end","message":{"role":"assistant","content":[],"stopReason":"error","errorMessage":"provider unavailable"}}`,
+	))
+	event := <-events
+	if event.Kind != piEventMessage || event.Text != "" || event.Error != "provider unavailable" {
+		t.Fatalf("unexpected message error event: %#v", event)
+	}
+
+	state := projectionTestState()
+	state.handlePiEvent(event, 0)
+	if len(state.currentAssistant().blocks) != 0 {
+		t.Fatalf("provider error became assistant content: %#v", state.currentAssistant().blocks)
+	}
+	state.handlePiEvent(piEvent{Kind: piEventAgentEnd, WillRetry: true}, 0)
+	if state.run != runStreaming {
+		t.Fatalf("agent_end(willRetry=true) settled the run: %q", state.run)
+	}
+	state.handlePiEvent(piEvent{Kind: piEventSettled}, 0)
+	if state.run != runFailed {
+		t.Fatalf("settled error run = %q, want failed", state.run)
+	}
+	message := state.currentAssistant()
+	if len(message.blocks) != 1 || strings.Contains(message.blocks[0].text, "provider unavailable") {
+		t.Fatalf("failed run exposed provider error in the assistant body: %#v", message.blocks)
+	}
+}
+
 func projectionTestState() *appState {
 	return &appState{
 		piConn: piConnected,

@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P3.2a Onevra Chat 复刻：Chat 的阅读区、时间线、工具行和输入框直接使用 Onevra 原生 Chat 组件，同时保留 P3.2 的外部 Pi 连接、有序文字与工具活动、`agent_settled` 完成判定、停止和重连状态。BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P3.3a Pi 运行时诊断：Chat 的阅读区、时间线、工具行和输入框继续使用 Onevra 原生 Chat 组件，并补齐队列、上下文压缩、自动重试和扩展错误状态。BYOP 仍以 `agent_settled` 作为运行完成信号，不把 provider 重试错误写进助手正文。BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -30,6 +30,13 @@
 - Stop、进程退出和重连分别把未完成工具标记为 Cancelled 或 Interrupted；
 - 以 `agent_settled` 作为真实运行完成信号；
 - Stop 使用 `clear_queue → abort`，并用 `agent_settled(aborted:true)` 确认结果；
+- 重试等待中的 Stop 先发送 `abort_retry`，再清空队列并中止当前运行；
+- 订阅 `queue_update`，在任务栏显示 steering 与 follow-up 队列数量；
+- 订阅 `compaction_start/end`，显示 manual、threshold、overflow 压缩状态及压缩前后 token 估算；
+- 订阅 `auto_retry_start/end`，显示重试次数、上限、倒计时和最终错误；
+- 区分 `agent_end(willRetry)` 与 `agent_settled`，前者不会提前关闭当前轮次；
+- provider 错误和失败重试保留在临时运行诊断，不进入永久助手消息块；
+- `extension_error` 与 JSONL 协议错误分开显示，并记录扩展文件、事件和错误摘要；
 - 进程退出、协议错误、请求超时、重连隔离和窗口关闭清理；
 - 固定 20 px 导航图标槽位，展开与收起状态保持左边缘对齐。
 
@@ -109,11 +116,11 @@ jq empty design-system/pi-workbench/tokens.extensions.json
 
 ```sh
 BYOP_PI_INTEGRATION=1 go test \
-  -run 'TestPiRPCIntegration(MinimalLoop|Stop|Tool|Timeline)$' \
+  -run 'TestPiRPCIntegration(MinimalLoop|Stop|Tool|Timeline|Compact)$' \
   -v -count=1 -timeout=8m
 ```
 
-该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，并要求 Pi 连续执行两次安全的 `bash` 命令。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
+该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，要求 Pi 连续执行两次安全的 `bash` 命令，并调用一次手动压缩 RPC。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
 
 验证记录见 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
 
