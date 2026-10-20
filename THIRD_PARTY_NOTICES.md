@@ -29,7 +29,10 @@ SOFTWARE.
 ## Onevra
 
 Source: <https://github.com/oneo-me/onevra>
+Go module: `github.com/oneo-me/onevra/source v0.2026.13`
 Referenced commit: `ece5cd99c334703f7878209f77cc24af14a49b79`
+Usage: Chat components and bundled Lucide icon definitions are linked as a Go
+dependency.
 License: MIT
 
 Copyright (c) 2026 ONEO
@@ -56,7 +59,8 @@ SOFTWARE.
 
 Source: <https://github.com/lucide-icons/lucide>
 Asset: `Pi` icon geometry in `assets/pi.svg`; remaining inline SVG icons follow
-Lucide geometry and stroke rules.
+Lucide geometry and stroke rules. Chat icons are used through Onevra's bundled
+Lucide package.
 License: ISC
 
 Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part

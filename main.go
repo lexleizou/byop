@@ -132,9 +132,11 @@ type chatBlock struct {
 }
 
 type chatMessage struct {
-	role   chatRole
-	status string
-	blocks []chatBlock
+	role      chatRole
+	status    string
+	blocks    []chatBlock
+	startedAt time.Time
+	endedAt   time.Time
 }
 
 type appState struct {
@@ -163,6 +165,7 @@ type appState struct {
 	activePrompt  string
 	activeRequest string
 	chat          []chatMessage
+	chatView      chatPresentation
 }
 
 func newAppState() *appState {
@@ -214,8 +217,9 @@ func (s *appState) seedToolDemo() {
 			status: "sent",
 		},
 		{
-			role:   chatAssistant,
-			status: "Streaming",
+			role:      chatAssistant,
+			status:    "Streaming",
+			startedAt: time.Now().Add(-14 * time.Second),
 			blocks: []chatBlock{
 				{
 					kind: chatBlockText,
@@ -417,7 +421,7 @@ func (s *appState) sendPrompt() {
 			}},
 			status: "sent",
 		},
-		chatMessage{role: chatAssistant, status: "Waiting for Pi…"},
+		chatMessage{role: chatAssistant, status: "Waiting for Pi…", startedAt: time.Now()},
 	)
 }
 
@@ -549,6 +553,16 @@ func (s *appState) setAssistantText(text, status string) {
 func (s *appState) setAssistantStatus(status string) {
 	if len(s.chat) > 0 && s.chat[len(s.chat)-1].role == chatAssistant {
 		s.chat[len(s.chat)-1].status = status
+		switch status {
+		case "Complete", "Stopped", "Interrupted", "failed", "handled":
+			s.markAssistantEnded()
+		}
+	}
+}
+
+func (s *appState) markAssistantEnded() {
+	if len(s.chat) > 0 && s.chat[len(s.chat)-1].role == chatAssistant && s.chat[len(s.chat)-1].endedAt.IsZero() {
+		s.chat[len(s.chat)-1].endedAt = time.Now()
 	}
 }
 
@@ -568,6 +582,7 @@ func (s *appState) ensureAssistantFallback(text string) {
 
 func (s *appState) finishAssistant(text, status string) {
 	s.setAssistantText(text, status)
+	s.markAssistantEnded()
 	s.activeRequest = ""
 	s.activePrompt = ""
 }

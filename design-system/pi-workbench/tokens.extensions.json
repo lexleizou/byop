@@ -4,11 +4,11 @@
     "name": "BYOP Extensions",
     "product": "Build You Own Pi",
     "productAbbreviation": "BYOP",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "updated": "2026-10-20",
     "base": "../onevra/tokens.json",
     "baseVersion": "1.0.0",
-    "status": "design source; P3.2 native Go currently consumes a subset",
+    "status": "design source; P3.2a native Go consumes a subset and renders Chat through Onevra v0.2026.13 components",
     "format": "project DTCG-style; not a formal schema conformance claim"
   },
   "workbench": {
@@ -988,6 +988,38 @@
           "unit": "px"
         },
         "$description": "Onevra ece5cd9 source/chat.go:476-477."
+      },
+      "composerInputFontSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "P3.2a product override. Onevra ece5cd9 source/components/chat/chat.go:547 uses 13.5; BYOP sets the GlassComposer input to the 14px body token."
+      },
+      "microLabelFontSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12.5,
+          "unit": "px"
+        },
+        "$description": "P3.2a keeps Onevra defaults for chips, activity actions and step titles (source/components/chat/chat.go:260,299,625; chip.go:57)."
+      },
+      "turnSummaryFontSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 13.5,
+          "unit": "px"
+        },
+        "$description": "P3.2a keeps Onevra fold and working rows at 13.5 (source/components/chat/chat.go:203,222)."
+      },
+      "activityMonoFontSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "P3.2a keeps Onevra monospace activity body (source/components/chat/chat.go:348); BYOP limits activity content height to 240px."
       }
     },
     "tone": {

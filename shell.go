@@ -56,7 +56,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P3.2 · TIMELINE", p.accent)
+		statusPill(c, p, "P3.2a · ONEVRA CHAT", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
@@ -116,6 +116,8 @@ func (s *appState) navButton(c *ui.Context, p palette, item navItem) {
 	if s.navCollapsed {
 		btn.Tooltip(item.label)
 		btn.Justify(ui.Center)
+	} else {
+		btn.Justify(ui.Start)
 	}
 	if !selected && btn.Hovered() {
 		btn.Background(p.surfaceHover)

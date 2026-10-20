@@ -1,7 +1,7 @@
 # BYOP Workbench Architecture
 
-Status: P3.2 native shell, external Pi RPC loop and ordered text/tool
-timelines are implemented. Plugin registry, plugin runtime and WebView hosting are
+Status: P3.2a native shell, external Pi RPC loop and ordered text/tool
+timelines are implemented; Chat renders through Onevra v0.2026.13 components. Plugin registry, plugin runtime and WebView hosting are
 design targets for P4/P5 and are not available in the current binary.
 
 ## Runtime Boundary
@@ -55,7 +55,7 @@ continue after an earlier `agent_end` event.
 | Capability | Owner | Current behavior |
 |---|---|---|
 | Window, navigation, themes | BYOP | Implemented natively |
-| Chat transcript projection | BYOP | Ordered text/tool timeline for the active ephemeral run |
+| Chat transcript projection | BYOP plus Onevra components | Ordered text/tool timeline rendered as Onevra turns, activity groups and glass composer |
 | Plugin metadata and contributions | BYOP | Planned |
 | Model calls and provider auth | Pi | Delegated |
 | Session persistence and credentials | Pi | Pi-owned; BYOP does not rewrite files |
@@ -162,6 +162,7 @@ The exact MyGo `ui.WebView` behavior still needs P5 platform validation.
 |---|---|
 | P3.1 | Structured tool lifecycle, native cards and active-tool task state |
 | P3.2 | Ordered text/tool timeline, in-place lifecycle updates and automatic folding |
+| P3.2a | Onevra Chat reading area, turn summaries, activity rows and glass composer; task panel collapsed by default |
 | P3.3 | Run diagnostics, retry/compaction visibility and richer chat state |
 | P4 | Manifest validation, registry, lazy activation, command and settings contributions |
 | P5 | WebView proof, theme bridge, crash fallback and complex view sandbox |

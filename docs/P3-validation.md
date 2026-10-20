@@ -1,3 +1,51 @@
+# BYOP P3.2a Validation
+
+验证日期：2026-10-20
+
+## 范围
+
+P3.2a 只替换 Chat 的阅读区、时间线、工具行和输入框，使其与 Onevra Chat 原页面
+一致。P3.2 的 Pi 事件处理、有序内容块、Stop 和重连逻辑保持不变。右侧任务栏
+继续默认收起，正文继续使用 14 px。
+
+## 实现
+
+- 直接依赖 Onevra `source v0.2026.13`（提交 `ece5cd9`）的 Chat 组件；
+- 阅读区使用 `FloatingConversation`，离开底部时显示“Back to latest”；
+- 每轮回复使用 `Turn`：运行中显示“Working · 耗时”，结束后折叠为“Worked for 耗时”，最终文字保持可见；
+- 连续工具合并为 `ActivityGroup`，运行中标题显示最新动作，结束后显示“Ran N tools”；
+- 单个工具使用 `Activity`，等宽详情展示长参数、结果或实时输出、状态和耗时；
+- 输入框使用 `GlassComposer`，保留模型标签、附件按钮、Pi 状态和 Stop；
+- 输入文字覆盖为 14 px；Onevra 的 12.5 / 13.5 px 辅助标签保持原值；
+- 用户手动展开或折叠工具后，只有工具状态变化才会重新同步默认展开状态；
+- 修复导航按钮内容被居中的回归，展开状态下图标与文字恢复左对齐。
+
+## 自动化验证
+
+| 检查 | 结果 |
+|---|---|
+| `gofmt -w *.go` | 通过 |
+| `go build -o byop .` | 通过 |
+| `go vet ./...` | 通过 |
+| `go test ./...` | 8 个单元测试通过 |
+| 真实 Pi：普通回复、Stop、Tool | 通过 |
+| 真实 Pi：Timeline | 首次因模型把两个命令合并而未产生两次独立工具调用；单独重跑通过 |
+| 设计 token JSON 解析 | 通过 |
+
+## 界面走查
+
+![P3.2a Onevra Chat](screenshots/p3-2a-onevra-chat.png)
+
+截图使用 `BYOP_DEMO_TOOLS=1 BYOP_PI_CONNECT=0` 的隔离演示数据，不含真实会话 ID、
+本地项目路径、凭据或客户内容。视觉走查确认右侧任务栏默认收起、已完成工具组
+折叠、运行中工具组展开、Working 行持续计时、输入框为 Onevra 玻璃样式。
+
+## 限制
+
+- 附件按钮和模型标签仍为展示态，附件与模型切换属于后续阶段；
+- 尚未逐像素对照 Onevra 网页预览，仅按组件源码和截图进行人工走查；
+- Dark 主题、窄窗口和 Linux / Windows 本轮未截图验证。
+
 # BYOP P3.2 Validation
 
 验证日期：2026-10-20

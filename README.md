@@ -2,16 +2,16 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P3.2 有序会话时间线：连接外部 Pi、发送消息、按真实顺序呈现文字与工具活动、等待 `agent_settled`、停止当前运行，以及连接中断和重连状态。BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P3.2a Onevra Chat 复刻：Chat 的阅读区、时间线、工具行和输入框直接使用 Onevra 原生 Chat 组件，同时保留 P3.2 的外部 Pi 连接、有序文字与工具活动、`agent_settled` 完成判定、停止和重连状态。BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
-![BYOP ordered session timeline](docs/screenshots/p3-2-timeline.png)
+![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
 ![BYOP Settings](docs/screenshots/p2-settings-connected.png)
 
 ## 当前能力
 
 - MyGo 原生窗口，无 React、Next.js 或内置 WebView；
-- Onevra 语义色、间距、圆角和 14 px 默认正文；
+- Onevra 语义色、间距、圆角和 14 px 默认正文；Chat 输入框也调整为 14 px；
 - Chat、Plugins、Library、Document、Automations、Settings 导航骨架；
 - Light、Dark、System 三种主题；
 - 默认收起的右侧任务栏；
@@ -20,7 +20,10 @@
 - 按 `toolCallId` 关联 `tool_execution_start/update/end`；
 - 原生会话时间线按“文字 → 工具 → 文字”的真实顺序保留内容块；
 - `tool_execution_start/update/end` 按 `toolCallId` 原位更新，不改变工具卡位置；
-- 原生工具卡展示名称、参数摘要、结果摘要、耗时、状态和可展开详情；
+- Chat 使用 Onevra `FloatingConversation`、`Turn`、`ActivityGroup`、`Activity` 和 `GlassComposer`；
+- 连续工具合并为可折叠的活动组，运行中显示最新动作，完成后显示“Ran N tools”；
+- 运行中显示“Working · 耗时”，结束后折叠为“Worked for 耗时”，保留最终回复可见；
+- 工具详情使用等宽文本，展示长参数、结果或实时输出和状态耗时；
 - 运行中工具自动展开，完成、失败、取消或中断后自动折叠；
 - Running、Completed、Failed、Cancelled、Interrupted 五种工具状态；
 - 多个工具保留各自时间线位置，右侧任务栏显示最新运行或最近活动的工具；
@@ -30,7 +33,7 @@
 - 进程退出、协议错误、请求超时、重连隔离和窗口关闭清理；
 - 固定 20 px 导航图标槽位，展开与收起状态保持左边缘对齐。
 
-Plugins、Library、Document 和 Automations 目前是可运行的原生视觉骨架。插件安装、插件 SDK、WebView 视图、附件、Markdown 富文本、会话历史与切换仍属于后续阶段。
+Plugins、Library、Document 和 Automations 目前是可运行的原生视觉骨架。插件安装、插件 SDK、WebView 视图、附件、模型选择、会话历史与切换仍属于后续阶段；输入框中的附件按钮和模型标签目前只做展示。
 
 ## 架构
 
@@ -89,7 +92,7 @@ BYOP_PI_CONNECT=0 go run .
 BYOP_THEME=dark BYOP_PAGE=plugins BYOP_TASKS=1 go run .
 ```
 
-`BYOP_THEME` 支持 `system`、`light`、`dark`；`BYOP_PAGE` 支持 `chat`、`plugins`、`library`、`document`、`automations`、`settings`；`BYOP_TASKS=1` 默认展开任务栏。
+`BYOP_THEME` 支持 `system`、`light`、`dark`；`BYOP_PAGE` 支持 `chat`、`plugins`、`library`、`document`、`automations`、`settings`；`BYOP_TASKS=1` 默认展开任务栏；`BYOP_DEMO_TOOLS=1` 载入不连接 Pi 的隔离演示时间线。
 
 ## 验证
 
@@ -126,7 +129,7 @@ BYOP_PI_INTEGRATION=1 go test \
 ## 参考
 
 - MyGo `v0.5.5`：`4d8673cd2658a2c6e86b26c44751e57bf8174f91`
-- Onevra 预览提交：`ece5cd99c334703f7878209f77cc24af14a49b79`
+- Onevra `source v0.2026.13`：`ece5cd99c334703f7878209f77cc24af14a49b79`，Chat 组件作为 Go 依赖使用
 - Pi 图标来自 Onevra 固定提交中的 Lucide `Pi` 图标
 
 第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
