@@ -1,8 +1,8 @@
 # BYOP Workbench Architecture
 
-Status: P2 native shell and external Pi RPC loop are implemented. Plugin
-registry, plugin runtime and WebView hosting are design targets for P4/P5 and
-are not available in the current binary.
+Status: P3 native shell, external Pi RPC loop and structured tool activity
+are implemented. Plugin registry, plugin runtime and WebView hosting are
+design targets for P4/P5 and are not available in the current binary.
 
 ## Runtime Boundary
 
@@ -52,7 +52,7 @@ continue after an earlier `agent_end` event.
 
 ## Ownership
 
-| Capability | Owner | P2 behavior |
+| Capability | Owner | Current behavior |
 |---|---|---|
 | Window, navigation, themes | BYOP | Implemented natively |
 | Chat transcript projection | BYOP | Implemented for the active ephemeral run |
@@ -60,7 +60,7 @@ continue after an earlier `agent_end` event.
 | Model calls and provider auth | Pi | Delegated |
 | Session persistence and credentials | Pi | Pi-owned; BYOP does not rewrite files |
 | Tools, Skills and extensions | Pi | Delegated |
-| Long-running task activity | BYOP plus adapters | Minimal current-run card only |
+| Long-running task activity | BYOP plus adapters | P3 projects the active Pi tool into the task panel |
 | Complex editor or visualizer UI | Plugin and WebView | Not implemented |
 
 BYOP should persist references and rebuildable indexes rather than duplicate
@@ -151,7 +151,7 @@ The exact MyGo `ui.WebView` behavior still needs P5 platform validation.
 | Embedded Pi SDK runtime | Remove; use external Pi CLI RPC |
 | Sessions, models, credentials | Keep in Pi; access through RPC and read-only discovery |
 | Skills and extensions | Keep in Pi; expose status and commands through adapters |
-| Tool execution timelines | Expand native event projection |
+| Tool execution timelines | Structured native cards implemented for the active run |
 | Mermaid, KaTeX, xterm, rich document editor | Consider declared WebView plugins |
 | Themes, sidebar widths, drafts | Rebuild BYOP preferences and explicit import |
 | Scheduled tasks and Loop semantics | Rebuild in BYOP with plugin-owned jobs |
@@ -160,7 +160,8 @@ The exact MyGo `ui.WebView` behavior still needs P5 platform validation.
 
 | Phase | Scope |
 |---|---|
-| P3 | Native tool cards, structured message events, run diagnostics and richer chat state |
+| P3.1 | Structured tool lifecycle, native cards and active-tool task state |
+| P3.2 | Run diagnostics, richer chat state and folded multi-tool history |
 | P4 | Manifest validation, registry, lazy activation, command and settings contributions |
 | P5 | WebView proof, theme bridge, crash fallback and complex view sandbox |
 | P6 | Read-only session discovery, model and thinking-level selectors |

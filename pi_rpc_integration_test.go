@@ -107,6 +107,112 @@ func TestPiRPCIntegrationStop(t *testing.T) {
 	t.Logf("stop: queue_note=%q aborted=%t", note, event.Aborted)
 }
 
+func TestPiRPCIntegrationTool(t *testing.T) {
+	client := startIntegrationPi(t)
+	defer closeIntegrationPi(t, client)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	if _, err := client.GetState(ctx); err != nil {
+		cancel()
+		t.Fatalf("get_state: %v", err)
+	}
+	cancel()
+
+	requestID, err := client.Prompt(
+		"Use the bash tool exactly once to run this exact command: printf 'BYOP_TOOL_OK'. " +
+			"Do not inspect files or use any other tool. After it succeeds, reply with exactly BYOP_TOOL_DONE.",
+	)
+	if err != nil {
+		t.Fatalf("prompt: %v", err)
+	}
+
+	var bashStart *piEvent
+	var bashEnd *piEvent
+	var finalText string
+	order := make([]string, 0, 5)
+	accepted := false
+	settled := false
+	deadline := time.After(120 * time.Second)
+	for !settled {
+		select {
+		case event := <-clientTestEvents(client):
+			switch event.Kind {
+			case piEventResponse:
+				if event.RequestID == requestID && event.Command == "prompt" {
+					if !event.Success {
+						t.Fatalf("prompt rejected: %s", event.Error)
+					}
+					accepted = true
+					order = append(order, "accepted")
+				}
+			case piEventToolStart:
+				order = append(order, "tool_start")
+				if event.ToolCallID == "" {
+					t.Fatal("tool start has an empty toolCallId")
+				}
+				if event.ToolName == "bash" && strings.Contains(string(event.ToolArgs), "BYOP_TOOL_OK") {
+					if bashStart != nil {
+						t.Fatal("Pi started the marker bash tool more than once")
+					}
+					copied := event
+					bashStart = &copied
+				}
+			case piEventToolUpdate:
+				if bashStart != nil && event.ToolCallID == bashStart.ToolCallID {
+					order = append(order, "tool_update")
+				}
+			case piEventToolEnd:
+				order = append(order, "tool_end")
+				if bashStart != nil && event.ToolCallID == bashStart.ToolCallID {
+					copied := event
+					bashEnd = &copied
+				}
+			case piEventMessage:
+				finalText = event.Text
+			case piEventSettled:
+				order = append(order, "settled")
+				settled = true
+			case piEventProcessExit:
+				t.Fatalf("Pi exited before agent_settled: %s", event.Error)
+			case piEventParseError:
+				t.Fatalf("Pi protocol error: %s", event.Error)
+			}
+		case <-deadline:
+			t.Fatalf("timed out waiting for the tool run; accepted=%t start=%t end=%t", accepted, bashStart != nil, bashEnd != nil)
+		}
+	}
+
+	if !accepted {
+		t.Fatal("did not receive a successful prompt response")
+	}
+	if bashStart == nil {
+		t.Fatal("did not observe the marker bash tool start event")
+	}
+	if bashEnd == nil {
+		t.Fatal("did not observe the matching marker bash tool end event")
+	}
+	if bashStart.ToolCallID != bashEnd.ToolCallID {
+		t.Fatalf("correlation failed: start=%q end=%q", bashStart.ToolCallID, bashEnd.ToolCallID)
+	}
+	if bashEnd.ToolIsError {
+		t.Fatal("marker bash tool ended with an error")
+	}
+	if !strings.Contains(formatToolResult(bashEnd.ToolResult), "BYOP_TOOL_OK") {
+		t.Fatalf("tool result did not contain the marker: %s", string(bashEnd.ToolResult))
+	}
+	if bashEnd.ToolDurationMS < 0 {
+		t.Fatalf("tool duration = %d, want non-negative", bashEnd.ToolDurationMS)
+	}
+	startAt := strings.Index(strings.Join(order, ","), "tool_start")
+	endAt := strings.LastIndex(strings.Join(order, ","), "tool_end")
+	settledAt := strings.LastIndex(strings.Join(order, ","), "settled")
+	if startAt < 0 || endAt < startAt || settledAt < endAt {
+		t.Fatalf("unexpected event order: %v", order)
+	}
+	t.Logf("tool: id=%s duration_ms=%d final=%q order=%v",
+		bashStart.ToolCallID, bashEnd.ToolDurationMS, finalText, order)
+}
+
 var integrationEventBuffers = make(map[*piClient]<-chan piEvent)
 
 func startIntegrationPi(t *testing.T) *piClient {

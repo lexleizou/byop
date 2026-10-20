@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/egoist/mygo/ui"
 )
 
@@ -25,18 +27,16 @@ func (s *appState) chatPage(c *ui.Context, p palette) {
 							FontSize(fontBody).LineHeight(1.45).TextColor(p.muted).MaxWidth(650)
 					})
 
-					for _, message := range s.chat {
+					for i := range s.chat {
+						message := &s.chat[i]
 						switch message.role {
 						case chatUser:
 							userMessage(c, p, message.text)
 						case chatAssistant:
-							assistantMessage(c, p, message.text, message.status)
+							assistantMessage(c, p, message)
 						}
 					}
 
-					if s.toolActivity != "" {
-						runActivity(c, p, s.toolActivity)
-					}
 					if s.piConn != piConnected && len(s.chat) == 0 {
 						ui.Column(c).Gap(6).Padding(12, 14).Radius(10).
 							Background(p.surface).Border(1, p.border).Children(func() {
@@ -62,18 +62,23 @@ func userMessage(c *ui.Context, p palette, text string) {
 	})
 }
 
-func assistantMessage(c *ui.Context, p palette, text, status string) {
+func assistantMessage(c *ui.Context, p palette, message *chatMessage) {
 	ui.Row(c).Gap(11).AlignItems(ui.Start).Children(func() {
 		assistantAvatar(c, p)
 		ui.Column(c).Grow(1).Gap(7).Children(func() {
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, appShort).FontSize(fontSmall).FontWeight(700).TextColor(p.text)
-				if status != "" {
-					ui.Text(c, status).FontSize(fontCaption).TextColor(p.muted)
+				if message.status != "" {
+					ui.Text(c, message.status).FontSize(fontCaption).TextColor(p.muted)
 				}
 			})
-			ui.Text(c, fallback(text, "Waiting for Pi…")).
-				Selectable().FontSize(fontBody).LineHeight(1.52).TextColor(p.text).MaxWidth(680)
+			if message.text != "" || len(message.toolCalls) == 0 {
+				ui.Text(c, fallback(message.text, "Waiting for Pi…")).
+					Selectable().FontSize(fontBody).LineHeight(1.52).TextColor(p.text).MaxWidth(680)
+			}
+			for i := range message.toolCalls {
+				toolCallCard(c, p, &message.toolCalls[i])
+			}
 		})
 	})
 }
@@ -84,20 +89,111 @@ func assistantAvatar(c *ui.Context, p palette) {
 	})
 }
 
-func runActivity(c *ui.Context, p palette, text string) {
-	ui.Column(c).FillWidth().Gap(10).Padding(12).Radius(11).
+func toolCallCard(c *ui.Context, p palette, tool *toolCallView) {
+	tone := toolCallTone(p, tool.status)
+	ui.Column(c).FillWidth().Gap(0).Radius(10).
 		Border(1, p.border).Background(p.surface).Children(func() {
-		ui.Row(c).Gap(9).AlignItems(ui.Center).Children(func() {
-			ui.Row(c).Size(28, 28).Radius(7).Background(p.surfaceHover).Center().Children(func() {
-				ui.Icon(c, icon("terminal")).Size(15, 15).TextColor(p.accent)
+		parts := ui.CollapsibleBase(c, &tool.expanded)
+		parts.Trigger.FillWidth().Gap(9).AlignItems(ui.Start).Padding(10, 12).
+			Cursor(ui.CursorPointer).
+			Children(func() {
+				ui.Row(c).Size(28, 28).Shrink(0).Radius(7).
+					Background(p.surfaceHover).Center().Children(func() {
+					ui.Icon(c, icon(toolCallIcon(tool.name))).Size(15, 15).TextColor(tone)
+				})
+				ui.Column(c).Grow(1).Gap(3).Children(func() {
+					ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
+						ui.Text(c, tool.name).Font("monospace").FontSize(fontSmall).
+							FontWeight(650).TextColor(p.text).Grow(1).SingleLine()
+						statusPill(c, p, toolCallStatusLabel(tool.status), tone)
+					})
+					ui.Text(c, fallback(oneLine(tool.arguments), "No argument summary.")).
+						FontSize(fontCaption).TextColor(p.muted).SingleLine().MaxWidth(590)
+					if summary := toolCallResultSummary(tool); summary != "" {
+						ui.Text(c, summary).FontSize(fontCaption).
+							TextColor(p.muted).SingleLine().MaxWidth(590)
+					}
+				})
+				ui.Column(c).Gap(3).AlignItems(ui.End).Shrink(0).Children(func() {
+					if tool.durationMS > 0 {
+						ui.Text(c, formatToolDuration(tool.durationMS)).
+							Font("monospace").FontSize(fontMicro).TextColor(p.muted)
+					}
+					ui.Icon(c, icon("chevron-down")).Size(14, 14).
+						TextColor(p.muted).Rotate(180 * parts.Progress())
+				})
 			})
-			ui.Column(c).Gap(1).Grow(1).Children(func() {
-				ui.Text(c, "Pi runtime").FontSize(fontSmall).FontWeight(650).TextColor(p.text)
-				ui.Text(c, text).FontSize(fontCaption).TextColor(p.muted)
+		parts.Panel(func() {
+			ui.Column(c).FillWidth().Gap(9).Padding(10, 12).
+				BorderWidth(1, 0, 0, 0).BorderColor(p.border).Children(func() {
+				toolDetail(c, p, "ARGUMENTS", fallback(tool.arguments, "No arguments"))
+				if result := fallback(tool.result, tool.partial); result != "" {
+					toolDetail(c, p, "RESULT", result)
+				}
 			})
-			statusPill(c, p, "LIVE", p.success)
 		})
 	})
+}
+
+func toolDetail(c *ui.Context, p palette, label, text string) {
+	ui.Column(c).FillWidth().Gap(4).Children(func() {
+		ui.Text(c, label).FontSize(fontMicro).FontWeight(700).TextColor(p.muted)
+		ui.Text(c, text).Selectable().Font("monospace").FontSize(fontSmall).
+			LineHeight(1.45).TextColor(p.text).MaxWidth(650)
+	})
+}
+
+func toolCallResultSummary(tool *toolCallView) string {
+	text := fallback(tool.result, tool.partial)
+	if text == "" {
+		switch tool.status {
+		case toolCallRunning:
+			return "Waiting for tool output…"
+		case toolCallCancelled:
+			return "Tool was cancelled before completion."
+		case toolCallInterrupted:
+			return "Tool was interrupted when Pi disconnected."
+		}
+		return ""
+	}
+	return summarizeLine(text, 150)
+}
+
+func summarizeLine(text string, limit int) string {
+	line := oneLine(text)
+	runes := []rune(line)
+	if len(runes) <= limit {
+		return line
+	}
+	return string(runes[:limit]) + "…"
+}
+
+func toolCallIcon(name string) string {
+	switch strings.ToLower(name) {
+	case "bash", "shell", "terminal":
+		return "terminal"
+	case "read", "write", "edit", "file":
+		return "file"
+	case "grep", "find", "search":
+		return "search"
+	case "git":
+		return "git"
+	default:
+		return "play"
+	}
+}
+
+func toolCallTone(p palette, status toolCallStatus) ui.Color {
+	switch status {
+	case toolCallRunning:
+		return p.warning
+	case toolCallCompleted:
+		return p.success
+	case toolCallFailed, toolCallInterrupted:
+		return p.danger
+	default:
+		return p.muted
+	}
 }
 
 func (s *appState) composer(c *ui.Context, p palette) {
@@ -442,7 +538,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P2 external Pi RPC · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P3 structured tool events · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})

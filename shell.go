@@ -56,7 +56,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P2 · PI RPC", p.accent)
+		statusPill(c, p, "P3 · TOOL EVENTS", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
@@ -229,7 +229,7 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 			ui.Scroll(c).Grow(1).Padding(12).Children(func() {
 				ui.Column(c).Gap(9).Children(func() {
 					s.taskCard(c, p, "Pi JSONL RPC", s.piSecondaryLabel(), s.connectionStateLabel(), s.piTone(p))
-					s.taskCard(c, p, "Current run", fallback(s.toolActivity, s.runDetail()), s.runLabel(), s.runTone(p))
+					s.taskCard(c, p, "Current run", s.currentRunTaskDetail(), s.runLabel(), s.runTone(p))
 					s.taskCard(c, p, "Plugin registry", "Reserved for P4", "Not started", p.muted)
 				})
 			})

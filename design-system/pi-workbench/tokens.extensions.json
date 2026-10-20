@@ -8,7 +8,7 @@
     "updated": "2026-10-20",
     "base": "../onevra/tokens.json",
     "baseVersion": "1.0.0",
-    "status": "design source; P2 native Go currently consumes a subset",
+    "status": "design source; P3 native Go currently consumes a subset",
     "format": "project DTCG-style; not a formal schema conformance claim"
   },
   "workbench": {

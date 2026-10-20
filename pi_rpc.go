@@ -25,7 +25,9 @@ const (
 	piEventRunStarted  piEventKind = "run_started"
 	piEventText        piEventKind = "text"
 	piEventMessage     piEventKind = "message"
-	piEventTool        piEventKind = "tool"
+	piEventToolStart   piEventKind = "tool_start"
+	piEventToolUpdate  piEventKind = "tool_update"
+	piEventToolEnd     piEventKind = "tool_end"
 	piEventSettled     piEventKind = "settled"
 	piEventProcessExit piEventKind = "process_exit"
 	piEventParseError  piEventKind = "parse_error"
@@ -46,18 +48,24 @@ type piSessionState struct {
 }
 
 type piEvent struct {
-	Kind        piEventKind
-	Source      *piClient
-	RequestID   string
-	Command     string
-	Success     bool
-	Error       string
-	Disposition string
-	Text        string
-	ToolName    string
-	Aborted     bool
-	Session     *piSessionState
-	StderrTail  string
+	Kind           piEventKind
+	Source         *piClient
+	RequestID      string
+	Command        string
+	Success        bool
+	Error          string
+	Disposition    string
+	Text           string
+	ToolName       string
+	ToolCallID     string
+	ToolArgs       json.RawMessage
+	ToolResult     json.RawMessage
+	ToolPartial    json.RawMessage
+	ToolIsError    bool
+	ToolDurationMS int64
+	Aborted        bool
+	Session        *piSessionState
+	StderrTail     string
 }
 
 type piRPCResponse struct {
@@ -357,21 +365,58 @@ func (p *piClient) handleRecord(line []byte) {
 		p.handleMessageEnd(line)
 	case "tool_execution_start":
 		var event struct {
-			ToolName string `json:"toolName"`
+			ToolCallID string          `json:"toolCallId"`
+			ToolName   string          `json:"toolName"`
+			Args       json.RawMessage `json:"args"`
 		}
-		_ = json.Unmarshal(line, &event)
-		p.emit(piEvent{Kind: piEventTool, ToolName: event.ToolName})
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi tool start: " + err.Error()})
+			return
+		}
+		p.emit(piEvent{
+			Kind:       piEventToolStart,
+			ToolCallID: event.ToolCallID,
+			ToolName:   event.ToolName,
+			ToolArgs:   event.Args,
+		})
+	case "tool_execution_update":
+		var event struct {
+			ToolCallID    string          `json:"toolCallId"`
+			ToolName      string          `json:"toolName"`
+			Args          json.RawMessage `json:"args"`
+			PartialResult json.RawMessage `json:"partialResult"`
+		}
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi tool update: " + err.Error()})
+			return
+		}
+		p.emit(piEvent{
+			Kind:        piEventToolUpdate,
+			ToolCallID:  event.ToolCallID,
+			ToolName:    event.ToolName,
+			ToolArgs:    event.Args,
+			ToolPartial: event.PartialResult,
+		})
 	case "tool_execution_end":
 		var event struct {
-			ToolName string `json:"toolName"`
-			IsError  bool   `json:"isError"`
+			ToolCallID string          `json:"toolCallId"`
+			ToolName   string          `json:"toolName"`
+			Result     json.RawMessage `json:"result"`
+			IsError    bool            `json:"isError"`
+			DurationMS int64           `json:"durationMs"`
 		}
-		_ = json.Unmarshal(line, &event)
-		text := event.ToolName + " finished"
-		if event.IsError {
-			text = event.ToolName + " failed"
+		if err := json.Unmarshal(line, &event); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi tool end: " + err.Error()})
+			return
 		}
-		p.emit(piEvent{Kind: piEventTool, ToolName: text})
+		p.emit(piEvent{
+			Kind:           piEventToolEnd,
+			ToolCallID:     event.ToolCallID,
+			ToolName:       event.ToolName,
+			ToolResult:     event.Result,
+			ToolIsError:    event.IsError,
+			ToolDurationMS: event.DurationMS,
+		})
 	case "agent_settled":
 		var event struct {
 			Aborted bool `json:"aborted"`
@@ -456,7 +501,11 @@ func (p *piClient) handleMessageEnd(line []byte) {
 		return
 	}
 	text := contentText(event.Message.Content)
-	if text == "" && event.Message.ErrorMessage != "" {
+	if text == "" && event.Message.ErrorMessage == "" {
+		p.resetStream()
+		return
+	}
+	if text == "" {
 		text = event.Message.ErrorMessage
 	}
 	p.emit(piEvent{
