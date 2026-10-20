@@ -4,11 +4,11 @@
     "name": "BYOP Extensions",
     "product": "Build You Own Pi",
     "productAbbreviation": "BYOP",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "updated": "2026-10-20",
     "base": "../onevra/tokens.json",
     "baseVersion": "1.0.0",
-    "status": "design source; P3 native Go currently consumes a subset",
+    "status": "design source; P3.2 native Go currently consumes a subset",
     "format": "project DTCG-style; not a formal schema conformance claim"
   },
   "workbench": {

@@ -2,9 +2,9 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P3.1 工具活动闭环：连接外部 Pi、发送消息、接收流式文本和结构化工具事件、等待 `agent_settled`、停止当前运行，以及连接中断和重连状态。BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P3.2 有序会话时间线：连接外部 Pi、发送消息、按真实顺序呈现文字与工具活动、等待 `agent_settled`、停止当前运行，以及连接中断和重连状态。BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
-![BYOP structured tool cards](docs/screenshots/p3-tool-cards.png)
+![BYOP ordered session timeline](docs/screenshots/p3-2-timeline.png)
 
 ![BYOP Settings](docs/screenshots/p2-settings-connected.png)
 
@@ -18,9 +18,12 @@
 - 外部 `pi --mode rpc --no-session` 进程适配器；
 - `get_state` 握手、`prompt` 发送、流式 `message_update`、最终 `message_end`；
 - 按 `toolCallId` 关联 `tool_execution_start/update/end`；
+- 原生会话时间线按“文字 → 工具 → 文字”的真实顺序保留内容块；
+- `tool_execution_start/update/end` 按 `toolCallId` 原位更新，不改变工具卡位置；
 - 原生工具卡展示名称、参数摘要、结果摘要、耗时、状态和可展开详情；
+- 运行中工具自动展开，完成、失败、取消或中断后自动折叠；
 - Running、Completed、Failed、Cancelled、Interrupted 五种工具状态；
-- 右侧任务栏显示当前活动工具；
+- 多个工具保留各自时间线位置，右侧任务栏显示最新运行或最近活动的工具；
 - Stop、进程退出和重连分别把未完成工具标记为 Cancelled 或 Interrupted；
 - 以 `agent_settled` 作为真实运行完成信号；
 - Stop 使用 `clear_queue → abort`，并用 `agent_settled(aborted:true)` 确认结果；
@@ -103,11 +106,11 @@ jq empty design-system/pi-workbench/tokens.extensions.json
 
 ```sh
 BYOP_PI_INTEGRATION=1 go test \
-  -run 'TestPiRPCIntegration(MinimalLoop|Stop|Tool)$' \
-  -v -count=1 -timeout=6m
+  -run 'TestPiRPCIntegration(MinimalLoop|Stop|Tool|Timeline)$' \
+  -v -count=1 -timeout=8m
 ```
 
-该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，并要求 Pi 通过 `bash` 返回固定安全标记。工具测试验证开始与结束事件使用同一 `toolCallId`，且结果、耗时和事件顺序正确。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
+该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，并要求 Pi 连续执行两次安全的 `bash` 命令。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
 
 验证记录见 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
 

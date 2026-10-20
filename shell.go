@@ -56,7 +56,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P3 · TOOL EVENTS", p.accent)
+		statusPill(c, p, "P3.2 · TIMELINE", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {

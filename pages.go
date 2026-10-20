@@ -31,7 +31,7 @@ func (s *appState) chatPage(c *ui.Context, p palette) {
 						message := &s.chat[i]
 						switch message.role {
 						case chatUser:
-							userMessage(c, p, message.text)
+							userMessage(c, p, messageText(message))
 						case chatAssistant:
 							assistantMessage(c, p, message)
 						}
@@ -62,6 +62,17 @@ func userMessage(c *ui.Context, p palette, text string) {
 	})
 }
 
+func messageText(message *chatMessage) string {
+	var parts []string
+	for i := range message.blocks {
+		block := &message.blocks[i]
+		if block.kind == chatBlockText && strings.TrimSpace(block.text) != "" {
+			parts = append(parts, block.text)
+		}
+	}
+	return strings.Join(parts, "\n\n")
+}
+
 func assistantMessage(c *ui.Context, p palette, message *chatMessage) {
 	ui.Row(c).Gap(11).AlignItems(ui.Start).Children(func() {
 		assistantAvatar(c, p)
@@ -72,12 +83,21 @@ func assistantMessage(c *ui.Context, p palette, message *chatMessage) {
 					ui.Text(c, message.status).FontSize(fontCaption).TextColor(p.muted)
 				}
 			})
-			if message.text != "" || len(message.toolCalls) == 0 {
-				ui.Text(c, fallback(message.text, "Waiting for Pi…")).
+			if len(message.blocks) == 0 {
+				ui.Text(c, "Waiting for Pi…").
 					Selectable().FontSize(fontBody).LineHeight(1.52).TextColor(p.text).MaxWidth(680)
 			}
-			for i := range message.toolCalls {
-				toolCallCard(c, p, &message.toolCalls[i])
+			for i := range message.blocks {
+				block := &message.blocks[i]
+				switch block.kind {
+				case chatBlockText:
+					if strings.TrimSpace(block.text) != "" {
+						ui.Text(c, block.text).Selectable().FontSize(fontBody).
+							LineHeight(1.52).TextColor(p.text).MaxWidth(680)
+					}
+				case chatBlockTool:
+					toolCallCard(c, p, &block.tool)
+				}
 			}
 		})
 	})
@@ -538,7 +558,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P3 structured tool events · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P3.2 ordered session timeline · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})

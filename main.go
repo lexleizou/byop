@@ -118,11 +118,23 @@ type toolCallView struct {
 	expanded   bool
 }
 
+type chatBlockKind string
+
+const (
+	chatBlockText chatBlockKind = "text"
+	chatBlockTool chatBlockKind = "tool"
+)
+
+type chatBlock struct {
+	kind chatBlockKind
+	text string
+	tool toolCallView
+}
+
 type chatMessage struct {
-	role      chatRole
-	text      string
-	status    string
-	toolCalls []toolCallView
+	role   chatRole
+	status string
+	blocks []chatBlock
 }
 
 type appState struct {
@@ -194,29 +206,46 @@ func (s *appState) seedToolDemo() {
 	s.activePrompt = "Review the sample project."
 	s.chat = []chatMessage{
 		{
-			role:   chatUser,
-			text:   "Review the sample project.",
+			role: chatUser,
+			blocks: []chatBlock{{
+				kind: chatBlockText,
+				text: "Review the sample project.",
+			}},
 			status: "sent",
 		},
 		{
 			role:   chatAssistant,
-			text:   "I’m checking the project files.",
 			status: "Streaming",
-			toolCalls: []toolCallView{
+			blocks: []chatBlock{
 				{
-					id:         "demo-tool-complete",
-					name:       "bash",
-					arguments:  "git status --short",
-					result:     " M app.go",
-					status:     toolCallCompleted,
-					durationMS: 84,
+					kind: chatBlockText,
+					text: "I’m checking the project files.",
 				},
 				{
-					id:        "demo-tool-running",
-					name:      "read",
-					arguments: "README.md",
-					partial:   "Reading 3 sections…",
-					status:    toolCallRunning,
+					kind: chatBlockTool,
+					tool: toolCallView{
+						id:         "demo-tool-complete",
+						name:       "bash",
+						arguments:  "git status --short",
+						result:     " M app.go",
+						status:     toolCallCompleted,
+						durationMS: 84,
+					},
+				},
+				{
+					kind: chatBlockText,
+					text: "The working tree is clean except for the sample app. I’m reading the remaining documentation now.",
+				},
+				{
+					kind: chatBlockTool,
+					tool: toolCallView{
+						id:        "demo-tool-running",
+						name:      "read",
+						arguments: "README.md",
+						partial:   "Reading 3 sections…",
+						status:    toolCallRunning,
+						expanded:  true,
+					},
 				},
 			},
 		},
@@ -380,8 +409,15 @@ func (s *appState) sendPrompt() {
 	s.activeRequest = requestID
 	s.activePrompt = text
 	s.chat = append(s.chat,
-		chatMessage{role: chatUser, text: text, status: "sent"},
-		chatMessage{role: chatAssistant, text: "", status: "Waiting for Pi…"},
+		chatMessage{
+			role: chatUser,
+			blocks: []chatBlock{{
+				kind: chatBlockText,
+				text: text,
+			}},
+			status: "sent",
+		},
+		chatMessage{role: chatAssistant, status: "Waiting for Pi…"},
 	)
 }
 
@@ -495,11 +531,19 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 }
 
 func (s *appState) setAssistantText(text, status string) {
-	if len(s.chat) == 0 || s.chat[len(s.chat)-1].role != chatAssistant {
-		s.chat = append(s.chat, chatMessage{role: chatAssistant})
+	message := s.currentAssistant()
+	message.status = status
+	if strings.TrimSpace(text) == "" {
+		return
 	}
-	s.chat[len(s.chat)-1].text = text
-	s.chat[len(s.chat)-1].status = status
+	if len(message.blocks) > 0 {
+		last := &message.blocks[len(message.blocks)-1]
+		if last.kind == chatBlockText {
+			last.text = text
+			return
+		}
+	}
+	message.blocks = append(message.blocks, chatBlock{kind: chatBlockText, text: text})
 }
 
 func (s *appState) setAssistantStatus(status string) {
@@ -509,13 +553,17 @@ func (s *appState) setAssistantStatus(status string) {
 }
 
 func (s *appState) ensureAssistantFallback(text string) {
-	if len(s.chat) == 0 || s.chat[len(s.chat)-1].role != chatAssistant {
-		s.chat = append(s.chat, chatMessage{role: chatAssistant, text: text})
+	message := s.currentAssistant()
+	for i := len(message.blocks) - 1; i >= 0; i-- {
+		block := &message.blocks[i]
+		if block.kind == chatBlockText && strings.TrimSpace(block.text) != "" {
+			return
+		}
+	}
+	if strings.TrimSpace(text) == "" {
 		return
 	}
-	if strings.TrimSpace(s.chat[len(s.chat)-1].text) == "" {
-		s.chat[len(s.chat)-1].text = text
-	}
+	message.blocks = append(message.blocks, chatBlock{kind: chatBlockText, text: text})
 }
 
 func (s *appState) finishAssistant(text, status string) {
@@ -537,64 +585,69 @@ func (s *appState) currentAssistant() *chatMessage {
 func (s *appState) startToolCall(event piEvent) {
 	message := s.currentAssistant()
 	id := event.ToolCallID
-	for i := range message.toolCalls {
-		if message.toolCalls[i].id != id {
+	for i := range message.blocks {
+		block := &message.blocks[i]
+		if block.kind != chatBlockTool || block.tool.id != id {
 			continue
 		}
-		message.toolCalls[i].name = fallback(event.ToolName, message.toolCalls[i].name)
-		message.toolCalls[i].arguments = formatToolArguments(event.ToolArgs)
-		message.toolCalls[i].status = toolCallRunning
+		block.tool.name = fallback(event.ToolName, block.tool.name)
+		block.tool.arguments = formatToolArguments(event.ToolArgs)
+		block.tool.status = toolCallRunning
+		block.tool.expanded = true
 		return
 	}
-	message.toolCalls = append(message.toolCalls, toolCallView{
-		id:        id,
-		name:      fallback(event.ToolName, "tool"),
-		arguments: formatToolArguments(event.ToolArgs),
-		status:    toolCallRunning,
+	message.blocks = append(message.blocks, chatBlock{
+		kind: chatBlockTool,
+		tool: toolCallView{
+			id:        id,
+			name:      fallback(event.ToolName, "tool"),
+			arguments: formatToolArguments(event.ToolArgs),
+			status:    toolCallRunning,
+			expanded:  true,
+		},
 	})
 }
 
 func (s *appState) updateToolCall(event piEvent) {
 	message := s.currentAssistant()
-	for i := range message.toolCalls {
-		if message.toolCalls[i].id != event.ToolCallID {
+	for i := range message.blocks {
+		block := &message.blocks[i]
+		if block.kind != chatBlockTool || block.tool.id != event.ToolCallID {
 			continue
 		}
 		if event.ToolName != "" {
-			message.toolCalls[i].name = event.ToolName
+			block.tool.name = event.ToolName
 		}
 		if len(event.ToolArgs) > 0 {
-			message.toolCalls[i].arguments = formatToolArguments(event.ToolArgs)
+			block.tool.arguments = formatToolArguments(event.ToolArgs)
 		}
 		if len(event.ToolPartial) > 0 {
-			message.toolCalls[i].partial = formatToolResult(event.ToolPartial)
+			block.tool.partial = formatToolResult(event.ToolPartial)
 		}
-		message.toolCalls[i].status = toolCallRunning
+		block.tool.status = toolCallRunning
 		return
 	}
 	s.startToolCall(event)
-	if message = s.currentAssistant(); len(message.toolCalls) > 0 {
-		message.toolCalls[len(message.toolCalls)-1].partial = formatToolResult(event.ToolPartial)
+	message = s.currentAssistant()
+	if tool, _ := s.findToolBlock(message, event.ToolCallID); tool != nil {
+		tool.partial = formatToolResult(event.ToolPartial)
 	}
 }
 
 func (s *appState) endToolCall(event piEvent) {
 	message := s.currentAssistant()
-	var tool *toolCallView
-	for i := range message.toolCalls {
-		if message.toolCalls[i].id == event.ToolCallID {
-			tool = &message.toolCalls[i]
-			break
-		}
-	}
+	tool, _ := s.findToolBlock(message, event.ToolCallID)
 	if tool == nil {
-		message.toolCalls = append(message.toolCalls, toolCallView{
-			id:       event.ToolCallID,
-			name:     fallback(event.ToolName, "tool"),
-			status:   toolCallCompleted,
-			expanded: false,
+		message.blocks = append(message.blocks, chatBlock{
+			kind: chatBlockTool,
+			tool: toolCallView{
+				id:       event.ToolCallID,
+				name:     fallback(event.ToolName, "tool"),
+				status:   toolCallCompleted,
+				expanded: false,
+			},
 		})
-		tool = &message.toolCalls[len(message.toolCalls)-1]
+		tool, _ = s.findToolBlock(message, event.ToolCallID)
 	}
 	if event.ToolName != "" {
 		tool.name = event.ToolName
@@ -605,34 +658,56 @@ func (s *appState) endToolCall(event piEvent) {
 	if event.ToolIsError {
 		tool.status = toolCallFailed
 	}
+	tool.expanded = false
 }
 
 func (s *appState) markOpenTools(status toolCallStatus) {
-	if len(s.chat) == 0 {
-		return
-	}
-	message := &s.chat[len(s.chat)-1]
-	if message.role != chatAssistant {
-		return
-	}
-	for i := range message.toolCalls {
-		if message.toolCalls[i].status == toolCallRunning {
-			message.toolCalls[i].status = status
+	for messageIndex := range s.chat {
+		message := &s.chat[messageIndex]
+		if message.role != chatAssistant {
+			continue
+		}
+		for blockIndex := range message.blocks {
+			block := &message.blocks[blockIndex]
+			if block.kind == chatBlockTool && block.tool.status == toolCallRunning {
+				block.tool.status = status
+				block.tool.expanded = false
+			}
 		}
 	}
 }
 
 func (s *appState) latestToolCall() *toolCallView {
+	var mostRecent *toolCallView
 	for messageIndex := len(s.chat) - 1; messageIndex >= 0; messageIndex-- {
 		message := &s.chat[messageIndex]
 		if message.role != chatAssistant {
 			continue
 		}
-		for toolIndex := len(message.toolCalls) - 1; toolIndex >= 0; toolIndex-- {
-			return &message.toolCalls[toolIndex]
+		for blockIndex := len(message.blocks) - 1; blockIndex >= 0; blockIndex-- {
+			block := &message.blocks[blockIndex]
+			if block.kind != chatBlockTool {
+				continue
+			}
+			if block.tool.status == toolCallRunning {
+				return &block.tool
+			}
+			if mostRecent == nil {
+				mostRecent = &block.tool
+			}
 		}
 	}
-	return nil
+	return mostRecent
+}
+
+func (s *appState) findToolBlock(message *chatMessage, id string) (*toolCallView, int) {
+	for blockIndex := range message.blocks {
+		block := &message.blocks[blockIndex]
+		if block.kind == chatBlockTool && block.tool.id == id {
+			return &block.tool, blockIndex
+		}
+	}
+	return nil, -1
 }
 
 func (s *appState) currentRunTaskDetail() string {

@@ -213,6 +213,113 @@ func TestPiRPCIntegrationTool(t *testing.T) {
 		bashStart.ToolCallID, bashEnd.ToolDurationMS, finalText, order)
 }
 
+func TestPiRPCIntegrationTimeline(t *testing.T) {
+	client := startIntegrationPi(t)
+	defer closeIntegrationPi(t, client)
+
+	state := projectionTestState()
+	state.pi = client
+	state.run = runIdle
+	state.composerDraft = strings.Join([]string{
+		"Use bash exactly twice, in two separate tool calls.",
+		"First run printf 'BYOP_ORDER_ONE'.",
+		"After that call finishes, send a standalone assistant text message containing only BETWEEN_TOOLS.",
+		"Then run printf 'BYOP_ORDER_TWO' in a second bash call.",
+		"After the second call finishes, send a standalone assistant text message containing only BYOP_ORDER_DONE.",
+		"Do not combine the commands and do not use any other tool.",
+	}, " ")
+	state.sendPrompt()
+	requestID := state.activeRequest
+	if requestID == "" {
+		t.Fatalf("prompt was not sent: %s", state.notice)
+	}
+
+	toolIDs := make(map[string]string)
+	settled := false
+	deadline := time.After(150 * time.Second)
+	for !settled {
+		select {
+		case event := <-clientTestEvents(client):
+			state.handlePiEvent(event, 0)
+			switch event.Kind {
+			case piEventResponse:
+				if event.RequestID == requestID && !event.Success {
+					t.Fatalf("prompt rejected: %s", event.Error)
+				}
+			case piEventToolStart:
+				switch {
+				case strings.Contains(string(event.ToolArgs), "BYOP_ORDER_ONE"):
+					toolIDs["one"] = event.ToolCallID
+				case strings.Contains(string(event.ToolArgs), "BYOP_ORDER_TWO"):
+					toolIDs["two"] = event.ToolCallID
+				}
+			case piEventSettled:
+				settled = true
+			case piEventProcessExit:
+				t.Fatalf("Pi exited before agent_settled: %s", event.Error)
+			case piEventParseError:
+				t.Fatalf("Pi protocol error: %s", event.Error)
+			}
+		case <-deadline:
+			t.Fatalf("timed out waiting for ordered timeline; tools=%v", toolIDs)
+		}
+	}
+
+	if toolIDs["one"] == "" || toolIDs["two"] == "" || toolIDs["one"] == toolIDs["two"] {
+		t.Fatalf("did not observe two distinct ordered tools: %v", toolIDs)
+	}
+	if len(state.chat) < 2 {
+		t.Fatalf("chat has %d messages, want user and assistant", len(state.chat))
+	}
+	assistant := &state.chat[len(state.chat)-1]
+	oneAt := timelineToolIndex(assistant, toolIDs["one"])
+	twoAt := timelineToolIndex(assistant, toolIDs["two"])
+	if oneAt < 0 || twoAt < 0 || twoAt <= oneAt {
+		t.Fatalf("tool order one=%d two=%d blocks=%#v", oneAt, twoAt, assistant.blocks)
+	}
+	if !timelineHasTextBetween(assistant, oneAt, twoAt, "BETWEEN_TOOLS") {
+		t.Fatalf("BETWEEN_TOOLS is not between the two tools: %#v", assistant.blocks)
+	}
+	if !timelineHasTextAfter(assistant, twoAt, "BYOP_ORDER_DONE") {
+		t.Fatalf("final text is not after the second tool: %#v", assistant.blocks)
+	}
+	if !strings.Contains(assistant.blocks[oneAt].tool.result, "BYOP_ORDER_ONE") ||
+		!strings.Contains(assistant.blocks[twoAt].tool.result, "BYOP_ORDER_TWO") {
+		t.Fatalf("tool results do not match their content positions: %#v", assistant.blocks)
+	}
+	t.Logf("timeline: one=%s two=%s blocks=%d", toolIDs["one"], toolIDs["two"], len(assistant.blocks))
+}
+
+func timelineToolIndex(message *chatMessage, id string) int {
+	for i := range message.blocks {
+		block := &message.blocks[i]
+		if block.kind == chatBlockTool && block.tool.id == id {
+			return i
+		}
+	}
+	return -1
+}
+
+func timelineHasTextBetween(message *chatMessage, start, end int, marker string) bool {
+	for i := start + 1; i < end; i++ {
+		block := &message.blocks[i]
+		if block.kind == chatBlockText && strings.Contains(block.text, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func timelineHasTextAfter(message *chatMessage, after int, marker string) bool {
+	for i := after + 1; i < len(message.blocks); i++ {
+		block := &message.blocks[i]
+		if block.kind == chatBlockText && strings.Contains(block.text, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 var integrationEventBuffers = make(map[*piClient]<-chan piEvent)
 
 func startIntegrationPi(t *testing.T) *piClient {

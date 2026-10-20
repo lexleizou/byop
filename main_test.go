@@ -45,6 +45,63 @@ func TestToolCallProjectionLifecycle(t *testing.T) {
 	}
 }
 
+func TestAssistantTimelinePreservesBlockOrder(t *testing.T) {
+	state := projectionTestState()
+
+	state.setAssistantText("text:one", "Streaming")
+	state.startToolCall(piEvent{
+		ToolCallID: "call_a",
+		ToolName:   "bash",
+		ToolArgs:   json.RawMessage(`{"command":"printf ONE"}`),
+	})
+	state.endToolCall(piEvent{
+		ToolCallID:     "call_a",
+		ToolName:       "bash",
+		ToolResult:     json.RawMessage(`{"content":[{"type":"text","text":"ONE"}]}`),
+		ToolDurationMS: 12,
+	})
+	state.setAssistantText("text:two", "Streaming")
+	state.startToolCall(piEvent{
+		ToolCallID: "call_b",
+		ToolName:   "bash",
+		ToolArgs:   json.RawMessage(`{"command":"printf TWO"}`),
+	})
+	state.setAssistantText("text:three", "Received")
+
+	assistant := state.chat[len(state.chat)-1]
+	if len(assistant.blocks) != 5 {
+		t.Fatalf("timeline has %d blocks, want 5: %#v", len(assistant.blocks), assistant.blocks)
+	}
+
+	gotKinds := make([]string, 0, len(assistant.blocks))
+	for i := range assistant.blocks {
+		block := &assistant.blocks[i]
+		switch block.kind {
+		case chatBlockText:
+			gotKinds = append(gotKinds, "text:"+block.text)
+		case chatBlockTool:
+			gotKinds = append(gotKinds, "tool:"+block.tool.id)
+		}
+	}
+	got := strings.Join(gotKinds, ",")
+	want := "text:text:one,tool:call_a,text:text:two,tool:call_b,text:text:three"
+	if got != want {
+		t.Fatalf("timeline order = %q, want %q", got, want)
+	}
+
+	firstTool := &assistant.blocks[1].tool
+	if firstTool.status != toolCallCompleted || firstTool.expanded || firstTool.result != "ONE" {
+		t.Fatalf("completed tool should be collapsed in place: %#v", firstTool)
+	}
+	runningTool := &assistant.blocks[3].tool
+	if runningTool.status != toolCallRunning || !runningTool.expanded {
+		t.Fatalf("running tool should stay expanded: %#v", runningTool)
+	}
+	if latest := state.latestToolCall(); latest == nil || latest.id != "call_b" {
+		t.Fatalf("latest tool = %#v, want call_b", latest)
+	}
+}
+
 func TestStopCancelsRunningTool(t *testing.T) {
 	state := projectionTestState()
 	state.startToolCall(piEvent{ToolCallID: "call_stop", ToolName: "bash"})
