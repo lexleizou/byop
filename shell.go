@@ -59,7 +59,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P4 · PLUGIN REGISTRY", p.accent)
+		statusPill(c, p, "P4.1 · PLUGIN LIFECYCLE", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
@@ -250,8 +250,12 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 
 func (s *appState) pluginRegistryTaskDetail() string {
 	registry := s.pluginRegistry
-	return fmt.Sprintf("%d registered · %d contribution(s) · %d issue(s)",
-		registry.registeredCount(), registry.contributionCount(), registry.problemCount())
+	active := 0
+	if s.plugins != nil {
+		active = s.plugins.activeCount()
+	}
+	return fmt.Sprintf("%d registered · %d active · %d contribution(s) · %d issue(s)",
+		registry.registeredCount(), active, registry.contributionCount(), registry.problemCount())
 }
 
 func (s *appState) pluginRegistryTaskLabel() string {

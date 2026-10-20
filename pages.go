@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -15,7 +16,7 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 			ui.Column(c).Grow(1).MaxWidth(880).Gap(22).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.End).Gap(16).Children(func() {
 					ui.Column(c).Grow(1).Children(func() {
-						pageHeader(c, p, "WORKBENCH", "Plugins", "Discover and validate local plugin manifests. P4 registers declared navigation, commands, views, task panels, settings, and WebView surfaces without executing plugin code.")
+						pageHeader(c, p, "WORKBENCH", "Plugins", "Discover and validate local plugin manifests. Native plugins start lazily on their first declared command, then run initialize, activate, command, and deactivate over JSONL JSON-RPC.")
 					})
 					primaryAction(c, p, "plugins-scan", "Scan plugins", "package", func() {
 						s.scanPlugins(true)
@@ -56,7 +57,7 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 				sectionLabel(c, p, "PLUGIN CONTRACT PREVIEW")
 				ui.Column(c).FillWidth().Gap(10).Padding(14).Radius(11).
 					Border(1, p.border).Background(p.surface).Children(func() {
-					ui.Text(c, fmt.Sprintf("Host %s validates schema %d and plugin API %s. Manifests are metadata-only in P4; Node/native execution, activation, permissions, and WebView hosting remain disabled.",
+					ui.Text(c, fmt.Sprintf("Host %s validates schema %d and plugin API %s. P4.1 activates native plugins on demand and routes declared commands; Node runtime, views, settings, permissions, and WebView hosting remain disabled.",
 						registry.HostVersion, pluginManifestSchemaVersion, registry.PluginAPI)).
 						FontSize(fontBody).LineHeight(1.5).TextColor(p.text)
 					ui.Row(c).Wrap().Gap(7).Children(func() {
@@ -164,20 +165,21 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 			iconName = entry.Manifest.Icon
 		}
 	}
-	card := ui.ButtonBase(c.Key("plugin-"+entry.SourceDirectory+"-"+string(entry.Status))).Width(260).MinWidth(220).
-		Column().AlignItems(ui.Start).Gap(10).Padding(14).Radius(11).
-		Border(1, p.border).Background(p.surface).Cursor(ui.CursorPointer).
-		Label(title).Tooltip("Plugin registry entry")
-	if card.Hovered() {
-		card.Background(p.surfaceHover)
+	runtime := s.plugins.status(entry.ID)
+	pillLabel := pluginStatusLabel(entry.Status)
+	pillTone := tone
+	if entry.Status == pluginRegistered && runtime.State != pluginStateInactive {
+		pillLabel = pluginRuntimeLabel(runtime.State)
+		pillTone = pluginRuntimeTone(p, runtime.State)
 	}
-	card.Children(func() {
+	ui.Column(c).Width(260).MinWidth(220).AlignItems(ui.Start).Gap(10).Padding(14).Radius(11).
+		Border(1, p.border).Background(p.surface).Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
 			ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
 				ui.Icon(c, iconOr(iconName, "plugins")).Size(17, 17).TextColor(tone)
 			})
 			ui.Spacer(c)
-			statusPill(c, p, pluginStatusLabel(entry.Status), tone)
+			statusPill(c, p, pillLabel, pillTone)
 		})
 		ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
 		ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
@@ -187,18 +189,107 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 		if entry.Version != "" {
 			meta = "v" + entry.Version + " · " + meta
 		}
+		if entry.Manifest != nil {
+			meta = entry.Manifest.Runtime + " · " + meta
+		}
 		ui.Text(c, meta).FontSize(fontCaption).TextColor(p.muted)
 		if entry.Error != "" {
 			ui.Text(c, summarizeLine(entry.Error, 240)).FontSize(fontCaption).
 				LineHeight(1.4).TextColor(p.danger)
 		}
-	})
-	if card.Clicked() {
-		if entry.Status == pluginRegistered {
-			s.showNotice(title + " is registered as metadata. Plugin activation and execution are not enabled in P4.")
-		} else {
-			s.showNotice(title + " is not registered: " + entry.Error)
+		if entry.Status != pluginRegistered || entry.Manifest == nil {
+			return
 		}
+		if runtime.LastResult != "" && runtime.LastError == "" {
+			ui.Text(c, runtime.LastCommand+" → "+runtime.LastResult).FontSize(fontCaption).
+				LineHeight(1.4).TextColor(p.success)
+		}
+		if runtime.LastError != "" {
+			ui.Text(c, summarizeLine(runtime.LastError, 240)).FontSize(fontCaption).
+				LineHeight(1.4).TextColor(p.danger)
+		}
+		busy := runtime.State == pluginStateStarting || runtime.State == pluginStateRunning ||
+			runtime.State == pluginStateStopping
+		ui.Row(c).Wrap().GapX(6).GapY(6).Children(func() {
+			for _, command := range entry.Manifest.Contributes.Commands {
+				command := command
+				pluginCommandButton(c, p, "plugin-cmd-"+entry.ID+"-"+command.ID, command, busy, func() {
+					s.runPluginCommand(entry, command)
+				})
+			}
+			if runtime.State == pluginStateActive {
+				secondaryAction(c, p, "plugin-stop-"+entry.ID, "Deactivate", func() {
+					s.deactivatePlugin(entry)
+				})
+			}
+		})
+	})
+}
+
+func pluginCommandButton(c *ui.Context, p palette, key string, command pluginCommandContribution, busy bool, click func()) {
+	label := fallback(command.Title, command.ID)
+	btn := ui.ButtonBase(c.Key(key)).Padding(6, 10).Radius(7).Border(1, p.border).
+		Background(p.background).Cursor(ui.CursorPointer).Label(label).
+		Tooltip(fallback(command.Description, command.ID))
+	if btn.Hovered() && !busy {
+		btn.Background(p.surfaceHover)
+	}
+	btn.Children(func() {
+		ui.Row(c).Gap(5).AlignItems(ui.Center).Children(func() {
+			ui.Icon(c, icon("play")).Size(11, 11).TextColor(p.accent)
+			ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(p.text)
+		})
+	})
+	if btn.Clicked() && !busy {
+		click()
+	}
+}
+
+func (s *appState) runPluginCommand(entry pluginRegistryEntry, command pluginCommandContribution) {
+	title := fallback(command.Title, command.ID)
+	s.showNotice("Running " + title + "…")
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), pluginLifecycleTimeout+pluginCommandTimeout)
+		defer cancel()
+		result, err := s.plugins.invokeCommand(ctx, entry, command.ID, map[string]any{})
+		s.postUI(func() {
+			if err != nil {
+				s.showNotice(title + " failed: " + summarizeLine(err.Error(), 200))
+				return
+			}
+			s.showNotice(title + " · " + pluginResultSummary(result))
+		})
+	}()
+}
+
+func (s *appState) deactivatePlugin(entry pluginRegistryEntry) {
+	name := fallback(entry.Name, entry.ID)
+	go func() {
+		err := s.plugins.deactivate(entry.ID)
+		s.postUI(func() {
+			if err != nil {
+				s.showNotice(name + " stopped with an error: " + summarizeLine(err.Error(), 200))
+				return
+			}
+			s.showNotice(name + " deactivated and its process exited.")
+		})
+	}()
+}
+
+func pluginRuntimeLabel(state pluginRuntimeState) string {
+	return strings.ToUpper(string(state))
+}
+
+func pluginRuntimeTone(p palette, state pluginRuntimeState) ui.Color {
+	switch state {
+	case pluginStateActive:
+		return p.success
+	case pluginStateStarting, pluginStateRunning, pluginStateStopping:
+		return p.accent
+	case pluginStateFailed:
+		return p.danger
+	default:
+		return p.muted
 	}
 }
 
@@ -467,7 +558,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						settingsValue(c, p, "RPC transport", "Strict JSONL over stdin/stdout")
 						settingsValue(c, p, "Pi ownership", "Sessions, models, credentials, extensions")
 						settingsValue(c, p, "Plugin registry", fmt.Sprintf("%d registered · %d contribution(s)", s.pluginRegistry.registeredCount(), s.pluginRegistry.contributionCount()))
-						settingsValue(c, p, "Plugin runtime", "Manifest metadata only; activation deferred")
+						settingsValue(c, p, "Plugin runtime", "Native lazy activation · declared commands")
 						settingsValue(c, p, "Complex UI", "Native first, declared WebView fallback")
 					})
 				})
@@ -477,7 +568,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P4 manifest registry · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P4.1 plugin lifecycle · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})

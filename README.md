@@ -2,11 +2,11 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P4 插件清单和注册表：BYOP 会扫描用户级与工作区级插件目录，严格校验 `plugin.json`，展示有效插件、贡献点、不兼容版本和跨插件冲突。P4 只注册元数据，不执行 Node/native entry、不激活插件，也不托管 WebView。Chat 继续使用 Onevra 原生组件和外部 Pi CLI JSONL RPC；BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P4.1 原生插件生命周期：在 P4 清单注册表的基础上，BYOP 会在用户第一次执行插件声明的命令时懒启动 native 插件进程，经 JSONL JSON-RPC 依次发送 `initialize`、`activate`、`invokeCommand`，停用时发送 `deactivate` 并等待进程退出。Node runtime、插件视图、设置项、权限执行和 WebView 仍属于后续阶段。Chat 继续使用 Onevra 原生组件和外部 Pi CLI JSONL RPC；BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
-![BYOP plugin manifest registry](docs/screenshots/p4-plugin-registry.png)
+![BYOP native plugin lifecycle](docs/screenshots/p41-plugin-active.png)
 
 ![BYOP Settings](docs/screenshots/p2-settings-connected.png)
 
@@ -43,11 +43,14 @@
 - 固定 20 px 导航图标槽位，展开与收起状态保持左边缘对齐；
 - 扫描 `~/.byop/plugins` 与 `<cwd>/.byop/plugins`，也可通过 `BYOP_PLUGINS_DIR` 指定一个或多个目录；
 - 严格解析 schema 1 `plugin.json`，拒绝未知字段、尾随 JSON、超过 1 MiB 的清单和不安全 entry 路径；
-- 检查宿主版本 `0.4.0` 与 Plugin API `1` 兼容性；
+- 检查宿主版本 `0.4.1` 与 Plugin API `1` 兼容性；
 - 标记插件 ID、跨插件贡献 ID 和同插件内重复贡献 ID；
-- Plugins 页面支持搜索、空状态、问题提示、重新扫描，以及 navigation、command、view、task panel、setting 和 WebView 元数据预览。
+- Plugins 页面支持搜索、空状态、问题提示、重新扫描，以及 navigation、command、view、task panel、setting 和 WebView 元数据预览；
+- native 插件按声明的 `onCommand:<id>` 或 `lazy: true` 懒启动，拒绝未声明命令、非 native runtime、越出插件目录的 entry（含符号链接）和不可执行 entry；
+- 插件卡片显示 inactive / starting / active / running / stopped / failed 生命周期状态、命令按钮、最近结果或错误，并提供 Deactivate；
+- 重新扫描和关闭窗口前会停用全部插件进程；插件意外退出时标记为 failed 并保留 stderr 尾部摘要。
 
-Library、Document 和 Automations 目前是可运行的原生视觉骨架。插件安装与运行时、lazy activation、插件 RPC、WebView 视图、附件、模型选择、会话历史与切换仍属于后续阶段；输入框中的附件按钮和模型标签目前只做展示。
+Library、Document 和 Automations 目前是可运行的原生视觉骨架。插件安装、Node runtime、插件视图与设置注入、权限执行、WebView 视图、附件、模型选择、会话历史与切换仍属于后续阶段；输入框中的附件按钮和模型标签目前只做展示。
 
 ## 架构
 
@@ -61,6 +64,8 @@ flowchart LR
     P --> X[Pi 扩展与 Skills]
     UI --> G[插件 Manifest Registry]
     G --> UI
+    G --> H[Plugin Host 生命周期]
+    H --> N[native 插件进程]
     G -. 后续 P5 .-> W[声明式 WebView]
 ```
 
@@ -72,7 +77,8 @@ flowchart LR
 | 插件清单、目录扫描、贡献点和冲突状态 | BYOP |
 | 模型、provider、OAuth、凭据 | Pi |
 | 会话 JSONL、扩展、Skills、工具执行 | Pi |
-| 插件执行、激活和复杂界面 | 后续插件运行时；P4 未实现 |
+| native 插件懒启动、生命周期和命令路由 | BYOP Plugin Host（P4.1） |
+| Node 插件、插件视图和复杂界面 | 后续阶段；P4.1 未实现 |
 
 计划中的插件契约和迁移边界见 [Architecture](docs/architecture.md)。
 
@@ -114,6 +120,15 @@ BYOP_PLUGINS_DIR=/path/one:/path/two go run .
 
 `BYOP_PLUGINS_DIR` 使用当前操作系统的路径列表分隔符；macOS/Linux 为 `:`，Windows 为 `;`。设置该变量后，BYOP 只扫描显式目录。目录不存在时，默认目录会被忽略，显式目录会在 Plugins 页面显示扫描问题。每个插件是根目录下的一项，清单文件名为 `plugin.json`。
 
+最小原生插件示例（`bin/` 不入库，需要先构建）：
+
+```sh
+(cd examples/hello-native && go build -o bin/hello-native .)
+BYOP_PLUGINS_DIR="$PWD/examples" BYOP_PAGE=plugins BYOP_PI_CONNECT=0 go run .
+```
+
+点击卡片上的 **Say hello** 会启动插件并显示结果；点击 **Deactivate** 会停用插件并结束进程。
+
 截图和本地走查参数：
 
 ```sh
@@ -143,7 +158,7 @@ BYOP_PI_INTEGRATION=1 go test \
 
 该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，要求 Pi 连续执行两次安全的 `bash` 命令，并调用一次手动压缩 RPC。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
 
-验证记录见 [P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
+验证记录见 [P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
 
 ## 设计系统
 

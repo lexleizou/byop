@@ -149,6 +149,7 @@ type appState struct {
 	pluginSearch   string
 	librarySearch  string
 	pluginRegistry pluginRegistry
+	plugins        *pluginHost
 
 	window        *mygo.Window
 	closed        atomic.Bool
@@ -214,11 +215,20 @@ func newAppState() *appState {
 	case "1", "true", "on":
 		s.seedToolDemo()
 	}
+	s.plugins = newPluginHost(pluginHostVersion, func() { s.postUI(func() {}) })
 	s.pluginRegistry = scanPluginRegistry(defaultPluginRoots())
 	return s
 }
 
 func (s *appState) scanPlugins(announce bool) {
+	if s.plugins != nil && s.plugins.activeCount() > 0 {
+		s.notice = "Stopping active plugins before rescanning…"
+		go func() {
+			s.plugins.stopAll()
+			s.postUI(func() { s.scanPlugins(announce) })
+		}()
+		return
+	}
 	s.pluginRegistry = scanPluginRegistry(defaultPluginRoots())
 	if !announce {
 		return
@@ -422,6 +432,9 @@ func (s *appState) shutdownPi() {
 	if s.pi != nil {
 		s.pi.Close()
 		s.pi = nil
+	}
+	if s.plugins != nil {
+		s.plugins.stopAll()
 	}
 }
 

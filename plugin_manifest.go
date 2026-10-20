@@ -16,7 +16,7 @@ import (
 const (
 	pluginManifestSchemaVersion = 1
 	pluginAPIVersion            = "1"
-	pluginHostVersion           = "0.4.0"
+	pluginHostVersion           = "0.4.1"
 	pluginManifestFilename      = "plugin.json"
 	maxPluginManifestBytes      = 1 << 20
 )

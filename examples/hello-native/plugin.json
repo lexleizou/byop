@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "example.hello-native",
+  "name": "Hello Native",
+  "version": "0.1.0",
+  "description": "Minimal native plugin that starts on its first command.",
+  "runtime": "native",
+  "entry": "bin/hello-native",
+  "icon": "terminal",
+  "compatibility": {
+    "host": ">=0.4.1 <1.0.0",
+    "pluginApi": "1"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "hello.say",
+        "title": "Say hello",
+        "description": "Returns a greeting from the native plugin process."
+      }
+    ]
+  },
+  "activation": {
+    "events": ["onCommand:hello.say"]
+  },
+  "capabilities": {
+    "workspace": "none",
+    "files": "none",
+    "network": false,
+    "process": "none"
+  }
+}

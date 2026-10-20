@@ -1,9 +1,10 @@
 # BYOP Workbench Architecture
 
-Status: P4 native shell, external Pi RPC loop, ordered timelines, transient
-runtime diagnostics and a strict plugin manifest registry are implemented;
-Chat renders through Onevra v0.2026.13 components. Plugin execution,
-activation and WebView hosting remain future work.
+Status: P4.1 native shell, external Pi RPC loop, ordered timelines, transient
+runtime diagnostics, a strict plugin manifest registry and native plugin lazy
+activation with command routing are implemented; Chat renders through Onevra
+v0.2026.13 components. Node plugins, plugin views, settings, permission
+enforcement and WebView hosting remain future work.
 
 ## Runtime Boundary
 
@@ -65,7 +66,8 @@ permanent turn completed, stopped or failed.
 |---|---|---|
 | Window, navigation, themes | BYOP | Implemented natively |
 | Chat transcript projection | BYOP plus Onevra components | Ordered text/tool timeline rendered as Onevra turns, activity groups and glass composer |
-| Plugin metadata and contributions | BYOP | P4 validates manifests, scans local roots and records contribution conflicts without executing entry code |
+| Plugin metadata and contributions | BYOP | P4 validates manifests, scans local roots and records contribution conflicts |
+| Native plugin lifecycle and commands | BYOP Plugin Host | P4.1 starts native plugins lazily, routes declared commands and stops processes on deactivate, rescan and window close |
 | Model calls and provider auth | Pi | Delegated |
 | Session persistence and credentials | Pi | Pi-owned; BYOP does not rewrite files |
 | Tools, Skills and extensions | Pi | Delegated |
@@ -87,8 +89,8 @@ manifest is ignored.
 The parser accepts one JSON object up to 1 MiB and rejects unknown fields,
 trailing JSON values and unsafe entry paths. The host records registered,
 invalid, incompatible, duplicate plugin ID and duplicate contribution ID
-states. Entry files are not opened or executed in P4. The current host version
-is `0.4.0`; manifest schema and Plugin API version are both `1`.
+states. Scanning never opens or executes entry files. The current host version
+is `0.4.1`; manifest schema and Plugin API version are both `1`.
 
 Each plugin is an independent local package with a manifest, a runtime entry
 point and declared contribution points.
@@ -126,11 +128,52 @@ point and declared contribution points.
 }
 ```
 
+## Native Plugin Lifecycle (P4.1)
+
+P4.1 implements the host-to-plugin lifecycle for `runtime: "native"`. A
+plugin process starts only when the user runs a declared command and the
+manifest lists `onCommand:<command>` in `activation.events` or sets
+`activation.lazy: true`. The host rejects undeclared commands before starting
+anything.
+
+```mermaid
+stateDiagram-v2
+    [*] --> inactive
+    inactive --> starting: first declared command
+    starting --> active: initialize + activate OK
+    starting --> failed: start, initialize or activate error
+    active --> running: invokeCommand
+    running --> active: result or error
+    active --> stopped: deactivate, rescan or window close
+    active --> failed: unexpected process exit
+    stopped --> starting: next declared command
+    failed --> starting: next declared command
+```
+
+The entry path must stay inside the plugin folder after symbolic links are
+resolved, and it must be a regular executable file. The host runs it directly
+without a shell, with the plugin folder as working directory and
+`BYOP_PLUGIN_ID` and `BYOP_PLUGIN_API` in the environment.
+
+Transport is one JSON object per LF-terminated line over stdin/stdout. Host
+requests are `{"jsonrpc":"2.0","id","method","params"}`; the plugin replies
+with the same `id` and either `result` or `error.message`. Lines without an
+`id` are ignored and reserved for future plugin-to-host notifications. Stderr
+is kept as a 4 KiB tail for failure messages.
+
+| Method | Params | Timeout |
+|---|---|---|
+| `initialize` | `pluginApi`, `hostVersion`, `pluginId` | 10 s together with `activate` |
+| `activate` | `reason`, for example `onCommand:hello.say` | 10 s together with `initialize` |
+| `invokeCommand` | `command`, `args` | 30 s |
+| `deactivate` | empty object | 2 s, then stdin closes; kill after another 2 s |
+
+`examples/hello-native` is the reference plugin for this contract.
+
 ## Planned Plugin Runtime Contract
 
-Host-to-plugin and plugin-to-host messages will use a versioned JSON-RPC
-envelope over the plugin runtime's transport. This runtime is planned; P4 only
-registers the declarations below.
+The remaining methods below are planned. P4.1 implements `initialize`,
+`activate`, `invokeCommand` and `deactivate` for native plugins only.
 
 | Direction | Method | Purpose |
 |---|---|---|
@@ -188,7 +231,8 @@ The exact MyGo `ui.WebView` behavior still needs P5 platform validation.
 | P3.2a | Onevra Chat reading area, turn summaries, activity rows and glass composer; task panel collapsed by default |
 | P3.3a | Queue, compaction, retry, extension-error and Stop-during-retry diagnostics |
 | P4 | Strict manifest validation, local root discovery, registry search and duplicate/conflict reporting |
-| P4.1 | Lazy activation, lifecycle broker, typed command/view/settings invocation and permission enforcement |
+| P4.1 | Native lazy activation, lifecycle states, declared command routing, deactivate and shutdown cleanup |
+| P4.2 | Node runtime, typed view/settings invocation, plugin-to-host calls and permission enforcement |
 | P5 | WebView proof, theme bridge, crash fallback and complex view sandbox |
 | P6 | Read-only session discovery, model and thinking-level selectors |
 | P7 | Automation and Loop contributions |
