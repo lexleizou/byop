@@ -21,6 +21,8 @@ const (
 	appShort = "BYOP"
 )
 
+var setMygoThemeSource = mygo.Theme.SetSource
+
 func main() {
 	state := newAppState()
 	mygo.Theme.SetSource(themeSource(state.themeMode))
@@ -151,6 +153,17 @@ type appState struct {
 	themeMode          themeMode
 	navCollapsed       bool
 	tasksOpen          bool
+	configDir          string
+	preferences        byopPreferences
+	preferencesStore   *byopPreferencesStore
+	preferencesWarning string
+	savedWorkspaceMiss bool
+	legacySources      legacyMigrationSources
+	legacyScan         legacyScan
+	legacyScanned      bool
+	legacyScanning     bool
+	legacyImport       legacyImportRecord
+	legacyImportSet    bool
 	notice             string
 	composerDraft      string
 	pluginSearch       string
@@ -178,6 +191,7 @@ type appState struct {
 	pi                     *piClient
 	piConn                 piConnectionState
 	piPath                 string
+	piCwd                  string
 	piVersion              string
 	piSessionID            string
 	piModel                string
@@ -227,9 +241,21 @@ type appState struct {
 }
 
 func newAppState() *appState {
+	configDir, configErr := pluginConfigDir()
+	if configErr != nil {
+		configDir = filepath.Join(os.TempDir(), "byop-config")
+	}
+	preferencesStore := newByopPreferencesStore(configDir)
+	preferences, preferencesWarning := preferencesStore.load()
 	s := &appState{
 		page:               configuredPage(),
-		themeMode:          themeSystem,
+		themeMode:          themeMode(preferences.Theme),
+		navCollapsed:       preferences.NavCollapsed,
+		tasksOpen:          preferences.TasksOpen,
+		configDir:          configDir,
+		preferences:        preferences,
+		preferencesStore:   preferencesStore,
+		preferencesWarning: preferencesWarning,
 		piConn:             piDisconnected,
 		run:                runIdle,
 		pluginSettingForms: make(map[string]*pluginSettingForm),
@@ -238,25 +264,30 @@ func newAppState() *appState {
 		pluginWebViews:     make(map[string]*pluginWebViewState),
 		pluginBridgeSlots:  make(map[string]chan struct{}),
 	}
-	switch themeMode(strings.ToLower(os.Getenv("BYOP_THEME"))) {
-	case themeLight:
-		s.themeMode = themeLight
-	case themeDark:
-		s.themeMode = themeDark
+	if mode, ok := parsePreferenceTheme(os.Getenv("BYOP_THEME")); ok {
+		s.themeMode = mode
 	}
-	switch strings.ToLower(os.Getenv("BYOP_TASKS")) {
-	case "1", "true", "open":
-		s.tasksOpen = true
+	if value, ok := parsePreferenceBool(os.Getenv("BYOP_TASKS"), "open"); ok {
+		s.tasksOpen = value
 	}
-	switch strings.ToLower(os.Getenv("BYOP_NAV")) {
-	case "collapsed", "collapsed-true":
-		s.navCollapsed = true
+	if value, ok := parsePreferenceBool(os.Getenv("BYOP_NAV"), "collapsed", "collapsed-true"); ok {
+		s.navCollapsed = value
+	}
+	if saved := strings.TrimSpace(preferences.Workspace); saved != "" &&
+		strings.TrimSpace(os.Getenv("BYOP_WORKSPACE")) == "" {
+		info, err := os.Stat(saved)
+		s.savedWorkspaceMiss = err != nil || !info.IsDir()
 	}
 	switch strings.ToLower(os.Getenv("BYOP_DEMO_TOOLS")) {
 	case "1", "true", "on":
 		s.seedToolDemo()
 	}
+	workspace, workspaceErr := piWorkspaceCwd(preferences.Workspace)
+	if workspaceErr != nil {
+		workspace, _ = os.Getwd()
+	}
 	s.plugins = newPluginHost(pluginHostVersion, func() { s.postUI(func() {}) },
+		pluginHostWorkspace(workspace),
 		pluginHostTheme(currentAppearanceDark),
 		pluginHostNoticeHandler(func(pluginID, pluginName, text, tone string) {
 			s.postUI(func() {
@@ -278,14 +309,48 @@ func newAppState() *appState {
 		}),
 	)
 	s.setPluginRegistry(scanPluginRegistry(defaultPluginRoots()))
-	configDir, configErr := pluginConfigDir()
-	if configErr != nil {
-		configDir = filepath.Join(os.TempDir(), "byop-config")
-	}
 	s.automations = newAutomationStore(configDir, registeredSessionLoopKeys(s.pluginRegistrySnapshot()))
 	s.plugins.invalidateSettingsCache()
 	s.syncPluginSettingForms()
+	if sources, err := defaultLegacyMigrationSources(); err == nil {
+		s.legacySources = sources
+	}
+	if record, ok := latestLegacyImport(configDir); ok {
+		s.legacyImport = record
+		s.legacyImportSet = true
+	}
 	return s
+}
+
+func parsePreferenceTheme(value string) (themeMode, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case string(themeSystem), "auto":
+		return themeSystem, true
+	case string(themeLight):
+		return themeLight, true
+	case string(themeDark):
+		return themeDark, true
+	default:
+		return themeSystem, false
+	}
+}
+
+func parsePreferenceBool(value string, trueValues ...string) (bool, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "":
+		return false, false
+	case "1", "true", "on":
+		return true, true
+	case "0", "false", "off", "closed", "expanded":
+		return false, true
+	default:
+		for _, candidate := range trueValues {
+			if strings.EqualFold(strings.TrimSpace(value), candidate) {
+				return true, true
+			}
+		}
+		return false, false
+	}
 }
 
 func (s *appState) scanPlugins(announce bool) {
@@ -440,9 +505,44 @@ func (s *appState) setTheme(mode themeMode) {
 	if s.themeMode == mode {
 		return
 	}
+	s.preferences.Theme = string(mode)
+	s.applyTheme(mode)
+	if err := s.persistPreferences(); err != nil {
+		s.showNotice("Theme changed, but preferences could not be saved.")
+	}
+}
+
+func (s *appState) applyTheme(mode themeMode) {
 	s.themeMode = mode
-	mygo.Theme.SetSource(themeSource(mode))
+	setMygoThemeSource(themeSource(mode))
 	s.syncPluginWebViewTheme(currentAppearanceDark())
+}
+
+func (s *appState) setNavCollapsed(collapsed bool) {
+	s.preferences.NavCollapsed = collapsed
+	s.navCollapsed = collapsed
+	if err := s.persistPreferences(); err != nil {
+		s.showNotice("Navigation changed, but preferences could not be saved.")
+	}
+}
+
+func (s *appState) setTasksOpen(open bool) {
+	s.preferences.TasksOpen = open
+	s.tasksOpen = open
+	if err := s.persistPreferences(); err != nil {
+		s.showNotice("Task panel changed, but preferences could not be saved.")
+	}
+}
+
+func (s *appState) persistPreferences() error {
+	if s.preferencesStore == nil {
+		return nil
+	}
+	if err := s.preferencesStore.save(s.preferences); err != nil {
+		return err
+	}
+	s.preferencesWarning = s.preferencesStore.warningSnapshot()
+	return nil
 }
 
 func (s *appState) setPage(p pageID) {
@@ -480,6 +580,9 @@ func (s *appState) applyPiSessionState(state *piSessionState) {
 	s.piModelID = state.Model.ID
 	s.piModelName = state.Model.Name
 	s.piModel = strings.TrimSpace(strings.Join(nonEmpty(state.Model.Provider, state.Model.Name), " / "))
+	if state.SessionID != "" {
+		s.recordLastSession(state.SessionID)
+	}
 }
 
 func (s *appState) refreshPiSessionState() {
@@ -522,11 +625,18 @@ func (s *appState) refreshPiSessions() {
 	if s.piSessionsTimer != nil {
 		s.piSessionsTimer.Stop()
 	}
+	cwd, cwdErr := s.sessionWorkspaceCwd()
 	s.piSessionsTimer = time.AfterFunc(250*time.Millisecond, func() {
 		if s.piSessionsRefresh.Load() != refresh || s.closed.Load() || piEphemeralSessions() {
 			return
 		}
-		sessions, err := piSessionsForWorkspace()
+		var sessions []piSessionSummary
+		var err error
+		if cwdErr == nil {
+			sessions, err = piSessionsForWorkspace(cwd)
+		} else {
+			err = cwdErr
+		}
 		s.postUI(func() {
 			if refresh != s.piSessionsRefresh.Load() || piEphemeralSessions() {
 				return
@@ -623,7 +733,7 @@ func (s *appState) newPiSession() {
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Could not create a Pi session: " + err.Error())
+					s.showNotice("Could not create a Pi session: " + uiErrorText(err, "unknown error"))
 				}
 			})
 			return
@@ -642,7 +752,8 @@ func (s *appState) newPiSession() {
 		if stateErr != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("New Pi session was created, but its state could not be confirmed: " + stateErr.Error())
+					s.showNotice("New Pi session was created, but its state could not be confirmed: " +
+						uiErrorText(stateErr, "unknown error"))
 				}
 			})
 			return
@@ -668,7 +779,7 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Could not switch Pi session: " + err.Error())
+					s.showNotice("Could not switch Pi session: " + uiErrorText(err, "unknown error"))
 				}
 			})
 			return
@@ -693,7 +804,8 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Session changed, but its transcript could not be restored: " + err.Error())
+					s.showNotice("Session changed, but its transcript could not be restored: " +
+						uiErrorText(err, "unknown error"))
 				}
 			})
 			return
@@ -702,7 +814,7 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Session transcript could not be read: " + err.Error())
+					s.showNotice("Session transcript could not be read: " + uiErrorText(err, "unknown error"))
 				}
 			})
 			return
@@ -738,7 +850,8 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			s.piError = ""
 			s.notice = notice
 			if stateErr != nil {
-				s.notice = notice + " Pi state could not be confirmed: " + stateErr.Error()
+				s.notice = notice + " Pi state could not be confirmed: " +
+					uiErrorText(stateErr, "unknown error")
 			} else if (strings.TrimSpace(expectedPath) != "" || strings.TrimSpace(expectedID) != "") &&
 				!samePiSession(canonicalPiPathIfPresent(expectedPath), expectedID, s.piSessionFile, state.SessionID) {
 				s.notice = notice + " Pi reported a different session."
@@ -747,6 +860,38 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			s.refreshPiSessions()
 		})
 	}()
+}
+
+func (s *appState) recordLastSession(sessionID string) {
+	cwd, err := s.sessionWorkspaceCwd()
+	if err != nil {
+		return
+	}
+	cwd = canonicalPiPath(cwd)
+	sessionID = strings.TrimSpace(sessionID)
+	if cwd == "" || sessionID == "" {
+		return
+	}
+	if s.preferences.LastSessionByWorkspace == nil {
+		s.preferences.LastSessionByWorkspace = make(map[string]string)
+	}
+	if s.preferences.LastSessionByWorkspace[cwd] == sessionID {
+		return
+	}
+	s.preferences.LastSessionByWorkspace[cwd] = sessionID
+	if s.preferencesWarning != "" {
+		return
+	}
+	if err := s.persistPreferences(); err != nil {
+		s.showNotice("Pi session changed, but its preference could not be saved.")
+	}
+}
+
+func (s *appState) sessionWorkspaceCwd() (string, error) {
+	if s.piCwd != "" {
+		return canonicalPiPath(s.piCwd), nil
+	}
+	return piWorkspaceCwd(s.preferences.Workspace)
 }
 
 func samePiSession(expectedPath, expectedID, actualPath, actualID string) bool {
@@ -777,7 +922,7 @@ func (s *appState) selectModel(provider, id string) {
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Could not change Pi model: " + err.Error())
+					s.showNotice("Could not change Pi model: " + uiErrorText(err, "unknown error"))
 				}
 			})
 			return
@@ -823,7 +968,8 @@ func (s *appState) selectThinkingLevel(level string) bool {
 			s.postUI(func() {
 				if s.finishThinkingCommit(client, epoch, gen) {
 					s.dropThinkingPending()
-					s.showNotice("Could not change Pi thinking level: " + err.Error())
+					s.showNotice("Could not change Pi thinking level: " +
+						uiErrorText(err, "unknown error"))
 				}
 			})
 			return
@@ -888,29 +1034,31 @@ func (s *appState) connectPi() {
 	path, err := resolvePiPath()
 	if err != nil {
 		s.piConn = piConnectionErr
-		s.piError = err.Error()
-		s.notice = err.Error()
+		s.piError = uiErrorText(err, "Pi CLI could not be resolved.")
+		s.notice = s.piError
 		return
 	}
 
 	s.piConnecting = true
 	s.piConn = piConnecting
+	s.piCwd = ""
 	s.piPath = path
 	s.piError = ""
 	s.notice = "Connecting to external Pi CLI…"
 	s.refreshPiSessions()
 
+	savedWorkspace := s.preferences.Workspace
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		version := piCLIVersion(ctx, path)
 		cancel()
-		cwd, err := piWorkspaceCwd()
+		cwd, err := piWorkspaceCwd(savedWorkspace)
 		if err != nil {
 			s.postUI(func() {
 				s.piConnecting = false
 				s.piConn = piConnectionErr
-				s.piError = err.Error()
-				s.notice = "Pi workspace failed: " + err.Error()
+				s.piError = uiErrorText(err, "Pi workspace failed.")
+				s.notice = "Pi workspace failed: " + s.piError
 			})
 			return
 		}
@@ -921,8 +1069,8 @@ func (s *appState) connectPi() {
 			s.postUI(func() {
 				s.piConnecting = false
 				s.piConn = piConnectionErr
-				s.piError = err.Error()
-				s.notice = "Pi connection failed: " + err.Error()
+				s.piError = uiErrorText(err, "Pi connection failed.")
+				s.notice = "Pi connection failed: " + s.piError
 			})
 			return
 		}
@@ -934,8 +1082,8 @@ func (s *appState) connectPi() {
 			s.postUI(func() {
 				s.piConnecting = false
 				s.piConn = piConnectionErr
-				s.piError = err.Error()
-				s.notice = "Pi RPC handshake failed: " + err.Error()
+				s.piError = uiErrorText(err, "Pi RPC handshake failed.")
+				s.notice = "Pi RPC handshake failed: " + s.piError
 			})
 			return
 		}
@@ -947,6 +1095,7 @@ func (s *appState) connectPi() {
 		levelsCancel()
 		s.postUI(func() {
 			s.pi = client
+			s.piCwd = client.cwd
 			s.piConnecting = false
 			s.piConn = piConnected
 			s.piVersion = version
@@ -964,6 +1113,7 @@ func (s *appState) connectPi() {
 			} else {
 				s.notice = "External Pi CLI connected."
 			}
+			s.refreshPiSessions()
 		})
 	}()
 }
@@ -989,6 +1139,7 @@ func (s *appState) reconnectPi() {
 		old.Close()
 	}
 	s.piConn = piDisconnected
+	s.piCwd = ""
 	s.piSessionFile = ""
 	s.piSessionID = ""
 	s.piSessions = nil
@@ -1059,8 +1210,8 @@ func (s *appState) sendPrompt() {
 			s.piSessionBusy = false
 		}
 		s.run = runFailed
-		s.piError = err.Error()
-		s.showNotice("Could not send to Pi: " + err.Error())
+		s.piError = uiErrorText(err, "Pi is unavailable.")
+		s.showNotice("Could not send to Pi: " + s.piError)
 		return
 	}
 	s.resetRuntimeDiagnostics()
@@ -1117,8 +1268,8 @@ func (s *appState) stopPrompt() {
 		note, err := client.Stop(ctx, abortRetry)
 		s.postUI(func() {
 			if err != nil {
-				s.piError = err.Error()
-				s.notice = "Stop was sent, but " + err.Error()
+				s.piError = uiErrorText(err, "Pi stop failed.")
+				s.notice = "Stop was sent, but " + s.piError
 			} else if note != "" {
 				s.notice = "Stop requested. " + note + "."
 			} else {
@@ -1142,10 +1293,10 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		}
 		if !event.Success {
 			s.run = runFailed
-			s.piError = event.Error
-			s.notice = "Pi rejected the prompt: " + fallback(event.Error, "unknown error")
+			s.piError = uiErrorFromText(event.Error, "Pi rejected the prompt.")
+			s.notice = "Pi rejected the prompt: " + s.piError
 			s.markOpenTools(toolCallFailed)
-			s.finishAssistant(fallback(event.Error, "Prompt rejected."), "failed")
+			s.finishAssistant(s.piError, "failed")
 			return
 		}
 		if event.Disposition == "handled" {
@@ -1165,7 +1316,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			s.setAssistantText(event.Text, "Received")
 		}
 		if event.Error != "" {
-			s.piError = event.Error
+			s.piError = uiErrorFromText(event.Error, "Pi message failed.")
 		}
 	case piEventQueueUpdate:
 		s.queueSteeringCount = len(event.QueueSteering)
@@ -1182,10 +1333,13 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.compacting = false
 		s.compactionReason = fallback(event.CompactReason, s.compactionReason)
 		s.compactionError = event.CompactError
+		if s.compactionError != "" {
+			s.compactionError = uiErrorFromText(s.compactionError, "Context compaction failed.")
+		}
 		s.agentWillRetry = event.WillRetry
 		s.compactionResult = compactionResultLabel(event)
 		if event.CompactError != "" {
-			s.piError = event.CompactError
+			s.piError = s.compactionError
 		}
 		if s.runActive() {
 			s.run = runStreaming
@@ -1197,7 +1351,10 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.retryDelayMS = event.RetryDelayMS
 		s.retryStartedAt = time.Now()
 		s.retryError = event.RetryError
-		s.piError = event.RetryError
+		if s.retryError != "" {
+			s.retryError = uiErrorFromText(s.retryError, "Pi retry failed.")
+		}
+		s.piError = s.retryError
 		if s.runActive() {
 			s.run = runStreaming
 		}
@@ -1209,6 +1366,9 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			s.piError = ""
 		} else {
 			s.retryError = fallback(event.RetryError, s.retryError)
+			if s.retryError != "" {
+				s.retryError = uiErrorFromText(s.retryError, "Pi retry failed.")
+			}
 			s.piError = s.retryError
 		}
 		if s.runActive() {
@@ -1223,10 +1383,10 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			s.schedulePiSessionsRefresh()
 		}
 	case piEventExtensionErr:
-		s.extensionError = event.Error
+		s.extensionError = uiErrorFromText(event.Error, "Pi extension failed.")
 		s.extensionPath = event.ExtensionPath
 		s.extensionEvent = event.ExtensionEvent
-		s.notice = "Pi extension error: " + event.Error
+		s.notice = "Pi extension error: " + s.extensionError
 	case piEventToolStart:
 		s.run = runStreaming
 		s.startToolCall(event)
@@ -1269,17 +1429,18 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.refreshPiSessionState()
 		s.schedulePiSessionsRefresh()
 	case piEventParseError:
-		s.piError = event.Error
-		s.notice = "Pi protocol warning: " + event.Error
+		s.piError = uiErrorFromText(event.Error, "Pi protocol warning.")
+		s.notice = "Pi protocol warning: " + s.piError
 	case piEventProcessExit:
 		s.sessionGen++
 		s.piSessionBusy = false
 		s.cancelThinkingCommit()
 		s.cancelThinkingPending()
 		s.pi = nil
+		s.piCwd = ""
 		s.piConnecting = false
 		s.piConn = piDisconnected
-		s.piError = fallback(event.StderrTail, event.Error)
+		s.piError = uiErrorFromText(fallback(event.StderrTail, event.Error), "Pi CLI disconnected.")
 		s.piSessionFile = ""
 		s.piSessionID = ""
 		s.piModel = ""

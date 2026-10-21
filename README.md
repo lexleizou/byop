@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P7：插件可在 `plugin.json` 声明 automation / Loop 贡献，Automations 页面显示注册项、暂停状态和最近运行；手动 Run now 会把每次运行持久化为运行记录，并在连续 5 次失败后自动暂停。P7 不启动定时调度器，声明的 interval、cron、at 与 afterSettled 规则只做校验和展示。Automations 页面从宿主内存快照读取状态与最近运行，绘制路径不读取存储文件。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P8：BYOP 将主题、导航、任务栏、工作区、最近 Pi 会话关联、草稿和保留的旧偏好写入 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。Settings 的 Migration 卡片只读扫描旧 Pi Agent Desktop 数据，预览后由用户显式导入；Pi 会话只关联，不复制正文。导入会先备份现有偏好，并以原子写入和导入记录保证可追溯；重复导入保持幂等。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -17,6 +17,10 @@
 - Chat、Plugins、Automations、Settings 导航；
 - Light、Dark、System 三种主题；
 - 默认收起的右侧任务栏；
+- 偏好持久化到 `<config>/preferences.json`，环境变量 `BYOP_THEME`、`BYOP_TASKS`、`BYOP_NAV`、`BYOP_WORKSPACE` 优先于文件；
+- Settings Migration 只读扫描旧桌面版本、localStorage 与 Pi scheduled-task 计数；旧主题、工作区、最近会话关联、草稿和兼容偏好经预览后显式导入；
+- 旧 Pi 会话按 header 的 ID 和 canonical workspace 关联；不复制会话正文、凭据或模型配置；
+- 旧字号、sidebar scale、宽度等值保存在 `legacy` 区，不改变 BYOP 的 14 px 正文和默认任务栏状态；
 - 外部 `pi --mode rpc` 进程适配器，默认持久化会话；`BYOP_PI_EPHEMERAL=1` 时使用 `--no-session`；
 - `get_state` 握手、`prompt` 发送、流式 `message_update`、最终 `message_end`；
 - 只读扫描 Pi 当前工作区 session 目录，显示最近 50 条中的前 8 条；展开后最多显示 16 条并可滚动；
@@ -193,7 +197,9 @@ go run .
 BYOP_THEME=dark BYOP_PAGE=plugins BYOP_TASKS=1 go run .
 ```
 
-`BYOP_THEME` 支持 `system`、`light`、`dark`；`BYOP_PAGE` 支持 `chat`、`plugins`、`automations`、`settings`；`BYOP_TASKS=1` 默认展开任务栏；`BYOP_DEMO_TOOLS=1` 载入不连接 Pi 的隔离演示时间线。
+`BYOP_THEME` 支持 `system`、`light`、`dark`；`BYOP_TASKS=1` 默认展开任务栏；`BYOP_NAV=collapsed` 默认收起导航；`BYOP_WORKSPACE=/absolute/path` 覆盖已保存工作区；`BYOP_PAGE` 支持 `chat`、`plugins`、`automations`、`settings`；`BYOP_DEMO_TOOLS=1` 载入不连接 Pi 的隔离演示时间线。
+
+迁移扫描源可由以下环境变量指向测试副本：`BYOP_LEGACY_APP_DIR`、`BYOP_LEGACY_LOCALSTORAGE`、`BYOP_LEGACY_PI_AGENT_DIR`。迁移前不会自动运行；扫描不会删除或改写旧数据。
 
 ## 验证
 
@@ -221,7 +227,7 @@ BYOP_PI_INTEGRATION=1 go test \
 
 该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，要求 Pi 连续执行两次安全的 `bash` 命令，并调用一次手动压缩 RPC。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
 
-验证记录见 [P7-validation.md](docs/P7-validation.md)、[P6b-validation.md](docs/P6b-validation.md)、[P6-validation.md](docs/P6-validation.md)、[P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
+验证记录见 [P8-validation.md](docs/P8-validation.md)、[P7-validation.md](docs/P7-validation.md)、[P6b-validation.md](docs/P6b-validation.md)、[P6-validation.md](docs/P6-validation.md)、[P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
 
 ## 设计系统
 

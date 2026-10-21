@@ -1,10 +1,11 @@
 # BYOP Workbench Architecture
 
-Status: P7 native shell, persisted external Pi sessions, read-only session
+Status: P8 native shell, persisted external Pi sessions, read-only session
 discovery and RPC-only session mutation, ordered timeline restoration, model
 and thinking-level selection, transient runtime diagnostics, the P5 plugin
-platform, and plugin-registered automation run records are implemented; Chat
-renders through Onevra v0.2026.13 components.
+platform, plugin-registered automation run records, and explicit migration of
+legacy Pi Agent Desktop preferences are implemented; Chat renders through
+Onevra v0.2026.13 components.
 
 ## Runtime Boundary
 
@@ -533,7 +534,7 @@ plugins. `examples/` contains contract fixtures only.
 | Skills and extensions | Keep in Pi; expose status and commands through adapters |
 | Tool execution timelines | Ordered native text/tool blocks implemented for the active run |
 | Mermaid, KaTeX, xterm, rich document editor | Consider declared WebView plugins |
-| Themes, sidebar widths, drafts | Rebuild BYOP preferences and explicit import |
+| Themes, sidebar widths, drafts | Themes and drafts have BYOP preferences with explicit, idempotent import; legacy width and scale values are preserved without changing BYOP layout |
 | Scheduled tasks and Loop semantics | Rebuild in BYOP with plugin-owned jobs |
 
 ## Next Phases
@@ -551,4 +552,4 @@ plugins. `examples/` contains contract fixtures only.
 | P6a | New BYOP logo, persisted Pi sessions, read-only session list, RPC session switching/restore and model/thinking RPC state (implemented) |
 | P6b | Model and thinking-level picker UI (implemented) |
 | P7 | Automation and Loop contributions, manual run records, failure auto-pause and pause/resume (implemented) |
-| P8 | Import old desktop preferences and migration verification |
+| P8 | Import old desktop preferences and migration verification (implemented) |

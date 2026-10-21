@@ -56,13 +56,17 @@ func piEphemeralSessions() bool {
 	}
 }
 
-func piWorkspaceCwd() (string, error) {
+func piWorkspaceCwd(savedWorkspace string) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("resolve working folder: %w", err)
 	}
 	if configured := strings.TrimSpace(os.Getenv("BYOP_WORKSPACE")); configured != "" {
 		cwd = configured
+	} else if saved := strings.TrimSpace(savedWorkspace); saved != "" {
+		if info, statErr := os.Stat(saved); statErr == nil && info.IsDir() {
+			cwd = saved
+		}
 	}
 	return canonicalPiPath(cwd), nil
 }
@@ -133,12 +137,8 @@ func piSessionDirectory(root, cwd string) string {
 	return filepath.Join(root, "--"+encoded+"--")
 }
 
-func piSessionsForWorkspace() ([]piSessionSummary, error) {
+func piSessionsForWorkspace(cwd string) ([]piSessionSummary, error) {
 	root, flat, err := piSessionRoot()
-	if err != nil {
-		return nil, err
-	}
-	cwd, err := piWorkspaceCwd()
 	if err != nil {
 		return nil, err
 	}

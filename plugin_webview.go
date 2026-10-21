@@ -153,7 +153,7 @@ func (s *appState) ensurePluginWebView(
 			sourceDirectory:     entry.SourceDirectory,
 			manifestFingerprint: fingerprint,
 			status:              pluginWebViewFailed,
-			error:               err.Error(),
+			error:               uiErrorText(err, "Plugin WebView could not be created."),
 		}
 		s.pluginWebViewsMu.Lock()
 		s.pluginWebViews[key] = state
@@ -202,7 +202,7 @@ func (s *appState) ensurePluginWebView(
 	page.OnDidFailLoad(func(loadErr *mygo.LoadError) {
 		message := "WebView failed to load"
 		if loadErr != nil {
-			message = loadErr.Error()
+			message = uiErrorFromText(loadErr.Error(), message)
 		}
 		s.updatePluginWebViewState(state, func(current *pluginWebViewState) {
 			current.status = pluginWebViewFailed
@@ -210,7 +210,7 @@ func (s *appState) ensurePluginWebView(
 		})
 	})
 	page.OnRenderProcessGone(func(reason string) {
-		message := fallback(reason, "Web content process exited")
+		message := uiErrorFromText(reason, "Web content process exited")
 		s.updatePluginWebViewState(state, func(current *pluginWebViewState) {
 			current.status = pluginWebViewFailed
 			current.error = "Web content process exited: " + message
@@ -280,7 +280,7 @@ func (s *appState) markPluginWebViewFailed(pluginID, viewID string, err error) {
 	state := s.pluginWebViews[pluginViewCacheKey(pluginID, viewID)]
 	if state != nil {
 		state.status = pluginWebViewFailed
-		state.error = fallback(errorText(err), "WebView unavailable")
+		state.error = uiErrorText(err, "WebView unavailable")
 	}
 	s.pluginWebViewsMu.Unlock()
 }

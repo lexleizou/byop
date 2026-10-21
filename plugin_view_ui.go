@@ -100,7 +100,7 @@ func (s *appState) loadPluginViewByID(pluginID, viewID string) {
 			}
 			s.pluginViewLoading = false
 			if err != nil {
-				s.pluginViewError = err.Error()
+				s.pluginViewError = uiErrorText(err, "Plugin view could not be rendered.")
 				return
 			}
 			s.pluginViewModels[pluginViewCacheKey(pluginID, viewID)] = model

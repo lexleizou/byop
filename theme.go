@@ -116,6 +116,6 @@ func nativeTheme(dark bool) (*ui.Theme, palette) {
 	return t, p
 }
 
-func currentAppearanceDark() bool {
+var currentAppearanceDark = func() bool {
 	return mygo.Theme.IsDark()
 }

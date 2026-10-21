@@ -225,7 +225,7 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 			}
 		}
 		if entry.Error != "" {
-			ui.Text(c, summarizeLine(entry.Error, 240)).FontSize(fontCaption).
+			ui.Text(c, summarizeLine(uiErrorFromText(entry.Error, "Plugin failed."), 240)).FontSize(fontCaption).
 				LineHeight(1.4).TextColor(p.danger)
 		}
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
@@ -236,7 +236,7 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 				LineHeight(1.4).TextColor(p.success)
 		}
 		if runtime.LastError != "" {
-			ui.Text(c, summarizeLine(runtime.LastError, 240)).FontSize(fontCaption).
+			ui.Text(c, summarizeLine(uiErrorFromText(runtime.LastError, "Plugin failed."), 240)).FontSize(fontCaption).
 				LineHeight(1.4).TextColor(p.danger)
 		}
 		if runtime.HostCalls > 0 {
@@ -340,7 +340,7 @@ func (s *appState) runPluginCommandWithArgs(
 		result, err := s.plugins.invokeCommand(ctx, entry, command.ID, args)
 		s.postUI(func() {
 			if err != nil {
-				s.showNotice(title + " failed: " + summarizeLine(err.Error(), 200))
+				s.showNotice(title + " failed: " + uiErrorSummary(err, "unknown error", 200))
 				return
 			}
 			s.showNotice(title + " · " + pluginResultSummary(result))
@@ -359,7 +359,7 @@ func (s *appState) deactivatePlugin(entry pluginRegistryEntry) {
 		err := s.plugins.deactivate(entry.ID)
 		s.postUI(func() {
 			if err != nil {
-				s.showNotice(name + " stopped with an error: " + summarizeLine(err.Error(), 200))
+				s.showNotice(name + " stopped with an error: " + uiErrorSummary(err, "unknown error", 200))
 				return
 			}
 			s.showNotice(name + " deactivated and its process exited.")
@@ -734,7 +734,11 @@ func (s *appState) automationRunRow(c *ui.Context, p palette, run automationRunR
 	}
 	detail := run.Result
 	if run.ErrorCode != "" || run.Error != "" {
-		detail = strings.TrimSpace(strings.Join(nonEmpty(run.ErrorCode, run.Error), " · "))
+		errorText := run.Error
+		if errorText != "" {
+			errorText = uiErrorFromText(errorText, "Automation failed.")
+		}
+		detail = strings.TrimSpace(strings.Join(nonEmpty(run.ErrorCode, errorText), " · "))
 	}
 	if detail == "" {
 		detail = "No result summary"
@@ -770,7 +774,7 @@ func (s *appState) runAutomation(entry pluginRegistryEntry, contribution pluginA
 	}
 	record, err := s.automations.beginRun(key, entry.ID, contribution.ID, contribution.Command)
 	if err != nil {
-		s.showNotice("Could not start automation: " + summarizeLine(err.Error(), 200))
+		s.showNotice("Could not start automation: " + uiErrorSummary(err, "unknown error", 200))
 		return
 	}
 	if s.window != nil {
@@ -801,7 +805,7 @@ func (s *appState) runAutomation(entry pluginRegistryEntry, contribution pluginA
 			case errors.Is(invokeErr, context.DeadlineExceeded):
 				outcome = automationOutcomeTimeout
 			}
-			errorSummary = invokeErr.Error()
+			errorSummary = uiErrorText(invokeErr, "unknown error")
 		} else {
 			resultSummary = pluginResultSummary(result)
 		}
@@ -810,7 +814,7 @@ func (s *appState) runAutomation(entry pluginRegistryEntry, contribution pluginA
 		s.postUI(func() {
 			if finishErr != nil {
 				s.showNotice("Automation finished, but its run record could not be saved: " +
-					summarizeLine(finishErr.Error(), 200))
+					uiErrorSummary(finishErr, "unknown error", 200))
 			} else {
 				title := fallback(contribution.Title, contribution.ID)
 				switch outcome {
@@ -844,7 +848,8 @@ func (s *appState) setAutomationPaused(key string, paused bool) {
 		err = s.automations.resume(key)
 	}
 	if err != nil {
-		s.showNotice("Automation state could not be saved: " + summarizeLine(err.Error(), 200))
+		s.showNotice("Automation state could not be saved: " +
+			uiErrorSummary(err, "unknown error", 200))
 		return
 	}
 	if s.window != nil {
@@ -866,6 +871,8 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						s.themeButton(c, p, themeDark, "moon", "Dark")
 					})
 				})
+
+				s.legacyMigrationSection(c, p)
 
 				settingsCard(c, p, "External Pi CLI", "BYOP starts a separately installed Pi process and uses its versioned JSONL RPC protocol. It does not replace Pi with an embedded SDK.", func() {
 					ui.Row(c).Gap(9).AlignItems(ui.Center).Children(func() {
@@ -911,7 +918,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P7 automations · 2026-10-21").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P8 migration · 2026-10-21").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})

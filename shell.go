@@ -62,14 +62,14 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P7 · AUTOMATIONS", p.accent)
+		statusPill(c, p, "P8 · MIGRATION", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
-			s.navCollapsed = !s.navCollapsed
+			s.setNavCollapsed(!s.navCollapsed)
 		})
 		iconButton(c, p, "tasks-toggle", "panel-right", "Toggle task panel", s.tasksOpen, func() {
-			s.tasksOpen = !s.tasksOpen
+			s.setTasksOpen(!s.tasksOpen)
 		})
 	})
 }
@@ -416,7 +416,7 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 					ui.Text(c, "Run activity and background work").FontSize(fontCaption).TextColor(p.muted)
 				})
 				iconButton(c, p, "tasks-close", "x", "Close task panel", false, func() {
-					s.tasksOpen = false
+					s.setTasksOpen(false)
 				})
 			})
 

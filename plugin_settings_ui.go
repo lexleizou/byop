@@ -248,7 +248,7 @@ func (s *appState) savePluginSettings(
 				}
 			}
 			if err != nil {
-				form.status = summarizeLine(err.Error(), 220)
+				form.status = uiErrorSummary(err, "Plugin settings could not be loaded.", 220)
 				form.statusError = true
 				return
 			}
