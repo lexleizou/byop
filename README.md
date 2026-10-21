@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P8：BYOP 将主题、导航、任务栏、工作区、最近 Pi 会话关联、草稿和保留的旧偏好写入 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。Settings 的 Migration 卡片只读扫描旧 Pi Agent Desktop 数据，预览后由用户显式导入；Pi 会话只关联，不复制正文。导入会先备份现有偏好，并以原子写入和导入记录保证可追溯；重复导入保持幂等。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P9a：每轮 Pi 正常结束后，BYOP 通过独立的一次性 Pi 进程生成一条简短后续消息。默认以 ghost text 显示，Tab 采纳、Esc 关闭；Settings 可切换为输入框上方的卡片。生成不使用主 JSONL RPC 会话，也不会自动发送。P8 的主题、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好继续保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -30,6 +30,8 @@
 - 原生会话时间线按“文字 → 工具 → 文字”的真实顺序保留内容块；
 - `tool_execution_start/update/end` 按 `toolCallId` 原位更新，不改变工具卡位置；
 - Chat 使用 Onevra `FloatingConversation`、`Turn`、`ActivityGroup`、`Activity` 和 `GlassComposer`；
+- 正常完成的轮次会以独立、无会话、无工具的 Pi one-shot 进程生成一条后续消息建议；默认显示为 ghost text，也可在 Settings 切换为输入框上方的卡片；
+- 建议只提供 `Tab` / `Use` 采纳和 `Esc` / dismiss 关闭，不会自动发送；采纳后清空输入框会重新显示，发送、新一轮、会话切换和关闭都会取消或移除旧建议；
 - 连续工具合并为可折叠的活动组，运行中显示最新动作，完成后显示“Ran N tools”；
 - 运行中显示“Working · 耗时”，结束后折叠为“Worked for 耗时”，保留最终回复可见；
 - 工具详情使用等宽文本，展示长参数、结果或实时输出和状态耗时；
@@ -227,7 +229,7 @@ BYOP_PI_INTEGRATION=1 go test \
 
 该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，要求 Pi 连续执行两次安全的 `bash` 命令，并调用一次手动压缩 RPC。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
 
-验证记录见 [P8-validation.md](docs/P8-validation.md)、[P7-validation.md](docs/P7-validation.md)、[P6b-validation.md](docs/P6b-validation.md)、[P6-validation.md](docs/P6-validation.md)、[P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
+验证记录见 [P9a-validation.md](docs/P9a-validation.md)、[P8-validation.md](docs/P8-validation.md)、[P7-validation.md](docs/P7-validation.md)、[P6b-validation.md](docs/P6b-validation.md)、[P6-validation.md](docs/P6-validation.md)、[P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
 
 ## 设计系统
 

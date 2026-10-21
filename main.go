@@ -186,41 +186,47 @@ type appState struct {
 	pluginBridgeMu     sync.Mutex
 	automations        *automationStore
 
-	window                 *mygo.Window
-	closed                 atomic.Bool
-	pi                     *piClient
-	piConn                 piConnectionState
-	piPath                 string
-	piCwd                  string
-	piVersion              string
-	piSessionID            string
-	piModel                string
-	piModelProvider        string
-	piModelID              string
-	piModelName            string
-	piThinkingLevel        string
-	piThinkingLevels       []string
-	piModels               []piModel
-	piSessionFile          string
-	piSessions             []piSessionSummary
-	piSessionsExpanded     bool
-	piSessionsRefresh      atomic.Uint64
-	piSessionsTimer        *time.Timer
-	piSessionBusy          bool
-	sessionGen             uint64
-	thinkingCommitInFlight bool
-	thinkingCommitLevel    string
-	thinkingCommitGen      uint64
-	thinkingCommitSeq      uint64
-	piError                string
-	piConnecting           bool
-	piEpoch                uint64
-	run                    runState
-	runID                  string
-	activePrompt           string
-	activeRequest          string
-	chat                   []chatMessage
-	chatView               chatPresentation
+	window                  *mygo.Window
+	closed                  atomic.Bool
+	pi                      *piClient
+	piConn                  piConnectionState
+	piPath                  string
+	piCwd                   string
+	piVersion               string
+	piSessionID             string
+	piModel                 string
+	piModelProvider         string
+	piModelID               string
+	piModelName             string
+	piThinkingLevel         string
+	piThinkingLevels        []string
+	piModels                []piModel
+	piSessionFile           string
+	piSessions              []piSessionSummary
+	piSessionsExpanded      bool
+	piSessionsRefresh       atomic.Uint64
+	piSessionsTimer         *time.Timer
+	piSessionBusy           bool
+	sessionGen              uint64
+	thinkingCommitInFlight  bool
+	thinkingCommitLevel     string
+	thinkingCommitGen       uint64
+	thinkingCommitSeq       uint64
+	piError                 string
+	piConnecting            bool
+	piEpoch                 uint64
+	run                     runState
+	runID                   string
+	activePrompt            string
+	activeRequest           string
+	chat                    []chatMessage
+	chatView                chatPresentation
+	followUpGeneration      uint64
+	followUpCancel          context.CancelFunc
+	followUpRunner          followUpRunner
+	followUpSuggestion      string
+	followUpAdoptionPending bool
+	followUpAdoptionFocus   bool
 
 	queueSteeringCount int
 	queueFollowUpCount int
@@ -721,6 +727,7 @@ func (s *appState) cancelThinkingCommit() {
 }
 
 func (s *appState) newPiSession() {
+	s.resetFollowUpSuggestion()
 	s.cancelThinkingPending()
 	client, epoch, gen, ok := s.beginPiSessionOperation("sessions")
 	if !ok {
@@ -767,6 +774,7 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 		s.showNotice("Session switching is unavailable while BYOP_PI_EPHEMERAL is enabled.")
 		return
 	}
+	s.resetFollowUpSuggestion()
 	s.cancelThinkingPending()
 	client, epoch, gen, ok := s.beginPiSessionOperation("sessions")
 	if !ok {
@@ -797,6 +805,7 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 }
 
 func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPath, expectedID, notice string) {
+	s.resetFollowUpSuggestion()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
@@ -838,6 +847,7 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			s.run = runIdle
 			s.activeRequest = ""
 			s.activePrompt = ""
+			s.resetFollowUpSuggestion()
 			if stateErr == nil {
 				s.applyPiSessionState(state)
 			}
@@ -1119,6 +1129,7 @@ func (s *appState) connectPi() {
 }
 
 func (s *appState) reconnectPi() {
+	s.resetFollowUpSuggestion()
 	s.sessionGen++
 	s.piSessionBusy = false
 	s.cancelThinkingCommit()
@@ -1158,6 +1169,7 @@ func (s *appState) reconnectPi() {
 
 func (s *appState) shutdownPi() {
 	s.closed.Store(true)
+	s.resetFollowUpSuggestion()
 	s.sessionGen++
 	s.piSessionBusy = false
 	s.cancelThinkingCommit()
@@ -1200,6 +1212,7 @@ func (s *appState) sendPrompt() {
 		return
 	}
 
+	s.resetFollowUpSuggestion()
 	s.cancelThinkingPending()
 	s.sessionGen++
 	gen := s.sessionGen
@@ -1306,6 +1319,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		}
 		s.run = runStreaming
 	case piEventRunStarted:
+		s.resetFollowUpSuggestion()
 		s.run = runStreaming
 	case piEventText:
 		s.run = runStreaming
@@ -1397,6 +1411,20 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.run = runStreaming
 		s.endToolCall(event)
 	case piEventSettled:
+		prompt := s.activePrompt
+		for i := len(s.chat) - 1; i >= 0; i-- {
+			if s.chat[i].role != chatUser {
+				continue
+			}
+			if text := strings.TrimSpace(messageText(&s.chat[i])); text != "" {
+				prompt = text
+				break
+			}
+		}
+		reply := ""
+		if len(s.chat) > 0 && s.chat[len(s.chat)-1].role == chatAssistant {
+			reply = messageText(&s.chat[len(s.chat)-1])
+		}
 		if s.runActive() {
 			s.sessionGen++
 		}
@@ -1425,6 +1453,9 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			if s.notice == "" {
 				s.notice = "Pi finished and is ready for another message."
 			}
+			if strings.TrimSpace(reply) != "" {
+				s.startFollowUpSuggestion(prompt, reply)
+			}
 		}
 		s.refreshPiSessionState()
 		s.schedulePiSessionsRefresh()
@@ -1432,6 +1463,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.piError = uiErrorFromText(event.Error, "Pi protocol warning.")
 		s.notice = "Pi protocol warning: " + s.piError
 	case piEventProcessExit:
+		s.resetFollowUpSuggestion()
 		s.sessionGen++
 		s.piSessionBusy = false
 		s.cancelThinkingCommit()

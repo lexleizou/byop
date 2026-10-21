@@ -18,6 +18,7 @@ const byopPreferencesVersion = 1
 type byopPreferences struct {
 	Version                int                    `json:"version"`
 	Theme                  string                 `json:"theme,omitempty"`
+	FollowUpStyle          string                 `json:"followUpStyle,omitempty"`
 	NavCollapsed           bool                   `json:"navCollapsed,omitempty"`
 	TasksOpen              bool                   `json:"tasksOpen,omitempty"`
 	Workspace              string                 `json:"workspace,omitempty"`
@@ -48,6 +49,7 @@ func defaultByopPreferences() byopPreferences {
 	return byopPreferences{
 		Version:                byopPreferencesVersion,
 		Theme:                  string(themeSystem),
+		FollowUpStyle:          string(followUpStyleGhost),
 		LastSessionByWorkspace: make(map[string]string),
 		Drafts:                 make(map[string]legacyDraft),
 		Legacy:                 make(map[string]legacyValue),
@@ -104,6 +106,7 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 	default:
 		preferences.Theme = string(themeSystem)
 	}
+	preferences.FollowUpStyle = string(normalizeFollowUpStyle(preferences.FollowUpStyle))
 	if preferences.LastSessionByWorkspace == nil {
 		preferences.LastSessionByWorkspace = make(map[string]string)
 	}

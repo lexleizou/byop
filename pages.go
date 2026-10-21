@@ -872,6 +872,14 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 					})
 				})
 
+				settingsCard(c, p, "Follow-up suggestion", "After a completed reply, BYOP can suggest one short next message. Suggestions never send automatically.", func() {
+					ui.Row(c).Gap(8).Wrap().Children(func() {
+						s.followUpStyleButton(c, p, followUpStyleGhost, "chat", "Grey text")
+						s.followUpStyleButton(c, p, followUpStyleCard, "document", "Card")
+					})
+					ui.Text(c, "Tab to use · Esc to dismiss").FontSize(fontSmall).TextColor(p.muted)
+				})
+
 				s.legacyMigrationSection(c, p)
 
 				settingsCard(c, p, "External Pi CLI", "BYOP starts a separately installed Pi process and uses its versioned JSONL RPC protocol. It does not replace Pi with an embedded SDK.", func() {
@@ -918,7 +926,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P8 migration · 2026-10-21").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P9a follow-up · 2026-10-22").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})
@@ -995,5 +1003,34 @@ func (s *appState) themeButton(c *ui.Context, p palette, mode themeMode, iconNam
 	})
 	if btn.Clicked() {
 		s.setTheme(mode)
+	}
+}
+
+func (s *appState) followUpStyleButton(c *ui.Context, p palette, style followUpStyle, iconName, label string) {
+	selected := s.currentFollowUpStyle() == style
+	bg := p.background
+	fg := p.muted
+	border := p.border
+	if selected {
+		bg = p.surfaceHover
+		fg = p.accent
+		border = p.accent
+	}
+	btn := ui.ButtonBase(c.Key("follow-up-style-"+string(style))).Padding(8, 12).Radius(8).
+		Border(1, border).Background(bg).Cursor(ui.CursorPointer).Label(label)
+	if btn.Hovered() && !selected {
+		btn.Background(p.surfaceHover)
+	}
+	btn.Children(func() {
+		ui.Row(c).Gap(7).AlignItems(ui.Center).Children(func() {
+			ui.Icon(c, icon(iconName)).Size(15, 15).TextColor(fg)
+			ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(fg)
+			if selected {
+				ui.Icon(c, icon("check")).Size(12, 12).TextColor(fg)
+			}
+		})
+	})
+	if btn.Clicked() {
+		s.setFollowUpStyle(style)
 	}
 }

@@ -332,43 +332,67 @@ func turnFooter(c *ui.Context, label string, failed bool) {
 
 func (s *appState) chatComposer(c *ui.Context) {
 	t := c.Theme()
-	result := chat.GlassComposer(c, &s.chatView.layout, &s.composerDraft, chat.ComposerOptions{
-		Label:        "Message",
-		Placeholder:  composerPlaceholder(s.piConn),
-		SendLabel:    "Send",
-		StopLabel:    "Stop",
-		Running:      s.runActive() && s.run != runStopping,
-		SendDisabled: s.piConn != piConnected,
-		Accessory: func(c *ui.Context) {
-			s.composerChoices(c)
-		},
-		Trailing: func(c *ui.Context) {
-			if chat.IconAction(c, "Attachments are not connected yet", lu.Paperclip).Clicked() {
-				s.showNotice("Attachments remain outside the current RPC boundary.")
-			}
-		},
-		Footer: func(c *ui.Context) {
-			chat.Chip(c, s.piCompactLabel(), chat.ChipOptions{Icon: lu.Terminal, ReadOnly: true})
-			ui.Spacer(c)
-			switch {
-			case s.run == runStopping:
-				chat.Shimmer(c, "Stopping Pi", 12.5, t.TextMuted, t.Text)
-			case s.retrying:
-				chat.Shimmer(c, s.retryStatusLabel(c), 12.5, t.TextMuted, t.Text)
-			case s.compacting:
-				chat.Shimmer(c, "Compacting context", 12.5, t.TextMuted, t.Text)
-			case s.runActive():
-				chat.Shimmer(c, "Pi is working", 12.5, t.TextMuted, t.Text)
-			}
-		},
+	visible := s.followUpSuggestionVisible()
+	style := s.currentFollowUpStyle()
+	placeholder := composerPlaceholder(s.piConn)
+	if visible && style == followUpStyleGhost {
+		placeholder = s.followUpSuggestion
+	}
+	cardVisible := visible && style == followUpStyleCard
+	ui.Column(c).FillWidth().MinWidth(0).Children(func() {
+		if cardVisible {
+			s.followUpSuggestionCard(c)
+		}
+		result := chat.GlassComposer(c, &s.chatView.layout, &s.composerDraft, chat.ComposerOptions{
+			Label:        "Message",
+			Placeholder:  placeholder,
+			SendLabel:    "Send",
+			StopLabel:    "Stop",
+			Running:      s.runActive() && s.run != runStopping,
+			SendDisabled: s.piConn != piConnected,
+			Accessory: func(c *ui.Context) {
+				s.composerChoices(c)
+			},
+			Trailing: func(c *ui.Context) {
+				if chat.IconAction(c, "Attachments are not connected yet", lu.Paperclip).Clicked() {
+					s.showNotice("Attachments remain outside the current RPC boundary.")
+				}
+			},
+			Footer: func(c *ui.Context) {
+				chat.Chip(c, s.piCompactLabel(), chat.ChipOptions{Icon: lu.Terminal, ReadOnly: true})
+				ui.Spacer(c)
+				switch {
+				case visible && style == followUpStyleGhost:
+					components.Text(c, "Tab to use · Esc to dismiss").FontSize(fontSmall).TextColor(t.TextMuted)
+				case s.run == runStopping:
+					chat.Shimmer(c, "Stopping Pi", 12.5, t.TextMuted, t.Text)
+				case s.retrying:
+					chat.Shimmer(c, s.retryStatusLabel(c), 12.5, t.TextMuted, t.Text)
+				case s.compacting:
+					chat.Shimmer(c, "Compacting context", 12.5, t.TextMuted, t.Text)
+				case s.runActive():
+					chat.Shimmer(c, "Pi is working", 12.5, t.TextMuted, t.Text)
+				}
+			},
+		})
+		result.Root.Key("chat-composer")
+		result.Input.FontSize(fontBody)
+		if !cardVisible {
+			s.applyPendingFollowUpAdoption(result.Input)
+		}
+		if visible && result.Input.Focused() {
+			composing := result.Input.Composing()
+			result.Input.HandleInput(func(ev ui.InputEvent) bool {
+				return s.handleFollowUpComposerInput(ev, composing)
+			})
+		}
+		if result.Send {
+			s.sendPrompt()
+		}
+		if result.Stop {
+			s.stopPrompt()
+		}
 	})
-	result.Input.FontSize(fontBody)
-	if result.Send {
-		s.sendPrompt()
-	}
-	if result.Stop {
-		s.stopPrompt()
-	}
 }
 
 func (s *appState) composerChoices(c *ui.Context) {
