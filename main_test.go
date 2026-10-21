@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -317,6 +318,7 @@ func TestMessageErrorStaysOutOfAssistantBody(t *testing.T) {
 	}
 
 	state := projectionTestState()
+	event.Source = nil
 	state.handlePiEvent(event, 0)
 	if len(state.currentAssistant().blocks) != 0 {
 		t.Fatalf("provider error became assistant content: %#v", state.currentAssistant().blocks)
@@ -332,6 +334,35 @@ func TestMessageErrorStaysOutOfAssistantBody(t *testing.T) {
 	message := state.currentAssistant()
 	if len(message.blocks) != 1 || strings.Contains(message.blocks[0].text, "provider unavailable") {
 		t.Fatalf("failed run exposed provider error in the assistant body: %#v", message.blocks)
+	}
+}
+
+func TestSettledOnlyAdvancesSessionGenerationForActiveRun(t *testing.T) {
+	state := projectionTestState()
+	state.run = runCompleted
+	state.sessionGen = 7
+
+	state.handlePiEvent(piEvent{Kind: piEventSettled}, 0)
+
+	if state.sessionGen != 7 {
+		t.Fatalf("settled idle session generation = %d, want 7", state.sessionGen)
+	}
+}
+
+func TestPiSessionStateCanonicalizesSessionFileOnce(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "session.jsonl")
+	if err := os.WriteFile(target, []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "linked-session.jsonl")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	state := &appState{}
+	state.applyPiSessionState(&piSessionState{SessionFile: link})
+	if want := canonicalPiPath(target); state.piSessionFile != want {
+		t.Fatalf("session file = %q, want canonical path %q", state.piSessionFile, want)
 	}
 }
 

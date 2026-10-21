@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P5 插件平台：在 P4.2 native/Node runtime、类型化视图、设置和宿主调用的基础上，BYOP 新增按插件视图隔离的 WebView、安全资源 scheme、页面身份校验、导航锁、主题桥和失败回退。Node 插件同时受 Node permission model 和宿主 API 检查约束；native 插件没有进程级沙箱，宿主调用仍按清单检查。Chat 继续使用 Onevra 原生组件和外部 Pi CLI JSONL RPC；BYOP 不内置 Pi SDK，不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P6a：BYOP 使用新的 project-original 标识，默认让 Pi 持久化会话，并在 Chat 导航中只读列出当前工作区的最近会话；新建和切换会话通过 Pi RPC 完成，切换后通过 `get_messages` 恢复原生时间线。模型与 thinking level 的 RPC 状态已接通，设置页显示当前模型和思考级别；选择器界面仍属于 P6b。插件平台维持 P5 的状态，不新增功能插件。BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -17,8 +17,11 @@
 - Chat、Plugins、Automations、Settings 导航；
 - Light、Dark、System 三种主题；
 - 默认收起的右侧任务栏；
-- 外部 `pi --mode rpc --no-session` 进程适配器；
+- 外部 `pi --mode rpc` 进程适配器，默认持久化会话；`BYOP_PI_EPHEMERAL=1` 时使用 `--no-session`；
 - `get_state` 握手、`prompt` 发送、流式 `message_update`、最终 `message_end`；
+- 只读扫描 Pi 当前工作区 session 目录，显示最近 50 条中的前 8 条；展开后最多显示 16 条并可滚动；
+- Chat 导航支持新建会话和切换会话；运行或压缩中拒绝切换；切换后重建 user、assistant 和 tool 时间线；
+- 连接、创建或切换会话后加载可用模型和 thinking levels；`selectModel`、`selectThinkingLevel` 只提供 P6b 选择器所需的应用状态与 RPC；
 - 按 `toolCallId` 关联 `tool_execution_start/update/end`；
 - 原生会话时间线按“文字 → 工具 → 文字”的真实顺序保留内容块；
 - `tool_execution_start/update/end` 按 `toolCallId` 原位更新，不改变工具卡位置；
@@ -63,7 +66,7 @@
 - 重新扫描、停用、进程停止和关闭窗口时销毁相关 WebView；离开页面只隐藏实例；
 - 重新扫描和关闭窗口前会停用全部插件进程；插件意外退出时标记为 failed 并保留 stderr 尾部摘要。
 
-Automations 目前仍是可运行的原生视觉骨架。插件安装、附件、模型选择、会话历史与切换仍属于后续阶段；输入框中的附件按钮和模型标签目前只做展示。
+Automations 目前仍是可运行的原生视觉骨架。插件安装与附件仍属于后续阶段；模型和 thinking level 选择器界面属于 P6b，输入框中的模型标签仍只做展示。P6a 已提供会话历史与切换。
 
 **Plugin development hold：** P5 后插件平台功能已就绪，但在 Lex 明确要求前不开发功能插件；此前 Library 与 Document 的页面和导航占位已在 P5 移除，其设计不得转为插件。`examples/` 只放契约 fixture。
 
@@ -95,7 +98,8 @@ flowchart LR
 | 窗口、导航、主题、任务栏 | BYOP |
 | 插件清单、目录扫描、贡献点和冲突状态 | BYOP |
 | 模型、provider、OAuth、凭据 | Pi |
-| 会话 JSONL、扩展、Skills、工具执行 | Pi |
+| 会话 JSONL、扩展、Skills、工具执行 | Pi；BYOP 只读扫描列表，所有会话变更走 RPC |
+| 模型目录、thinking levels、provider 凭据 | Pi；BYOP 只保存当前选择的可显示元数据 |
 | native / Node 插件生命周期、命令和视图 | BYOP Plugin Host（P5） |
 | 插件设置、宿主调用和能力检查 | BYOP Plugin Host（P5） |
 | WebView 静态资源、导航隔离、bridge 与生命周期 | BYOP Plugin Host（P5） |
@@ -126,6 +130,20 @@ BYOP_PI_PATH=/absolute/path/to/pi go run .
 ```sh
 BYOP_PI_CONNECT=0 go run .
 ```
+
+使用临时会话（不写入 Pi session 目录，并隐藏侧栏会话列表）：
+
+```sh
+BYOP_PI_EPHEMERAL=1 go run .
+```
+
+设置 `PI_CODING_AGENT_SESSION_DIR` 时，Pi 直接把会话 JSONL 存放在该目录下，
+不再按工作区创建 `--<cwd>--` 子目录。BYOP 同样扫描这个平铺目录，并只显示
+session header 的 `cwd` 与当前工作区（解析符号链接后）一致的条目；路径开头的
+`~` 会被展开。未设置时，会话根目录为
+`($PI_CODING_AGENT_DIR 或 ~/.pi/agent)/sessions`，当前工作区则使用
+`--<cwd>--` 子目录。若只在 Pi settings 中设置 `sessionDir`，请在启动 BYOP 时
+同步设置 `PI_CODING_AGENT_SESSION_DIR`，确保列表读取同一位置。
 
 默认扫描：
 
@@ -194,7 +212,7 @@ BYOP_PI_INTEGRATION=1 go test \
 
 该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，要求 Pi 连续执行两次安全的 `bash` 命令，并调用一次手动压缩 RPC。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
 
-验证记录见 [P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
+验证记录见 [P6-validation.md](docs/P6-validation.md)、[P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
 
 ## 设计系统
 

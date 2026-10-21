@@ -1,5 +1,11 @@
 # Third-Party Notices
 
+## BYOP Logo
+
+Assets: `assets/byop-logo.svg` and `assets/byop-logo-1024.png`
+Description: The filled circle with a cutout π is a project-original BYOP
+asset. The Lucide `Pi` mark remains available for non-brand icon use.
+
 ## MyGo
 
 Source: <https://github.com/egoist/mygo>

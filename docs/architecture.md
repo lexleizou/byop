@@ -1,10 +1,9 @@
 # BYOP Workbench Architecture
 
-Status: P5 native shell, external Pi RPC loop, ordered timelines, transient
-runtime diagnostics, a strict plugin manifest registry, native and Node plugin
-lazy activation, typed native views, plugin settings, bidirectional host calls,
-capability enforcement and isolated WebView hosting are implemented; Chat
-renders through Onevra v0.2026.13 components.
+Status: P6a native shell, persisted external Pi sessions, read-only session
+discovery and RPC-only session mutation, ordered timeline restoration, model
+and thinking-level RPC state, transient runtime diagnostics, and the P5 plugin
+platform are implemented; Chat renders through Onevra v0.2026.13 components.
 
 ## Runtime Boundary
 
@@ -57,11 +56,37 @@ flowchart TB
     PluginHost --> Settings
 ```
 
-BYOP starts `pi --mode rpc --no-session` as a child process. Every outbound
-command and inbound event uses one JSON object per LF-terminated line. Request
-IDs correlate command responses. The UI treats `agent_settled` as the end of
-a run because retries, compaction, steering, follow-ups and queued work may
-continue after an earlier `agent_end` event.
+BYOP starts `pi --mode rpc` as a child process, so Pi persists sessions in its
+own store. `BYOP_PI_EPHEMERAL=1` adds `--no-session` for tests and isolated use.
+Every outbound command and inbound event uses one JSON object per LF-terminated
+line. Request IDs correlate command responses. The UI treats `agent_settled`
+as the end of a run because retries, compaction, steering, follow-ups and
+queued work may continue after an earlier `agent_end` event.
+
+BYOP starts Pi and resolves the discovery directory from one common, absolute,
+symlink-resolved workspace path (`BYOP_WORKSPACE` or the process working
+directory). When `PI_CODING_AGENT_SESSION_DIR` is set, Pi stores session JSONL
+files flat in that directory, so BYOP scans it non-recursively and keeps only
+files whose header `cwd` matches the resolved workspace. A leading `~` is
+expanded. When the variable is unset, the root is
+`($PI_CODING_AGENT_DIR or ~/.pi/agent)/sessions`, and BYOP reads the resolved
+workspace's `--<cwd>--` child. BYOP never changes session files or follows a
+session symlink. Entries are sorted by modification time before the newest 50
+are parsed; scans larger than 64 MiB and JSONL lines larger than 1 MiB are
+bounded. Listing reads headers, message roles, the latest `session_info` name,
+first user text and file modification time.
+
+`new_session` and `switch_session` go through Pi RPC. Session mutations use a
+generation-guarded busy state, so prompt, switch, create, model and thinking
+changes cannot overlap; stale async callbacks are discarded. After a successful
+create or switch, `get_messages` supplies the active branch for native
+transcript reconstruction, while `get_state` supplies the active session file,
+model and thinking level. Paths are compared after symlink resolution, with the
+session ID as a fallback. A mismatch is reported without discarding the
+reported transcript. `BYOP_PI_EPHEMERAL=1` skips discovery, hides the session
+list and refuses switching. `get_available_models` and
+`get_available_thinking_levels` populate future picker state. These methods omit
+provider URLs, headers and credential material from BYOP state.
 
 P3.3a projects the following Pi session events into host-only transient state:
 `queue_update`, `compaction_start`, `compaction_end`, `auto_retry_start`,
@@ -81,14 +106,16 @@ permanent turn completed, stopped or failed.
 | Plugin lifecycle, commands and views | BYOP Plugin Host | Starts native and Node plugins lazily, routes declared commands, renders typed views and stops processes on deactivate, rescan and window close |
 | Plugin settings and host calls | BYOP Plugin Host | Persists typed values, injects settings, accepts JSON-RPC requests from plugins and enforces declared capabilities |
 | Model calls and provider auth | Pi | Delegated |
-| Session persistence and credentials | Pi | Pi-owned; BYOP does not rewrite files |
+| Session persistence and credentials | Pi | Pi owns JSONL and credentials; BYOP scans file metadata and conversation fields read-only for the sidebar, then mutates sessions only through RPC |
+| Session list and active transcript | BYOP | Debounced discovery outside the UI goroutine; switch/create responses rebuild the native transcript through `get_messages` |
+| Model and thinking state | Pi plus BYOP adapter | BYOP stores only display fields needed by Settings and the future P6b picker |
 | Tools, Skills and extensions | Pi | Delegated |
 | Long-running task activity | BYOP plus adapters | P3.3a projects the latest tool and transient runtime diagnostics into the task panel |
 | Complex editor or visualizer UI | Plugin and BYOP WebView host | Declared WebViews are served from `byop-plugin://` and retain the plugin's existing capability boundary |
 
-BYOP should persist references and rebuildable indexes rather than duplicate
-Pi session bodies or secrets. A future session browser should discover
-sessions read-only and use Pi RPC for switching and mutations.
+BYOP does not persist a second session index or duplicate Pi session bodies or
+secrets. The in-memory sidebar cache is rebuilt by the read-only scanner;
+switching, creation and transcript retrieval use Pi RPC.
 
 ## Plugin Manifest Registry
 
@@ -420,7 +447,7 @@ plugins. `examples/` contains contract fixtures only.
 | Tauri window and native webview shell | Rewrite with MyGo native host |
 | React/Next chat interface | Rewrite as native Chat and typed view models |
 | Embedded Pi SDK runtime | Remove; use external Pi CLI RPC |
-| Sessions, models, credentials | Keep in Pi; access through RPC and read-only discovery |
+| Sessions, models, credentials | Keep in Pi; sessions are discovered read-only and all mutations use RPC |
 | Skills and extensions | Keep in Pi; expose status and commands through adapters |
 | Tool execution timelines | Ordered native text/tool blocks implemented for the active run |
 | Mermaid, KaTeX, xterm, rich document editor | Consider declared WebView plugins |
@@ -439,6 +466,7 @@ plugins. `examples/` contains contract fixtures only.
 | P4.1 | Native lazy activation, lifecycle states, declared command routing, deactivate and shutdown cleanup |
 | P4.2 | Node runtime, typed view/settings invocation, plugin-to-host calls and permission enforcement |
 | P5 | Isolated WebView scheme, bridge identity and capability reuse, theme bridge, navigation lock, lifecycle and native fallback (implemented) |
-| P6 | Read-only session discovery, model and thinking-level selectors |
+| P6a | New BYOP logo, persisted Pi sessions, read-only session list, RPC session switching/restore and model/thinking RPC state (implemented) |
+| P6b | Model and thinking-level picker UI |
 | P7 | Automation and Loop contributions |
 | P8 | Import old desktop preferences and migration verification |

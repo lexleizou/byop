@@ -53,10 +53,42 @@ type piSessionState struct {
 	AutoCompaction      bool   `json:"autoCompactionEnabled"`
 	SessionFile         string `json:"sessionFile"`
 	Model               struct {
-		Provider string `json:"provider"`
-		ID       string `json:"id"`
-		Name     string `json:"name"`
+		Provider      string   `json:"provider"`
+		ID            string   `json:"id"`
+		Name          string   `json:"name"`
+		Reasoning     bool     `json:"reasoning"`
+		ContextWindow int      `json:"contextWindow"`
+		Input         []string `json:"input"`
 	} `json:"model"`
+}
+
+type piModel struct {
+	Provider      string
+	ID            string
+	Name          string
+	Reasoning     bool
+	ContextWindow int
+	Input         []string
+}
+
+type piModelWire struct {
+	Provider      string   `json:"provider"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Reasoning     bool     `json:"reasoning"`
+	ContextWindow int      `json:"contextWindow"`
+	Input         []string `json:"input"`
+}
+
+func (m piModelWire) model() piModel {
+	return piModel{
+		Provider:      m.Provider,
+		ID:            m.ID,
+		Name:          m.Name,
+		Reasoning:     m.Reasoning,
+		ContextWindow: m.ContextWindow,
+		Input:         append([]string(nil), m.Input...),
+	}
 }
 
 type piEvent struct {
@@ -141,8 +173,18 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 			return nil, fmt.Errorf("resolve working folder: %w", err)
 		}
 	}
+	if absolute, err := filepath.Abs(cwd); err == nil {
+		cwd = absolute
+	}
+	if resolved, err := filepath.EvalSymlinks(cwd); err == nil {
+		cwd = resolved
+	}
 
-	cmd := exec.Command(path, "--mode", "rpc", "--no-session")
+	args := []string{"--mode", "rpc"}
+	if piEphemeralSessions() {
+		args = append(args, "--no-session")
+	}
+	cmd := exec.Command(path, args...)
 	cmd.Dir = cwd
 	cmd.Env = cleanPiEnv(os.Environ())
 
@@ -235,6 +277,111 @@ func (p *piClient) GetState(ctx context.Context) (*piSessionState, error) {
 		return nil, fmt.Errorf("parse Pi state: %w", err)
 	}
 	return &state, nil
+}
+
+func (p *piClient) NewSession(ctx context.Context) (bool, error) {
+	data, err := p.request(ctx, map[string]any{"type": "new_session"})
+	if err != nil {
+		return false, err
+	}
+	var result struct {
+		Cancelled bool `json:"cancelled"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return false, fmt.Errorf("parse new session response: %w", err)
+	}
+	return result.Cancelled, nil
+}
+
+func (p *piClient) SwitchSession(ctx context.Context, path string) (bool, error) {
+	data, err := p.request(ctx, map[string]any{
+		"type":        "switch_session",
+		"sessionPath": path,
+	})
+	if err != nil {
+		return false, err
+	}
+	var result struct {
+		Cancelled bool `json:"cancelled"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return false, fmt.Errorf("parse switch session response: %w", err)
+	}
+	return result.Cancelled, nil
+}
+
+func (p *piClient) GetMessages(ctx context.Context) ([]json.RawMessage, error) {
+	data, err := p.request(ctx, map[string]any{"type": "get_messages"})
+	if err != nil {
+		return nil, err
+	}
+	var result struct {
+		Messages []json.RawMessage `json:"messages"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("parse Pi messages: %w", err)
+	}
+	return result.Messages, nil
+}
+
+func (p *piClient) GetAvailableModels(ctx context.Context) ([]piModel, error) {
+	data, err := p.request(ctx, map[string]any{"type": "get_available_models"})
+	if err != nil {
+		return nil, err
+	}
+	return decodePiModels(data)
+}
+
+func decodePiModels(data json.RawMessage) ([]piModel, error) {
+	var result struct {
+		Models []piModelWire `json:"models"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("parse available models: %w", err)
+	}
+	models := make([]piModel, 0, len(result.Models))
+	for _, model := range result.Models {
+		models = append(models, model.model())
+	}
+	return models, nil
+}
+
+func (p *piClient) SetModel(ctx context.Context, provider, id string) (piModel, error) {
+	data, err := p.request(ctx, map[string]any{
+		"type":     "set_model",
+		"provider": provider,
+		"modelId":  id,
+	})
+	if err != nil {
+		return piModel{}, err
+	}
+	var model piModelWire
+	if err := json.Unmarshal(data, &model); err != nil {
+		return piModel{}, fmt.Errorf("parse selected model: %w", err)
+	}
+	return model.model(), nil
+}
+
+func (p *piClient) GetAvailableThinkingLevels(ctx context.Context) ([]string, error) {
+	data, err := p.request(ctx, map[string]any{"type": "get_available_thinking_levels"})
+	if err != nil {
+		return nil, err
+	}
+	var result struct {
+		Levels []string `json:"levels"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("parse thinking levels: %w", err)
+	}
+	return append([]string(nil), result.Levels...), nil
+}
+
+func (p *piClient) SetThinkingLevel(ctx context.Context, level string) error {
+	_, err := p.request(ctx, map[string]any{
+		"type":  "set_thinking_level",
+		"level": level,
+	})
+	return err
 }
 
 func (p *piClient) Prompt(message string) (string, error) {

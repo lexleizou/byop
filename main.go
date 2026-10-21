@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -42,6 +43,7 @@ func main() {
 			Content:         ui.View(state.view),
 		})
 		state.window = win
+		state.setAppIcon(win)
 		win.OnClosed(state.shutdownPi)
 		switch strings.ToLower(os.Getenv("BYOP_PI_CONNECT")) {
 		case "0", "false", "off":
@@ -170,23 +172,36 @@ type appState struct {
 	pluginBridgeSlots  map[string]chan struct{}
 	pluginBridgeMu     sync.Mutex
 
-	window        *mygo.Window
-	closed        atomic.Bool
-	pi            *piClient
-	piConn        piConnectionState
-	piPath        string
-	piVersion     string
-	piSessionID   string
-	piModel       string
-	piError       string
-	piConnecting  bool
-	piEpoch       uint64
-	run           runState
-	runID         string
-	activePrompt  string
-	activeRequest string
-	chat          []chatMessage
-	chatView      chatPresentation
+	window             *mygo.Window
+	closed             atomic.Bool
+	pi                 *piClient
+	piConn             piConnectionState
+	piPath             string
+	piVersion          string
+	piSessionID        string
+	piModel            string
+	piModelProvider    string
+	piModelID          string
+	piModelName        string
+	piThinkingLevel    string
+	piThinkingLevels   []string
+	piModels           []piModel
+	piSessionFile      string
+	piSessions         []piSessionSummary
+	piSessionsExpanded bool
+	piSessionsRefresh  atomic.Uint64
+	piSessionsTimer    *time.Timer
+	piSessionBusy      bool
+	sessionGen         uint64
+	piError            string
+	piConnecting       bool
+	piEpoch            uint64
+	run                runState
+	runID              string
+	activePrompt       string
+	activeRequest      string
+	chat               []chatMessage
+	chatView           chatPresentation
 
 	queueSteeringCount int
 	queueFollowUpCount int
@@ -426,6 +441,375 @@ func (s *appState) showNotice(text string) {
 	s.notice = text
 }
 
+func (s *appState) setAppIcon(win *mygo.Window) {
+	if err := mygo.App.Dock.SetIcon(byopLogoPNG); err != nil {
+		log.Printf("set Dock icon: %v", err)
+	}
+	if win != nil {
+		if err := win.SetIcon(byopLogoPNG); err != nil {
+			log.Printf("set window icon: %v", err)
+		}
+	}
+}
+
+func (s *appState) applyPiSessionState(state *piSessionState) {
+	if state == nil {
+		return
+	}
+	s.piSessionID = state.SessionID
+	if state.SessionFile == "" {
+		s.piSessionFile = ""
+	} else {
+		s.piSessionFile = canonicalPiPath(state.SessionFile)
+	}
+	s.piThinkingLevel = state.ThinkingLevel
+	s.piModelProvider = state.Model.Provider
+	s.piModelID = state.Model.ID
+	s.piModelName = state.Model.Name
+	s.piModel = strings.TrimSpace(strings.Join(nonEmpty(state.Model.Provider, state.Model.Name), " / "))
+}
+
+func (s *appState) refreshPiSessionState() {
+	if s.pi == nil || s.piConn != piConnected {
+		return
+	}
+	client := s.pi
+	epoch := s.piEpoch
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		state, err := client.GetState(ctx)
+		if err != nil {
+			return
+		}
+		s.postUI(func() {
+			if epoch != s.piEpoch || s.pi != client {
+				return
+			}
+			if s.sessionGen != 0 && s.piSessionBusy {
+				return
+			}
+			s.applyPiSessionState(state)
+		})
+	}()
+}
+
+func (s *appState) refreshPiSessions() {
+	if piEphemeralSessions() {
+		s.piSessionsRefresh.Add(1)
+		if s.piSessionsTimer != nil {
+			s.piSessionsTimer.Stop()
+			s.piSessionsTimer = nil
+		}
+		s.piSessions = nil
+		s.piSessionsExpanded = false
+		return
+	}
+	refresh := s.piSessionsRefresh.Add(1)
+	if s.piSessionsTimer != nil {
+		s.piSessionsTimer.Stop()
+	}
+	s.piSessionsTimer = time.AfterFunc(250*time.Millisecond, func() {
+		if s.piSessionsRefresh.Load() != refresh || s.closed.Load() || piEphemeralSessions() {
+			return
+		}
+		sessions, err := piSessionsForWorkspace()
+		s.postUI(func() {
+			if refresh != s.piSessionsRefresh.Load() || piEphemeralSessions() {
+				return
+			}
+			if err == nil {
+				s.piSessions = sessions
+			}
+		})
+	})
+}
+
+func (s *appState) schedulePiSessionsRefresh() {
+	s.refreshPiSessions()
+}
+
+func (s *appState) sessionMutationAllowed() bool {
+	return s.piMutationAllowed("sessions")
+}
+
+func (s *appState) piMutationAllowed(change string) bool {
+	if s.piSessionBusy {
+		s.showNotice("Wait for the current Pi session operation before changing " + change + ".")
+		return false
+	}
+	if s.runActive() || s.compacting {
+		s.showNotice("Stop the active Pi run before changing " + change + ".")
+		return false
+	}
+	if s.pi == nil || s.piConn != piConnected {
+		s.showNotice("Pi CLI is not connected. Reconnect from Settings.")
+		return false
+	}
+	return true
+}
+
+func (s *appState) beginPiSessionOperation(change string) (*piClient, uint64, uint64, bool) {
+	if !s.piMutationAllowed(change) {
+		return nil, 0, 0, false
+	}
+	client := s.pi
+	epoch := s.piEpoch
+	s.sessionGen++
+	gen := s.sessionGen
+	s.piSessionBusy = true
+	return client, epoch, gen, true
+}
+
+func (s *appState) finishPiSessionOperation(client *piClient, epoch, gen uint64) bool {
+	if gen != s.sessionGen {
+		return false
+	}
+	s.piSessionBusy = false
+	return epoch == s.piEpoch && s.pi == client && !s.runActive()
+}
+
+func (s *appState) newPiSession() {
+	client, epoch, gen, ok := s.beginPiSessionOperation("sessions")
+	if !ok {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		cancelled, err := client.NewSession(ctx)
+		if err != nil {
+			s.postUI(func() {
+				if s.finishPiSessionOperation(client, epoch, gen) {
+					s.showNotice("Could not create a Pi session: " + err.Error())
+				}
+			})
+			return
+		}
+		if cancelled {
+			s.postUI(func() {
+				if s.finishPiSessionOperation(client, epoch, gen) {
+					s.showNotice("Pi canceled the new session.")
+				}
+			})
+			return
+		}
+		stateCtx, stateCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		state, stateErr := client.GetState(stateCtx)
+		stateCancel()
+		if stateErr != nil {
+			s.postUI(func() {
+				if s.finishPiSessionOperation(client, epoch, gen) {
+					s.showNotice("New Pi session was created, but its state could not be confirmed: " + stateErr.Error())
+				}
+			})
+			return
+		}
+		s.loadPiSession(client, epoch, gen, state.SessionFile, state.SessionID, "New Pi session created.")
+	}()
+}
+
+func (s *appState) switchPiSession(summary piSessionSummary) {
+	if piEphemeralSessions() {
+		s.showNotice("Session switching is unavailable while BYOP_PI_EPHEMERAL is enabled.")
+		return
+	}
+	client, epoch, gen, ok := s.beginPiSessionOperation("sessions")
+	if !ok {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		cancelled, err := client.SwitchSession(ctx, summary.Path)
+		if err != nil {
+			s.postUI(func() {
+				if s.finishPiSessionOperation(client, epoch, gen) {
+					s.showNotice("Could not switch Pi session: " + err.Error())
+				}
+			})
+			return
+		}
+		if cancelled {
+			s.postUI(func() {
+				if s.finishPiSessionOperation(client, epoch, gen) {
+					s.showNotice("Pi canceled the session switch.")
+				}
+			})
+			return
+		}
+		s.loadPiSession(client, epoch, gen, summary.Path, summary.ID, "Switched Pi session.")
+	}()
+}
+
+func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPath, expectedID, notice string) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		rawMessages, err := client.GetMessages(ctx)
+		if err != nil {
+			s.postUI(func() {
+				if s.finishPiSessionOperation(client, epoch, gen) {
+					s.showNotice("Session changed, but its transcript could not be restored: " + err.Error())
+				}
+			})
+			return
+		}
+		chat, err := rebuildChatFromPiMessages(rawMessages)
+		if err != nil {
+			s.postUI(func() {
+				if s.finishPiSessionOperation(client, epoch, gen) {
+					s.showNotice("Session transcript could not be read: " + err.Error())
+				}
+			})
+			return
+		}
+		stateCtx, stateCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		state, stateErr := client.GetState(stateCtx)
+		stateCancel()
+		modelsCtx, modelsCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		models, modelsErr := client.GetAvailableModels(modelsCtx)
+		modelsCancel()
+		levelsCtx, levelsCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
+		levelsCancel()
+		s.postUI(func() {
+			if !s.finishPiSessionOperation(client, epoch, gen) {
+				return
+			}
+			s.chat = chat
+			s.run = runIdle
+			s.activeRequest = ""
+			s.activePrompt = ""
+			s.chatView = chatPresentation{}
+			if stateErr == nil {
+				s.applyPiSessionState(state)
+			}
+			if modelsErr == nil {
+				s.piModels = models
+			}
+			if levelsErr == nil {
+				s.piThinkingLevels = levels
+			}
+			s.piError = ""
+			s.notice = notice
+			if stateErr != nil {
+				s.notice = notice + " Pi state could not be confirmed: " + stateErr.Error()
+			} else if (strings.TrimSpace(expectedPath) != "" || strings.TrimSpace(expectedID) != "") &&
+				!samePiSession(expectedPath, expectedID, state.SessionFile, state.SessionID) {
+				s.notice = notice + " Pi reported a different session."
+			}
+			s.page = pageChat
+			s.refreshPiSessions()
+		})
+	}()
+}
+
+func samePiSession(expectedPath, expectedID, actualPath, actualID string) bool {
+	if expectedPath != "" && actualPath != "" &&
+		filepath.Clean(expectedPath) == filepath.Clean(actualPath) {
+		return true
+	}
+	return strings.TrimSpace(expectedID) != "" && expectedID == actualID
+}
+
+func (s *appState) selectModel(provider, id string) {
+	client, epoch, gen, ok := s.beginPiSessionOperation("model")
+	if !ok {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		model, err := client.SetModel(ctx, provider, id)
+		if err != nil {
+			s.postUI(func() {
+				if s.finishPiSessionOperation(client, epoch, gen) {
+					s.showNotice("Could not change Pi model: " + err.Error())
+				}
+			})
+			return
+		}
+		levelsCtx, levelsCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
+		levelsCancel()
+		stateCtx, stateCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		state, stateErr := client.GetState(stateCtx)
+		stateCancel()
+		s.postUI(func() {
+			if !s.finishPiSessionOperation(client, epoch, gen) {
+				return
+			}
+			s.piModelProvider = model.Provider
+			s.piModelID = model.ID
+			s.piModelName = model.Name
+			s.piModel = strings.TrimSpace(strings.Join(nonEmpty(model.Provider, model.Name), " / "))
+			if levelsErr == nil {
+				s.piThinkingLevels = levels
+			}
+			if stateErr == nil {
+				s.applyPiSessionState(state)
+			} else if levelsErr != nil {
+				s.showNotice("Model changed, but thinking levels could not be refreshed.")
+				return
+			}
+			s.showNotice("Pi model changed.")
+		})
+	}()
+}
+
+func (s *appState) selectThinkingLevel(level string) {
+	client, epoch, gen, ok := s.beginPiSessionOperation("thinking level")
+	if !ok {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		err := client.SetThinkingLevel(ctx, level)
+		if err != nil {
+			s.postUI(func() {
+				if s.finishPiSessionOperation(client, epoch, gen) {
+					s.showNotice("Could not change Pi thinking level: " + err.Error())
+				}
+			})
+			return
+		}
+		stateCtx, stateCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		state, stateErr := client.GetState(stateCtx)
+		stateCancel()
+		levelsCtx, levelsCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
+		levelsCancel()
+		s.postUI(func() {
+			if !s.finishPiSessionOperation(client, epoch, gen) {
+				return
+			}
+			s.piThinkingLevel = level
+			if stateErr == nil {
+				s.applyPiSessionState(state)
+			}
+			if levelsErr == nil {
+				s.piThinkingLevels = levels
+			}
+			s.showNotice("Pi thinking level changed.")
+		})
+	}()
+}
+
+func (s *appState) activePiSession() piSessionSummary {
+	for _, session := range s.piSessions {
+		if s.piSessionFile != "" && session.Path != "" &&
+			filepath.Clean(session.Path) == filepath.Clean(s.piSessionFile) {
+			return session
+		}
+		if s.piSessionID != "" && session.ID == s.piSessionID {
+			return session
+		}
+	}
+	return piSessionSummary{}
+}
+
 func (s *appState) postUI(fn func()) {
 	if s.closed.Load() || s.window == nil {
 		return
@@ -438,6 +822,7 @@ func (s *appState) connectPi() {
 		return
 	}
 	s.piEpoch++
+	s.sessionGen++
 	epoch := s.piEpoch
 	path, err := resolvePiPath()
 	if err != nil {
@@ -452,12 +837,23 @@ func (s *appState) connectPi() {
 	s.piPath = path
 	s.piError = ""
 	s.notice = "Connecting to external Pi CLI…"
+	s.refreshPiSessions()
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 		version := piCLIVersion(ctx, path)
-		client, err := startPiClient(path, "", func(event piEvent) {
+		cancel()
+		cwd, err := piWorkspaceCwd()
+		if err != nil {
+			s.postUI(func() {
+				s.piConnecting = false
+				s.piConn = piConnectionErr
+				s.piError = err.Error()
+				s.notice = "Pi workspace failed: " + err.Error()
+			})
+			return
+		}
+		client, err := startPiClient(path, cwd, func(event piEvent) {
 			s.postUI(func() { s.handlePiEvent(event, epoch) })
 		})
 		if err != nil {
@@ -469,7 +865,9 @@ func (s *appState) connectPi() {
 			})
 			return
 		}
-		state, err := client.GetState(ctx)
+		handshakeCtx, handshakeCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		state, err := client.GetState(handshakeCtx)
+		handshakeCancel()
 		if err != nil {
 			client.Close()
 			s.postUI(func() {
@@ -480,21 +878,43 @@ func (s *appState) connectPi() {
 			})
 			return
 		}
+		modelsCtx, modelsCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		models, modelsErr := client.GetAvailableModels(modelsCtx)
+		modelsCancel()
+		levelsCtx, levelsCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
+		levelsCancel()
 		s.postUI(func() {
 			s.pi = client
 			s.piConnecting = false
 			s.piConn = piConnected
 			s.piVersion = version
-			s.piSessionID = state.SessionID
-			s.piModel = strings.TrimSpace(strings.Join(nonEmpty(state.Model.Provider, state.Model.Name), " / "))
+			s.applyPiSessionState(state)
+			if modelsErr == nil {
+				s.piModels = models
+			}
+			if levelsErr == nil {
+				s.piThinkingLevels = levels
+			}
 			s.piError = ""
 			s.resetRuntimeDiagnostics()
-			s.notice = "External Pi CLI connected."
+			if modelsErr != nil || levelsErr != nil {
+				s.notice = "External Pi CLI connected; model metadata was unavailable."
+			} else {
+				s.notice = "External Pi CLI connected."
+			}
 		})
 	}()
 }
 
 func (s *appState) reconnectPi() {
+	s.sessionGen++
+	s.piSessionBusy = false
+	if s.piSessionsTimer != nil {
+		s.piSessionsTimer.Stop()
+		s.piSessionsTimer = nil
+	}
+	s.piSessionsRefresh.Add(1)
 	if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
 		s.markOpenTools(toolCallInterrupted)
 		s.setAssistantStatus("Interrupted")
@@ -506,13 +926,31 @@ func (s *appState) reconnectPi() {
 		old.Close()
 	}
 	s.piConn = piDisconnected
+	s.piSessionFile = ""
+	s.piSessionID = ""
+	s.piSessions = nil
+	s.piSessionsExpanded = false
 	s.run = runIdle
 	s.piConnecting = false
+	s.piModel = ""
+	s.piModelProvider = ""
+	s.piModelID = ""
+	s.piModelName = ""
+	s.piThinkingLevel = ""
+	s.piThinkingLevels = nil
+	s.piModels = nil
 	s.connectPi()
 }
 
 func (s *appState) shutdownPi() {
 	s.closed.Store(true)
+	s.sessionGen++
+	s.piSessionBusy = false
+	if s.piSessionsTimer != nil {
+		s.piSessionsTimer.Stop()
+		s.piSessionsTimer = nil
+	}
+	s.piSessionsRefresh.Add(1)
 	s.destroyAllPluginWebViews()
 	if s.pi != nil {
 		s.pi.Close()
@@ -533,13 +971,23 @@ func (s *appState) sendPrompt() {
 		s.showNotice("Pi CLI is not connected. Reconnect from Settings.")
 		return
 	}
+	if s.piSessionBusy {
+		s.showNotice("Wait for the current Pi session operation before sending a message.")
+		return
+	}
 	if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
 		s.showNotice("Pi is already working. Stop the current run before sending another message.")
 		return
 	}
 
+	s.sessionGen++
+	gen := s.sessionGen
+	s.piSessionBusy = true
 	requestID, err := s.pi.Prompt(text)
 	if err != nil {
+		if gen == s.sessionGen {
+			s.piSessionBusy = false
+		}
 		s.run = runFailed
 		s.piError = err.Error()
 		s.showNotice("Could not send to Pi: " + err.Error())
@@ -553,6 +1001,7 @@ func (s *appState) sendPrompt() {
 	s.runID = requestID
 	s.activeRequest = requestID
 	s.activePrompt = text
+	s.piSessionBusy = false
 	s.chat = append(s.chat,
 		chatMessage{
 			role: chatUser,
@@ -613,7 +1062,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 	if epoch != s.piEpoch {
 		return
 	}
-	if event.Source != nil && s.pi != nil && event.Source != s.pi {
+	if event.Source != nil && event.Source != s.pi {
 		return
 	}
 	switch event.Kind {
@@ -700,6 +1149,9 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		if s.runActive() {
 			s.run = runStreaming
 		}
+		if !event.WillRetry {
+			s.schedulePiSessionsRefresh()
+		}
 	case piEventExtensionErr:
 		s.extensionError = event.Error
 		s.extensionPath = event.ExtensionPath
@@ -715,6 +1167,10 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.run = runStreaming
 		s.endToolCall(event)
 	case piEventSettled:
+		if s.runActive() {
+			s.sessionGen++
+		}
+		s.piSessionBusy = false
 		s.activeRequest = ""
 		s.activePrompt = ""
 		s.queueSteeringCount = 0
@@ -740,14 +1196,27 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 				s.notice = "Pi finished and is ready for another message."
 			}
 		}
+		s.refreshPiSessionState()
+		s.schedulePiSessionsRefresh()
 	case piEventParseError:
 		s.piError = event.Error
 		s.notice = "Pi protocol warning: " + event.Error
 	case piEventProcessExit:
+		s.sessionGen++
+		s.piSessionBusy = false
 		s.pi = nil
 		s.piConnecting = false
 		s.piConn = piDisconnected
 		s.piError = fallback(event.StderrTail, event.Error)
+		s.piSessionFile = ""
+		s.piSessionID = ""
+		s.piModel = ""
+		s.piModelProvider = ""
+		s.piModelID = ""
+		s.piModelName = ""
+		s.piThinkingLevel = ""
+		s.piThinkingLevels = nil
+		s.piModels = nil
 		s.resetRuntimeDiagnostics()
 		if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
 			s.run = runInterrupted

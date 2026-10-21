@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 )
@@ -50,7 +52,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 	ui.Row(c).Height(height).FillWidth().Padding(0, 14, 0, start).
 		AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(p.border).
 		Background(p.background).DragWindow().Children(func() {
-		ui.Row(c).Gap(9).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 			brandMark(c, p, 30)
 			ui.Column(c).Gap(0).Children(func() {
 				ui.Text(c, appShort).FontSize(fontUILarge).FontWeight(650).TextColor(p.text)
@@ -60,7 +62,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P5 · ISOLATED WEBVIEWS", p.accent)
+		statusPill(c, p, "P6 · SESSIONS", p.accent)
 		ui.Spacer(c)
 
 		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
@@ -73,12 +75,8 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 }
 
 func brandMark(c *ui.Context, p palette, size float32) ui.Element {
-	box := ui.Row(c).Size(size, size).Radius(9).Background(p.accent).
-		Center().Label("Build You Own Pi")
-	box.Children(func() {
-		ui.Icon(c, icon("pi")).Size(size*0.58, size*0.58).TextColor(p.accentText)
-	})
-	return box
+	return ui.Icon(c, icon("byop")).Size(size, size).TextColor(p.text).
+		Label("Build You Own Pi")
 }
 
 func (s *appState) navigation(c *ui.Context, p palette) {
@@ -97,6 +95,12 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 			ui.Column(c).Gap(3).Children(func() {
 				for _, item := range navItems {
 					s.navButton(c, p, item)
+					if item.id == pageChat && !s.navCollapsed && s.chatCapablePage() {
+						s.sessionsNavigation(c, p)
+					}
+				}
+				if s.navCollapsed && s.chatCapablePage() {
+					s.collapsedNewSessionButton(c, p)
 				}
 				pluginItems := s.pluginNavigationItems()
 				if len(pluginItems) > 0 {
@@ -204,6 +208,136 @@ func (s *appState) navButton(c *ui.Context, p palette, item navItem) {
 	}
 	if btn.Clicked() {
 		s.setPage(item.id)
+	}
+}
+
+func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
+	recent := s.piSessions
+	showAll := len(recent) > 8
+	visible := recent
+	if !s.piSessionsExpanded && len(visible) > 8 {
+		visible = visible[:8]
+	}
+	ui.Column(c).Gap(2).FillWidth().Children(func() {
+		ui.Row(c).Height(30).FillWidth().Padding(0, 10).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, "SESSIONS").FontSize(fontCaption).FontWeight(700).TextColor(p.muted).Grow(1)
+			iconButton(c, p, "sessions-new", "plus", "New session", false, func() {
+				s.newPiSession()
+			})
+		})
+		if len(visible) == 0 {
+			return
+		}
+		container := ui.Scroll(c).FillWidth().Gap(2).MaxHeight(16 * 44)
+		if !s.piSessionsExpanded {
+			container = ui.Column(c).FillWidth().Gap(2)
+		}
+		container.Children(func() {
+			for _, summary := range visible {
+				s.sessionNavRow(c, p, summary)
+			}
+			if showAll {
+				label := "Show all"
+				if s.piSessionsExpanded {
+					label = "Show recent"
+				}
+				secondarySessionAction(c, p, "sessions-show-all", label, func() {
+					s.piSessionsExpanded = !s.piSessionsExpanded
+				})
+			}
+		})
+	})
+}
+
+func (s *appState) chatCapablePage() bool {
+	if piEphemeralSessions() {
+		return false
+	}
+	switch s.page {
+	case pagePluginView:
+		return false
+	default:
+		return true
+	}
+}
+
+func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSummary) {
+	active := s.isActivePiSession(summary)
+	bg := ui.Color{}
+	text := p.muted
+	if active {
+		bg = p.surfaceHover
+		text = p.text
+	}
+	btn := ui.ButtonBase(c.Key("session-"+summary.Path)).Height(40).FillWidth().Padding(0, 10).
+		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(summary.Title)
+	btn.Justify(ui.Start)
+	if btn.Hovered() && !active {
+		btn.Background(p.surfaceHover)
+	}
+	btn.Children(func() {
+		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+			ui.Row(c).Size(20, 20).Shrink(0).Center().Children(func() {
+				ui.Icon(c, icon("chat")).Size(15, 15).TextColor(text)
+			})
+			ui.Text(c, summary.Title).FontSize(fontBody).TextColor(text).SingleLine().Grow(1)
+			ui.Text(c, relativeSessionTime(summary.Updated)).FontSize(fontCaption).
+				TextColor(p.muted).SingleLine()
+		})
+	})
+	if active {
+		btn.Draw(func(painter *ui.Painter, r ui.Rect) {
+			painter.Fill(ui.Rect{X: 0, Y: (r.H - 18) / 2, W: 3, H: 18}, p.accent, 2)
+		})
+	}
+	if btn.Clicked() {
+		s.switchPiSession(summary)
+	}
+}
+
+func (s *appState) isActivePiSession(summary piSessionSummary) bool {
+	if s.piSessionFile != "" && summary.Path != "" {
+		return filepath.Clean(summary.Path) == filepath.Clean(s.piSessionFile)
+	}
+	return s.piSessionID != "" && summary.ID == s.piSessionID
+}
+
+func (s *appState) collapsedNewSessionButton(c *ui.Context, p palette) {
+	iconButton(c, p, "sessions-new-collapsed", "plus", "New session", false, func() {
+		s.newPiSession()
+	})
+}
+
+func secondarySessionAction(c *ui.Context, p palette, key, label string, click func()) {
+	btn := ui.ButtonBase(c.Key(key)).Height(28).FillWidth().Padding(0, 10).Radius(7).
+		Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
+	if btn.Hovered() {
+		btn.Background(c.Theme().SurfaceHover)
+	}
+	btn.Children(func() {
+		ui.Text(c, label).FontSize(fontSmall).TextColor(c.Theme().TextMuted)
+	})
+	if btn.Clicked() {
+		click()
+	}
+}
+
+func relativeSessionTime(updated time.Time) string {
+	if updated.IsZero() {
+		return ""
+	}
+	elapsed := time.Since(updated)
+	switch {
+	case elapsed < time.Minute:
+		return "now"
+	case elapsed < time.Hour:
+		return fmt.Sprintf("%dm", int(elapsed.Minutes()))
+	case elapsed < 24*time.Hour:
+		return fmt.Sprintf("%dh", int(elapsed.Hours()))
+	case elapsed < 7*24*time.Hour:
+		return fmt.Sprintf("%dd", int(elapsed.Hours()/24))
+	default:
+		return updated.Format("Jan 2")
 	}
 }
 

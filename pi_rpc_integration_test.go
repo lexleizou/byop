@@ -346,6 +346,7 @@ func startIntegrationPi(t *testing.T) *piClient {
 	if os.Getenv("BYOP_PI_INTEGRATION") != "1" {
 		t.Skip("set BYOP_PI_INTEGRATION=1 to run against the installed Pi CLI")
 	}
+	t.Setenv("BYOP_PI_EPHEMERAL", "1")
 	path, err := resolvePiPath()
 	if err != nil {
 		t.Fatal(err)

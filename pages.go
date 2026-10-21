@@ -520,7 +520,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 					ui.Column(c).Gap(8).Children(func() {
 						settingsValue(c, p, "CLI path", s.piPathLabel())
 						settingsValue(c, p, "Version", fallback(s.piVersion, "Pending handshake"))
-						settingsValue(c, p, "Model", fallback(s.piModel, "Pi default"))
+						settingsValue(c, p, "Model", s.modelSettingsLabel())
 						settingsValue(c, p, "Session", s.sessionLabel())
 						settingsValue(c, p, "Run state", s.runLabel()+" · "+s.runDetail())
 					})
@@ -549,7 +549,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P5 isolated WebViews · 2026-10-20").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P6 sessions · 2026-10-21").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})
@@ -560,9 +560,25 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 
 func (s *appState) sessionLabel() string {
 	if s.piSessionID == "" {
-		return "Ephemeral / not assigned"
+		return "Not assigned"
 	}
-	return "Active ephemeral session"
+	if s.piSessionFile == "" {
+		return s.piSessionID + " · ephemeral"
+	}
+	active := s.activePiSession()
+	if active.Title != "" {
+		return active.Title + " · " + s.piSessionID
+	}
+	return s.piSessionID
+}
+
+func (s *appState) modelSettingsLabel() string {
+	model := strings.TrimSpace(strings.Join(nonEmpty(s.piModelProvider, s.piModelName), " / "))
+	if model == "" {
+		model = fallback(s.piModel, "Pi default")
+	}
+	level := fallback(s.piThinkingLevel, "off")
+	return model + " · thinking " + level
 }
 
 func settingsCard(c *ui.Context, p palette, title, description string, body func()) {

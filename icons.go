@@ -11,6 +11,12 @@ import (
 //go:embed assets/pi.svg
 var piSVGData []byte
 
+//go:embed assets/byop-logo.svg
+var byopLogoData []byte
+
+//go:embed assets/byop-logo-1024.png
+var byopLogoPNG []byte
+
 var iconSet map[string]*ui.SVG
 
 func init() {
@@ -19,6 +25,7 @@ func init() {
 		iconSet[name] = ui.MustParseSVG([]byte(lucide(markup)))
 	}
 	iconSet["pi"] = ui.MustParseSVG(piSVGData)
+	iconSet["byop"] = ui.MustParseSVG(byopLogoData)
 }
 
 func icon(name string) *ui.SVG {
