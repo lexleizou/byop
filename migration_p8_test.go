@@ -371,6 +371,228 @@ func TestP8UIErrorTextHidesLocalPaths(t *testing.T) {
 	}
 }
 
+func TestP8UIErrorPathRedactionIsAnchored(t *testing.T) {
+	tests := []struct {
+		name string
+		text string
+		want string
+	}{
+		{
+			name: "model path",
+			text: "model anthropic/claude-sonnet not found",
+			want: "model anthropic/claude-sonnet not found",
+		},
+		{
+			name: "https URL",
+			text: "HTTP 401 from https://api.example.com/v1/chat",
+			want: "HTTP 401 from https://api.example.com/v1/chat",
+		},
+		{
+			name: "fraction",
+			text: "retry 2/3 failed: timeout",
+			want: "retry 2/3 failed: timeout",
+		},
+		{
+			name: "absolute path",
+			text: "open /Users/x/secret/file.json: no such file",
+			want: "open file.json: no such file",
+		},
+		{
+			name: "file URL",
+			text: "file:///Users/x/a.txt",
+			want: "a.txt",
+		},
+		{
+			name: "windows path",
+			text: `open "C:\Users\x\secret\file.json": access denied`,
+			want: `open "file.json": access denied`,
+		},
+		{
+			name: "equals delimiter",
+			text: "cwd=/Users/x/proj: exit 1",
+			want: "cwd=proj: exit 1",
+		},
+		{
+			name: "bracket delimiter",
+			text: "[/Users/x/a.txt,",
+			want: "[a.txt,",
+		},
+		{
+			name: "windows file URL",
+			text: "file:///C:/Users/x/a.txt",
+			want: "a.txt",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := uiErrorText(errors.New(test.text), "failed"); got != test.want {
+				t.Fatalf("uiErrorText(%q) = %q, want %q", test.text, got, test.want)
+			}
+		})
+	}
+}
+
+func TestP8LegacyConflictKeepsExistingValueAndConverges(t *testing.T) {
+	preferences := defaultByopPreferences()
+	preferences.Legacy["pi-sidebar-width"] = legacyValue{
+		Value: json.RawMessage(`"300"`), Source: "localStorage", ImportedAt: "original",
+	}
+	raw := json.RawMessage(`"360"`)
+	scan := legacyScan{}
+	addLegacyLocalValue(
+		&scan, preferences, "pi-sidebar-width", raw, "localStorage", "pi-sidebar-width")
+	scan.canImport, scan.importableCount = legacyScanImportability(scan.Entries)
+
+	entry := findP8Entry(t, scan, "pi-sidebar-width")
+	if entry.Status != legacyStatusConflict || entry.action == nil {
+		t.Fatalf("conflict entry = %#v", entry)
+	}
+	if got := entry.statusLabel(); got != "IMPORT AS CONFLICT COPY" {
+		t.Fatalf("conflict status label = %q", got)
+	}
+	direct := legacyPreviewEntry{
+		Status: legacyStatusConflict,
+		action: &legacyImportAction{
+			Kind: legacyActionLegacyValue, Key: "pi-sidebar-width",
+			Raw: json.RawMessage(`"360"`),
+		},
+	}
+	if got := direct.statusLabel(); got != "IMPORT CONFLICTING VALUE" {
+		t.Fatalf("direct conflict status label = %q", got)
+	}
+	if !scan.canImport || scan.importableCount != 1 {
+		t.Fatalf("conflict importability = %v/%d", scan.canImport, scan.importableCount)
+	}
+
+	next, _ := applyLegacyImport(scan, preferences)
+	if got := string(next.Legacy["pi-sidebar-width"].Value); got != `"300"` {
+		t.Fatalf("existing legacy value changed to %q", got)
+	}
+	if got := string(next.Legacy["pi-sidebar-width:conflict"].Value); got != `"360"` {
+		t.Fatalf("conflict copy = %q", got)
+	}
+
+	rescan := legacyScan{}
+	addLegacyLocalValue(
+		&rescan, next, "pi-sidebar-width", raw, "localStorage", "pi-sidebar-width")
+	entry = findP8Entry(t, rescan, "pi-sidebar-width")
+	if entry.Status != legacyStatusSame || entry.action != nil {
+		t.Fatalf("rescan conflict = %#v", entry)
+	}
+}
+
+func TestP8LegacyRawEqualAfterPreferencesRoundTrip(t *testing.T) {
+	configDir := t.TempDir()
+	preferences := defaultByopPreferences()
+	preferences.Legacy["pi-sidebar-width"] = legacyValue{
+		Value: json.RawMessage(`"300"`), Source: "localStorage", ImportedAt: "original",
+	}
+
+	scan := legacyScan{}
+	addLegacyLocalValue(
+		&scan, preferences, "pi-sidebar-width", json.RawMessage(`"a&b"`),
+		"localStorage", "pi-sidebar-width")
+	addLegacyDrafts(
+		&scan, preferences, json.RawMessage(`{"chat":"if a && b <x>"}`), legacyDraftsKey)
+	scan.canImport, scan.importableCount = legacyScanImportability(scan.Entries)
+
+	next, _ := applyLegacyImport(scan, preferences)
+	store := newByopPreferencesStore(configDir)
+	if err := store.save(next); err != nil {
+		t.Fatalf("save preferences: %v", err)
+	}
+	saved, warning := store.load()
+	if warning != "" {
+		t.Fatalf("load preferences: %s", warning)
+	}
+
+	rescan := legacyScan{}
+	addLegacyLocalValue(
+		&rescan, saved, "pi-sidebar-width", json.RawMessage(`"a&b"`),
+		"localStorage", "pi-sidebar-width")
+	addLegacyDrafts(
+		&rescan, saved, json.RawMessage(`{"chat":"if a && b <x>"}`), legacyDraftsKey)
+	for _, id := range []string{"pi-sidebar-width", legacyDraftsKey + "/chat"} {
+		entry := findP8Entry(t, rescan, id)
+		if entry.Status != legacyStatusSame || entry.action != nil {
+			t.Fatalf("%s rescan = %#v, want same without action", id, entry)
+		}
+	}
+	rescan.canImport, rescan.importableCount = legacyScanImportability(rescan.Entries)
+	if rescan.canImport || rescan.importableCount != 0 {
+		t.Fatalf("rescan importability = %v/%d", rescan.canImport, rescan.importableCount)
+	}
+}
+
+func TestP8ThemeAndWorkspaceConflictsUseSeparateCopies(t *testing.T) {
+	preferences := defaultByopPreferences()
+	preferences.Theme = string(themeDark)
+	preferences.Legacy["pi-theme"] = legacyValue{
+		Value: json.RawMessage(`"light"`), Source: "localStorage", ImportedAt: "original",
+	}
+	preferences.Legacy["pi-workspace-v1.rightPanelOpen"] = legacyValue{
+		Value: json.RawMessage(`false`), Source: "localStorage", ImportedAt: "original",
+	}
+
+	scan := legacyScan{}
+	addLegacyTheme(&scan, preferences, json.RawMessage(`"sepia"`), "localStorage")
+	addLegacyWorkspaceWithSession(
+		&scan, preferences, json.RawMessage(`{"rightPanelOpen":true}`), nil)
+	scan.canImport, scan.importableCount = legacyScanImportability(scan.Entries)
+	if !scan.canImport || scan.importableCount != 2 {
+		t.Fatalf("conflict importability = %v/%d", scan.canImport, scan.importableCount)
+	}
+
+	next, _ := applyLegacyImport(scan, preferences)
+	if next.Theme != string(themeDark) {
+		t.Fatalf("theme conflict changed current theme to %q", next.Theme)
+	}
+	if got := string(next.Legacy["pi-theme"].Value); got != `"light"` {
+		t.Fatalf("existing theme value changed to %q", got)
+	}
+	if got := string(next.Legacy["pi-theme:conflict"].Value); got != `"sepia"` {
+		t.Fatalf("theme conflict copy = %q", got)
+	}
+	if got := string(next.Legacy["pi-workspace-v1.rightPanelOpen"].Value); got != `false` {
+		t.Fatalf("existing workspace field changed to %q", got)
+	}
+	if got := string(next.Legacy["pi-workspace-v1.rightPanelOpen:conflict"].Value); got != `true` {
+		t.Fatalf("workspace conflict copy = %q", got)
+	}
+}
+
+func TestP8CanonicalizesLastSessionLookupKeys(t *testing.T) {
+	workspace := t.TempDir()
+	alias := filepath.Join(t.TempDir(), "workspace-link")
+	if err := os.Symlink(workspace, alias); err != nil {
+		t.Skipf("symlinks are unavailable: %v", err)
+	}
+	workspaceRaw, err := json.Marshal(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessionRaw := json.RawMessage(`"session-present"`)
+	scan := legacyScan{}
+	addLegacyWorkspaceWithSession(
+		&scan,
+		defaultByopPreferences(),
+		json.RawMessage(`{"cwd":`+string(workspaceRaw)+`,"sessionId":"session-present"}`),
+		map[string]json.RawMessage{alias: sessionRaw},
+	)
+	entry := findP8Entry(t, scan, "pi-workspace-v1/sessionId")
+	if entry.Status != legacyStatusInfo ||
+		entry.Summary != "Workspace session also exists in last-open map" {
+		t.Fatalf("canonical session lookup entry = %#v", entry)
+	}
+}
+
+func TestP8EmptyWorkspaceDoesNotCanonicalizeToCurrentDirectory(t *testing.T) {
+	if _, found := canonicalLegacySessionValue(
+		map[string]json.RawMessage{"": json.RawMessage(`"session"`)}, ""); found {
+		t.Fatal("empty workspace matched an empty lastSessions key")
+	}
+}
+
 type p8MigrationFixture struct {
 	configDir      string
 	workspace      string
@@ -435,7 +657,7 @@ func newP8MigrationFixture(t *testing.T) p8MigrationFixture {
 	}
 	drafts := json.RawMessage(`{"chat":"Draft body"}`)
 	values := map[string]string{
-		"pi-theme":                      `"dark"`,
+		"pi-theme":                      `dark`,
 		"pi-workspace-v1":               string(workspaceValue),
 		"pi-web:last-open-by-workspace": string(lastOpen),
 		"pi-chat-content-font-size":     `"15"`,
@@ -519,15 +741,21 @@ func writeP8File(t *testing.T, path, contents string) {
 
 func assertP8Status(t *testing.T, scan legacyScan, id string, want legacyImportStatus) {
 	t.Helper()
+	entry := findP8Entry(t, scan, id)
+	if entry.Status != want {
+		t.Fatalf("%s status = %q, want %q", id, entry.Status, want)
+	}
+}
+
+func findP8Entry(t *testing.T, scan legacyScan, id string) legacyPreviewEntry {
+	t.Helper()
 	for _, entry := range scan.Entries {
 		if entry.ID == id {
-			if entry.Status != want {
-				t.Fatalf("%s status = %q, want %q", id, entry.Status, want)
-			}
-			return
+			return entry
 		}
 	}
 	t.Fatalf("preview entry %q not found: %#v", id, scan.Entries)
+	return legacyPreviewEntry{}
 }
 
 func mapLengths(preferences byopPreferences) [3]int {

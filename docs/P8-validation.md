@@ -38,15 +38,30 @@
 - UI 错误提示中的本地路径缩为文件名或固定文案；
 - 标题栏与 About 更新为 P8 标记；插件 host 版本仍为 `0.7.0`。
 
+## Review fixes (Opus 5.5 re-review)
+
+- 旧 Pi Agent 写入的非 JSON 原始字符串按 JSON 字符串解码，主题值 `dark` 可直接
+  迁移；只有坏 hex 或奇数 UTF-16 字节长度标为 unknown，不再静默丢行；
+- 旧值与当前偏好冲突时，Import 把旧值写到 `<key>:conflict`，不覆盖
+  `Legacy[key]` 或当前偏好；预览明确显示可执行的 conflict copy 动作，重复导入
+  收敛为 same；
+- 旧值与当前偏好的 JSON 语义比较会正确识别 `json.MarshalIndent` 对 `&`、`<`、
+  `>` 的 HTML 转义，持久化后重新扫描保持 same；
+- UI 错误只脱敏位于文本开头或分隔符后的绝对路径和 `file://` 路径，保留
+  `anthropic/claude-sonnet`、HTTP(S) URL 和 `2/3` 等普通斜杠文本，并处理
+  `=`、`[`、`,` 分隔符及 `file:///C:/...` 形式；
+- 最近会话查找会规范化 `lastSessions` 键，符号链接工作区可命中同一会话，空
+  工作区不会回退到当前目录。
+
 ## Verified
 
 | 检查 | 结果 |
 |---|---|
-| P8 临时目录单元测试 | 通过（11 项）：UTF-16LE、映射与幂等导入、主题冲突、扫描后当前偏好冲突复检、损坏偏好保全、历史追加失败、WAL sqlite 私有副本读取与源文件不变、环境变量覆盖、分字段偏好写入、自动会话关联不落盘与路径脱敏 |
+| P8 临时目录单元测试 | 通过（17 项 `TestP8*`）：原始非 JSON 值、冲突副本与 JSON 语义往返收敛、路径脱敏边界、会话键规范化、空工作区保护、UTF-16LE、映射与幂等导入、主题冲突、扫描后当前偏好冲突复检、损坏偏好保全、历史追加失败、WAL sqlite 私有副本读取与源文件不变、环境变量覆盖、分字段偏好写入、自动会话关联不落盘与路径脱敏 |
 | `gofmt -l .` | 通过；无输出 |
 | `go vet ./...` | 通过 |
 | `go build -o byop .` | 通过 |
-| `go test ./... -count=1` | 通过；120 项（2 个 package） |
+| `go test ./... -count=1` | 通过；135 项（2 个 package） |
 | `git diff --check` | 通过 |
 | 真实窗口 Migration 卡片走查 | 通过：0.7.4 真实数据副本 Scan 显示 new 1 · kept 6 · linked 1 · ignored 1 · info 4；Import 后显示 Already up to date，再次 Scan 为 same 8，`imports.jsonl` 1 行，源 sqlite size/mtime 不变（`screenshots/p8-migration-scan.png`、`p8-migration-imported.png`） |
 | 真实窗口主题导入后即时应用 | 走查发现 P2：`BYOP_THEME=light` 且旧数据无主题时，Import 把窗口切回 System；已用 `ThemeChanged` 修复，复测保持 Light；旧数据含主题时的立即应用由单元测试覆盖 |
@@ -73,11 +88,15 @@
 - 若扫描后旧数据发生变化，预览不会自动刷新；用户需要再次 Scan；
 - 迁移写入失败时旧文件不被删除；已有偏好会先尝试备份，具体错误显示为 notice；
 - 设置 `BYOP_THEME` 时，导入的主题仍会在本次运行中立即生效；这是预期行为；
-- `ui_errors` 的路径脱敏可能误伤普通文字；
 - 真实旧 localStorage 键集合可能超出当前规格，未知键会保留为 unknown 而不导入；
 - P3：`BYOP_THEME` 与用户显式点击的模式相同时，显式主题点击不会写回偏好；
 - P3：`sqlite3` 会读取 `~/.sqliterc`，且扫描没有超时；
-- P3：最近会话查找按 canonical path 查 `lastSessions` 的原始键，可能多出一条预览；
 - P3：会话映射中的非字符串值会被静默跳过。
-- P3：含 `&`、`<`、`>` 的旧值经 `json.MarshalIndent` 转义后，重启再扫描会显示为
-  conflict（无导入动作，Import 不出现、不重复写入）；后续可改为解码后比较。
+- P3：drafts source alias overlap（`pi-web:drafts` 与另一个 drafts key）可能显示
+  false conflict；
+- P3：每次导入都会新增一个 `migration/backup-*.json`，目前没有保留数量上限；
+- 含空格的路径可能在错误文本中留下中间目录名（例如
+  `My Docs/secret.json`）；`POST /v1/chat/completions` 也可能被缩短；
+- 第二次不同的冲突会覆盖之前的 `:conflict` 副本，旧值只能从
+  `migration/backup-*.json` 恢复。
+- P3：`legacyRawEqual` 只比较第一个 JSON 值；输入已经过 `json.Valid` 与正常反序列化，实际不会出现多值 JSON。

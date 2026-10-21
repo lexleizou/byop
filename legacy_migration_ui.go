@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -207,7 +206,7 @@ func (s *appState) legacyMigrationPreview(c *ui.Context, p palette) {
 				ui.Text(c, entry.Summary).FontSize(fontCaption).LineHeight(1.35).
 					TextColor(p.text).Grow(1)
 				ui.Text(c, entry.Target).FontSize(fontMicro).TextColor(p.muted).Width(82)
-				statusPill(c, p, strings.ToUpper(string(entry.Status)),
+				statusPill(c, p, entry.statusLabel(),
 					legacyStatusTone(p, entry.Status))
 			})
 		}

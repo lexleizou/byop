@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -53,6 +54,21 @@ type legacyPreviewEntry struct {
 	Target  string
 	Status  legacyImportStatus
 	action  *legacyImportAction
+}
+
+func (entry legacyPreviewEntry) statusLabel() string {
+	if entry.Status != legacyStatusConflict || entry.action == nil {
+		return strings.ToUpper(string(entry.Status))
+	}
+	action := entry.action
+	if action.LegacyKey == "" {
+		return "IMPORT CONFLICTING VALUE"
+	}
+	if action.Kind == legacyActionLegacyValue &&
+		strings.HasSuffix(action.LegacyKey, ":conflict") {
+		return "IMPORT AS CONFLICT COPY"
+	}
+	return "IMPORT CONFLICTING VALUE"
 }
 
 type legacyImportActionKind string
@@ -258,6 +274,7 @@ func scanLegacyDesktop(
 	}
 	prefs = cloneByopPreferences(prefs)
 	localValues := make(map[string]json.RawMessage)
+	var localUndecodable []string
 	uiValues := make(map[string]json.RawMessage)
 
 	if err := ctx.Err(); err != nil {
@@ -282,7 +299,7 @@ func scanLegacyDesktop(
 	localSummary := "No legacy localStorage database"
 	localStatus := "not found"
 	if localPath != "" {
-		localValues, err = readLegacyLocalStorage(ctx, localPath)
+		localValues, localUndecodable, err = readLegacyLocalStorage(ctx, localPath)
 		if err != nil {
 			if errors.Is(err, exec.ErrNotFound) {
 				localStatus = "unavailable"
@@ -295,6 +312,9 @@ func scanLegacyDesktop(
 		} else {
 			localStatus = "found"
 			localSummary = fmt.Sprintf("%d preference key(s)", len(localValues))
+			if len(localUndecodable) > 0 {
+				localSummary += fmt.Sprintf(" · %d undecodable", len(localUndecodable))
+			}
 			if localCount > 1 {
 				localSummary += fmt.Sprintf(" · latest of %d databases", localCount)
 			}
@@ -320,6 +340,13 @@ func scanLegacyDesktop(
 		Summary: taskSummary,
 	})
 
+	for _, key := range localUndecodable {
+		scan.Entries = append(scan.Entries, legacyPreviewEntry{
+			ID: key, Source: "localStorage",
+			Summary: "Undecodable localStorage value", Target: "Not imported",
+			Status: legacyStatusUnknown,
+		})
+	}
 	applyLegacyMappings(&scan, prefs, localValues, uiValues)
 	scan.canImport, scan.importableCount = legacyScanImportability(scan.Entries)
 	return scan, nil
@@ -445,6 +472,15 @@ func decodeLegacyObject(data []byte) map[string]json.RawMessage {
 }
 
 func legacyRawEqual(a, b []byte) bool {
+	var decodedA, decodedB any
+	decoderA := json.NewDecoder(bytes.NewReader(a))
+	decoderA.UseNumber()
+	decoderB := json.NewDecoder(bytes.NewReader(b))
+	decoderB.UseNumber()
+	if decoderA.Decode(&decodedA) == nil && decoderB.Decode(&decodedB) == nil &&
+		reflect.DeepEqual(decodedA, decodedB) {
+		return true
+	}
 	var compactA, compactB bytes.Buffer
 	if err := json.Compact(&compactA, a); err != nil {
 		return bytes.Equal(a, b)
@@ -471,20 +507,20 @@ func legacyJSONNumber(raw json.RawMessage) (float64, bool) {
 	return number, true
 }
 
-func readLegacyLocalStorage(ctx context.Context, path string) (map[string]json.RawMessage, error) {
+func readLegacyLocalStorage(ctx context.Context, path string) (map[string]json.RawMessage, []string, error) {
 	tempDir, err := os.MkdirTemp("", "byop-legacy-localstorage-")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer os.RemoveAll(tempDir)
 	copyPath := filepath.Join(tempDir, "localstorage.sqlite3")
 	if err := copyLegacyFile(path, copyPath); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, suffix := range []string{"-wal", "-shm"} {
 		if _, statErr := os.Stat(path + suffix); statErr == nil {
 			if copyErr := copyLegacyFile(path+suffix, copyPath+suffix); copyErr != nil {
-				return nil, copyErr
+				return nil, nil, copyErr
 			}
 		}
 	}
@@ -492,7 +528,7 @@ func readLegacyLocalStorage(ctx context.Context, path string) (map[string]json.R
 	if _, statErr := os.Stat(sqlitePath); statErr != nil {
 		sqlitePath, err = exec.LookPath("sqlite3")
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	// The copied database is a private, disposable file. Open it read-write so
@@ -502,23 +538,26 @@ func readLegacyLocalStorage(ctx context.Context, path string) (map[string]json.R
 		"SELECT key, hex(value) AS value FROM ItemTable;")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("read legacy localStorage with sqlite3: %w", err)
+		return nil, nil, fmt.Errorf("read legacy localStorage with sqlite3: %w", err)
 	}
 	var rows []legacyLocalStorageItem
 	if len(bytes.TrimSpace(output)) > 0 {
 		if err := json.Unmarshal(output, &rows); err != nil {
-			return nil, fmt.Errorf("decode legacy localStorage rows: %w", err)
+			return nil, nil, fmt.Errorf("decode legacy localStorage rows: %w", err)
 		}
 	}
 	values := make(map[string]json.RawMessage, len(rows))
+	undecodable := make([]string, 0)
 	for _, row := range rows {
 		decoded, err := decodeLegacyUTF16LEHex(row.Value)
 		if err != nil {
+			undecodable = append(undecodable, row.Key)
 			continue
 		}
 		values[row.Key] = decoded
 	}
-	return values, nil
+	sort.Strings(undecodable)
+	return values, undecodable, nil
 }
 
 func copyLegacyFile(source, target string) error {
@@ -547,7 +586,11 @@ func decodeLegacyUTF16LEHex(value string) (json.RawMessage, error) {
 	text := string(utf16.Decode(codeUnits))
 	text = strings.TrimSpace(text)
 	if !json.Valid([]byte(text)) {
-		return nil, errors.New("legacy localStorage value is not JSON")
+		encoded, err := json.Marshal(text)
+		if err != nil {
+			return nil, err
+		}
+		return json.RawMessage(encoded), nil
 	}
 	return json.RawMessage(text), nil
 }
@@ -719,8 +762,11 @@ func addLegacyTheme(scan *legacyScan, prefs byopPreferences, raw json.RawMessage
 		var action *legacyImportAction
 		if existing, found := prefs.Legacy["pi-theme"]; found && legacyRawEqual(existing.Value, raw) {
 			status = legacyStatusSame
+		} else if legacyConflictValueMatches(prefs, "pi-theme", raw) {
+			status = legacyStatusSame
 		} else if found {
 			status = legacyStatusConflict
+			action = legacyConflictImportAction("pi-theme", raw, source)
 		} else {
 			action = &legacyImportAction{
 				Kind: legacyActionLegacyValue, Key: "pi-theme",
@@ -754,10 +800,16 @@ func addLegacyTheme(scan *legacyScan, prefs byopPreferences, raw json.RawMessage
 	default:
 		if existing, found := prefs.Legacy["pi-theme"]; found && legacyRawEqual(existing.Value, raw) {
 			status = legacyStatusSame
+		} else if legacyConflictValueMatches(prefs, "pi-theme", raw) {
+			status = legacyStatusSame
 		} else {
 			status = legacyStatusConflict
-			action = &legacyImportAction{
-				Kind: legacyActionLegacyValue, Key: "pi-theme", Raw: cloneRawMessage(raw), Source: source,
+			if _, found := prefs.Legacy["pi-theme"]; found {
+				action = legacyConflictImportAction("pi-theme", raw, source)
+			} else {
+				action = &legacyImportAction{
+					Kind: legacyActionLegacyValue, Key: "pi-theme", Raw: cloneRawMessage(raw), Source: source,
+				}
 			}
 		}
 	}
@@ -819,11 +871,19 @@ func addLegacyWorkspaceWithSession(
 						legacyRawEqual(existing.Value, cwdRaw) {
 						status = legacyStatusSame
 						action = nil
+					} else if legacyConflictValueMatches(prefs, "pi-workspace-v1", cwdRaw) {
+						status = legacyStatusSame
+						action = nil
 					} else {
 						status = legacyStatusConflict
-						action = &legacyImportAction{
-							Kind: legacyActionLegacyValue, Key: "pi-workspace-v1",
-							Raw: cloneRawMessage(cwdRaw), Source: "localStorage",
+						if _, found := prefs.Legacy["pi-workspace-v1"]; found {
+							action = legacyConflictImportAction(
+								"pi-workspace-v1", cwdRaw, "localStorage")
+						} else {
+							action = &legacyImportAction{
+								Kind: legacyActionLegacyValue, Key: "pi-workspace-v1",
+								Raw: cloneRawMessage(cwdRaw), Source: "localStorage",
+							}
 						}
 					}
 				}
@@ -858,8 +918,11 @@ func addLegacyWorkspaceWithSession(
 		var action *legacyImportAction
 		if existing, found := prefs.Legacy[legacyKey]; found && legacyRawEqual(existing.Value, rawValue) {
 			status = legacyStatusSame
+		} else if legacyConflictValueMatches(prefs, legacyKey, rawValue) {
+			status = legacyStatusSame
 		} else if found {
 			status = legacyStatusConflict
+			action = legacyConflictImportAction(legacyKey, rawValue, "localStorage")
 		} else {
 			action = &legacyImportAction{
 				Kind: legacyActionLegacyValue, Key: legacyKey,
@@ -877,8 +940,8 @@ func addLegacyWorkspaceWithSession(
 		added = true
 	}
 	if rawSessionID, exists := object["sessionId"]; exists {
-		if lastSession, linked := lastSessions[canonicalWorkspace]; linked &&
-			legacyRawEqual(lastSession, rawSessionID) {
+		lastSession, linked := canonicalLegacySessionValue(lastSessions, canonicalWorkspace)
+		if linked && legacyRawEqual(lastSession, rawSessionID) {
 			scan.Entries = append(scan.Entries, legacyPreviewEntry{
 				ID: "pi-workspace-v1/sessionId", Source: "localStorage",
 				Summary: "Workspace session also exists in last-open map",
@@ -896,6 +959,27 @@ func addLegacyWorkspaceWithSession(
 			Status: legacyStatusInfo,
 		})
 	}
+}
+
+func canonicalLegacySessionValue(
+	values map[string]json.RawMessage,
+	workspace string,
+) (json.RawMessage, bool) {
+	if workspace == "" {
+		return nil, false
+	}
+	workspace = canonicalPiPath(workspace)
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if canonicalPiPath(key) == workspace {
+			return values[key], true
+		}
+	}
+	return nil, false
 }
 
 func addLegacyWorkspaceSession(
@@ -942,11 +1026,17 @@ func addLegacyWorkspaceSession(
 		} else {
 			if existing, found := prefs.Legacy[legacyKey]; found && legacyRawEqual(existing.Value, raw) {
 				status = legacyStatusSame
+			} else if legacyConflictValueMatches(prefs, legacyKey, raw) {
+				status = legacyStatusSame
 			} else {
 				status = legacyStatusConflict
-				action = &legacyImportAction{
-					Kind: legacyActionLegacyValue, Key: legacyKey,
-					Raw: cloneRawMessage(raw), Source: "localStorage",
+				if _, found := prefs.Legacy[legacyKey]; found {
+					action = legacyConflictImportAction(legacyKey, raw, "localStorage")
+				} else {
+					action = &legacyImportAction{
+						Kind: legacyActionLegacyValue, Key: legacyKey,
+						Raw: cloneRawMessage(raw), Source: "localStorage",
+					}
 				}
 			}
 		}
@@ -1041,12 +1131,19 @@ func addLegacyLastSessions(scan *legacyScan, prefs byopPreferences, raw json.Raw
 				if existing, found := prefs.Legacy[legacyKey]; found &&
 					legacyRawEqual(existing.Value, object[cwd]) {
 					status = legacyStatusSame
+				} else if legacyConflictValueMatches(prefs, legacyKey, object[cwd]) {
+					status = legacyStatusSame
 				} else {
 					status = legacyStatusConflict
-					action = &legacyImportAction{
-						Kind: legacyActionLegacyValue,
-						Key:  legacyKey,
-						Raw:  cloneRawMessage(object[cwd]), Source: "localStorage",
+					if _, found := prefs.Legacy[legacyKey]; found {
+						action = legacyConflictImportAction(
+							legacyKey, object[cwd], "localStorage")
+					} else {
+						action = &legacyImportAction{
+							Kind: legacyActionLegacyValue,
+							Key:  legacyKey,
+							Raw:  cloneRawMessage(object[cwd]), Source: "localStorage",
+						}
 					}
 				}
 			}
@@ -1154,11 +1251,18 @@ func addLegacyDrafts(
 				if existing, found := prefs.Legacy[legacyKey]; found &&
 					legacyRawEqual(existing.Value, object[key]) {
 					status = legacyStatusSame
+				} else if legacyConflictValueMatches(prefs, legacyKey, object[key]) {
+					status = legacyStatusSame
 				} else {
 					status = legacyStatusConflict
-					action = &legacyImportAction{
-						Kind: legacyActionLegacyValue, Key: legacyKey,
-						Raw: cloneRawMessage(object[key]), Source: "localStorage",
+					if _, found := prefs.Legacy[legacyKey]; found {
+						action = legacyConflictImportAction(
+							legacyKey, object[key], "localStorage")
+					} else {
+						action = &legacyImportAction{
+							Kind: legacyActionLegacyValue, Key: legacyKey,
+							Raw: cloneRawMessage(object[key]), Source: "localStorage",
+						}
 					}
 				}
 			}
@@ -1199,8 +1303,11 @@ func addLegacyLocalValue(
 	if existing, found := prefs.Legacy[key]; found {
 		if legacyRawEqual(existing.Value, raw) {
 			status = legacyStatusSame
+		} else if legacyConflictValueMatches(prefs, key, raw) {
+			status = legacyStatusSame
 		} else {
 			status = legacyStatusConflict
+			action = legacyConflictImportAction(key, raw, source)
 		}
 	} else {
 		action = &legacyImportAction{
@@ -1213,6 +1320,26 @@ func addLegacyLocalValue(
 	})
 	if action != nil {
 		scan.Actions = append(scan.Actions, *action)
+	}
+}
+
+func legacyConflictValueMatches(
+	prefs byopPreferences,
+	key string,
+	raw json.RawMessage,
+) bool {
+	existing, found := prefs.Legacy[key+":conflict"]
+	return found && legacyRawEqual(existing.Value, raw)
+}
+
+func legacyConflictImportAction(
+	key string,
+	raw json.RawMessage,
+	source string,
+) *legacyImportAction {
+	return &legacyImportAction{
+		Kind: legacyActionLegacyValue, Key: key, LegacyKey: key + ":conflict",
+		Raw: cloneRawMessage(raw), Source: source, Overwrite: true,
 	}
 }
 
