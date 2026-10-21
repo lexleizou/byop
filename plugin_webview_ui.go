@@ -20,7 +20,7 @@ func (s *appState) pluginWebViewPage(c *ui.Context, p palette) {
 		return
 	}
 
-	ui.Column(c).Fill().Children(func() {
+	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
 		s.pluginWebViewHeader(c, p, entry, view)
 		ui.Row(c).FillWidth().Grow(1).Padding(12).Children(func() {
 			ui.WebView(c, snapshot.webView).FillWidth().Grow(1).Radius(9)

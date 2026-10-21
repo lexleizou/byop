@@ -145,7 +145,7 @@ func (s *appState) chatPage(c *ui.Context, _ palette) {
 	if s.runActive() {
 		c.After(time.Second)
 	}
-	ui.Column(c).Fill().MinWidth(0).Children(func() {
+	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
 		chat.FloatingConversation(c, &s.chatView.layout, &s.chatView.conversation, "Back to latest",
 			func(c *ui.Context) { s.transcript(c) },
 			func(c *ui.Context) { s.chatComposer(c) })
