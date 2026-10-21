@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -70,6 +71,14 @@ func TestPluginHelperProcess(t *testing.T) {
 		case "activate", "deactivate":
 			response["result"] = map[string]any{}
 		case "invokeCommand":
+			var params struct {
+				Command string `json:"command"`
+			}
+			_ = json.Unmarshal(request.Params, &params)
+			if params.Command == "hello.wait" {
+				pendingInvokeID = request.ID
+				continue
+			}
 			pendingInvokeID = request.ID
 			if err := encoder.Encode(map[string]any{
 				"jsonrpc": "2.0",
@@ -291,5 +300,35 @@ func TestPluginHostStopAllEndsActiveProcesses(t *testing.T) {
 	got := readPluginHelperLog(t, logPath)
 	if got[len(got)-1] != "exit" {
 		t.Fatalf("plugin did not exit: %v", got)
+	}
+}
+
+func TestPluginHostStopAllReturnsSentinelToPendingCommand(t *testing.T) {
+	entry, _ := writeNativeHelperPlugin(t, []string{"onCommand:hello.wait"}, true)
+	entry.Manifest.Contributes.Commands = append(entry.Manifest.Contributes.Commands,
+		pluginCommandContribution{ID: "hello.wait", Title: "Wait"})
+	host := newTestPluginHost(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	result := make(chan error, 1)
+	go func() {
+		_, err := host.invokeCommand(ctx, entry, "hello.wait", nil)
+		result <- err
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	for host.status(entry.ID).State != pluginStateRunning && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if state := host.status(entry.ID).State; state != pluginStateRunning {
+		t.Fatalf("pending command state = %s, want running", state)
+	}
+	host.stopAll()
+	select {
+	case err := <-result:
+		if !errors.Is(err, errPluginStopped) {
+			t.Fatalf("pending command error = %v, want errPluginStopped", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("pending command did not receive the stop sentinel")
 	}
 }

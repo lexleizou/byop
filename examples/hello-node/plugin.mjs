@@ -94,6 +94,9 @@ async function invokeCommand(command) {
       return { message: `Could not read README.md: ${error.message}` };
     }
   }
+  if (command === "hello.fail") {
+    throw new Error("Fixture failure for automation contract");
+  }
   throw new Error(`Unknown command: ${command}`);
 }
 

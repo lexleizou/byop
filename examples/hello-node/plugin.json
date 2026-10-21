@@ -3,7 +3,7 @@
   "id": "example.hello-node",
   "name": "Hello Node",
   "version": "0.1.0",
-  "description": "Contract fixture for the P4.2 Node runtime, native views, settings, and host calls.",
+  "description": "Contract fixture for the P4.2 Node runtime and P7 automation contributions.",
   "runtime": "node",
   "entry": "plugin.mjs",
   "icon": "plugins",
@@ -30,6 +30,11 @@
         "id": "hello.readme",
         "title": "Read README",
         "description": "Read the first line of the workspace README through the host API."
+      },
+      {
+        "id": "hello.fail",
+        "title": "Fail deliberately",
+        "description": "Exercise the automation failure path."
       }
     ],
     "views": [
@@ -79,13 +84,36 @@
           }
         ]
       }
+    ],
+    "automations": [
+      {
+        "id": "hello.auto.greet",
+        "title": "Greeting loop",
+        "description": "Contract fixture for a scheduled Loop rule; P7 displays it and runs it manually.",
+        "command": "hello.greet",
+        "kind": "scheduledLoop",
+        "rule": {
+          "type": "interval",
+          "minutes": 60
+        },
+        "missedPolicy": "skip"
+      },
+      {
+        "id": "hello.auto.fail",
+        "title": "Failure probe",
+        "description": "Always fails so the run record and failure controls can be checked.",
+        "command": "hello.fail",
+        "kind": "manual",
+        "maxDurationMinutes": 1
+      }
     ]
   },
   "activation": {
     "events": [
       "onView:hello.panel",
       "onCommand:hello.greet",
-      "onCommand:hello.readme"
+      "onCommand:hello.readme",
+      "onCommand:hello.fail"
     ]
   },
   "capabilities": {

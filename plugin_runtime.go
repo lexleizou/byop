@@ -37,6 +37,8 @@ const (
 	maxPluginStderrBytes   = 4096
 )
 
+var errPluginStopped = errors.New("plugin stopped")
+
 // pluginRuntimeStatus is the UI-facing snapshot of one plugin process.
 type pluginRuntimeStatus struct {
 	State            pluginRuntimeState
@@ -212,6 +214,16 @@ func (h *pluginHost) process(pluginID string) *pluginProcess {
 // invokeCommand dispatches a declared command, starting and activating the
 // plugin on first use when the command is one of its activation events.
 func (h *pluginHost) invokeCommand(ctx context.Context, entry pluginRegistryEntry, commandID string, args any) (json.RawMessage, error) {
+	return h.invokeCommandTimeout(ctx, entry, commandID, args, pluginCommandTimeout)
+}
+
+func (h *pluginHost) invokeCommandTimeout(
+	ctx context.Context,
+	entry pluginRegistryEntry,
+	commandID string,
+	args any,
+	timeout time.Duration,
+) (json.RawMessage, error) {
 	if entry.Status != pluginRegistered || entry.Manifest == nil {
 		return nil, fmt.Errorf("plugin %s is not registered", fallback(entry.ID, "unknown"))
 	}
@@ -228,7 +240,7 @@ func (h *pluginHost) invokeCommand(ctx context.Context, entry pluginRegistryEntr
 		status.LastCommand = commandID
 		status.LastError = ""
 	})
-	commandCtx, cancel := context.WithTimeout(ctx, pluginCommandTimeout)
+	commandCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	result, err := process.call(commandCtx, "invokeCommand", map[string]any{
 		"command": commandID,
@@ -418,6 +430,7 @@ func (h *pluginHost) deactivate(pluginID string) error {
 	if !h.detach(pluginID, process) {
 		return nil
 	}
+	process.stopPending(fmt.Errorf("plugin %s stopped: %w", pluginID, errPluginStopped))
 	h.updateStatus(pluginID, func(status *pluginRuntimeStatus) {
 		status.State = pluginStateStopping
 	})
@@ -747,6 +760,16 @@ func (p *pluginProcess) forget(id string) {
 	p.mu.Lock()
 	delete(p.pending, id)
 	p.mu.Unlock()
+}
+
+func (p *pluginProcess) stopPending(err error) {
+	p.mu.Lock()
+	pending := p.pending
+	p.pending = make(map[string]chan pluginRPCResult)
+	p.mu.Unlock()
+	for _, reply := range pending {
+		reply <- pluginRPCResult{err: err}
+	}
 }
 
 func (p *pluginProcess) readStdout(r io.Reader) {

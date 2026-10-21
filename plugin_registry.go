@@ -245,6 +245,9 @@ func pluginContributionIDs(manifest *pluginManifest) []string {
 	for _, contribution := range manifest.Contributes.WebViews {
 		ids = append(ids, contribution.ID)
 	}
+	for _, contribution := range manifest.Contributes.Automations {
+		ids = append(ids, contribution.ID)
+	}
 	return ids
 }
 

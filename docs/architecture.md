@@ -1,9 +1,10 @@
 # BYOP Workbench Architecture
 
-Status: P6b native shell, persisted external Pi sessions, read-only session
+Status: P7 native shell, persisted external Pi sessions, read-only session
 discovery and RPC-only session mutation, ordered timeline restoration, model
-and thinking-level selection, transient runtime diagnostics, and the P5 plugin
-platform are implemented; Chat renders through Onevra v0.2026.13 components.
+and thinking-level selection, transient runtime diagnostics, the P5 plugin
+platform, and plugin-registered automation run records are implemented; Chat
+renders through Onevra v0.2026.13 components.
 
 ## Runtime Boundary
 
@@ -111,6 +112,7 @@ permanent turn completed, stopped or failed.
 | Plugin metadata and contributions | BYOP | Validates manifests, scans local roots and records contribution conflicts |
 | Plugin lifecycle, commands and views | BYOP Plugin Host | Starts native and Node plugins lazily, routes declared commands, renders typed views and stops processes on deactivate, rescan and window close |
 | Plugin settings and host calls | BYOP Plugin Host | Persists typed values, injects settings, accepts JSON-RPC requests from plugins and enforces declared capabilities |
+| Automation contributions and run state | BYOP | Validates plugin declarations, persists manual run records and enforces pause/resume and failure rules |
 | Model calls and provider auth | Pi | Delegated |
 | Session persistence and credentials | Pi | Pi owns JSONL and credentials; BYOP scans file metadata and conversation fields read-only for the sidebar, then mutates sessions only through RPC |
 | Session list and active transcript | BYOP | Debounced discovery outside the UI goroutine; switch/create responses rebuild the native transcript through `get_messages` |
@@ -135,7 +137,7 @@ The parser accepts one JSON object up to 1 MiB and rejects unknown fields,
 trailing JSON values and unsafe entry paths. The host records registered,
 invalid, incompatible, duplicate plugin ID and duplicate contribution ID
 states. Scanning never opens or executes entry files. The current host version
-is `0.5.0`; manifest schema and Plugin API version are both `1`.
+is `0.7.0`; manifest schema and Plugin API version are both `1`.
 
 Each plugin is an independent local package with a manifest, a runtime entry
 point and declared contribution points.
@@ -438,6 +440,80 @@ The methods below remain future work.
 | Host → Plugin | `cancel` | Cancel one long-running operation |
 | Plugin → Host | `host.emit` | Notify the registry of an event |
 
+## P7 Automation and Loop Contract
+
+Plugins register automations under `contributes.automations`. Each item has an
+ID, title, optional description, a command declared by the same plugin, one of
+the `manual`, `once`, `scheduledLoop` or `sessionLoop` kinds, an optional rule,
+an optional missed policy and a maximum duration. The command must also appear
+as the exact `onCommand:<command>` activation event, so lazy activation can
+start the plugin when a run begins.
+
+| Kind | Required rule | Accepted rule types |
+|---|---|---|
+| `manual` | None | — |
+| `once` | Required | `at` with RFC3339 time |
+| `scheduledLoop` | Required | `interval` (at least 5 minutes) or 5-field `cron` |
+| `sessionLoop` | Required | `interval`, `cron` or `afterSettled` |
+
+`missedPolicy` accepts an empty value (meaning `catchUpLatest`), `catchUpLatest`
+or `skip`. `maxDurationMinutes` defaults to 30 when omitted and is bounded to
+1–1440. Rules and activation are validated when the plugin registry is scanned.
+P7 has no timed scheduler, ticker or live duration refresh: interval, cron and
+`at` declarations are validated and displayed only, and the sole trigger is the
+manual **Run now** action with `trigger: "manual"`.
+
+Automation state lives under `<pluginConfigDir()>/automations/`. `state.json`
+maps `<pluginID>/<automationID>` to enabled state, consecutive failures,
+auto-pause reason, pause time, last run time and last state. Each automation has
+a `runs/<pluginID>/<automationID>.jsonl` file containing `running` and final
+records, plus an optional `archive/<pluginID>/<automationID>.jsonl` overflow
+file. The active file keeps the newest 200 records. Starting a run appends one
+receipt inside the store lock; finishing the run atomically replaces the active
+file with its complete record set. Overflow records are appended to the archive.
+`state.json` is also replaced atomically.
+
+Recovery scans `runs/` only and parses each JSONL file line by line. Invalid
+lines are skipped with a store warning while valid records remain available;
+files whose names contain `.corrupt-` are ignored during this scan. If an
+active run file exceeds the 200-record cap, startup moves the overflow records
+to the archive and atomically rewrites the active file instead of quarantining
+it. Recovery then converts any valid `running` record to `aborted` with error
+code `interrupted`. If a run file has no parseable records, including after a
+read failure, it is first renamed to
+`<name>.corrupt-<UTC timestamp>.jsonl` in the archive directory. Valid records
+that precede a read failure remain in the in-memory snapshot. Likewise, an
+empty or corrupt `state.json` is renamed to
+`state.corrupt-<UTC timestamp>.json` before a replacement is saved. Directories
+use mode `0700` and files use `0600`.
+
+At startup, an unfinished record becomes `aborted` with error code
+`interrupted`, and enabled session Loops pause with reason `appRestarted`.
+Failure and timeout increment the consecutive count. Success resets it only
+when the automation is still enabled and has no paused marker. At five
+consecutive failures the automation is disabled with reason
+`consecutiveFailures`. Resume re-enables it and clears the count. A user pause
+does not cancel an active run, so its final result is still recorded, but a
+successful finish preserves the pause and failure count; only Resume clears
+both the pause and count.
+
+Run invocation uses the existing plugin command path with a timeout derived
+from `maxDurationMinutes`. Timeout records use `errorCode: "timeLimit"`; other
+command errors use `errorCode: "pluginError"`. Timeout detection uses
+`errors.Is(err, context.DeadlineExceeded)`. A pending command interrupted by an
+intentional plugin stop returns an `errPluginStopped` sentinel; the run becomes
+`aborted` with error code `stopped` and does not increment consecutive failures.
+The stop sentinel covers deactivation, rescan and window close.
+
+The store maintains in-memory state and capped recent-run snapshots. Load,
+begin, finish, pause, resume and startup recovery update those maps under the
+store mutex. The Automations page copies its state, running flag and newest five
+runs through one short lock and performs no file I/O on the draw path. Plugin
+rescans rebuild the registry and contribution cards without reopening the
+automation store, so startup recovery runs once and state remains keyed by
+plugin and automation IDs. Stored state for a no-longer-registered plugin is
+not shown.
+
 ## Plugin Development Hold
 
 After P5, the plugin platform is functionally ready for local native, Node and
@@ -474,5 +550,5 @@ plugins. `examples/` contains contract fixtures only.
 | P5 | Isolated WebView scheme, bridge identity and capability reuse, theme bridge, navigation lock, lifecycle and native fallback (implemented) |
 | P6a | New BYOP logo, persisted Pi sessions, read-only session list, RPC session switching/restore and model/thinking RPC state (implemented) |
 | P6b | Model and thinking-level picker UI (implemented) |
-| P7 | Automation and Loop contributions |
+| P7 | Automation and Loop contributions, manual run records, failure auto-pause and pause/resume (implemented) |
 | P8 | Import old desktop preferences and migration verification |

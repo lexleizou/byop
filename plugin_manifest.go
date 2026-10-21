@@ -11,15 +11,22 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
 	pluginManifestSchemaVersion = 1
 	pluginAPIVersion            = "1"
-	pluginHostVersion           = "0.5.0"
+	pluginHostVersion           = "0.7.0"
 	pluginManifestFilename      = "plugin.json"
 	maxPluginManifestBytes      = 1 << 20
 	maxPluginSettingFields      = 50
+
+	automationMinIntervalMinutes        = 5
+	automationDefaultMaxDurationMinutes = 30
+	automationMaxDurationMinutes        = 1440
+	automationMaxConsecutiveFailures    = 5
+	automationRunsKeptPerTask           = 200
 )
 
 type pluginManifest struct {
@@ -43,12 +50,13 @@ type pluginCompatibility struct {
 }
 
 type pluginContributions struct {
-	Navigation []pluginNavigationContribution `json:"navigation,omitempty"`
-	Commands   []pluginCommandContribution    `json:"commands,omitempty"`
-	Views      []pluginViewContribution       `json:"views,omitempty"`
-	TaskPanels []pluginTaskPanelContribution  `json:"taskPanels,omitempty"`
-	Settings   []pluginSettingContribution    `json:"settings,omitempty"`
-	WebViews   []pluginWebViewContribution    `json:"webviews,omitempty"`
+	Navigation  []pluginNavigationContribution `json:"navigation,omitempty"`
+	Commands    []pluginCommandContribution    `json:"commands,omitempty"`
+	Views       []pluginViewContribution       `json:"views,omitempty"`
+	TaskPanels  []pluginTaskPanelContribution  `json:"taskPanels,omitempty"`
+	Settings    []pluginSettingContribution    `json:"settings,omitempty"`
+	WebViews    []pluginWebViewContribution    `json:"webviews,omitempty"`
+	Automations []pluginAutomationContribution `json:"automations,omitempty"`
 }
 
 type pluginNavigationContribution struct {
@@ -98,6 +106,24 @@ type pluginWebViewContribution struct {
 	Title    string `json:"title"`
 	Location string `json:"location"`
 	Entry    string `json:"entry"`
+}
+
+type pluginAutomationContribution struct {
+	ID                 string                `json:"id"`
+	Title              string                `json:"title"`
+	Description        string                `json:"description,omitempty"`
+	Command            string                `json:"command"`
+	Kind               string                `json:"kind"`
+	Rule               *pluginAutomationRule `json:"rule,omitempty"`
+	MissedPolicy       string                `json:"missedPolicy,omitempty"`
+	MaxDurationMinutes int                   `json:"maxDurationMinutes,omitempty"`
+}
+
+type pluginAutomationRule struct {
+	Type    string `json:"type"`
+	Minutes int    `json:"minutes,omitempty"`
+	Cron    string `json:"cron,omitempty"`
+	At      string `json:"at,omitempty"`
 }
 
 type pluginActivation struct {
@@ -258,6 +284,24 @@ func validatePluginManifest(manifest *pluginManifest) error {
 				contribution.ID)
 		}
 	}
+	for _, contribution := range manifest.Contributes.Automations {
+		validateContribution("automation", contribution.ID, contribution.Title)
+		if pluginTextInvalid(contribution.Description, 300) {
+			issues = append(issues, "automation contribution description is too long: "+contribution.ID)
+		}
+		if !pluginDeclaresCommand(manifest, contribution.Command) {
+			issues = append(issues, "automation command is not declared: "+contribution.ID)
+		}
+		if !pluginDeclaresActivationEvent(manifest, "onCommand:"+contribution.Command) {
+			issues = append(issues, "automation command lacks activation event: "+contribution.ID)
+		}
+		validatePluginAutomationRule(contribution, &issues)
+		if contribution.MaxDurationMinutes != 0 &&
+			(contribution.MaxDurationMinutes < 1 ||
+				contribution.MaxDurationMinutes > automationMaxDurationMinutes) {
+			issues = append(issues, "automation maxDurationMinutes must be 0 or 1-1440: "+contribution.ID)
+		}
+	}
 	for _, event := range manifest.Activation.Events {
 		if pluginTextInvalid(event, 180) || !strings.Contains(event, ":") {
 			issues = append(issues, "activation event must contain a printable type and value")
@@ -338,6 +382,94 @@ func validatePluginSettingFields(manifest *pluginManifest, issues *[]string) {
 	}
 }
 
+func validatePluginAutomationRule(contribution pluginAutomationContribution, issues *[]string) {
+	label := "automation contribution " + fallback(contribution.ID, "<missing>")
+	switch contribution.Kind {
+	case "manual":
+		if contribution.Rule != nil {
+			*issues = append(*issues, label+" rule must be absent for manual")
+		}
+	case "once":
+		if contribution.Rule == nil {
+			*issues = append(*issues, label+" rule is required")
+		} else if contribution.Rule.Type != "at" {
+			*issues = append(*issues, label+" rule type must be at for once")
+		}
+	case "scheduledLoop", "sessionLoop":
+		if contribution.Rule == nil {
+			*issues = append(*issues, label+" rule is required")
+		} else {
+			switch contribution.Rule.Type {
+			case "interval", "cron":
+			case "afterSettled":
+				if contribution.Kind != "sessionLoop" {
+					*issues = append(*issues, label+" afterSettled is only valid for sessionLoop")
+				}
+			default:
+				if contribution.Kind == "sessionLoop" {
+					*issues = append(*issues, label+" rule type must be interval, cron, or afterSettled")
+				} else {
+					*issues = append(*issues, label+" rule type must be interval or cron")
+				}
+			}
+		}
+	default:
+		*issues = append(*issues, label+" kind must be manual, once, scheduledLoop, or sessionLoop")
+	}
+
+	if contribution.Rule == nil {
+		validatePluginAutomationMissedPolicy(contribution.MissedPolicy, label, issues)
+		return
+	}
+
+	rule := contribution.Rule
+	if contribution.Kind == "manual" {
+		if rule.Minutes != 0 || rule.Cron != "" || rule.At != "" {
+			*issues = append(*issues, label+" manual rule has unused fields")
+		}
+		validatePluginAutomationMissedPolicy(contribution.MissedPolicy, label, issues)
+		return
+	}
+	switch rule.Type {
+	case "interval":
+		if rule.Minutes < automationMinIntervalMinutes {
+			*issues = append(*issues, label+" interval minutes must be at least 5")
+		}
+		if rule.Cron != "" || rule.At != "" {
+			*issues = append(*issues, label+" interval rule has unused fields")
+		}
+	case "cron":
+		if len(strings.Fields(rule.Cron)) != 5 || pluginTextInvalid(rule.Cron, 120) {
+			*issues = append(*issues, label+" cron must contain exactly 5 printable fields")
+		}
+		if rule.Minutes != 0 || rule.At != "" {
+			*issues = append(*issues, label+" cron rule has unused fields")
+		}
+	case "at":
+		if _, err := time.Parse(time.RFC3339, rule.At); err != nil {
+			*issues = append(*issues, label+" at must be RFC3339")
+		}
+		if rule.Minutes != 0 || rule.Cron != "" {
+			*issues = append(*issues, label+" at rule has unused fields")
+		}
+	case "afterSettled":
+		if rule.Minutes != 0 || rule.Cron != "" || rule.At != "" {
+			*issues = append(*issues, label+" afterSettled rule has unused fields")
+		}
+	default:
+		if rule.Minutes != 0 || rule.Cron != "" || rule.At != "" {
+			*issues = append(*issues, label+" unknown rule has unused fields")
+		}
+	}
+	validatePluginAutomationMissedPolicy(contribution.MissedPolicy, label, issues)
+}
+
+func validatePluginAutomationMissedPolicy(policy, label string, issues *[]string) {
+	if policy != "" && policy != "catchUpLatest" && policy != "skip" {
+		*issues = append(*issues, label+" missedPolicy must be catchUpLatest or skip")
+	}
+}
+
 func pluginSettingDefaultValue(field pluginSettingField) (any, error) {
 	if len(field.Default) == 0 {
 		switch field.Type {
@@ -406,6 +538,15 @@ func pluginRequiredTextInvalid(value string, maximum int) bool {
 	return strings.TrimSpace(value) == "" || pluginTextInvalid(value, maximum)
 }
 
+func pluginDeclaresActivationEvent(manifest *pluginManifest, event string) bool {
+	for _, declared := range manifest.Activation.Events {
+		if declared == event {
+			return true
+		}
+	}
+	return false
+}
+
 func safePluginRelativePath(value string) bool {
 	value = strings.TrimSpace(value)
 	if value == "" || strings.Contains(value, `\`) || strings.ContainsRune(value, '\x00') || path.IsAbs(value) {
@@ -459,7 +600,8 @@ func (manifest *pluginManifest) contributionCount() int {
 		len(manifest.Contributes.Views) +
 		len(manifest.Contributes.TaskPanels) +
 		len(manifest.Contributes.Settings) +
-		len(manifest.Contributes.WebViews)
+		len(manifest.Contributes.WebViews) +
+		len(manifest.Contributes.Automations)
 }
 
 type semanticVersion struct {

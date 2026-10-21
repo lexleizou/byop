@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P6b：BYOP 继续使用 P6a 的持久化会话与原生时间线，并在 Chat composer 提供两个 Onevra 选择器。模型 chip 从 Pi 的可用模型中选择 provider/model；支持 reasoning 的模型另显示 Thinking 强度选择器，拖动时即时显示本地选择，并在面板关闭或 400 ms 无后续变化后提交。插件平台维持 P5 的状态，不新增功能插件。BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P7：插件可在 `plugin.json` 声明 automation / Loop 贡献，Automations 页面显示注册项、暂停状态和最近运行；手动 Run now 会把每次运行持久化为运行记录，并在连续 5 次失败后自动暂停。P7 不启动定时调度器，声明的 interval、cron、at 与 afterSettled 规则只做校验和展示。Automations 页面从宿主内存快照读取状态与最近运行，绘制路径不读取存储文件。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -46,7 +46,7 @@
 - 固定 20 px 导航图标槽位，展开与收起状态保持左边缘对齐；
 - 扫描 `~/.byop/plugins` 与 `<cwd>/.byop/plugins`，也可通过 `BYOP_PLUGINS_DIR` 指定一个或多个目录；
 - 严格解析 schema 1 `plugin.json`，拒绝未知字段、尾随 JSON、超过 1 MiB 的清单和不安全 entry 路径；
-- 检查宿主版本 `0.5.0` 与 Plugin API `1` 兼容性；
+- 检查宿主版本 `0.7.0` 与 Plugin API `1` 兼容性；
 - 标记插件 ID、跨插件贡献 ID 和同插件内重复贡献 ID；
 - Plugins 页面支持搜索、空状态、问题提示、重新扫描，以及 navigation、command、view、task panel、setting 和 WebView 元数据预览；
 - native 与 Node 插件按声明的 `onCommand:<id>`、`onView:<id>` 或 `lazy: true` 懒启动；两者都拒绝越出插件目录的 entry（含符号链接），native 还要求可执行文件，Node 只接受 `.js`、`.mjs`、`.cjs`；
@@ -65,8 +65,16 @@
 - WebView 提供 Light/Dark CSS 变量、运行时主题事件和固定 14 px 正文字号；加载或渲染进程失败时显示原生错误卡，可 Reload 或返回 Plugins；
 - 重新扫描、停用、进程停止和关闭窗口时销毁相关 WebView；离开页面只隐藏实例；
 - 重新扫描和关闭窗口前会停用全部插件进程；插件意外退出时标记为 failed 并保留 stderr 尾部摘要。
+- 插件可声明 manual、once、scheduledLoop 和 sessionLoop 自动化；自动化命令必须同时是插件已声明的 command，并出现在 `activation.events` 的精确 `onCommand:<command>` 项中；
+- Automations 页面显示注册项、kind 与规则、READY / PAUSED / AUTO-PAUSED / RUNNING 状态、连续失败数和最近 5 次运行；
+- Run now 只允许已启用且未在运行的自动化；调用超时按 `timeLimit` 记录，其他插件错误按 `pluginError` 记录；
+- 每次运行先向 `runs/<pluginID>/<automationID>.jsonl` 追加 `running`，完成后原子重写 active 文件为最终记录；每项最多保留 200 条，较早记录追加到 `archive/<pluginID>/<automationID>.jsonl`，`state.json` 使用原子重写；启动时把未完成运行标记为 `aborted/interrupted`；
+- JSONL 按行解析，坏行产生可见 warning 后跳过；整个 run 文件都无法解析时先转为 `.corrupt-<UTC timestamp>.jsonl`，损坏的 `state.json` 也先转为 `.corrupt-<UTC timestamp>.json`，再写新文件；
+- 连续 5 次失败自动暂停；用户可暂停和恢复，恢复会清除失败计数；sessionLoop 在应用重启后自动暂停并显示 `App restarted`；
+- 插件因重扫、停用或窗口关闭而主动停止时，待处理运行记录为 `aborted/stopped`，不计入连续失败数；
+- P7 没有定时 scheduler、ticker 或运行计时刷新；所有运行都由 Run now 手动触发，`trigger` 固定为 `manual`。
 
-Automations 目前仍是可运行的原生视觉骨架。插件安装与附件仍属于后续阶段。模型与 Thinking chip 在运行、压缩或会话操作期间切为只读；模型元数据未加载时，模型 chip 仍为只读。P6a 已提供会话历史与切换。
+插件安装与附件仍属于后续阶段。模型与 Thinking chip 在运行、压缩或会话操作期间切为只读；模型元数据未加载时，模型 chip 仍为只读。P6a 已提供会话历史与切换。
 
 **Plugin development hold：** P5 后插件平台功能已就绪，但在 Lex 明确要求前不开发功能插件；此前 Library 与 Document 的页面和导航占位已在 P5 移除，其设计不得转为插件。`examples/` 只放契约 fixture。
 
@@ -193,10 +201,11 @@ BYOP_THEME=dark BYOP_PAGE=plugins BYOP_TASKS=1 go run .
 gofmt -l .
 go build -o byop .
 go vet ./...
-go test ./...
+go test ./... -count=1
 git diff --check
 node --check examples/hello-webview/plugin.mjs
 node --check examples/hello-webview/web/app.js
+node --check examples/hello-node/plugin.mjs
 python3 -m json.tool examples/hello-webview/plugin.json
 jq empty design-system/onevra/tokens.json
 jq empty design-system/pi-workbench/tokens.extensions.json
@@ -212,7 +221,7 @@ BYOP_PI_INTEGRATION=1 go test \
 
 该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，要求 Pi 连续执行两次安全的 `bash` 命令，并调用一次手动压缩 RPC。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
 
-验证记录见 [P6b-validation.md](docs/P6b-validation.md)、[P6-validation.md](docs/P6-validation.md)、[P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
+验证记录见 [P7-validation.md](docs/P7-validation.md)、[P6b-validation.md](docs/P6b-validation.md)、[P6-validation.md](docs/P6-validation.md)、[P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
 
 ## 设计系统
 

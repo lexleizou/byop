@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 )
@@ -120,6 +123,9 @@ func pluginContributionSearchText(manifest *pluginManifest) string {
 	}
 	for _, contribution := range manifest.Contributes.WebViews {
 		parts = append(parts, contribution.ID, contribution.Title)
+	}
+	for _, contribution := range manifest.Contributes.Automations {
+		parts = append(parts, contribution.ID, contribution.Title, contribution.Description)
 	}
 	return strings.Join(parts, " ")
 }
@@ -424,6 +430,7 @@ func pluginContributionSummary(manifest *pluginManifest) string {
 	appendPart(len(manifest.Contributes.TaskPanels), "task panel", "task panels")
 	appendPart(len(manifest.Contributes.Settings), "setting", "settings")
 	appendPart(len(manifest.Contributes.WebViews), "WebView", "WebViews")
+	appendPart(len(manifest.Contributes.Automations), "automation", "automations")
 	if len(parts) == 0 {
 		return "No contributions declared"
 	}
@@ -439,55 +446,410 @@ func contractChip(c *ui.Context, p palette, label string) {
 }
 
 func (s *appState) automationsPage(c *ui.Context, p palette) {
+	registry := s.pluginRegistrySnapshot()
+	type automationItem struct {
+		entry        pluginRegistryEntry
+		contribution pluginAutomationContribution
+		key          string
+		state        automationStoredState
+		runs         []automationRunRecord
+		running      bool
+	}
+	var items []automationItem
+	paused := 0
+	for _, entry := range registry.Entries {
+		if entry.Status != pluginRegistered || entry.Manifest == nil {
+			continue
+		}
+		for _, contribution := range entry.Manifest.Contributes.Automations {
+			key := automationKey(entry.ID, contribution.ID)
+			state := automationStoredState{Enabled: true}
+			var runs []automationRunRecord
+			running := false
+			if s.automations != nil {
+				snapshot := s.automations.snapshotFor(key, 5)
+				state = snapshot.State
+				runs = snapshot.Runs
+				running = snapshot.Running
+			}
+			if !state.Enabled {
+				paused++
+			}
+			items = append(items, automationItem{
+				entry:        entry,
+				contribution: contribution,
+				key:          key,
+				state:        state,
+				runs:         runs,
+				running:      running,
+			})
+		}
+	}
+	sort.SliceStable(items, func(left, right int) bool {
+		leftName := fallback(items[left].entry.Name, items[left].entry.ID)
+		rightName := fallback(items[right].entry.Name, items[right].entry.ID)
+		if leftName != rightName {
+			return leftName < rightName
+		}
+		if items[left].entry.ID != items[right].entry.ID {
+			return items[left].entry.ID < items[right].entry.ID
+		}
+		return items[left].contribution.ID < items[right].contribution.ID
+	})
+
 	ui.Scroll(c).Fill().Children(func() {
 		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
 			ui.Column(c).Grow(1).MaxWidth(880).Gap(22).Children(func() {
-				ui.Row(c).FillWidth().AlignItems(ui.End).Gap(16).Children(func() {
-					ui.Column(c).Grow(1).Children(func() {
-						pageHeader(c, p, "AUTOMATE", "Automations", "Scheduled and event-driven work routed through installed plugins and the external Pi runtime.")
-					})
-					primaryAction(c, p, "automation-create", "New automation", "plus", func() {
-						s.showNotice("Automation creation is not connected yet.")
-					})
+				pageHeader(c, p, "AUTOMATE", "Automations",
+					"Plugin-registered automations and Loops. Declared rules are validated and displayed; P7 runs them manually.")
+
+				ui.Row(c).Wrap().AlignItems(ui.Center).GapX(9).GapY(7).Children(func() {
+					statusPill(c, p, fmt.Sprintf("%d REGISTERED", len(items)), p.accent)
+					statusPill(c, p, fmt.Sprintf("%d PAUSED", paused), p.muted)
+					ui.Text(c, "Timed triggers arrive in a later phase; runs are manual in P7.").
+						FontSize(fontSmall).TextColor(p.muted)
 				})
 
-				ui.Row(c).Wrap().Gap(12).Children(func() {
-					s.automationCard(c, p, "Morning brief", "Weekdays · 08:30", "Chat", true)
-					s.automationCard(c, p, "Repository digest", "On demand", "Git plugin", false)
-				})
+				if s.automations != nil {
+					for _, warning := range s.automations.warningsSnapshot() {
+						ui.Text(c, warning).FontSize(fontCaption).TextColor(p.danger)
+					}
+				}
 
-				ui.Column(c).FillWidth().Gap(14).Padding(18).Radius(12).
-					Border(1, p.border).Background(p.surface).Children(func() {
-					ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-						ui.Icon(c, icon("clock")).Size(18, 18).TextColor(p.accent)
-						ui.Text(c, "No scheduler connected").FontSize(fontBody).FontWeight(650).TextColor(p.text)
+				sectionLabel(c, p, "REGISTERED AUTOMATIONS")
+				if len(items) == 0 {
+					ui.Column(c).FillWidth().Gap(7).Padding(18).Radius(11).
+						Border(1, p.border).Background(p.surface).Children(func() {
+						ui.Text(c, "No automation contributions").FontSize(fontBody).
+							FontWeight(650).TextColor(p.text)
+						ui.Row(c).AlignItems(ui.Center).Children(func() {
+							ui.Text(c, "Plugins declare ").FontSize(fontSmall).TextColor(p.muted)
+							ui.Text(c, "contributes.automations").Font("monospace").
+								FontSize(fontSmall).TextColor(p.text)
+							ui.Text(c, " in plugin.json.").FontSize(fontSmall).TextColor(p.muted)
+						})
 					})
-					ui.Text(c, "The P0 inventory found only scheduler.lock. BYOP will present no job as runnable until a plugin runtime and permission model exist.").
-						FontSize(fontSmall).LineHeight(1.5).TextColor(p.muted)
-				})
+				} else {
+					ui.Column(c).FillWidth().Gap(12).Children(func() {
+						for _, item := range items {
+							s.automationContributionCard(c, p, item.entry, item.contribution,
+								item.state, item.runs, item.running)
+						}
+					})
+				}
 			})
 		})
 	})
 }
 
-func (s *appState) automationCard(c *ui.Context, p palette, title, schedule, owner string, enabled bool) {
-	ui.Column(c).Width(280).Grow(1).MinWidth(220).Gap(12).Padding(14).Radius(11).
+func (s *appState) automationContributionCard(
+	c *ui.Context,
+	p palette,
+	entry pluginRegistryEntry,
+	contribution pluginAutomationContribution,
+	state automationStoredState,
+	runs []automationRunRecord,
+	running bool,
+) {
+	key := automationKey(entry.ID, contribution.ID)
+	title := fallback(contribution.Title, contribution.ID)
+	description := fallback(contribution.Description, "No description declared.")
+	status, tone := automationStatusLabel(p, state, running)
+	ui.Column(c).FillWidth().Gap(12).Padding(16).Radius(11).
 		Border(1, p.border).Background(p.surface).Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
-			ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
-				ui.Icon(c, icon("play")).Size(15, 15).TextColor(p.accent)
+			ui.Column(c).Gap(2).Grow(1).Children(func() {
+				ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
+				ui.Text(c, fallback(entry.Name, entry.ID)).FontSize(fontCaption).
+					TextColor(p.accent)
 			})
 			ui.Spacer(c)
-			if enabled {
-				statusPill(c, p, "PREVIEW ON", p.warning)
+			statusPill(c, p, status, tone)
+		})
+		ui.Row(c).Wrap().GapX(7).GapY(5).Children(func() {
+			statusPill(c, p, automationKindLabel(contribution), p.muted)
+			statusPill(c, p, fmt.Sprintf("FAILURES %d/%d",
+				state.ConsecutiveFailures, automationMaxConsecutiveFailures),
+				automationFailureTone(p, state.ConsecutiveFailures))
+			if state.LastRunAt != "" {
+				ui.Text(c, "Last run "+automationLocalTimestamp(state.LastRunAt)+" · "+
+					fallback(strings.ToUpper(state.LastState), "UNKNOWN")).
+					FontSize(fontCaption).TextColor(p.muted)
 			} else {
-				statusPill(c, p, "OFF", p.muted)
+				ui.Text(c, "No runs yet").FontSize(fontCaption).TextColor(p.muted)
 			}
 		})
-		ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
-		ui.Text(c, schedule).FontSize(fontSmall).TextColor(p.muted)
-		ui.Text(c, "Owner · "+owner).FontSize(fontCaption).TextColor(p.accent)
+		ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
+		if !state.Enabled && state.AutoPausedReason != "" {
+			ui.Text(c, automationPausedReason(state.AutoPausedReason)).FontSize(fontCaption).
+				TextColor(p.danger)
+		}
+		ui.Row(c).Wrap().GapX(7).GapY(7).AlignItems(ui.Center).Children(func() {
+			runDisabled := running || !state.Enabled
+			runButton := ui.ButtonBase(c.Key("automation-run-"+key)).
+				Padding(7, 11).Radius(7).Border(1, p.border).Background(p.surface).
+				Cursor(ui.CursorPointer).Label("Run now").Disabled(runDisabled)
+			if runButton.Hovered() && !runDisabled {
+				runButton.Background(p.surfaceHover)
+			}
+			runButton.Children(func() {
+				ui.Row(c).Gap(5).AlignItems(ui.Center).Children(func() {
+					ui.Icon(c, icon("play")).Size(11, 11).
+						TextColor(automationActionTone(p, runDisabled))
+					ui.Text(c, "Run now").FontSize(fontSmall).FontWeight(600).
+						TextColor(automationActionTone(p, runDisabled))
+				})
+			})
+			if runButton.Clicked() && !runDisabled {
+				s.runAutomation(entry, contribution)
+			}
+			if state.Enabled {
+				secondaryAction(c, p, "automation-pause-"+key, "Pause", func() {
+					s.setAutomationPaused(key, true)
+				})
+			} else {
+				secondaryAction(c, p, "automation-resume-"+key, "Resume", func() {
+					s.setAutomationPaused(key, false)
+				})
+			}
+		})
+		if len(runs) > 0 {
+			ui.Divider(c).MarginY(2)
+			sectionLabel(c, p, "RECENT RUNS")
+			for _, run := range runs {
+				s.automationRunRow(c, p, run)
+			}
+		}
 	})
+}
+
+func automationKindLabel(contribution pluginAutomationContribution) string {
+	switch contribution.Kind {
+	case "scheduledLoop":
+		return "Scheduled loop · " + automationRuleLabel(contribution.Rule)
+	case "sessionLoop":
+		return "Session loop · " + automationRuleLabel(contribution.Rule)
+	case "once":
+		return "Once · " + automationRuleLabel(contribution.Rule)
+	default:
+		return "Manual"
+	}
+}
+
+func automationRuleLabel(rule *pluginAutomationRule) string {
+	if rule == nil {
+		return "No rule"
+	}
+	switch rule.Type {
+	case "interval":
+		return fmt.Sprintf("every %d min", rule.Minutes)
+	case "cron":
+		return "cron " + rule.Cron
+	case "at":
+		return rule.At
+	case "afterSettled":
+		return "after settled"
+	default:
+		return rule.Type
+	}
+}
+
+func automationStatusLabel(p palette, state automationStoredState, running bool) (string, ui.Color) {
+	if running {
+		return "RUNNING", p.accent
+	}
+	if !state.Enabled {
+		if state.AutoPausedReason != "" {
+			return "AUTO-PAUSED", p.danger
+		}
+		return "PAUSED", p.muted
+	}
+	return "READY", p.success
+}
+
+func automationPausedReason(reason string) string {
+	switch reason {
+	case "consecutiveFailures":
+		return "5 consecutive failures"
+	case "appRestarted":
+		return "App restarted"
+	default:
+		return reason
+	}
+}
+
+func automationFailureTone(p palette, failures int) ui.Color {
+	if failures >= automationMaxConsecutiveFailures {
+		return p.danger
+	}
+	if failures > 0 {
+		return p.warning
+	}
+	return p.muted
+}
+
+func automationActionTone(p palette, disabled bool) ui.Color {
+	if disabled {
+		return p.muted
+	}
+	return p.text
+}
+
+func automationLocalTimestamp(value string) string {
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return value
+	}
+	return parsed.Local().Format("2006-01-02 15:04:05")
+}
+
+func automationRunDuration(run automationRunRecord) string {
+	if run.EndedAt == "" {
+		return "running"
+	}
+	started, startErr := time.Parse(time.RFC3339Nano, run.StartedAt)
+	ended, endErr := time.Parse(time.RFC3339Nano, run.EndedAt)
+	if startErr != nil || endErr != nil {
+		return "—"
+	}
+	duration := ended.Sub(started)
+	if duration < time.Second {
+		return fmt.Sprintf("%d ms", duration.Milliseconds())
+	}
+	return duration.Round(time.Millisecond).String()
+}
+
+func (s *appState) automationRunRow(c *ui.Context, p palette, run automationRunRecord) {
+	tone := p.muted
+	iconName := "clock"
+	switch run.State {
+	case automationRunSucceeded:
+		tone = p.success
+		iconName = "check"
+	case automationRunFailed, automationRunAborted:
+		tone = p.danger
+		iconName = "x"
+	case automationRunRunning:
+		tone = p.accent
+	}
+	detail := run.Result
+	if run.ErrorCode != "" || run.Error != "" {
+		detail = strings.TrimSpace(strings.Join(nonEmpty(run.ErrorCode, run.Error), " · "))
+	}
+	if detail == "" {
+		detail = "No result summary"
+	}
+	startedAt := run.StartedAt
+	if parsed, err := time.Parse(time.RFC3339Nano, run.StartedAt); err == nil {
+		startedAt = parsed.Local().Format("15:04:05")
+	}
+	ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
+		ui.Icon(c, icon(iconName)).Size(12, 12).TextColor(tone)
+		ui.Text(c, fmt.Sprintf("%s · %s · %s · %s", strings.ToUpper(string(run.State)),
+			run.Trigger, startedAt, automationRunDuration(run))).
+			Font("monospace").FontSize(fontCaption).TextColor(tone).Grow(1).SingleLine()
+		ui.Text(c, summarizeLine(detail, 150)).FontSize(fontCaption).TextColor(p.muted).
+			MaxWidth(380).SingleLine()
+	})
+}
+
+func (s *appState) runAutomation(entry pluginRegistryEntry, contribution pluginAutomationContribution) {
+	if s.automations == nil || s.plugins == nil {
+		s.showNotice("Automation runtime is unavailable.")
+		return
+	}
+	key := automationKey(entry.ID, contribution.ID)
+	snapshot := s.automations.snapshotFor(key, 0)
+	if !snapshot.State.Enabled {
+		s.showNotice("Resume the automation before running it.")
+		return
+	}
+	if snapshot.Running {
+		s.showNotice("This automation is already running.")
+		return
+	}
+	record, err := s.automations.beginRun(key, entry.ID, contribution.ID, contribution.Command)
+	if err != nil {
+		s.showNotice("Could not start automation: " + summarizeLine(err.Error(), 200))
+		return
+	}
+	if s.window != nil {
+		s.window.Invalidate()
+	}
+	s.showNotice("Running " + fallback(contribution.Title, contribution.ID) + "…")
+	timeoutMinutes := contribution.MaxDurationMinutes
+	if timeoutMinutes == 0 {
+		timeoutMinutes = automationDefaultMaxDurationMinutes
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMinutes)*time.Minute)
+		defer cancel()
+		result, invokeErr := s.plugins.invokeCommandTimeout(ctx, entry, contribution.Command,
+			map[string]any{
+				"automation": contribution.ID,
+				"trigger":    "manual",
+				"runId":      record.RunID,
+			}, time.Duration(timeoutMinutes)*time.Minute)
+		outcome := automationOutcomeSuccess
+		errorSummary := ""
+		resultSummary := ""
+		if invokeErr != nil {
+			outcome = automationOutcomeFailure
+			switch {
+			case errors.Is(invokeErr, errPluginStopped):
+				outcome = automationOutcomeStopped
+			case errors.Is(invokeErr, context.DeadlineExceeded):
+				outcome = automationOutcomeTimeout
+			}
+			errorSummary = invokeErr.Error()
+		} else {
+			resultSummary = pluginResultSummary(result)
+		}
+		autoPaused, finishErr := s.automations.finishRun(key, record.RunID, outcome,
+			errorSummary, resultSummary)
+		s.postUI(func() {
+			if finishErr != nil {
+				s.showNotice("Automation finished, but its run record could not be saved: " +
+					summarizeLine(finishErr.Error(), 200))
+			} else {
+				title := fallback(contribution.Title, contribution.ID)
+				switch outcome {
+				case automationOutcomeSuccess:
+					s.showNotice(title + " · " + fallback(resultSummary, "Command completed"))
+				case automationOutcomeTimeout:
+					s.showNotice(title + " timed out after " + fmt.Sprintf("%d", timeoutMinutes) +
+						" minute(s).")
+				case automationOutcomeStopped:
+					s.showNotice(title + " stopped because its plugin was deactivated.")
+				default:
+					s.showNotice(title + " failed: " + summarizeLine(errorSummary, 200))
+				}
+				if autoPaused {
+					s.showNotice(fmt.Sprintf("%s paused after %d consecutive failures.",
+						title, automationMaxConsecutiveFailures))
+				}
+			}
+		})
+	}()
+}
+
+func (s *appState) setAutomationPaused(key string, paused bool) {
+	if s.automations == nil {
+		return
+	}
+	var err error
+	if paused {
+		err = s.automations.pause(key)
+	} else {
+		err = s.automations.resume(key)
+	}
+	if err != nil {
+		s.showNotice("Automation state could not be saved: " + summarizeLine(err.Error(), 200))
+		return
+	}
+	if s.window != nil {
+		s.window.Invalidate()
+	}
 }
 
 func (s *appState) settingsPage(c *ui.Context, p palette) {
@@ -549,7 +911,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P6 models · 2026-10-21").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P7 automations · 2026-10-21").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})

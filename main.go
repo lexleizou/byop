@@ -171,6 +171,7 @@ type appState struct {
 	pluginWebViewDark  bool
 	pluginBridgeSlots  map[string]chan struct{}
 	pluginBridgeMu     sync.Mutex
+	automations        *automationStore
 
 	window                 *mygo.Window
 	closed                 atomic.Bool
@@ -277,6 +278,11 @@ func newAppState() *appState {
 		}),
 	)
 	s.setPluginRegistry(scanPluginRegistry(defaultPluginRoots()))
+	configDir, configErr := pluginConfigDir()
+	if configErr != nil {
+		configDir = filepath.Join(os.TempDir(), "byop-config")
+	}
+	s.automations = newAutomationStore(configDir, registeredSessionLoopKeys(s.pluginRegistrySnapshot()))
 	s.plugins.invalidateSettingsCache()
 	s.syncPluginSettingForms()
 	return s
@@ -301,6 +307,9 @@ func (s *appState) scanPlugins(announce bool) {
 		s.pluginViewPluginID = ""
 		s.pluginViewID = ""
 		s.pluginViewKind = ""
+	}
+	if s.automations != nil {
+		s.automations.refreshSessionLoopKeys(registeredSessionLoopKeys(s.pluginRegistrySnapshot()))
 	}
 	if !announce {
 		return
