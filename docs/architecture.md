@@ -1,8 +1,8 @@
 # BYOP Workbench Architecture
 
-Status: P6a native shell, persisted external Pi sessions, read-only session
+Status: P6b native shell, persisted external Pi sessions, read-only session
 discovery and RPC-only session mutation, ordered timeline restoration, model
-and thinking-level RPC state, transient runtime diagnostics, and the P5 plugin
+and thinking-level selection, transient runtime diagnostics, and the P5 plugin
 platform are implemented; Chat renders through Onevra v0.2026.13 components.
 
 ## Runtime Boundary
@@ -85,8 +85,14 @@ model and thinking level. Paths are compared after symlink resolution, with the
 session ID as a fallback. A mismatch is reported without discarding the
 reported transcript. `BYOP_PI_EPHEMERAL=1` skips discovery, hides the session
 list and refuses switching. `get_available_models` and
-`get_available_thinking_levels` populate future picker state. These methods omit
-provider URLs, headers and credential material from BYOP state.
+`get_available_thinking_levels` populate the composer choices. The model picker
+uses a lookup map keyed by `provider/id`, so model IDs containing `/` remain
+intact. The thinking effort picker keeps its selection local while the user
+clicks or drags, then commits once after the panel closes or 400 ms without
+another change; stale timers are discarded. Both controls become read-only
+during runs, compaction and Pi session operations. Session comparison uses the
+canonical path stored after `get_state` is applied. These methods omit provider
+URLs, headers and credential material from BYOP state.
 
 P3.3a projects the following Pi session events into host-only transient state:
 `queue_update`, `compaction_start`, `compaction_end`, `auto_retry_start`,
@@ -108,7 +114,7 @@ permanent turn completed, stopped or failed.
 | Model calls and provider auth | Pi | Delegated |
 | Session persistence and credentials | Pi | Pi owns JSONL and credentials; BYOP scans file metadata and conversation fields read-only for the sidebar, then mutates sessions only through RPC |
 | Session list and active transcript | BYOP | Debounced discovery outside the UI goroutine; switch/create responses rebuild the native transcript through `get_messages` |
-| Model and thinking state | Pi plus BYOP adapter | BYOP stores only display fields needed by Settings and the future P6b picker |
+| Model and thinking state | Pi plus BYOP adapter | BYOP stores display fields and composer selection state; Pi owns the model directory, reasoning levels and credentials |
 | Tools, Skills and extensions | Pi | Delegated |
 | Long-running task activity | BYOP plus adapters | P3.3a projects the latest tool and transient runtime diagnostics into the task panel |
 | Complex editor or visualizer UI | Plugin and BYOP WebView host | Declared WebViews are served from `byop-plugin://` and retain the plugin's existing capability boundary |
@@ -467,6 +473,6 @@ plugins. `examples/` contains contract fixtures only.
 | P4.2 | Node runtime, typed view/settings invocation, plugin-to-host calls and permission enforcement |
 | P5 | Isolated WebView scheme, bridge identity and capability reuse, theme bridge, navigation lock, lifecycle and native fallback (implemented) |
 | P6a | New BYOP logo, persisted Pi sessions, read-only session list, RPC session switching/restore and model/thinking RPC state (implemented) |
-| P6b | Model and thinking-level picker UI |
+| P6b | Model and thinking-level picker UI (implemented) |
 | P7 | Automation and Loop contributions |
 | P8 | Import old desktop preferences and migration verification |

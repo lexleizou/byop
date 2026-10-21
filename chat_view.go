@@ -17,10 +17,15 @@ import (
 type chatPresentation struct {
 	conversation chat.ConversationState
 	layout       chat.FloatingConversationState
+	modelPicker  chat.PickerState
+	effortPicker chat.EffortState
 	markdown     markdown.Options
 	turns        map[int]*chat.TurnState
 	groups       map[string]*chat.GroupState
 	activities   map[string]*activityPresentation
+
+	thinkingPending     string
+	thinkingCommitTimer *time.Timer
 }
 
 type activityPresentation struct {
@@ -335,9 +340,7 @@ func (s *appState) chatComposer(c *ui.Context) {
 		Running:      s.runActive() && s.run != runStopping,
 		SendDisabled: s.piConn != piConnected,
 		Accessory: func(c *ui.Context) {
-			if s.piModel != "" {
-				chat.Chip(c, s.piModel, chat.ChipOptions{Icon: lu.Sparkles, ReadOnly: true})
-			}
+			s.composerChoices(c)
 		},
 		Trailing: func(c *ui.Context) {
 			if chat.IconAction(c, "Attachments are not connected yet", lu.Paperclip).Clicked() {
@@ -365,6 +368,177 @@ func (s *appState) chatComposer(c *ui.Context) {
 	}
 	if result.Stop {
 		s.stopPrompt()
+	}
+}
+
+func (s *appState) composerChoices(c *ui.Context) {
+	readOnly := s.runActive() || s.compacting || s.piSessionBusy
+	if (s.runActive() || s.compacting) && !s.piSessionBusy {
+		s.cancelThinkingPending()
+	}
+
+	modelLabel := piModelDisplayName(s.piModelName, s.piModel)
+	if len(s.piModels) == 0 {
+		s.chatView.modelPicker.Open = false
+		if s.piModel != "" {
+			chat.Chip(c, modelLabel, chat.ChipOptions{Icon: lu.Sparkles, ReadOnly: true})
+		}
+	} else if readOnly {
+		s.chatView.modelPicker.Open = false
+		chat.Chip(c, modelLabel, chat.ChipOptions{Icon: lu.Sparkles, ReadOnly: true})
+	} else {
+		options, choices := buildPiModelChoices(s.piModels)
+		result := chat.Picker(c.Key("model-picker"), &s.chatView.modelPicker, chat.PickerOptions{
+			Label:       modelLabel,
+			Icon:        lu.Sparkles,
+			Options:     options,
+			Selected:    piModelChoiceID(s.piModelProvider, s.piModelID),
+			Searchable:  5,
+			SearchLabel: "Search models",
+			EmptyText:   "No models",
+			Width:       300,
+		})
+		if result.Chosen != "" {
+			choice, ok := choices[result.Chosen]
+			if ok && (choice.model.Provider != s.piModelProvider || choice.model.ID != s.piModelID) {
+				s.selectModel(choice.model.Provider, choice.model.ID)
+			}
+		}
+	}
+
+	levels := buildPiThinkingOptions(s.piThinkingLevels)
+	if !reasoningLevelsVisible(s.piThinkingLevels) || len(levels) == 0 {
+		s.chatView.effortPicker.Open = false
+		s.cancelThinkingPending()
+		return
+	}
+	s.normalizeThinkingPending(levels)
+	selected := s.piThinkingLevel
+	if s.chatView.thinkingPending != "" {
+		selected = s.chatView.thinkingPending
+	} else if s.thinkingCommitInFlight && s.thinkingCommitLevel != "" {
+		selected = s.thinkingCommitLevel
+	}
+	if selected == "" {
+		selected = levels[0].ID
+	}
+	if readOnly {
+		s.chatView.effortPicker.Open = false
+		label := thinkingLevelLabel(selected)
+		chip := chat.Chip(c, label, chat.ChipOptions{Icon: lu.Brain, ReadOnly: true})
+		components.Tooltip(c, chip, "Thinking · "+label)
+		return
+	}
+
+	wasOpen := s.chatView.effortPicker.Open
+	result := chat.EffortPicker(c.Key("thinking-picker"), &s.chatView.effortPicker, chat.EffortPickerOptions{
+		Label:    "Thinking",
+		Tooltip:  "Thinking · " + thinkingLevelLabel(selected),
+		Icon:     lu.Brain,
+		Levels:   levels,
+		Selected: selected,
+		Off:      levels[0].ID == "off",
+	})
+	if result.Chosen != "" {
+		s.setThinkingPending(result.Chosen)
+	}
+	if wasOpen && !s.chatView.effortPicker.Open {
+		s.commitThinkingPending()
+	}
+}
+
+func (s *appState) setThinkingPending(level string) {
+	level = strings.TrimSpace(level)
+	if level == "" {
+		return
+	}
+	if level == s.chatView.thinkingPending {
+		return
+	}
+	s.stopThinkingCommitTimer()
+	if s.thinkingCommitInFlight {
+		if level == s.thinkingCommitLevel {
+			s.chatView.thinkingPending = ""
+			return
+		}
+		s.chatView.thinkingPending = level
+		s.scheduleThinkingPendingCommit()
+		return
+	}
+	if level == s.piThinkingLevel {
+		s.chatView.thinkingPending = ""
+		return
+	}
+	s.chatView.thinkingPending = level
+	s.scheduleThinkingPendingCommit()
+}
+
+func (s *appState) scheduleThinkingPendingCommit() {
+	level := s.chatView.thinkingPending
+	if level == "" {
+		return
+	}
+	s.stopThinkingCommitTimer()
+	seq := s.thinkingCommitSeq
+	s.chatView.thinkingCommitTimer = time.AfterFunc(thinkingCommitDelay, func() {
+		s.postUI(func() {
+			if seq != s.thinkingCommitSeq || s.chatView.thinkingPending != level {
+				return
+			}
+			s.chatView.thinkingCommitTimer = nil
+			if s.thinkingCommitInFlight {
+				return
+			}
+			s.commitThinkingPending()
+		})
+	})
+}
+
+func (s *appState) commitThinkingPending() bool {
+	level := s.chatView.thinkingPending
+	if !shouldCommitThinking(level, s.piThinkingLevel,
+		!s.runActive() && !s.compacting && !s.piSessionBusy && !s.thinkingCommitInFlight) {
+		return false
+	}
+	s.stopThinkingCommitTimer()
+	return s.selectThinkingLevel(level)
+}
+
+func (s *appState) normalizeThinkingPending(levels []chat.Option) {
+	pending := s.chatView.thinkingPending
+	if pending == "" {
+		return
+	}
+	for _, level := range levels {
+		if level.ID == pending {
+			return
+		}
+	}
+	s.cancelThinkingPending()
+}
+
+func (s *appState) cancelThinkingPending() {
+	s.stopThinkingCommitTimer()
+	s.chatView.thinkingPending = ""
+}
+
+func (s *appState) revertThinkingPending(level string) {
+	s.stopThinkingCommitTimer()
+	if s.chatView.thinkingPending == level {
+		s.chatView.thinkingPending = ""
+	}
+}
+
+func (s *appState) dropThinkingPending() {
+	s.stopThinkingCommitTimer()
+	s.chatView.thinkingPending = ""
+}
+
+func (s *appState) stopThinkingCommitTimer() {
+	s.thinkingCommitSeq++
+	if s.chatView.thinkingCommitTimer != nil {
+		s.chatView.thinkingCommitTimer.Stop()
+		s.chatView.thinkingCommitTimer = nil
 	}
 }
 

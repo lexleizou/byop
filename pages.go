@@ -549,7 +549,7 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						brandMark(c, p, 38)
 						ui.Column(c).Gap(1).Children(func() {
 							ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-							ui.Text(c, "P6 sessions · 2026-10-21").FontSize(fontCaption).TextColor(p.muted)
+							ui.Text(c, "P6 models · 2026-10-21").FontSize(fontCaption).TextColor(p.muted)
 						})
 					})
 				})

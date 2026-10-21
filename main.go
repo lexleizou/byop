@@ -172,36 +172,40 @@ type appState struct {
 	pluginBridgeSlots  map[string]chan struct{}
 	pluginBridgeMu     sync.Mutex
 
-	window             *mygo.Window
-	closed             atomic.Bool
-	pi                 *piClient
-	piConn             piConnectionState
-	piPath             string
-	piVersion          string
-	piSessionID        string
-	piModel            string
-	piModelProvider    string
-	piModelID          string
-	piModelName        string
-	piThinkingLevel    string
-	piThinkingLevels   []string
-	piModels           []piModel
-	piSessionFile      string
-	piSessions         []piSessionSummary
-	piSessionsExpanded bool
-	piSessionsRefresh  atomic.Uint64
-	piSessionsTimer    *time.Timer
-	piSessionBusy      bool
-	sessionGen         uint64
-	piError            string
-	piConnecting       bool
-	piEpoch            uint64
-	run                runState
-	runID              string
-	activePrompt       string
-	activeRequest      string
-	chat               []chatMessage
-	chatView           chatPresentation
+	window                 *mygo.Window
+	closed                 atomic.Bool
+	pi                     *piClient
+	piConn                 piConnectionState
+	piPath                 string
+	piVersion              string
+	piSessionID            string
+	piModel                string
+	piModelProvider        string
+	piModelID              string
+	piModelName            string
+	piThinkingLevel        string
+	piThinkingLevels       []string
+	piModels               []piModel
+	piSessionFile          string
+	piSessions             []piSessionSummary
+	piSessionsExpanded     bool
+	piSessionsRefresh      atomic.Uint64
+	piSessionsTimer        *time.Timer
+	piSessionBusy          bool
+	sessionGen             uint64
+	thinkingCommitInFlight bool
+	thinkingCommitLevel    string
+	thinkingCommitGen      uint64
+	thinkingCommitSeq      uint64
+	piError                string
+	piConnecting           bool
+	piEpoch                uint64
+	run                    runState
+	runID                  string
+	activePrompt           string
+	activeRequest          string
+	chat                   []chatMessage
+	chatView               chatPresentation
 
 	queueSteeringCount int
 	queueFollowUpCount int
@@ -486,7 +490,7 @@ func (s *appState) refreshPiSessionState() {
 			if epoch != s.piEpoch || s.pi != client {
 				return
 			}
-			if s.sessionGen != 0 && s.piSessionBusy {
+			if s.sessionGen != 0 && (s.piSessionBusy || s.thinkingCommitInFlight) {
 				return
 			}
 			s.applyPiSessionState(state)
@@ -534,7 +538,7 @@ func (s *appState) sessionMutationAllowed() bool {
 }
 
 func (s *appState) piMutationAllowed(change string) bool {
-	if s.piSessionBusy {
+	if s.piSessionBusy || s.thinkingCommitInFlight {
 		s.showNotice("Wait for the current Pi session operation before changing " + change + ".")
 		return false
 	}
@@ -569,7 +573,36 @@ func (s *appState) finishPiSessionOperation(client *piClient, epoch, gen uint64)
 	return epoch == s.piEpoch && s.pi == client && !s.runActive()
 }
 
+func (s *appState) beginThinkingCommit(level string) (*piClient, uint64, uint64, bool) {
+	if !s.piMutationAllowed("thinking level") {
+		return nil, 0, 0, false
+	}
+	client := s.pi
+	epoch := s.piEpoch
+	s.thinkingCommitGen++
+	gen := s.thinkingCommitGen
+	s.thinkingCommitInFlight = true
+	s.thinkingCommitLevel = level
+	return client, epoch, gen, true
+}
+
+func (s *appState) finishThinkingCommit(client *piClient, epoch, gen uint64) bool {
+	if gen != s.thinkingCommitGen {
+		return false
+	}
+	s.thinkingCommitInFlight = false
+	s.thinkingCommitLevel = ""
+	return epoch == s.piEpoch && s.pi == client && !s.runActive()
+}
+
+func (s *appState) cancelThinkingCommit() {
+	s.thinkingCommitGen++
+	s.thinkingCommitInFlight = false
+	s.thinkingCommitLevel = ""
+}
+
 func (s *appState) newPiSession() {
+	s.cancelThinkingPending()
 	client, epoch, gen, ok := s.beginPiSessionOperation("sessions")
 	if !ok {
 		return
@@ -614,6 +647,7 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 		s.showNotice("Session switching is unavailable while BYOP_PI_EPHEMERAL is enabled.")
 		return
 	}
+	s.cancelThinkingPending()
 	client, epoch, gen, ok := s.beginPiSessionOperation("sessions")
 	if !ok {
 		return
@@ -677,11 +711,12 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			if !s.finishPiSessionOperation(client, epoch, gen) {
 				return
 			}
+			s.cancelThinkingPending()
+			s.chatView = chatPresentation{}
 			s.chat = chat
 			s.run = runIdle
 			s.activeRequest = ""
 			s.activePrompt = ""
-			s.chatView = chatPresentation{}
 			if stateErr == nil {
 				s.applyPiSessionState(state)
 			}
@@ -696,7 +731,7 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			if stateErr != nil {
 				s.notice = notice + " Pi state could not be confirmed: " + stateErr.Error()
 			} else if (strings.TrimSpace(expectedPath) != "" || strings.TrimSpace(expectedID) != "") &&
-				!samePiSession(expectedPath, expectedID, state.SessionFile, state.SessionID) {
+				!samePiSession(canonicalPiPathIfPresent(expectedPath), expectedID, s.piSessionFile, state.SessionID) {
 				s.notice = notice + " Pi reported a different session."
 			}
 			s.page = pageChat
@@ -713,7 +748,15 @@ func samePiSession(expectedPath, expectedID, actualPath, actualID string) bool {
 	return strings.TrimSpace(expectedID) != "" && expectedID == actualID
 }
 
+func canonicalPiPathIfPresent(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	return canonicalPiPath(value)
+}
+
 func (s *appState) selectModel(provider, id string) {
+	s.cancelThinkingPending()
 	client, epoch, gen, ok := s.beginPiSessionOperation("model")
 	if !ok {
 		return
@@ -753,15 +796,15 @@ func (s *appState) selectModel(provider, id string) {
 				s.showNotice("Model changed, but thinking levels could not be refreshed.")
 				return
 			}
-			s.showNotice("Pi model changed.")
 		})
 	}()
 }
 
-func (s *appState) selectThinkingLevel(level string) {
-	client, epoch, gen, ok := s.beginPiSessionOperation("thinking level")
+func (s *appState) selectThinkingLevel(level string) bool {
+	client, epoch, gen, ok := s.beginThinkingCommit(level)
 	if !ok {
-		return
+		s.revertThinkingPending(level)
+		return false
 	}
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -769,7 +812,8 @@ func (s *appState) selectThinkingLevel(level string) {
 		err := client.SetThinkingLevel(ctx, level)
 		if err != nil {
 			s.postUI(func() {
-				if s.finishPiSessionOperation(client, epoch, gen) {
+				if s.finishThinkingCommit(client, epoch, gen) {
+					s.dropThinkingPending()
 					s.showNotice("Could not change Pi thinking level: " + err.Error())
 				}
 			})
@@ -782,7 +826,7 @@ func (s *appState) selectThinkingLevel(level string) {
 		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
 		levelsCancel()
 		s.postUI(func() {
-			if !s.finishPiSessionOperation(client, epoch, gen) {
+			if !s.finishThinkingCommit(client, epoch, gen) {
 				return
 			}
 			s.piThinkingLevel = level
@@ -792,9 +836,17 @@ func (s *appState) selectThinkingLevel(level string) {
 			if levelsErr == nil {
 				s.piThinkingLevels = levels
 			}
-			s.showNotice("Pi thinking level changed.")
+			if s.chatView.thinkingPending == level {
+				s.chatView.thinkingPending = ""
+			}
+			if s.chatView.effortPicker.Open {
+				s.scheduleThinkingPendingCommit()
+			} else {
+				s.commitThinkingPending()
+			}
 		})
 	}()
+	return true
 }
 
 func (s *appState) activePiSession() piSessionSummary {
@@ -910,6 +962,8 @@ func (s *appState) connectPi() {
 func (s *appState) reconnectPi() {
 	s.sessionGen++
 	s.piSessionBusy = false
+	s.cancelThinkingCommit()
+	s.cancelThinkingPending()
 	if s.piSessionsTimer != nil {
 		s.piSessionsTimer.Stop()
 		s.piSessionsTimer = nil
@@ -946,6 +1000,8 @@ func (s *appState) shutdownPi() {
 	s.closed.Store(true)
 	s.sessionGen++
 	s.piSessionBusy = false
+	s.cancelThinkingCommit()
+	s.cancelThinkingPending()
 	if s.piSessionsTimer != nil {
 		s.piSessionsTimer.Stop()
 		s.piSessionsTimer = nil
@@ -975,11 +1031,16 @@ func (s *appState) sendPrompt() {
 		s.showNotice("Wait for the current Pi session operation before sending a message.")
 		return
 	}
+	if s.thinkingCommitInFlight {
+		s.showNotice("Wait for the current thinking level update before sending a message.")
+		return
+	}
 	if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
 		s.showNotice("Pi is already working. Stop the current run before sending another message.")
 		return
 	}
 
+	s.cancelThinkingPending()
 	s.sessionGen++
 	gen := s.sessionGen
 	s.piSessionBusy = true
@@ -1204,6 +1265,8 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 	case piEventProcessExit:
 		s.sessionGen++
 		s.piSessionBusy = false
+		s.cancelThinkingCommit()
+		s.cancelThinkingPending()
 		s.pi = nil
 		s.piConnecting = false
 		s.piConn = piDisconnected

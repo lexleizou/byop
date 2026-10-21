@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -363,6 +364,132 @@ func TestPiSessionStateCanonicalizesSessionFileOnce(t *testing.T) {
 	state.applyPiSessionState(&piSessionState{SessionFile: link})
 	if want := canonicalPiPath(target); state.piSessionFile != want {
 		t.Fatalf("session file = %q, want canonical path %q", state.piSessionFile, want)
+	}
+}
+
+func TestThinkingCommitSequenceSurvivesChatPresentationReset(t *testing.T) {
+	state := &appState{}
+	state.thinkingCommitSeq = 7
+	state.stopThinkingCommitTimer()
+	state.chatView = chatPresentation{}
+
+	if state.thinkingCommitSeq != 8 {
+		t.Fatalf("thinking commit sequence after reset = %d, want 8", state.thinkingCommitSeq)
+	}
+}
+
+func TestThinkingDragBackWhileCommitInFlightKeepsPending(t *testing.T) {
+	state := &appState{
+		piThinkingLevel:        "low",
+		thinkingCommitInFlight: true,
+		thinkingCommitLevel:    "high",
+	}
+	state.chatView.thinkingPending = "high"
+
+	state.setThinkingPending("low")
+	defer state.stopThinkingCommitTimer()
+
+	if state.chatView.thinkingPending != "low" {
+		t.Fatalf("pending after drag back = %q, want %q", state.chatView.thinkingPending, "low")
+	}
+
+	state.setThinkingPending("high")
+	if state.chatView.thinkingPending != "" {
+		t.Fatalf("pending after returning to in-flight level = %q, want empty", state.chatView.thinkingPending)
+	}
+}
+
+func TestPiModelChoicesPreserveSlashIDsAndFormatContext(t *testing.T) {
+	models := []piModel{
+		{Provider: "openai", ID: "team/model-a", Name: "Model A", ContextWindow: 200_000},
+		{Provider: "openai", ID: "team/model-a-2", Name: "Model A", ContextWindow: 200_000},
+		{Provider: "local", ID: "model-b", ContextWindow: 1_000_000},
+		{Provider: "small", ID: "model-c", ContextWindow: 0},
+	}
+	options, choices := buildPiModelChoices(models)
+	if got, want := options[0].ID, "openai/team/model-a"; got != want {
+		t.Fatalf("model option ID = %q, want %q", got, want)
+	}
+	if got, want := options[0].Detail, "200K"; got != want {
+		t.Fatalf("200K detail = %q, want %q", got, want)
+	}
+	if got, want := options[0].Description, "team/model-a"; got != want {
+		t.Fatalf("duplicate model description = %q, want %q", got, want)
+	}
+	if got, want := options[1].Description, "team/model-a-2"; got != want {
+		t.Fatalf("second duplicate model description = %q, want %q", got, want)
+	}
+	if options[2].Description != "" {
+		t.Fatalf("unique model description = %q, want empty", options[2].Description)
+	}
+	if got, want := options[2].Label, "model-b"; got != want {
+		t.Fatalf("fallback model label = %q, want %q", got, want)
+	}
+	if got, want := options[2].Detail, "1M"; got != want {
+		t.Fatalf("1M detail = %q, want %q", got, want)
+	}
+	if options[3].Detail != "" {
+		t.Fatalf("zero context detail = %q, want empty", options[3].Detail)
+	}
+	choice, ok := choices["openai/team/model-a"]
+	if !ok || choice.model.Provider != "openai" || choice.model.ID != "team/model-a" {
+		t.Fatalf("slash model lookup = %#v, %v", choice, ok)
+	}
+	if got, want := piModelDisplayName("", "provider / fallback"), "provider / fallback"; got != want {
+		t.Fatalf("model display fallback = %q, want %q", got, want)
+	}
+	if got, want := piModelDisplayName("", ""), "Pi default"; got != want {
+		t.Fatalf("default model display = %q, want %q", got, want)
+	}
+}
+
+func TestPiThinkingOptionsOrderLabelsAndVisibility(t *testing.T) {
+	options := buildPiThinkingOptions([]string{
+		"very_high", "high", "off", "minimal", "low", "xhigh", "medium", "high",
+	})
+	got := make([]string, 0, len(options))
+	for _, option := range options {
+		got = append(got, option.ID+"="+option.Label)
+	}
+	want := []string{
+		"off=Off",
+		"minimal=Minimal",
+		"low=Low",
+		"medium=Medium",
+		"high=High",
+		"xhigh=XHigh",
+		"very_high=Very High",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("thinking options = %#v, want %#v", got, want)
+	}
+	if reasoningLevelsVisible(nil) || reasoningLevelsVisible([]string{"off"}) {
+		t.Fatal("empty and off-only reasoning levels should be hidden")
+	}
+	if !reasoningLevelsVisible([]string{"low"}) {
+		t.Fatal("a single supported reasoning level should remain visible")
+	}
+}
+
+func TestThinkingCommitDecision(t *testing.T) {
+	tests := []struct {
+		name               string
+		pending, confirmed string
+		allowed            bool
+		want               bool
+	}{
+		{name: "changed", pending: "high", confirmed: "low", allowed: true, want: true},
+		{name: "same", pending: "high", confirmed: "high", allowed: true},
+		{name: "empty", confirmed: "low", allowed: true},
+		{name: "disabled", pending: "high", confirmed: "low", allowed: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := shouldCommitThinking(test.pending, test.confirmed, test.allowed); got != test.want {
+				t.Fatalf("shouldCommitThinking(%q, %q, %v) = %v, want %v",
+					test.pending, test.confirmed, test.allowed, got, test.want)
+			}
+		})
 	}
 }
 
