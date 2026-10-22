@@ -150,6 +150,7 @@ func (s *appState) chatPage(c *ui.Context, p palette) {
 		if s.piConnectionErrorActive() {
 			s.piConnectionAlert(c, p)
 		}
+		s.legacyMigrationPrompt(c, p)
 		chat.FloatingConversation(c, &s.chatView.layout, &s.chatView.conversation, text("chatBackToLatest"),
 			func(c *ui.Context) { s.transcript(c) },
 			func(c *ui.Context) { s.chatComposer(c) })

@@ -1426,29 +1426,29 @@
   "@settingsVersion": {
     "description": "Label for the Pi CLI version."
   },
-  "settingsModel": "Model",
-  "@settingsModel": {
-    "description": "Label for the current Pi model."
+  "settingsShowPiDetails": "Show details",
+  "@settingsShowPiDetails": {
+    "description": "Action that expands raw Pi connection error details."
   },
-  "settingsSession": "Session",
-  "@settingsSession": {
-    "description": "Label for the current Pi session."
-  },
-  "settingsRunState": "Run state",
-  "@settingsRunState": {
-    "description": "Label for the current run state."
+  "settingsHidePiDetails": "Hide details",
+  "@settingsHidePiDetails": {
+    "description": "Action that collapses raw Pi connection error details."
   },
   "settingsPluginSettings": "PLUGIN SETTINGS",
   "@settingsPluginSettings": {
     "description": "Section label for plugin settings."
   },
-  "settingsWorkbenchTitle": "Workbench preferences",
-  "@settingsWorkbenchTitle": {
-    "description": "Workbench preferences card title."
+  "settingsDiagnosticsTitle": "Diagnostics",
+  "@settingsDiagnosticsTitle": {
+    "description": "Collapsible diagnostics card title."
   },
-  "settingsWorkbenchDescription": "Layout, external Pi, and plugin platform status for this native workbench.",
-  "@settingsWorkbenchDescription": {
-    "description": "Workbench preferences card description."
+  "settingsDiagnosticsDescription": "Runtime, plugin, and migration information for troubleshooting.",
+  "@settingsDiagnosticsDescription": {
+    "description": "Collapsible diagnostics card description."
+  },
+  "settingsDiagnosticsToggle": "Toggle diagnostics",
+  "@settingsDiagnosticsToggle": {
+    "description": "Accessible label for the diagnostics disclosure button."
   },
   "settingsNativeRuntime": "Native runtime",
   "@settingsNativeRuntime": {
@@ -1878,21 +1878,25 @@
   "@statusClear": {
     "description": "Task status clear."
   },
-  "legacyTitle": "Migrate from Pi Agent Desktop",
-  "@legacyTitle": {
-    "description": "Legacy migration card title."
+  "legacyPromptDiscovered": "Legacy Pi Agent Desktop settings found.",
+  "@legacyPromptDiscovered": {
+    "description": "One-time Chat prompt offering to import legacy settings."
   },
-  "legacyDescription": "Read-only scan of the old desktop app. Nothing is deleted; Pi sessions are linked, not copied.",
-  "@legacyDescription": {
-    "description": "Legacy migration card description."
+  "legacyPromptDismiss": "Don't import",
+  "@legacyPromptDismiss": {
+    "description": "Action that permanently dismisses the legacy migration prompt."
+  },
+  "legacyPromptDismissFailed": "Could not save your legacy migration choice.",
+  "@legacyPromptDismissFailed": {
+    "description": "Notice shown when the migration prompt preference cannot be saved."
+  },
+  "legacyReimport": "Re-import legacy data",
+  "@legacyReimport": {
+    "description": "Settings link that scans and imports legacy data again."
   },
   "legacyWorkspaceMissing": "saved workspace missing",
   "@legacyWorkspaceMissing": {
     "description": "Legacy workspace warning."
-  },
-  "legacyScan": "Scan",
-  "@legacyScan": {
-    "description": "Legacy scan action."
   },
   "legacyScanning": "Scanning…",
   "@legacyScanning": {
@@ -1925,136 +1929,6 @@
   "legacyImported": "Legacy preferences imported.",
   "@legacyImported": {
     "description": "Legacy import success notice."
-  },
-  "legacyUnknown": "Unknown",
-  "@legacyUnknown": {
-    "description": "Unknown legacy value."
-  },
-  "legacyNoPreferences": "No migratable legacy preferences were found.",
-  "@legacyNoPreferences": {
-    "description": "Legacy empty state."
-  },
-  "legacyStatusNew": "NEW",
-  "@legacyStatusNew": {
-    "description": "Legacy new status."
-  },
-  "legacyStatusSame": "SAME",
-  "@legacyStatusSame": {
-    "description": "Legacy same status."
-  },
-  "legacyStatusConflict": "CONFLICT",
-  "@legacyStatusConflict": {
-    "description": "Legacy conflict status."
-  },
-  "legacyStatusKept": "KEPT",
-  "@legacyStatusKept": {
-    "description": "Legacy kept status."
-  },
-  "legacyStatusLinked": "LINKED",
-  "@legacyStatusLinked": {
-    "description": "Legacy linked status."
-  },
-  "legacyStatusMissing": "MISSING",
-  "@legacyStatusMissing": {
-    "description": "Legacy missing status."
-  },
-  "legacyStatusInfo": "INFO",
-  "@legacyStatusInfo": {
-    "description": "Legacy info status."
-  },
-  "legacyStatusIgnored": "IGNORED",
-  "@legacyStatusIgnored": {
-    "description": "Legacy ignored status."
-  },
-  "legacyStatusUnknown": "UNKNOWN",
-  "@legacyStatusUnknown": {
-    "description": "Legacy unknown status."
-  },
-  "legacyImportConflictingValue": "IMPORT CONFLICTING VALUE",
-  "@legacyImportConflictingValue": {
-    "description": "Legacy import conflict status."
-  },
-  "legacyImportConflictCopy": "IMPORT AS CONFLICT COPY",
-  "@legacyImportConflictCopy": {
-    "description": "Legacy import conflict-copy status."
-  },
-  "legacyFound": "FOUND",
-  "@legacyFound": {
-    "description": "Legacy source found."
-  },
-  "legacyUnavailable": "UNAVAILABLE",
-  "@legacyUnavailable": {
-    "description": "Legacy source unavailable."
-  },
-  "legacyNotFound": "NOT FOUND",
-  "@legacyNotFound": {
-    "description": "Legacy source missing."
-  },
-  "legacyLastImport": "Last import {time} · {counts}",
-  "@legacyLastImport": {
-    "description": "Legacy last import summary.",
-    "placeholders": {
-      "time": {
-        "type": "String",
-        "example": "2026-10-22 10:00"
-      },
-      "counts": {
-        "type": "String",
-        "example": "new 2"
-      }
-    }
-  },
-  "legacyVersion": "LEGACY {version}",
-  "@legacyVersion": {
-    "description": "Legacy version pill.",
-    "placeholders": {
-      "version": {
-        "type": "String",
-        "example": "1.0"
-      }
-    }
-  },
-  "legacyCountsSummary": "new {new} · same {same} · conflict {conflict} · kept {kept} · linked {linked} · missing {missing} · unknown {unknown} · ignored {ignored} · info {info}",
-  "@legacyCountsSummary": {
-    "description": "Legacy import counts.",
-    "placeholders": {
-      "new": {
-        "type": "int",
-        "example": "1"
-      },
-      "same": {
-        "type": "int",
-        "example": "1"
-      },
-      "conflict": {
-        "type": "int",
-        "example": "1"
-      },
-      "kept": {
-        "type": "int",
-        "example": "1"
-      },
-      "linked": {
-        "type": "int",
-        "example": "1"
-      },
-      "missing": {
-        "type": "int",
-        "example": "1"
-      },
-      "unknown": {
-        "type": "int",
-        "example": "1"
-      },
-      "ignored": {
-        "type": "int",
-        "example": "1"
-      },
-      "info": {
-        "type": "int",
-        "example": "1"
-      }
-    }
   },
   "compactionCompletedTokens": "Context compacted · {before} → {after} tokens",
   "@compactionCompletedTokens": {
@@ -2173,318 +2047,6 @@
         "example": "0"
       }
     }
-  },
-  "legacySourceNoAppDirectory": "No app directory",
-  "@legacySourceNoAppDirectory": {
-    "description": "Legacy app directory missing."
-  },
-  "legacySourceAppDirectoryFound": "App directory found",
-  "@legacySourceAppDirectoryFound": {
-    "description": "Legacy app directory available."
-  },
-  "legacySourceNoLocalStorage": "No legacy localStorage database",
-  "@legacySourceNoLocalStorage": {
-    "description": "Legacy localStorage database missing."
-  },
-  "legacySourceSQLiteUnavailable": "sqlite3 is unavailable",
-  "@legacySourceSQLiteUnavailable": {
-    "description": "Legacy localStorage dependency unavailable."
-  },
-  "legacySourceLocalStorageUnreadable": "Legacy localStorage could not be read",
-  "@legacySourceLocalStorageUnreadable": {
-    "description": "Legacy localStorage read failed."
-  },
-  "legacySourceNoScheduledTasks": "No legacy scheduled tasks",
-  "@legacySourceNoScheduledTasks": {
-    "description": "No legacy scheduled tasks available."
-  },
-  "legacySummaryWindowState": "Window state present",
-  "@legacySummaryWindowState": {
-    "description": "Legacy window state summary."
-  },
-  "legacySummaryVersion": "version {version}",
-  "@legacySummaryVersion": {
-    "description": "Legacy version summary.",
-    "placeholders": {
-      "version": {
-        "type": "String",
-        "example": "1.3.0"
-      }
-    }
-  },
-  "legacySummaryWindow": "Window {width} × {height}",
-  "@legacySummaryWindow": {
-    "description": "Legacy window dimensions.",
-    "placeholders": {
-      "width": {
-        "type": "int",
-        "example": "800"
-      },
-      "height": {
-        "type": "int",
-        "example": "600"
-      }
-    }
-  },
-  "legacySummaryPreferenceKeys": "{count, plural, one {# preference key} other {# preference keys}}",
-  "@legacySummaryPreferenceKeys": {
-    "description": "Legacy preference key count.",
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "example": "3"
-      }
-    }
-  },
-  "legacySummaryUndecodable": "{count, plural, one {# undecodable} other {# undecodable}}",
-  "@legacySummaryUndecodable": {
-    "description": "Undecodable preference count.",
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "example": "1"
-      }
-    }
-  },
-  "legacySummaryLatestDatabase": "latest of {count, plural, one {# database} other {# databases}}",
-  "@legacySummaryLatestDatabase": {
-    "description": "Duplicate legacy database count.",
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "example": "2"
-      }
-    }
-  },
-  "legacySummaryScheduledTasks": "{count, plural, one {# scheduled task found} other {# scheduled tasks found}} — not imported in P8 (P7 automations are plugin-owned)",
-  "@legacySummaryScheduledTasks": {
-    "description": "Legacy scheduled task count.",
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "example": "2"
-      }
-    }
-  },
-  "legacySummaryUndecodableValue": "Undecodable localStorage value",
-  "@legacySummaryUndecodableValue": {
-    "description": "Undecodable preference entry."
-  },
-  "legacySummaryServerPort": "Server port is managed by BYOP/Pi",
-  "@legacySummaryServerPort": {
-    "description": "Server-managed preference entry."
-  },
-  "legacySummaryUnknownPreference": "Unknown preference key",
-  "@legacySummaryUnknownPreference": {
-    "description": "Unknown preference entry."
-  },
-  "legacySummaryThemeLocalStorageWins": "Theme also exists in localStorage; localStorage wins",
-  "@legacySummaryThemeLocalStorageWins": {
-    "description": "Theme source conflict entry."
-  },
-  "legacySummaryDuplicateAppTheme": "Duplicate app-directory theme; first value wins",
-  "@legacySummaryDuplicateAppTheme": {
-    "description": "Duplicate theme entry."
-  },
-  "legacySummaryDuplicateLocalValue": "Duplicate value in localStorage; localStorage wins",
-  "@legacySummaryDuplicateLocalValue": {
-    "description": "Duplicate localStorage entry."
-  },
-  "legacySummaryUnsupportedTheme": "Unsupported theme value kept as legacy",
-  "@legacySummaryUnsupportedTheme": {
-    "description": "Unsupported theme entry."
-  },
-  "legacySummaryWorkspaceValueUnknown": "Workspace value is unrecognized",
-  "@legacySummaryWorkspaceValueUnknown": {
-    "description": "Unknown workspace entry."
-  },
-  "legacySummaryWorkspacePathUnknown": "Workspace path is unrecognized",
-  "@legacySummaryWorkspacePathUnknown": {
-    "description": "Unknown workspace path entry."
-  },
-  "legacySummaryWorkspaceMissing": "Workspace folder is missing",
-  "@legacySummaryWorkspaceMissing": {
-    "description": "Missing workspace entry."
-  },
-  "legacySummaryWorkspaceSessionDuplicate": "Workspace session also exists in last-open map",
-  "@legacySummaryWorkspaceSessionDuplicate": {
-    "description": "Duplicate workspace session entry."
-  },
-  "legacySummaryNoWorkspaceFields": "No workspace fields",
-  "@legacySummaryNoWorkspaceFields": {
-    "description": "Workspace fields missing."
-  },
-  "legacySummaryWorkspaceSessionUnknown": "Workspace session reference is unrecognized",
-  "@legacySummaryWorkspaceSessionUnknown": {
-    "description": "Unknown workspace session entry."
-  },
-  "legacySummaryRightPanelKept": "Right panel preference kept as legacy",
-  "@legacySummaryRightPanelKept": {
-    "description": "Legacy right panel entry."
-  },
-  "legacySummaryFileTabsKept": "Open file tabs kept as legacy",
-  "@legacySummaryFileTabsKept": {
-    "description": "Legacy file tabs entry."
-  },
-  "legacySummaryActiveFileTabKept": "Active file tab kept as legacy",
-  "@legacySummaryActiveFileTabKept": {
-    "description": "Legacy active file tab entry."
-  },
-  "legacySummaryWorkspaceSessionKept": "Workspace session reference kept as legacy",
-  "@legacySummaryWorkspaceSessionKept": {
-    "description": "Legacy workspace session entry."
-  },
-  "legacySummaryWorkspaceFieldKept": "Workspace field kept as legacy",
-  "@legacySummaryWorkspaceFieldKept": {
-    "description": "Legacy workspace field entry."
-  },
-  "legacySummaryLastSessionMapUnknown": "Last-session map is unrecognized",
-  "@legacySummaryLastSessionMapUnknown": {
-    "description": "Unknown last-session entry."
-  },
-  "legacySummaryNoSavedSessions": "No saved sessions",
-  "@legacySummaryNoSavedSessions": {
-    "description": "No saved session entry."
-  },
-  "legacySummaryDraftMapUnknown": "Draft map is unrecognized",
-  "@legacySummaryDraftMapUnknown": {
-    "description": "Unknown draft map entry."
-  },
-  "legacySummaryNoDrafts": "No drafts",
-  "@legacySummaryNoDrafts": {
-    "description": "No draft entry."
-  },
-  "legacySummaryDraftValueUnknown": "Unrecognized draft value",
-  "@legacySummaryDraftValueUnknown": {
-    "description": "Unknown draft value entry."
-  },
-  "legacySummaryKeptBodySize": "Kept as legacy value (BYOP body stays 14px)",
-  "@legacySummaryKeptBodySize": {
-    "description": "Legacy body size entry."
-  },
-  "legacySummaryWidthKept": "Width kept as legacy value",
-  "@legacySummaryWidthKept": {
-    "description": "Legacy width entry."
-  },
-  "legacySummaryPreferenceKept": "Preference kept as legacy value",
-  "@legacySummaryPreferenceKept": {
-    "description": "Legacy preference entry."
-  },
-  "legacySummaryTheme": "Theme: {theme}",
-  "@legacySummaryTheme": {
-    "description": "Legacy theme entry.",
-    "placeholders": {
-      "theme": {
-        "type": "String",
-        "example": "dark"
-      }
-    }
-  },
-  "legacySummaryWorkspace": "Workspace: {workspace}",
-  "@legacySummaryWorkspace": {
-    "description": "Legacy workspace entry.",
-    "placeholders": {
-      "workspace": {
-        "type": "String",
-        "example": "/tmp/workspace"
-      }
-    }
-  },
-  "legacySummaryWorkspaceSessionWorkspaceMissing": "Workspace session {session} · workspace missing",
-  "@legacySummaryWorkspaceSessionWorkspaceMissing": {
-    "description": "Legacy workspace session with missing workspace.",
-    "placeholders": {
-      "session": {
-        "type": "String",
-        "example": "abc"
-      }
-    }
-  },
-  "legacySummaryWorkspaceSessionMissing": "Workspace session {session} · session missing",
-  "@legacySummaryWorkspaceSessionMissing": {
-    "description": "Legacy workspace session missing.",
-    "placeholders": {
-      "session": {
-        "type": "String",
-        "example": "abc"
-      }
-    }
-  },
-  "legacySummaryWorkspaceSession": "Workspace session {session}",
-  "@legacySummaryWorkspaceSession": {
-    "description": "Legacy workspace session summary.",
-    "placeholders": {
-      "session": {
-        "type": "String",
-        "example": "abc"
-      }
-    }
-  },
-  "legacySummarySessionWorkspaceMissing": "{session} · workspace missing",
-  "@legacySummarySessionWorkspaceMissing": {
-    "description": "Legacy session with missing workspace.",
-    "placeholders": {
-      "session": {
-        "type": "String",
-        "example": "abc"
-      }
-    }
-  },
-  "legacySummarySessionMissing": "{session} · session missing",
-  "@legacySummarySessionMissing": {
-    "description": "Missing legacy session reference.",
-    "placeholders": {
-      "session": {
-        "type": "String",
-        "example": "abc"
-      }
-    }
-  },
-  "legacySummaryDraftCharacters": "Draft · {count, plural, one {# character} other {# characters}}",
-  "@legacySummaryDraftCharacters": {
-    "description": "Legacy draft length summary.",
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "example": "12"
-      }
-    }
-  },
-  "legacyTargetInfoOnly": "Info only",
-  "@legacyTargetInfoOnly": {
-    "description": "Migration target label."
-  },
-  "legacyTargetNotImported": "Not imported",
-  "@legacyTargetNotImported": {
-    "description": "Migration target label."
-  },
-  "legacyTargetIgnored": "Ignored",
-  "@legacyTargetIgnored": {
-    "description": "Migration target label."
-  },
-  "legacyTargetLegacy": "Legacy",
-  "@legacyTargetLegacy": {
-    "description": "Migration target label."
-  },
-  "legacyTargetTheme": "Theme",
-  "@legacyTargetTheme": {
-    "description": "Migration target label."
-  },
-  "legacyTargetWorkspace": "Workspace",
-  "@legacyTargetWorkspace": {
-    "description": "Migration target label."
-  },
-  "legacyTargetLastSession": "Last session",
-  "@legacyTargetLastSession": {
-    "description": "Migration target label."
-  },
-  "legacyTargetSessionLinks": "Session links",
-  "@legacyTargetSessionLinks": {
-    "description": "Migration target label."
-  },
-  "legacyTargetDrafts": "Drafts",
-  "@legacyTargetDrafts": {
-    "description": "Migration target label."
   },
   "legacyWarningLocalStorageRead": "Legacy localStorage could not be read.",
   "@legacyWarningLocalStorageRead": {

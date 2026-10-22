@@ -447,19 +447,6 @@ func TestP8LegacyConflictKeepsExistingValueAndConverges(t *testing.T) {
 	if entry.Status != legacyStatusConflict || entry.action == nil {
 		t.Fatalf("conflict entry = %#v", entry)
 	}
-	if got := entry.statusLabel(); got != "IMPORT AS CONFLICT COPY" {
-		t.Fatalf("conflict status label = %q", got)
-	}
-	direct := legacyPreviewEntry{
-		Status: legacyStatusConflict,
-		action: &legacyImportAction{
-			Kind: legacyActionLegacyValue, Key: "pi-sidebar-width",
-			Raw: json.RawMessage(`"360"`),
-		},
-	}
-	if got := direct.statusLabel(); got != "IMPORT CONFLICTING VALUE" {
-		t.Fatalf("direct conflict status label = %q", got)
-	}
 	if !scan.canImport || scan.importableCount != 1 {
 		t.Fatalf("conflict importability = %v/%d", scan.canImport, scan.importableCount)
 	}

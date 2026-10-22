@@ -56,40 +56,6 @@ type legacyPreviewEntry struct {
 	action  *legacyImportAction
 }
 
-func (entry legacyPreviewEntry) statusLabel() string {
-	if entry.Status != legacyStatusConflict || entry.action == nil {
-		switch entry.Status {
-		case legacyStatusNew:
-			return text("legacyStatusNew")
-		case legacyStatusSame:
-			return text("legacyStatusSame")
-		case legacyStatusConflict:
-			return text("legacyStatusConflict")
-		case legacyStatusKept:
-			return text("legacyStatusKept")
-		case legacyStatusLinked:
-			return text("legacyStatusLinked")
-		case legacyStatusMissing:
-			return text("legacyStatusMissing")
-		case legacyStatusInfo:
-			return text("legacyStatusInfo")
-		case legacyStatusIgnored:
-			return text("legacyStatusIgnored")
-		default:
-			return text("legacyStatusUnknown")
-		}
-	}
-	action := entry.action
-	if action.LegacyKey == "" {
-		return text("legacyImportConflictingValue")
-	}
-	if action.Kind == legacyActionLegacyValue &&
-		strings.HasSuffix(action.LegacyKey, ":conflict") {
-		return text("legacyImportConflictCopy")
-	}
-	return text("legacyImportConflictingValue")
-}
-
 type legacyImportActionKind string
 
 const (

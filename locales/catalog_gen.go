@@ -5012,46 +5012,32 @@ func (msgs Messages) SettingsVersion() string {
 	return Catalog.Format(msgs.locale, "settingsVersion", nil)
 }
 
-// SettingsModel says "Model"
+// SettingsShowPiDetails says "Show details"
 // in the language the app shows.
 //
-// Label for the current Pi model.
-func SettingsModel() string { return In(i18n.Locale()).SettingsModel() }
+// Action that expands raw Pi connection error details.
+func SettingsShowPiDetails() string { return In(i18n.Locale()).SettingsShowPiDetails() }
 
-// SettingsModel says "Model"
+// SettingsShowPiDetails says "Show details"
 // in the language of msgs.
 //
-// Label for the current Pi model.
-func (msgs Messages) SettingsModel() string {
-	return Catalog.Format(msgs.locale, "settingsModel", nil)
+// Action that expands raw Pi connection error details.
+func (msgs Messages) SettingsShowPiDetails() string {
+	return Catalog.Format(msgs.locale, "settingsShowPiDetails", nil)
 }
 
-// SettingsSession says "Session"
+// SettingsHidePiDetails says "Hide details"
 // in the language the app shows.
 //
-// Label for the current Pi session.
-func SettingsSession() string { return In(i18n.Locale()).SettingsSession() }
+// Action that collapses raw Pi connection error details.
+func SettingsHidePiDetails() string { return In(i18n.Locale()).SettingsHidePiDetails() }
 
-// SettingsSession says "Session"
+// SettingsHidePiDetails says "Hide details"
 // in the language of msgs.
 //
-// Label for the current Pi session.
-func (msgs Messages) SettingsSession() string {
-	return Catalog.Format(msgs.locale, "settingsSession", nil)
-}
-
-// SettingsRunState says "Run state"
-// in the language the app shows.
-//
-// Label for the current run state.
-func SettingsRunState() string { return In(i18n.Locale()).SettingsRunState() }
-
-// SettingsRunState says "Run state"
-// in the language of msgs.
-//
-// Label for the current run state.
-func (msgs Messages) SettingsRunState() string {
-	return Catalog.Format(msgs.locale, "settingsRunState", nil)
+// Action that collapses raw Pi connection error details.
+func (msgs Messages) SettingsHidePiDetails() string {
+	return Catalog.Format(msgs.locale, "settingsHidePiDetails", nil)
 }
 
 // SettingsPluginSettings says "PLUGIN SETTINGS"
@@ -5068,32 +5054,48 @@ func (msgs Messages) SettingsPluginSettings() string {
 	return Catalog.Format(msgs.locale, "settingsPluginSettings", nil)
 }
 
-// SettingsWorkbenchTitle says "Workbench preferences"
+// SettingsDiagnosticsTitle says "Diagnostics"
 // in the language the app shows.
 //
-// Workbench preferences card title.
-func SettingsWorkbenchTitle() string { return In(i18n.Locale()).SettingsWorkbenchTitle() }
+// Collapsible diagnostics card title.
+func SettingsDiagnosticsTitle() string { return In(i18n.Locale()).SettingsDiagnosticsTitle() }
 
-// SettingsWorkbenchTitle says "Workbench preferences"
+// SettingsDiagnosticsTitle says "Diagnostics"
 // in the language of msgs.
 //
-// Workbench preferences card title.
-func (msgs Messages) SettingsWorkbenchTitle() string {
-	return Catalog.Format(msgs.locale, "settingsWorkbenchTitle", nil)
+// Collapsible diagnostics card title.
+func (msgs Messages) SettingsDiagnosticsTitle() string {
+	return Catalog.Format(msgs.locale, "settingsDiagnosticsTitle", nil)
 }
 
-// SettingsWorkbenchDescription says "Layout, external Pi, and plugin platform status for this native workbench."
+// SettingsDiagnosticsDescription says "Runtime, plugin, and migration information for troubleshooting."
 // in the language the app shows.
 //
-// Workbench preferences card description.
-func SettingsWorkbenchDescription() string { return In(i18n.Locale()).SettingsWorkbenchDescription() }
+// Collapsible diagnostics card description.
+func SettingsDiagnosticsDescription() string {
+	return In(i18n.Locale()).SettingsDiagnosticsDescription()
+}
 
-// SettingsWorkbenchDescription says "Layout, external Pi, and plugin platform status for this native workbench."
+// SettingsDiagnosticsDescription says "Runtime, plugin, and migration information for troubleshooting."
 // in the language of msgs.
 //
-// Workbench preferences card description.
-func (msgs Messages) SettingsWorkbenchDescription() string {
-	return Catalog.Format(msgs.locale, "settingsWorkbenchDescription", nil)
+// Collapsible diagnostics card description.
+func (msgs Messages) SettingsDiagnosticsDescription() string {
+	return Catalog.Format(msgs.locale, "settingsDiagnosticsDescription", nil)
+}
+
+// SettingsDiagnosticsToggle says "Toggle diagnostics"
+// in the language the app shows.
+//
+// Accessible label for the diagnostics disclosure button.
+func SettingsDiagnosticsToggle() string { return In(i18n.Locale()).SettingsDiagnosticsToggle() }
+
+// SettingsDiagnosticsToggle says "Toggle diagnostics"
+// in the language of msgs.
+//
+// Accessible label for the diagnostics disclosure button.
+func (msgs Messages) SettingsDiagnosticsToggle() string {
+	return Catalog.Format(msgs.locale, "settingsDiagnosticsToggle", nil)
 }
 
 // SettingsNativeRuntime says "Native runtime"
@@ -6460,32 +6462,60 @@ func (msgs Messages) StatusClear() string {
 	return Catalog.Format(msgs.locale, "statusClear", nil)
 }
 
-// LegacyTitle says "Migrate from Pi Agent Desktop"
+// LegacyPromptDiscovered says "Legacy Pi Agent Desktop settings found."
 // in the language the app shows.
 //
-// Legacy migration card title.
-func LegacyTitle() string { return In(i18n.Locale()).LegacyTitle() }
+// One-time Chat prompt offering to import legacy settings.
+func LegacyPromptDiscovered() string { return In(i18n.Locale()).LegacyPromptDiscovered() }
 
-// LegacyTitle says "Migrate from Pi Agent Desktop"
+// LegacyPromptDiscovered says "Legacy Pi Agent Desktop settings found."
 // in the language of msgs.
 //
-// Legacy migration card title.
-func (msgs Messages) LegacyTitle() string {
-	return Catalog.Format(msgs.locale, "legacyTitle", nil)
+// One-time Chat prompt offering to import legacy settings.
+func (msgs Messages) LegacyPromptDiscovered() string {
+	return Catalog.Format(msgs.locale, "legacyPromptDiscovered", nil)
 }
 
-// LegacyDescription says "Read-only scan of the old desktop app. Nothing is deleted; Pi sessions are linked, not copied."
+// LegacyPromptDismiss says "Don't import"
 // in the language the app shows.
 //
-// Legacy migration card description.
-func LegacyDescription() string { return In(i18n.Locale()).LegacyDescription() }
+// Action that permanently dismisses the legacy migration prompt.
+func LegacyPromptDismiss() string { return In(i18n.Locale()).LegacyPromptDismiss() }
 
-// LegacyDescription says "Read-only scan of the old desktop app. Nothing is deleted; Pi sessions are linked, not copied."
+// LegacyPromptDismiss says "Don't import"
 // in the language of msgs.
 //
-// Legacy migration card description.
-func (msgs Messages) LegacyDescription() string {
-	return Catalog.Format(msgs.locale, "legacyDescription", nil)
+// Action that permanently dismisses the legacy migration prompt.
+func (msgs Messages) LegacyPromptDismiss() string {
+	return Catalog.Format(msgs.locale, "legacyPromptDismiss", nil)
+}
+
+// LegacyPromptDismissFailed says "Could not save your legacy migration choice."
+// in the language the app shows.
+//
+// Notice shown when the migration prompt preference cannot be saved.
+func LegacyPromptDismissFailed() string { return In(i18n.Locale()).LegacyPromptDismissFailed() }
+
+// LegacyPromptDismissFailed says "Could not save your legacy migration choice."
+// in the language of msgs.
+//
+// Notice shown when the migration prompt preference cannot be saved.
+func (msgs Messages) LegacyPromptDismissFailed() string {
+	return Catalog.Format(msgs.locale, "legacyPromptDismissFailed", nil)
+}
+
+// LegacyReimport says "Re-import legacy data"
+// in the language the app shows.
+//
+// Settings link that scans and imports legacy data again.
+func LegacyReimport() string { return In(i18n.Locale()).LegacyReimport() }
+
+// LegacyReimport says "Re-import legacy data"
+// in the language of msgs.
+//
+// Settings link that scans and imports legacy data again.
+func (msgs Messages) LegacyReimport() string {
+	return Catalog.Format(msgs.locale, "legacyReimport", nil)
 }
 
 // LegacyWorkspaceMissing says "saved workspace missing"
@@ -6500,20 +6530,6 @@ func LegacyWorkspaceMissing() string { return In(i18n.Locale()).LegacyWorkspaceM
 // Legacy workspace warning.
 func (msgs Messages) LegacyWorkspaceMissing() string {
 	return Catalog.Format(msgs.locale, "legacyWorkspaceMissing", nil)
-}
-
-// LegacyScan says "Scan"
-// in the language the app shows.
-//
-// Legacy scan action.
-func LegacyScan() string { return In(i18n.Locale()).LegacyScan() }
-
-// LegacyScan says "Scan"
-// in the language of msgs.
-//
-// Legacy scan action.
-func (msgs Messages) LegacyScan() string {
-	return Catalog.Format(msgs.locale, "legacyScan", nil)
 }
 
 // LegacyScanning says "Scanning…"
@@ -6626,276 +6642,6 @@ func LegacyImported() string { return In(i18n.Locale()).LegacyImported() }
 // Legacy import success notice.
 func (msgs Messages) LegacyImported() string {
 	return Catalog.Format(msgs.locale, "legacyImported", nil)
-}
-
-// LegacyUnknown says "Unknown"
-// in the language the app shows.
-//
-// Unknown legacy value.
-func LegacyUnknown() string { return In(i18n.Locale()).LegacyUnknown() }
-
-// LegacyUnknown says "Unknown"
-// in the language of msgs.
-//
-// Unknown legacy value.
-func (msgs Messages) LegacyUnknown() string {
-	return Catalog.Format(msgs.locale, "legacyUnknown", nil)
-}
-
-// LegacyNoPreferences says "No migratable legacy preferences were found."
-// in the language the app shows.
-//
-// Legacy empty state.
-func LegacyNoPreferences() string { return In(i18n.Locale()).LegacyNoPreferences() }
-
-// LegacyNoPreferences says "No migratable legacy preferences were found."
-// in the language of msgs.
-//
-// Legacy empty state.
-func (msgs Messages) LegacyNoPreferences() string {
-	return Catalog.Format(msgs.locale, "legacyNoPreferences", nil)
-}
-
-// LegacyStatusNew says "NEW"
-// in the language the app shows.
-//
-// Legacy new status.
-func LegacyStatusNew() string { return In(i18n.Locale()).LegacyStatusNew() }
-
-// LegacyStatusNew says "NEW"
-// in the language of msgs.
-//
-// Legacy new status.
-func (msgs Messages) LegacyStatusNew() string {
-	return Catalog.Format(msgs.locale, "legacyStatusNew", nil)
-}
-
-// LegacyStatusSame says "SAME"
-// in the language the app shows.
-//
-// Legacy same status.
-func LegacyStatusSame() string { return In(i18n.Locale()).LegacyStatusSame() }
-
-// LegacyStatusSame says "SAME"
-// in the language of msgs.
-//
-// Legacy same status.
-func (msgs Messages) LegacyStatusSame() string {
-	return Catalog.Format(msgs.locale, "legacyStatusSame", nil)
-}
-
-// LegacyStatusConflict says "CONFLICT"
-// in the language the app shows.
-//
-// Legacy conflict status.
-func LegacyStatusConflict() string { return In(i18n.Locale()).LegacyStatusConflict() }
-
-// LegacyStatusConflict says "CONFLICT"
-// in the language of msgs.
-//
-// Legacy conflict status.
-func (msgs Messages) LegacyStatusConflict() string {
-	return Catalog.Format(msgs.locale, "legacyStatusConflict", nil)
-}
-
-// LegacyStatusKept says "KEPT"
-// in the language the app shows.
-//
-// Legacy kept status.
-func LegacyStatusKept() string { return In(i18n.Locale()).LegacyStatusKept() }
-
-// LegacyStatusKept says "KEPT"
-// in the language of msgs.
-//
-// Legacy kept status.
-func (msgs Messages) LegacyStatusKept() string {
-	return Catalog.Format(msgs.locale, "legacyStatusKept", nil)
-}
-
-// LegacyStatusLinked says "LINKED"
-// in the language the app shows.
-//
-// Legacy linked status.
-func LegacyStatusLinked() string { return In(i18n.Locale()).LegacyStatusLinked() }
-
-// LegacyStatusLinked says "LINKED"
-// in the language of msgs.
-//
-// Legacy linked status.
-func (msgs Messages) LegacyStatusLinked() string {
-	return Catalog.Format(msgs.locale, "legacyStatusLinked", nil)
-}
-
-// LegacyStatusMissing says "MISSING"
-// in the language the app shows.
-//
-// Legacy missing status.
-func LegacyStatusMissing() string { return In(i18n.Locale()).LegacyStatusMissing() }
-
-// LegacyStatusMissing says "MISSING"
-// in the language of msgs.
-//
-// Legacy missing status.
-func (msgs Messages) LegacyStatusMissing() string {
-	return Catalog.Format(msgs.locale, "legacyStatusMissing", nil)
-}
-
-// LegacyStatusInfo says "INFO"
-// in the language the app shows.
-//
-// Legacy info status.
-func LegacyStatusInfo() string { return In(i18n.Locale()).LegacyStatusInfo() }
-
-// LegacyStatusInfo says "INFO"
-// in the language of msgs.
-//
-// Legacy info status.
-func (msgs Messages) LegacyStatusInfo() string {
-	return Catalog.Format(msgs.locale, "legacyStatusInfo", nil)
-}
-
-// LegacyStatusIgnored says "IGNORED"
-// in the language the app shows.
-//
-// Legacy ignored status.
-func LegacyStatusIgnored() string { return In(i18n.Locale()).LegacyStatusIgnored() }
-
-// LegacyStatusIgnored says "IGNORED"
-// in the language of msgs.
-//
-// Legacy ignored status.
-func (msgs Messages) LegacyStatusIgnored() string {
-	return Catalog.Format(msgs.locale, "legacyStatusIgnored", nil)
-}
-
-// LegacyStatusUnknown says "UNKNOWN"
-// in the language the app shows.
-//
-// Legacy unknown status.
-func LegacyStatusUnknown() string { return In(i18n.Locale()).LegacyStatusUnknown() }
-
-// LegacyStatusUnknown says "UNKNOWN"
-// in the language of msgs.
-//
-// Legacy unknown status.
-func (msgs Messages) LegacyStatusUnknown() string {
-	return Catalog.Format(msgs.locale, "legacyStatusUnknown", nil)
-}
-
-// LegacyImportConflictingValue says "IMPORT CONFLICTING VALUE"
-// in the language the app shows.
-//
-// Legacy import conflict status.
-func LegacyImportConflictingValue() string { return In(i18n.Locale()).LegacyImportConflictingValue() }
-
-// LegacyImportConflictingValue says "IMPORT CONFLICTING VALUE"
-// in the language of msgs.
-//
-// Legacy import conflict status.
-func (msgs Messages) LegacyImportConflictingValue() string {
-	return Catalog.Format(msgs.locale, "legacyImportConflictingValue", nil)
-}
-
-// LegacyImportConflictCopy says "IMPORT AS CONFLICT COPY"
-// in the language the app shows.
-//
-// Legacy import conflict-copy status.
-func LegacyImportConflictCopy() string { return In(i18n.Locale()).LegacyImportConflictCopy() }
-
-// LegacyImportConflictCopy says "IMPORT AS CONFLICT COPY"
-// in the language of msgs.
-//
-// Legacy import conflict-copy status.
-func (msgs Messages) LegacyImportConflictCopy() string {
-	return Catalog.Format(msgs.locale, "legacyImportConflictCopy", nil)
-}
-
-// LegacyFound says "FOUND"
-// in the language the app shows.
-//
-// Legacy source found.
-func LegacyFound() string { return In(i18n.Locale()).LegacyFound() }
-
-// LegacyFound says "FOUND"
-// in the language of msgs.
-//
-// Legacy source found.
-func (msgs Messages) LegacyFound() string {
-	return Catalog.Format(msgs.locale, "legacyFound", nil)
-}
-
-// LegacyUnavailable says "UNAVAILABLE"
-// in the language the app shows.
-//
-// Legacy source unavailable.
-func LegacyUnavailable() string { return In(i18n.Locale()).LegacyUnavailable() }
-
-// LegacyUnavailable says "UNAVAILABLE"
-// in the language of msgs.
-//
-// Legacy source unavailable.
-func (msgs Messages) LegacyUnavailable() string {
-	return Catalog.Format(msgs.locale, "legacyUnavailable", nil)
-}
-
-// LegacyNotFound says "NOT FOUND"
-// in the language the app shows.
-//
-// Legacy source missing.
-func LegacyNotFound() string { return In(i18n.Locale()).LegacyNotFound() }
-
-// LegacyNotFound says "NOT FOUND"
-// in the language of msgs.
-//
-// Legacy source missing.
-func (msgs Messages) LegacyNotFound() string {
-	return Catalog.Format(msgs.locale, "legacyNotFound", nil)
-}
-
-// LegacyLastImport says "Last import {time} · {counts}"
-// in the language the app shows.
-//
-// Legacy last import summary.
-func LegacyLastImport(time_ string, counts string) string {
-	return In(i18n.Locale()).LegacyLastImport(time_, counts)
-}
-
-// LegacyLastImport says "Last import {time} · {counts}"
-// in the language of msgs.
-//
-// Legacy last import summary.
-func (msgs Messages) LegacyLastImport(time_ string, counts string) string {
-	return Catalog.Format(msgs.locale, "legacyLastImport", map[string]any{"time": time_, "counts": counts})
-}
-
-// LegacyVersion says "LEGACY {version}"
-// in the language the app shows.
-//
-// Legacy version pill.
-func LegacyVersion(version string) string { return In(i18n.Locale()).LegacyVersion(version) }
-
-// LegacyVersion says "LEGACY {version}"
-// in the language of msgs.
-//
-// Legacy version pill.
-func (msgs Messages) LegacyVersion(version string) string {
-	return Catalog.Format(msgs.locale, "legacyVersion", map[string]any{"version": version})
-}
-
-// LegacyCountsSummary says "new {new} · same {same} · conflict {conflict} · kept {kept} · linked {linked} · missing {missing} · unknown {un…"
-// in the language the app shows.
-//
-// Legacy import counts.
-func LegacyCountsSummary(new int, same int, conflict int, kept int, linked int, missing int, unknown int, ignored int, info int) string {
-	return In(i18n.Locale()).LegacyCountsSummary(new, same, conflict, kept, linked, missing, unknown, ignored, info)
-}
-
-// LegacyCountsSummary says "new {new} · same {same} · conflict {conflict} · kept {kept} · linked {linked} · missing {missing} · unknown {un…"
-// in the language of msgs.
-//
-// Legacy import counts.
-func (msgs Messages) LegacyCountsSummary(new int, same int, conflict int, kept int, linked int, missing int, unknown int, ignored int, info int) string {
-	return Catalog.Format(msgs.locale, "legacyCountsSummary", map[string]any{"new": new, "same": same, "conflict": conflict, "kept": kept, "linked": linked, "missing": missing, "unknown": unknown, "ignored": ignored, "info": info})
 }
 
 // CompactionCompletedTokens says "Context compacted · {before} → {after} tokens"
@@ -7040,846 +6786,6 @@ func TasksPluginRegistryDetail(registered int, active int, contributions int, is
 // Task panel plugin registry detail.
 func (msgs Messages) TasksPluginRegistryDetail(registered int, active int, contributions int, issues int) string {
 	return Catalog.Format(msgs.locale, "tasksPluginRegistryDetail", map[string]any{"registered": registered, "active": active, "contributions": contributions, "issues": issues})
-}
-
-// LegacySourceNoAppDirectory says "No app directory"
-// in the language the app shows.
-//
-// Legacy app directory missing.
-func LegacySourceNoAppDirectory() string { return In(i18n.Locale()).LegacySourceNoAppDirectory() }
-
-// LegacySourceNoAppDirectory says "No app directory"
-// in the language of msgs.
-//
-// Legacy app directory missing.
-func (msgs Messages) LegacySourceNoAppDirectory() string {
-	return Catalog.Format(msgs.locale, "legacySourceNoAppDirectory", nil)
-}
-
-// LegacySourceAppDirectoryFound says "App directory found"
-// in the language the app shows.
-//
-// Legacy app directory available.
-func LegacySourceAppDirectoryFound() string { return In(i18n.Locale()).LegacySourceAppDirectoryFound() }
-
-// LegacySourceAppDirectoryFound says "App directory found"
-// in the language of msgs.
-//
-// Legacy app directory available.
-func (msgs Messages) LegacySourceAppDirectoryFound() string {
-	return Catalog.Format(msgs.locale, "legacySourceAppDirectoryFound", nil)
-}
-
-// LegacySourceNoLocalStorage says "No legacy localStorage database"
-// in the language the app shows.
-//
-// Legacy localStorage database missing.
-func LegacySourceNoLocalStorage() string { return In(i18n.Locale()).LegacySourceNoLocalStorage() }
-
-// LegacySourceNoLocalStorage says "No legacy localStorage database"
-// in the language of msgs.
-//
-// Legacy localStorage database missing.
-func (msgs Messages) LegacySourceNoLocalStorage() string {
-	return Catalog.Format(msgs.locale, "legacySourceNoLocalStorage", nil)
-}
-
-// LegacySourceSQLiteUnavailable says "sqlite3 is unavailable"
-// in the language the app shows.
-//
-// Legacy localStorage dependency unavailable.
-func LegacySourceSQLiteUnavailable() string { return In(i18n.Locale()).LegacySourceSQLiteUnavailable() }
-
-// LegacySourceSQLiteUnavailable says "sqlite3 is unavailable"
-// in the language of msgs.
-//
-// Legacy localStorage dependency unavailable.
-func (msgs Messages) LegacySourceSQLiteUnavailable() string {
-	return Catalog.Format(msgs.locale, "legacySourceSQLiteUnavailable", nil)
-}
-
-// LegacySourceLocalStorageUnreadable says "Legacy localStorage could not be read"
-// in the language the app shows.
-//
-// Legacy localStorage read failed.
-func LegacySourceLocalStorageUnreadable() string {
-	return In(i18n.Locale()).LegacySourceLocalStorageUnreadable()
-}
-
-// LegacySourceLocalStorageUnreadable says "Legacy localStorage could not be read"
-// in the language of msgs.
-//
-// Legacy localStorage read failed.
-func (msgs Messages) LegacySourceLocalStorageUnreadable() string {
-	return Catalog.Format(msgs.locale, "legacySourceLocalStorageUnreadable", nil)
-}
-
-// LegacySourceNoScheduledTasks says "No legacy scheduled tasks"
-// in the language the app shows.
-//
-// No legacy scheduled tasks available.
-func LegacySourceNoScheduledTasks() string { return In(i18n.Locale()).LegacySourceNoScheduledTasks() }
-
-// LegacySourceNoScheduledTasks says "No legacy scheduled tasks"
-// in the language of msgs.
-//
-// No legacy scheduled tasks available.
-func (msgs Messages) LegacySourceNoScheduledTasks() string {
-	return Catalog.Format(msgs.locale, "legacySourceNoScheduledTasks", nil)
-}
-
-// LegacySummaryWindowState says "Window state present"
-// in the language the app shows.
-//
-// Legacy window state summary.
-func LegacySummaryWindowState() string { return In(i18n.Locale()).LegacySummaryWindowState() }
-
-// LegacySummaryWindowState says "Window state present"
-// in the language of msgs.
-//
-// Legacy window state summary.
-func (msgs Messages) LegacySummaryWindowState() string {
-	return Catalog.Format(msgs.locale, "legacySummaryWindowState", nil)
-}
-
-// LegacySummaryVersion says "version {version}"
-// in the language the app shows.
-//
-// Legacy version summary.
-func LegacySummaryVersion(version string) string {
-	return In(i18n.Locale()).LegacySummaryVersion(version)
-}
-
-// LegacySummaryVersion says "version {version}"
-// in the language of msgs.
-//
-// Legacy version summary.
-func (msgs Messages) LegacySummaryVersion(version string) string {
-	return Catalog.Format(msgs.locale, "legacySummaryVersion", map[string]any{"version": version})
-}
-
-// LegacySummaryWindow says "Window {width} × {height}"
-// in the language the app shows.
-//
-// Legacy window dimensions.
-func LegacySummaryWindow(width int, height int) string {
-	return In(i18n.Locale()).LegacySummaryWindow(width, height)
-}
-
-// LegacySummaryWindow says "Window {width} × {height}"
-// in the language of msgs.
-//
-// Legacy window dimensions.
-func (msgs Messages) LegacySummaryWindow(width int, height int) string {
-	return Catalog.Format(msgs.locale, "legacySummaryWindow", map[string]any{"width": width, "height": height})
-}
-
-// LegacySummaryPreferenceKeys says "{count, plural, one {# preference key} other {# preference keys}}"
-// in the language the app shows.
-//
-// Legacy preference key count.
-func LegacySummaryPreferenceKeys(count int) string {
-	return In(i18n.Locale()).LegacySummaryPreferenceKeys(count)
-}
-
-// LegacySummaryPreferenceKeys says "{count, plural, one {# preference key} other {# preference keys}}"
-// in the language of msgs.
-//
-// Legacy preference key count.
-func (msgs Messages) LegacySummaryPreferenceKeys(count int) string {
-	return Catalog.Format(msgs.locale, "legacySummaryPreferenceKeys", map[string]any{"count": count})
-}
-
-// LegacySummaryUndecodable says "{count, plural, one {# undecodable} other {# undecodable}}"
-// in the language the app shows.
-//
-// Undecodable preference count.
-func LegacySummaryUndecodable(count int) string {
-	return In(i18n.Locale()).LegacySummaryUndecodable(count)
-}
-
-// LegacySummaryUndecodable says "{count, plural, one {# undecodable} other {# undecodable}}"
-// in the language of msgs.
-//
-// Undecodable preference count.
-func (msgs Messages) LegacySummaryUndecodable(count int) string {
-	return Catalog.Format(msgs.locale, "legacySummaryUndecodable", map[string]any{"count": count})
-}
-
-// LegacySummaryLatestDatabase says "latest of {count, plural, one {# database} other {# databases}}"
-// in the language the app shows.
-//
-// Duplicate legacy database count.
-func LegacySummaryLatestDatabase(count int) string {
-	return In(i18n.Locale()).LegacySummaryLatestDatabase(count)
-}
-
-// LegacySummaryLatestDatabase says "latest of {count, plural, one {# database} other {# databases}}"
-// in the language of msgs.
-//
-// Duplicate legacy database count.
-func (msgs Messages) LegacySummaryLatestDatabase(count int) string {
-	return Catalog.Format(msgs.locale, "legacySummaryLatestDatabase", map[string]any{"count": count})
-}
-
-// LegacySummaryScheduledTasks says "{count, plural, one {# scheduled task found} other {# scheduled tasks found}} — not imported in P8 (P7 automations …"
-// in the language the app shows.
-//
-// Legacy scheduled task count.
-func LegacySummaryScheduledTasks(count int) string {
-	return In(i18n.Locale()).LegacySummaryScheduledTasks(count)
-}
-
-// LegacySummaryScheduledTasks says "{count, plural, one {# scheduled task found} other {# scheduled tasks found}} — not imported in P8 (P7 automations …"
-// in the language of msgs.
-//
-// Legacy scheduled task count.
-func (msgs Messages) LegacySummaryScheduledTasks(count int) string {
-	return Catalog.Format(msgs.locale, "legacySummaryScheduledTasks", map[string]any{"count": count})
-}
-
-// LegacySummaryUndecodableValue says "Undecodable localStorage value"
-// in the language the app shows.
-//
-// Undecodable preference entry.
-func LegacySummaryUndecodableValue() string { return In(i18n.Locale()).LegacySummaryUndecodableValue() }
-
-// LegacySummaryUndecodableValue says "Undecodable localStorage value"
-// in the language of msgs.
-//
-// Undecodable preference entry.
-func (msgs Messages) LegacySummaryUndecodableValue() string {
-	return Catalog.Format(msgs.locale, "legacySummaryUndecodableValue", nil)
-}
-
-// LegacySummaryServerPort says "Server port is managed by BYOP/Pi"
-// in the language the app shows.
-//
-// Server-managed preference entry.
-func LegacySummaryServerPort() string { return In(i18n.Locale()).LegacySummaryServerPort() }
-
-// LegacySummaryServerPort says "Server port is managed by BYOP/Pi"
-// in the language of msgs.
-//
-// Server-managed preference entry.
-func (msgs Messages) LegacySummaryServerPort() string {
-	return Catalog.Format(msgs.locale, "legacySummaryServerPort", nil)
-}
-
-// LegacySummaryUnknownPreference says "Unknown preference key"
-// in the language the app shows.
-//
-// Unknown preference entry.
-func LegacySummaryUnknownPreference() string {
-	return In(i18n.Locale()).LegacySummaryUnknownPreference()
-}
-
-// LegacySummaryUnknownPreference says "Unknown preference key"
-// in the language of msgs.
-//
-// Unknown preference entry.
-func (msgs Messages) LegacySummaryUnknownPreference() string {
-	return Catalog.Format(msgs.locale, "legacySummaryUnknownPreference", nil)
-}
-
-// LegacySummaryThemeLocalStorageWins says "Theme also exists in localStorage; localStorage wins"
-// in the language the app shows.
-//
-// Theme source conflict entry.
-func LegacySummaryThemeLocalStorageWins() string {
-	return In(i18n.Locale()).LegacySummaryThemeLocalStorageWins()
-}
-
-// LegacySummaryThemeLocalStorageWins says "Theme also exists in localStorage; localStorage wins"
-// in the language of msgs.
-//
-// Theme source conflict entry.
-func (msgs Messages) LegacySummaryThemeLocalStorageWins() string {
-	return Catalog.Format(msgs.locale, "legacySummaryThemeLocalStorageWins", nil)
-}
-
-// LegacySummaryDuplicateAppTheme says "Duplicate app-directory theme; first value wins"
-// in the language the app shows.
-//
-// Duplicate theme entry.
-func LegacySummaryDuplicateAppTheme() string {
-	return In(i18n.Locale()).LegacySummaryDuplicateAppTheme()
-}
-
-// LegacySummaryDuplicateAppTheme says "Duplicate app-directory theme; first value wins"
-// in the language of msgs.
-//
-// Duplicate theme entry.
-func (msgs Messages) LegacySummaryDuplicateAppTheme() string {
-	return Catalog.Format(msgs.locale, "legacySummaryDuplicateAppTheme", nil)
-}
-
-// LegacySummaryDuplicateLocalValue says "Duplicate value in localStorage; localStorage wins"
-// in the language the app shows.
-//
-// Duplicate localStorage entry.
-func LegacySummaryDuplicateLocalValue() string {
-	return In(i18n.Locale()).LegacySummaryDuplicateLocalValue()
-}
-
-// LegacySummaryDuplicateLocalValue says "Duplicate value in localStorage; localStorage wins"
-// in the language of msgs.
-//
-// Duplicate localStorage entry.
-func (msgs Messages) LegacySummaryDuplicateLocalValue() string {
-	return Catalog.Format(msgs.locale, "legacySummaryDuplicateLocalValue", nil)
-}
-
-// LegacySummaryUnsupportedTheme says "Unsupported theme value kept as legacy"
-// in the language the app shows.
-//
-// Unsupported theme entry.
-func LegacySummaryUnsupportedTheme() string { return In(i18n.Locale()).LegacySummaryUnsupportedTheme() }
-
-// LegacySummaryUnsupportedTheme says "Unsupported theme value kept as legacy"
-// in the language of msgs.
-//
-// Unsupported theme entry.
-func (msgs Messages) LegacySummaryUnsupportedTheme() string {
-	return Catalog.Format(msgs.locale, "legacySummaryUnsupportedTheme", nil)
-}
-
-// LegacySummaryWorkspaceValueUnknown says "Workspace value is unrecognized"
-// in the language the app shows.
-//
-// Unknown workspace entry.
-func LegacySummaryWorkspaceValueUnknown() string {
-	return In(i18n.Locale()).LegacySummaryWorkspaceValueUnknown()
-}
-
-// LegacySummaryWorkspaceValueUnknown says "Workspace value is unrecognized"
-// in the language of msgs.
-//
-// Unknown workspace entry.
-func (msgs Messages) LegacySummaryWorkspaceValueUnknown() string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspaceValueUnknown", nil)
-}
-
-// LegacySummaryWorkspacePathUnknown says "Workspace path is unrecognized"
-// in the language the app shows.
-//
-// Unknown workspace path entry.
-func LegacySummaryWorkspacePathUnknown() string {
-	return In(i18n.Locale()).LegacySummaryWorkspacePathUnknown()
-}
-
-// LegacySummaryWorkspacePathUnknown says "Workspace path is unrecognized"
-// in the language of msgs.
-//
-// Unknown workspace path entry.
-func (msgs Messages) LegacySummaryWorkspacePathUnknown() string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspacePathUnknown", nil)
-}
-
-// LegacySummaryWorkspaceMissing says "Workspace folder is missing"
-// in the language the app shows.
-//
-// Missing workspace entry.
-func LegacySummaryWorkspaceMissing() string { return In(i18n.Locale()).LegacySummaryWorkspaceMissing() }
-
-// LegacySummaryWorkspaceMissing says "Workspace folder is missing"
-// in the language of msgs.
-//
-// Missing workspace entry.
-func (msgs Messages) LegacySummaryWorkspaceMissing() string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspaceMissing", nil)
-}
-
-// LegacySummaryWorkspaceSessionDuplicate says "Workspace session also exists in last-open map"
-// in the language the app shows.
-//
-// Duplicate workspace session entry.
-func LegacySummaryWorkspaceSessionDuplicate() string {
-	return In(i18n.Locale()).LegacySummaryWorkspaceSessionDuplicate()
-}
-
-// LegacySummaryWorkspaceSessionDuplicate says "Workspace session also exists in last-open map"
-// in the language of msgs.
-//
-// Duplicate workspace session entry.
-func (msgs Messages) LegacySummaryWorkspaceSessionDuplicate() string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspaceSessionDuplicate", nil)
-}
-
-// LegacySummaryNoWorkspaceFields says "No workspace fields"
-// in the language the app shows.
-//
-// Workspace fields missing.
-func LegacySummaryNoWorkspaceFields() string {
-	return In(i18n.Locale()).LegacySummaryNoWorkspaceFields()
-}
-
-// LegacySummaryNoWorkspaceFields says "No workspace fields"
-// in the language of msgs.
-//
-// Workspace fields missing.
-func (msgs Messages) LegacySummaryNoWorkspaceFields() string {
-	return Catalog.Format(msgs.locale, "legacySummaryNoWorkspaceFields", nil)
-}
-
-// LegacySummaryWorkspaceSessionUnknown says "Workspace session reference is unrecognized"
-// in the language the app shows.
-//
-// Unknown workspace session entry.
-func LegacySummaryWorkspaceSessionUnknown() string {
-	return In(i18n.Locale()).LegacySummaryWorkspaceSessionUnknown()
-}
-
-// LegacySummaryWorkspaceSessionUnknown says "Workspace session reference is unrecognized"
-// in the language of msgs.
-//
-// Unknown workspace session entry.
-func (msgs Messages) LegacySummaryWorkspaceSessionUnknown() string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspaceSessionUnknown", nil)
-}
-
-// LegacySummaryRightPanelKept says "Right panel preference kept as legacy"
-// in the language the app shows.
-//
-// Legacy right panel entry.
-func LegacySummaryRightPanelKept() string { return In(i18n.Locale()).LegacySummaryRightPanelKept() }
-
-// LegacySummaryRightPanelKept says "Right panel preference kept as legacy"
-// in the language of msgs.
-//
-// Legacy right panel entry.
-func (msgs Messages) LegacySummaryRightPanelKept() string {
-	return Catalog.Format(msgs.locale, "legacySummaryRightPanelKept", nil)
-}
-
-// LegacySummaryFileTabsKept says "Open file tabs kept as legacy"
-// in the language the app shows.
-//
-// Legacy file tabs entry.
-func LegacySummaryFileTabsKept() string { return In(i18n.Locale()).LegacySummaryFileTabsKept() }
-
-// LegacySummaryFileTabsKept says "Open file tabs kept as legacy"
-// in the language of msgs.
-//
-// Legacy file tabs entry.
-func (msgs Messages) LegacySummaryFileTabsKept() string {
-	return Catalog.Format(msgs.locale, "legacySummaryFileTabsKept", nil)
-}
-
-// LegacySummaryActiveFileTabKept says "Active file tab kept as legacy"
-// in the language the app shows.
-//
-// Legacy active file tab entry.
-func LegacySummaryActiveFileTabKept() string {
-	return In(i18n.Locale()).LegacySummaryActiveFileTabKept()
-}
-
-// LegacySummaryActiveFileTabKept says "Active file tab kept as legacy"
-// in the language of msgs.
-//
-// Legacy active file tab entry.
-func (msgs Messages) LegacySummaryActiveFileTabKept() string {
-	return Catalog.Format(msgs.locale, "legacySummaryActiveFileTabKept", nil)
-}
-
-// LegacySummaryWorkspaceSessionKept says "Workspace session reference kept as legacy"
-// in the language the app shows.
-//
-// Legacy workspace session entry.
-func LegacySummaryWorkspaceSessionKept() string {
-	return In(i18n.Locale()).LegacySummaryWorkspaceSessionKept()
-}
-
-// LegacySummaryWorkspaceSessionKept says "Workspace session reference kept as legacy"
-// in the language of msgs.
-//
-// Legacy workspace session entry.
-func (msgs Messages) LegacySummaryWorkspaceSessionKept() string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspaceSessionKept", nil)
-}
-
-// LegacySummaryWorkspaceFieldKept says "Workspace field kept as legacy"
-// in the language the app shows.
-//
-// Legacy workspace field entry.
-func LegacySummaryWorkspaceFieldKept() string {
-	return In(i18n.Locale()).LegacySummaryWorkspaceFieldKept()
-}
-
-// LegacySummaryWorkspaceFieldKept says "Workspace field kept as legacy"
-// in the language of msgs.
-//
-// Legacy workspace field entry.
-func (msgs Messages) LegacySummaryWorkspaceFieldKept() string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspaceFieldKept", nil)
-}
-
-// LegacySummaryLastSessionMapUnknown says "Last-session map is unrecognized"
-// in the language the app shows.
-//
-// Unknown last-session entry.
-func LegacySummaryLastSessionMapUnknown() string {
-	return In(i18n.Locale()).LegacySummaryLastSessionMapUnknown()
-}
-
-// LegacySummaryLastSessionMapUnknown says "Last-session map is unrecognized"
-// in the language of msgs.
-//
-// Unknown last-session entry.
-func (msgs Messages) LegacySummaryLastSessionMapUnknown() string {
-	return Catalog.Format(msgs.locale, "legacySummaryLastSessionMapUnknown", nil)
-}
-
-// LegacySummaryNoSavedSessions says "No saved sessions"
-// in the language the app shows.
-//
-// No saved session entry.
-func LegacySummaryNoSavedSessions() string { return In(i18n.Locale()).LegacySummaryNoSavedSessions() }
-
-// LegacySummaryNoSavedSessions says "No saved sessions"
-// in the language of msgs.
-//
-// No saved session entry.
-func (msgs Messages) LegacySummaryNoSavedSessions() string {
-	return Catalog.Format(msgs.locale, "legacySummaryNoSavedSessions", nil)
-}
-
-// LegacySummaryDraftMapUnknown says "Draft map is unrecognized"
-// in the language the app shows.
-//
-// Unknown draft map entry.
-func LegacySummaryDraftMapUnknown() string { return In(i18n.Locale()).LegacySummaryDraftMapUnknown() }
-
-// LegacySummaryDraftMapUnknown says "Draft map is unrecognized"
-// in the language of msgs.
-//
-// Unknown draft map entry.
-func (msgs Messages) LegacySummaryDraftMapUnknown() string {
-	return Catalog.Format(msgs.locale, "legacySummaryDraftMapUnknown", nil)
-}
-
-// LegacySummaryNoDrafts says "No drafts"
-// in the language the app shows.
-//
-// No draft entry.
-func LegacySummaryNoDrafts() string { return In(i18n.Locale()).LegacySummaryNoDrafts() }
-
-// LegacySummaryNoDrafts says "No drafts"
-// in the language of msgs.
-//
-// No draft entry.
-func (msgs Messages) LegacySummaryNoDrafts() string {
-	return Catalog.Format(msgs.locale, "legacySummaryNoDrafts", nil)
-}
-
-// LegacySummaryDraftValueUnknown says "Unrecognized draft value"
-// in the language the app shows.
-//
-// Unknown draft value entry.
-func LegacySummaryDraftValueUnknown() string {
-	return In(i18n.Locale()).LegacySummaryDraftValueUnknown()
-}
-
-// LegacySummaryDraftValueUnknown says "Unrecognized draft value"
-// in the language of msgs.
-//
-// Unknown draft value entry.
-func (msgs Messages) LegacySummaryDraftValueUnknown() string {
-	return Catalog.Format(msgs.locale, "legacySummaryDraftValueUnknown", nil)
-}
-
-// LegacySummaryKeptBodySize says "Kept as legacy value (BYOP body stays 14px)"
-// in the language the app shows.
-//
-// Legacy body size entry.
-func LegacySummaryKeptBodySize() string { return In(i18n.Locale()).LegacySummaryKeptBodySize() }
-
-// LegacySummaryKeptBodySize says "Kept as legacy value (BYOP body stays 14px)"
-// in the language of msgs.
-//
-// Legacy body size entry.
-func (msgs Messages) LegacySummaryKeptBodySize() string {
-	return Catalog.Format(msgs.locale, "legacySummaryKeptBodySize", nil)
-}
-
-// LegacySummaryWidthKept says "Width kept as legacy value"
-// in the language the app shows.
-//
-// Legacy width entry.
-func LegacySummaryWidthKept() string { return In(i18n.Locale()).LegacySummaryWidthKept() }
-
-// LegacySummaryWidthKept says "Width kept as legacy value"
-// in the language of msgs.
-//
-// Legacy width entry.
-func (msgs Messages) LegacySummaryWidthKept() string {
-	return Catalog.Format(msgs.locale, "legacySummaryWidthKept", nil)
-}
-
-// LegacySummaryPreferenceKept says "Preference kept as legacy value"
-// in the language the app shows.
-//
-// Legacy preference entry.
-func LegacySummaryPreferenceKept() string { return In(i18n.Locale()).LegacySummaryPreferenceKept() }
-
-// LegacySummaryPreferenceKept says "Preference kept as legacy value"
-// in the language of msgs.
-//
-// Legacy preference entry.
-func (msgs Messages) LegacySummaryPreferenceKept() string {
-	return Catalog.Format(msgs.locale, "legacySummaryPreferenceKept", nil)
-}
-
-// LegacySummaryTheme says "Theme: {theme}"
-// in the language the app shows.
-//
-// Legacy theme entry.
-func LegacySummaryTheme(theme string) string { return In(i18n.Locale()).LegacySummaryTheme(theme) }
-
-// LegacySummaryTheme says "Theme: {theme}"
-// in the language of msgs.
-//
-// Legacy theme entry.
-func (msgs Messages) LegacySummaryTheme(theme string) string {
-	return Catalog.Format(msgs.locale, "legacySummaryTheme", map[string]any{"theme": theme})
-}
-
-// LegacySummaryWorkspace says "Workspace: {workspace}"
-// in the language the app shows.
-//
-// Legacy workspace entry.
-func LegacySummaryWorkspace(workspace string) string {
-	return In(i18n.Locale()).LegacySummaryWorkspace(workspace)
-}
-
-// LegacySummaryWorkspace says "Workspace: {workspace}"
-// in the language of msgs.
-//
-// Legacy workspace entry.
-func (msgs Messages) LegacySummaryWorkspace(workspace string) string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspace", map[string]any{"workspace": workspace})
-}
-
-// LegacySummaryWorkspaceSessionWorkspaceMissing says "Workspace session {session} · workspace missing"
-// in the language the app shows.
-//
-// Legacy workspace session with missing workspace.
-func LegacySummaryWorkspaceSessionWorkspaceMissing(session string) string {
-	return In(i18n.Locale()).LegacySummaryWorkspaceSessionWorkspaceMissing(session)
-}
-
-// LegacySummaryWorkspaceSessionWorkspaceMissing says "Workspace session {session} · workspace missing"
-// in the language of msgs.
-//
-// Legacy workspace session with missing workspace.
-func (msgs Messages) LegacySummaryWorkspaceSessionWorkspaceMissing(session string) string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspaceSessionWorkspaceMissing", map[string]any{"session": session})
-}
-
-// LegacySummaryWorkspaceSessionMissing says "Workspace session {session} · session missing"
-// in the language the app shows.
-//
-// Legacy workspace session missing.
-func LegacySummaryWorkspaceSessionMissing(session string) string {
-	return In(i18n.Locale()).LegacySummaryWorkspaceSessionMissing(session)
-}
-
-// LegacySummaryWorkspaceSessionMissing says "Workspace session {session} · session missing"
-// in the language of msgs.
-//
-// Legacy workspace session missing.
-func (msgs Messages) LegacySummaryWorkspaceSessionMissing(session string) string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspaceSessionMissing", map[string]any{"session": session})
-}
-
-// LegacySummaryWorkspaceSession says "Workspace session {session}"
-// in the language the app shows.
-//
-// Legacy workspace session summary.
-func LegacySummaryWorkspaceSession(session string) string {
-	return In(i18n.Locale()).LegacySummaryWorkspaceSession(session)
-}
-
-// LegacySummaryWorkspaceSession says "Workspace session {session}"
-// in the language of msgs.
-//
-// Legacy workspace session summary.
-func (msgs Messages) LegacySummaryWorkspaceSession(session string) string {
-	return Catalog.Format(msgs.locale, "legacySummaryWorkspaceSession", map[string]any{"session": session})
-}
-
-// LegacySummarySessionWorkspaceMissing says "{session} · workspace missing"
-// in the language the app shows.
-//
-// Legacy session with missing workspace.
-func LegacySummarySessionWorkspaceMissing(session string) string {
-	return In(i18n.Locale()).LegacySummarySessionWorkspaceMissing(session)
-}
-
-// LegacySummarySessionWorkspaceMissing says "{session} · workspace missing"
-// in the language of msgs.
-//
-// Legacy session with missing workspace.
-func (msgs Messages) LegacySummarySessionWorkspaceMissing(session string) string {
-	return Catalog.Format(msgs.locale, "legacySummarySessionWorkspaceMissing", map[string]any{"session": session})
-}
-
-// LegacySummarySessionMissing says "{session} · session missing"
-// in the language the app shows.
-//
-// Missing legacy session reference.
-func LegacySummarySessionMissing(session string) string {
-	return In(i18n.Locale()).LegacySummarySessionMissing(session)
-}
-
-// LegacySummarySessionMissing says "{session} · session missing"
-// in the language of msgs.
-//
-// Missing legacy session reference.
-func (msgs Messages) LegacySummarySessionMissing(session string) string {
-	return Catalog.Format(msgs.locale, "legacySummarySessionMissing", map[string]any{"session": session})
-}
-
-// LegacySummaryDraftCharacters says "Draft · {count, plural, one {# character} other {# characters}}"
-// in the language the app shows.
-//
-// Legacy draft length summary.
-func LegacySummaryDraftCharacters(count int) string {
-	return In(i18n.Locale()).LegacySummaryDraftCharacters(count)
-}
-
-// LegacySummaryDraftCharacters says "Draft · {count, plural, one {# character} other {# characters}}"
-// in the language of msgs.
-//
-// Legacy draft length summary.
-func (msgs Messages) LegacySummaryDraftCharacters(count int) string {
-	return Catalog.Format(msgs.locale, "legacySummaryDraftCharacters", map[string]any{"count": count})
-}
-
-// LegacyTargetInfoOnly says "Info only"
-// in the language the app shows.
-//
-// Migration target label.
-func LegacyTargetInfoOnly() string { return In(i18n.Locale()).LegacyTargetInfoOnly() }
-
-// LegacyTargetInfoOnly says "Info only"
-// in the language of msgs.
-//
-// Migration target label.
-func (msgs Messages) LegacyTargetInfoOnly() string {
-	return Catalog.Format(msgs.locale, "legacyTargetInfoOnly", nil)
-}
-
-// LegacyTargetNotImported says "Not imported"
-// in the language the app shows.
-//
-// Migration target label.
-func LegacyTargetNotImported() string { return In(i18n.Locale()).LegacyTargetNotImported() }
-
-// LegacyTargetNotImported says "Not imported"
-// in the language of msgs.
-//
-// Migration target label.
-func (msgs Messages) LegacyTargetNotImported() string {
-	return Catalog.Format(msgs.locale, "legacyTargetNotImported", nil)
-}
-
-// LegacyTargetIgnored says "Ignored"
-// in the language the app shows.
-//
-// Migration target label.
-func LegacyTargetIgnored() string { return In(i18n.Locale()).LegacyTargetIgnored() }
-
-// LegacyTargetIgnored says "Ignored"
-// in the language of msgs.
-//
-// Migration target label.
-func (msgs Messages) LegacyTargetIgnored() string {
-	return Catalog.Format(msgs.locale, "legacyTargetIgnored", nil)
-}
-
-// LegacyTargetLegacy says "Legacy"
-// in the language the app shows.
-//
-// Migration target label.
-func LegacyTargetLegacy() string { return In(i18n.Locale()).LegacyTargetLegacy() }
-
-// LegacyTargetLegacy says "Legacy"
-// in the language of msgs.
-//
-// Migration target label.
-func (msgs Messages) LegacyTargetLegacy() string {
-	return Catalog.Format(msgs.locale, "legacyTargetLegacy", nil)
-}
-
-// LegacyTargetTheme says "Theme"
-// in the language the app shows.
-//
-// Migration target label.
-func LegacyTargetTheme() string { return In(i18n.Locale()).LegacyTargetTheme() }
-
-// LegacyTargetTheme says "Theme"
-// in the language of msgs.
-//
-// Migration target label.
-func (msgs Messages) LegacyTargetTheme() string {
-	return Catalog.Format(msgs.locale, "legacyTargetTheme", nil)
-}
-
-// LegacyTargetWorkspace says "Workspace"
-// in the language the app shows.
-//
-// Migration target label.
-func LegacyTargetWorkspace() string { return In(i18n.Locale()).LegacyTargetWorkspace() }
-
-// LegacyTargetWorkspace says "Workspace"
-// in the language of msgs.
-//
-// Migration target label.
-func (msgs Messages) LegacyTargetWorkspace() string {
-	return Catalog.Format(msgs.locale, "legacyTargetWorkspace", nil)
-}
-
-// LegacyTargetLastSession says "Last session"
-// in the language the app shows.
-//
-// Migration target label.
-func LegacyTargetLastSession() string { return In(i18n.Locale()).LegacyTargetLastSession() }
-
-// LegacyTargetLastSession says "Last session"
-// in the language of msgs.
-//
-// Migration target label.
-func (msgs Messages) LegacyTargetLastSession() string {
-	return Catalog.Format(msgs.locale, "legacyTargetLastSession", nil)
-}
-
-// LegacyTargetSessionLinks says "Session links"
-// in the language the app shows.
-//
-// Migration target label.
-func LegacyTargetSessionLinks() string { return In(i18n.Locale()).LegacyTargetSessionLinks() }
-
-// LegacyTargetSessionLinks says "Session links"
-// in the language of msgs.
-//
-// Migration target label.
-func (msgs Messages) LegacyTargetSessionLinks() string {
-	return Catalog.Format(msgs.locale, "legacyTargetSessionLinks", nil)
-}
-
-// LegacyTargetDrafts says "Drafts"
-// in the language the app shows.
-//
-// Migration target label.
-func LegacyTargetDrafts() string { return In(i18n.Locale()).LegacyTargetDrafts() }
-
-// LegacyTargetDrafts says "Drafts"
-// in the language of msgs.
-//
-// Migration target label.
-func (msgs Messages) LegacyTargetDrafts() string {
-	return Catalog.Format(msgs.locale, "legacyTargetDrafts", nil)
 }
 
 // LegacyWarningLocalStorageRead says "Legacy localStorage could not be read."

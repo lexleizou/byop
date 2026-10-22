@@ -1093,12 +1093,15 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						ui.Text(c, locales.ChatFollowUpHint()).FontSize(fontSmall).TextColor(p.muted)
 					})
 
-				s.legacyMigrationSection(c, p)
-
 				settingsCard(c, p, locales.SettingsPiTitle(), locales.SettingsPiDescription(), func() {
 					ui.Row(c).Gap(9).AlignItems(ui.Center).Children(func() {
 						ui.Box(c).Size(8, 8).Radius(4).Background(s.piTone(p))
-						ui.Text(c, s.piConnectionLabel()).FontSize(fontSmall).TextColor(p.text).Grow(1)
+						statusLabel := s.piConnectionLabel()
+						if message := s.piConnectionErrorText(); message != "" {
+							statusLabel = message
+						}
+						ui.Text(c, statusLabel).FontSize(fontSmall).TextColor(p.text).
+							Grow(1).MinWidth(0).MaxLines(2).Tooltip(statusLabel)
 						label := locales.SettingsConnect()
 						if s.piConn == piConnected {
 							label = locales.SettingsReconnect()
@@ -1111,39 +1114,38 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						settingsValue(c, p, locales.SettingsCliPath(), s.piPathLabel())
 						settingsValue(c, p, locales.SettingsVersion(),
 							fallback(s.piVersion, locales.SettingsPendingHandshake()))
-						settingsValue(c, p, locales.SettingsModel(), s.modelSettingsLabel())
-						settingsValue(c, p, locales.SettingsSession(), s.sessionLabel())
-						settingsValue(c, p, locales.SettingsRunState(),
-							s.runLabel()+" · "+s.runDetail())
 					})
-					if s.piError != "" {
-						ui.Text(c, s.piError).FontSize(fontCaption).LineHeight(1.4).TextColor(p.danger)
+					if s.piConnectionErrorActive() {
+						label := text("settingsShowPiDetails")
+						if s.piErrorDetailsOpen {
+							label = text("settingsHidePiDetails")
+						}
+						button := ui.ButtonBase(c.Key("settings-pi-error-details")).Justify(ui.Start).
+							Shrink(0).Padding(0).Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
+						if button.Hovered() {
+							button.Background(p.surfaceHover)
+						}
+						button.Children(func() {
+							ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(p.muted)
+						})
+						if button.Clicked() {
+							s.piErrorDetailsOpen = !s.piErrorDetailsOpen
+						}
+						if s.piErrorDetailsOpen {
+							ui.Row(c).FillWidth().Padding(9, 10).Radius(7).
+								Background(p.background).Children(func() {
+								ui.Text(c, s.piError).Font("monospace").FontSize(fontCaption).
+									LineHeight(1.4).TextColor(p.danger).FillWidth().MinWidth(0)
+							})
+						}
 					}
 				})
+				s.legacyMigrationSettingsControl(c, p)
 
 				sectionLabel(c, p, locales.SettingsPluginSettings())
 				s.pluginSettingsSection(c, p)
 
-				settingsCard(c, p, locales.SettingsWorkbenchTitle(),
-					locales.SettingsWorkbenchDescription(), func() {
-						ui.Column(c).Gap(8).Children(func() {
-							settingsValue(c, p, locales.SettingsNativeRuntime(),
-								locales.SettingsNativeRuntimeValue())
-							settingsValue(c, p, locales.SettingsRpcTransport(),
-								locales.SettingsRpcTransportValue())
-							settingsValue(c, p, locales.SettingsPiOwnership(),
-								locales.SettingsPiOwnershipValue())
-							settingsValue(c, p, locales.SettingsPluginRegistry(),
-								textArgs("settingsPluginRegistryValue", map[string]any{
-									"registered":    registry.registeredCount(),
-									"contributions": registry.contributionCount(),
-								}))
-							settingsValue(c, p, locales.SettingsPluginRuntime(),
-								locales.SettingsPluginRuntimeValue())
-							settingsValue(c, p, locales.SettingsWebViewBoundary(),
-								locales.SettingsWebViewBoundaryValue())
-						})
-					})
+				s.diagnosticsSettingsCard(c, p, registry)
 
 				settingsCard(c, p, locales.SettingsAboutTitle(),
 					locales.SettingsAboutDescription(), func() {
@@ -1162,29 +1164,6 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 			})
 		})
 	})
-}
-
-func (s *appState) sessionLabel() string {
-	if s.piSessionID == "" {
-		return locales.SettingsNotAssigned()
-	}
-	if s.piSessionFile == "" {
-		return s.piSessionID + " · " + locales.SettingsEphemeral()
-	}
-	active := s.activePiSession()
-	if active.Title != "" {
-		return active.Title + " · " + s.piSessionID
-	}
-	return s.piSessionID
-}
-
-func (s *appState) modelSettingsLabel() string {
-	model := strings.TrimSpace(strings.Join(nonEmpty(s.piModelProvider, s.piModelName), " / "))
-	if model == "" {
-		model = fallback(s.piModel, locales.SettingsPiDefault())
-	}
-	level := fallback(s.piThinkingLevel, "off")
-	return model + " · " + locales.SettingsThinking(level)
 }
 
 func settingsCard(c *ui.Context, p palette, title, description string, body func()) {

@@ -1393,29 +1393,29 @@
   "@settingsVersion": {
     "description": "Label for the Pi CLI version."
   },
-  "settingsModel": "模型",
-  "@settingsModel": {
-    "description": "Label for the current Pi model."
+  "settingsShowPiDetails": "显示详情",
+  "@settingsShowPiDetails": {
+    "description": "Action that expands raw Pi connection error details."
   },
-  "settingsSession": "会话",
-  "@settingsSession": {
-    "description": "Label for the current Pi session."
-  },
-  "settingsRunState": "运行状态",
-  "@settingsRunState": {
-    "description": "Label for the current run state."
+  "settingsHidePiDetails": "隐藏详情",
+  "@settingsHidePiDetails": {
+    "description": "Action that collapses raw Pi connection error details."
   },
   "settingsPluginSettings": "插件设置",
   "@settingsPluginSettings": {
     "description": "Section label for plugin settings."
   },
-  "settingsWorkbenchTitle": "工作台偏好",
-  "@settingsWorkbenchTitle": {
-    "description": "Workbench preferences card title."
+  "settingsDiagnosticsTitle": "诊断",
+  "@settingsDiagnosticsTitle": {
+    "description": "Collapsible diagnostics card title."
   },
-  "settingsWorkbenchDescription": "此原生工作台的布局、外部 Pi 和插件平台状态。",
-  "@settingsWorkbenchDescription": {
-    "description": "Workbench preferences card description."
+  "settingsDiagnosticsDescription": "用于排查问题的运行时、插件和迁移信息。",
+  "@settingsDiagnosticsDescription": {
+    "description": "Collapsible diagnostics card description."
+  },
+  "settingsDiagnosticsToggle": "展开或收起诊断",
+  "@settingsDiagnosticsToggle": {
+    "description": "Accessible label for the diagnostics disclosure button."
   },
   "settingsNativeRuntime": "原生运行时",
   "@settingsNativeRuntime": {
@@ -1815,21 +1815,25 @@
   "@statusClear": {
     "description": "Task status clear."
   },
-  "legacyTitle": "从 Pi Agent Desktop 迁移",
-  "@legacyTitle": {
-    "description": "Legacy migration card title."
+  "legacyPromptDiscovered": "发现旧版 Pi Agent Desktop 设置。",
+  "@legacyPromptDiscovered": {
+    "description": "One-time Chat prompt offering to import legacy settings."
   },
-  "legacyDescription": "只读扫描旧桌面应用。不会删除任何内容；Pi 会话将建立链接，不会复制。",
-  "@legacyDescription": {
-    "description": "Legacy migration card description."
+  "legacyPromptDismiss": "暂不导入",
+  "@legacyPromptDismiss": {
+    "description": "Action that permanently dismisses the legacy migration prompt."
+  },
+  "legacyPromptDismissFailed": "无法保存旧版迁移选择。",
+  "@legacyPromptDismissFailed": {
+    "description": "Notice shown when the migration prompt preference cannot be saved."
+  },
+  "legacyReimport": "重新导入旧版数据",
+  "@legacyReimport": {
+    "description": "Settings link that scans and imports legacy data again."
   },
   "legacyWorkspaceMissing": "已保存的工作区不存在",
   "@legacyWorkspaceMissing": {
     "description": "Legacy workspace warning."
-  },
-  "legacyScan": "扫描",
-  "@legacyScan": {
-    "description": "Legacy scan action."
   },
   "legacyScanning": "正在扫描…",
   "@legacyScanning": {
@@ -1862,82 +1866,6 @@
   "legacyImported": "旧版偏好已导入。",
   "@legacyImported": {
     "description": "Legacy import success notice."
-  },
-  "legacyUnknown": "未知",
-  "@legacyUnknown": {
-    "description": "Unknown legacy value."
-  },
-  "legacyNoPreferences": "未找到可迁移的旧版偏好设置。",
-  "@legacyNoPreferences": {
-    "description": "Legacy empty state."
-  },
-  "legacyStatusNew": "新增",
-  "@legacyStatusNew": {
-    "description": "Legacy new status."
-  },
-  "legacyStatusSame": "相同",
-  "@legacyStatusSame": {
-    "description": "Legacy same status."
-  },
-  "legacyStatusConflict": "冲突",
-  "@legacyStatusConflict": {
-    "description": "Legacy conflict status."
-  },
-  "legacyStatusKept": "保留",
-  "@legacyStatusKept": {
-    "description": "Legacy kept status."
-  },
-  "legacyStatusLinked": "已链接",
-  "@legacyStatusLinked": {
-    "description": "Legacy linked status."
-  },
-  "legacyStatusMissing": "缺失",
-  "@legacyStatusMissing": {
-    "description": "Legacy missing status."
-  },
-  "legacyStatusInfo": "信息",
-  "@legacyStatusInfo": {
-    "description": "Legacy info status."
-  },
-  "legacyStatusIgnored": "已忽略",
-  "@legacyStatusIgnored": {
-    "description": "Legacy ignored status."
-  },
-  "legacyStatusUnknown": "未知",
-  "@legacyStatusUnknown": {
-    "description": "Legacy unknown status."
-  },
-  "legacyImportConflictingValue": "导入冲突值",
-  "@legacyImportConflictingValue": {
-    "description": "Legacy import conflict status."
-  },
-  "legacyImportConflictCopy": "作为冲突副本导入",
-  "@legacyImportConflictCopy": {
-    "description": "Legacy import conflict-copy status."
-  },
-  "legacyFound": "已找到",
-  "@legacyFound": {
-    "description": "Legacy source found."
-  },
-  "legacyUnavailable": "不可用",
-  "@legacyUnavailable": {
-    "description": "Legacy source unavailable."
-  },
-  "legacyNotFound": "未找到",
-  "@legacyNotFound": {
-    "description": "Legacy source missing."
-  },
-  "legacyLastImport": "上次导入 {time} · {counts}",
-  "@legacyLastImport": {
-    "description": "Legacy last import summary."
-  },
-  "legacyVersion": "旧版 {version}",
-  "@legacyVersion": {
-    "description": "Legacy version pill."
-  },
-  "legacyCountsSummary": "新增 {new} · 相同 {same} · 冲突 {conflict} · 保留 {kept} · 已链接 {linked} · 缺失 {missing} · 未知 {unknown} · 已忽略 {ignored} · 信息 {info}",
-  "@legacyCountsSummary": {
-    "description": "Legacy import counts."
   },
   "compactionCompletedTokens": "上下文已压缩 · {before} → {after} tokens",
   "@compactionCompletedTokens": {
@@ -1974,230 +1902,6 @@
   "tasksPluginRegistryDetail": "已注册 {registered} 个 · 活动 {active} 个 · 贡献 {contributions} 项 · 问题 {issues} 个",
   "@tasksPluginRegistryDetail": {
     "description": "Task panel plugin registry detail."
-  },
-  "legacySourceNoAppDirectory": "未找到应用目录",
-  "@legacySourceNoAppDirectory": {
-    "description": "Legacy app directory missing."
-  },
-  "legacySourceAppDirectoryFound": "已找到应用目录",
-  "@legacySourceAppDirectoryFound": {
-    "description": "Legacy app directory available."
-  },
-  "legacySourceNoLocalStorage": "未找到旧版 localStorage 数据库",
-  "@legacySourceNoLocalStorage": {
-    "description": "Legacy localStorage database missing."
-  },
-  "legacySourceSQLiteUnavailable": "sqlite3 不可用",
-  "@legacySourceSQLiteUnavailable": {
-    "description": "Legacy localStorage dependency unavailable."
-  },
-  "legacySourceLocalStorageUnreadable": "无法读取旧版 localStorage",
-  "@legacySourceLocalStorageUnreadable": {
-    "description": "Legacy localStorage read failed."
-  },
-  "legacySourceNoScheduledTasks": "没有旧版计划任务",
-  "@legacySourceNoScheduledTasks": {
-    "description": "No legacy scheduled tasks available."
-  },
-  "legacySummaryWindowState": "窗口状态已找到",
-  "@legacySummaryWindowState": {
-    "description": "Legacy window state summary."
-  },
-  "legacySummaryVersion": "版本 {version}",
-  "@legacySummaryVersion": {
-    "description": "Legacy version summary."
-  },
-  "legacySummaryWindow": "窗口 {width} × {height}",
-  "@legacySummaryWindow": {
-    "description": "Legacy window dimensions."
-  },
-  "legacySummaryPreferenceKeys": "{count} 个偏好键",
-  "@legacySummaryPreferenceKeys": {
-    "description": "Legacy preference key count."
-  },
-  "legacySummaryUndecodable": "{count} 个无法解码",
-  "@legacySummaryUndecodable": {
-    "description": "Undecodable preference count."
-  },
-  "legacySummaryLatestDatabase": "取最新的 {count} 个数据库",
-  "@legacySummaryLatestDatabase": {
-    "description": "Duplicate legacy database count."
-  },
-  "legacySummaryScheduledTasks": "找到 {count} 个计划任务 — P8 未导入（P7 自动化由插件管理）",
-  "@legacySummaryScheduledTasks": {
-    "description": "Legacy scheduled task count."
-  },
-  "legacySummaryUndecodableValue": "无法解码的 localStorage 值",
-  "@legacySummaryUndecodableValue": {
-    "description": "Undecodable preference entry."
-  },
-  "legacySummaryServerPort": "服务器端口由 BYOP/Pi 管理",
-  "@legacySummaryServerPort": {
-    "description": "Server-managed preference entry."
-  },
-  "legacySummaryUnknownPreference": "未知偏好键",
-  "@legacySummaryUnknownPreference": {
-    "description": "Unknown preference entry."
-  },
-  "legacySummaryThemeLocalStorageWins": "主题也存在于 localStorage；以 localStorage 为准",
-  "@legacySummaryThemeLocalStorageWins": {
-    "description": "Theme source conflict entry."
-  },
-  "legacySummaryDuplicateAppTheme": "应用目录中有重复主题；采用第一个值",
-  "@legacySummaryDuplicateAppTheme": {
-    "description": "Duplicate theme entry."
-  },
-  "legacySummaryDuplicateLocalValue": "localStorage 中有重复值；以 localStorage 为准",
-  "@legacySummaryDuplicateLocalValue": {
-    "description": "Duplicate localStorage entry."
-  },
-  "legacySummaryUnsupportedTheme": "不支持的主题值已保留为旧版数据",
-  "@legacySummaryUnsupportedTheme": {
-    "description": "Unsupported theme entry."
-  },
-  "legacySummaryWorkspaceValueUnknown": "无法识别工作区值",
-  "@legacySummaryWorkspaceValueUnknown": {
-    "description": "Unknown workspace entry."
-  },
-  "legacySummaryWorkspacePathUnknown": "无法识别工作区路径",
-  "@legacySummaryWorkspacePathUnknown": {
-    "description": "Unknown workspace path entry."
-  },
-  "legacySummaryWorkspaceMissing": "工作区文件夹不存在",
-  "@legacySummaryWorkspaceMissing": {
-    "description": "Missing workspace entry."
-  },
-  "legacySummaryWorkspaceSessionDuplicate": "工作区会话也存在于最近打开映射中",
-  "@legacySummaryWorkspaceSessionDuplicate": {
-    "description": "Duplicate workspace session entry."
-  },
-  "legacySummaryNoWorkspaceFields": "没有工作区字段",
-  "@legacySummaryNoWorkspaceFields": {
-    "description": "Workspace fields missing."
-  },
-  "legacySummaryWorkspaceSessionUnknown": "无法识别工作区会话引用",
-  "@legacySummaryWorkspaceSessionUnknown": {
-    "description": "Unknown workspace session entry."
-  },
-  "legacySummaryRightPanelKept": "右侧面板偏好已保留为旧版数据",
-  "@legacySummaryRightPanelKept": {
-    "description": "Legacy right panel entry."
-  },
-  "legacySummaryFileTabsKept": "打开的文件标签已保留为旧版数据",
-  "@legacySummaryFileTabsKept": {
-    "description": "Legacy file tabs entry."
-  },
-  "legacySummaryActiveFileTabKept": "活动文件标签已保留为旧版数据",
-  "@legacySummaryActiveFileTabKept": {
-    "description": "Legacy active file tab entry."
-  },
-  "legacySummaryWorkspaceSessionKept": "工作区会话引用已保留为旧版数据",
-  "@legacySummaryWorkspaceSessionKept": {
-    "description": "Legacy workspace session entry."
-  },
-  "legacySummaryWorkspaceFieldKept": "工作区字段已保留为旧版数据",
-  "@legacySummaryWorkspaceFieldKept": {
-    "description": "Legacy workspace field entry."
-  },
-  "legacySummaryLastSessionMapUnknown": "无法识别最近会话映射",
-  "@legacySummaryLastSessionMapUnknown": {
-    "description": "Unknown last-session entry."
-  },
-  "legacySummaryNoSavedSessions": "没有已保存会话",
-  "@legacySummaryNoSavedSessions": {
-    "description": "No saved session entry."
-  },
-  "legacySummaryDraftMapUnknown": "无法识别草稿映射",
-  "@legacySummaryDraftMapUnknown": {
-    "description": "Unknown draft map entry."
-  },
-  "legacySummaryNoDrafts": "没有草稿",
-  "@legacySummaryNoDrafts": {
-    "description": "No draft entry."
-  },
-  "legacySummaryDraftValueUnknown": "无法识别草稿值",
-  "@legacySummaryDraftValueUnknown": {
-    "description": "Unknown draft value entry."
-  },
-  "legacySummaryKeptBodySize": "已保留为旧版值（BYOP 正文保持 14px）",
-  "@legacySummaryKeptBodySize": {
-    "description": "Legacy body size entry."
-  },
-  "legacySummaryWidthKept": "宽度已保留为旧版值",
-  "@legacySummaryWidthKept": {
-    "description": "Legacy width entry."
-  },
-  "legacySummaryPreferenceKept": "偏好已保留为旧版值",
-  "@legacySummaryPreferenceKept": {
-    "description": "Legacy preference entry."
-  },
-  "legacySummaryTheme": "主题：{theme}",
-  "@legacySummaryTheme": {
-    "description": "Legacy theme entry."
-  },
-  "legacySummaryWorkspace": "工作区：{workspace}",
-  "@legacySummaryWorkspace": {
-    "description": "Legacy workspace entry."
-  },
-  "legacySummaryWorkspaceSessionWorkspaceMissing": "工作区会话 {session} · 工作区不存在",
-  "@legacySummaryWorkspaceSessionWorkspaceMissing": {
-    "description": "Legacy workspace session with missing workspace."
-  },
-  "legacySummaryWorkspaceSessionMissing": "工作区会话 {session} · 会话不存在",
-  "@legacySummaryWorkspaceSessionMissing": {
-    "description": "Legacy workspace session missing."
-  },
-  "legacySummaryWorkspaceSession": "工作区会话 {session}",
-  "@legacySummaryWorkspaceSession": {
-    "description": "Legacy workspace session summary."
-  },
-  "legacySummarySessionWorkspaceMissing": "{session} · 工作区不存在",
-  "@legacySummarySessionWorkspaceMissing": {
-    "description": "Legacy session with missing workspace."
-  },
-  "legacySummarySessionMissing": "{session} · 会话不存在",
-  "@legacySummarySessionMissing": {
-    "description": "Missing legacy session reference."
-  },
-  "legacySummaryDraftCharacters": "草稿 · {count} 个字符",
-  "@legacySummaryDraftCharacters": {
-    "description": "Legacy draft length summary."
-  },
-  "legacyTargetInfoOnly": "仅提供信息",
-  "@legacyTargetInfoOnly": {
-    "description": "Migration target label."
-  },
-  "legacyTargetNotImported": "不导入",
-  "@legacyTargetNotImported": {
-    "description": "Migration target label."
-  },
-  "legacyTargetIgnored": "已忽略",
-  "@legacyTargetIgnored": {
-    "description": "Migration target label."
-  },
-  "legacyTargetLegacy": "旧版",
-  "@legacyTargetLegacy": {
-    "description": "Migration target label."
-  },
-  "legacyTargetTheme": "主题",
-  "@legacyTargetTheme": {
-    "description": "Migration target label."
-  },
-  "legacyTargetWorkspace": "工作区",
-  "@legacyTargetWorkspace": {
-    "description": "Migration target label."
-  },
-  "legacyTargetLastSession": "最近会话",
-  "@legacyTargetLastSession": {
-    "description": "Migration target label."
-  },
-  "legacyTargetSessionLinks": "会话链接",
-  "@legacyTargetSessionLinks": {
-    "description": "Migration target label."
-  },
-  "legacyTargetDrafts": "草稿",
-  "@legacyTargetDrafts": {
-    "description": "Migration target label."
   },
   "legacyWarningLocalStorageRead": "无法读取旧版 localStorage。",
   "@legacyWarningLocalStorageRead": {

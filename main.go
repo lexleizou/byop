@@ -86,6 +86,7 @@ func main() {
 		state.window = win
 		state.setAppIcon(win)
 		win.OnClosed(state.shutdownPi)
+		state.scanLegacyMigration()
 		switch strings.ToLower(os.Getenv("BYOP_PI_CONNECT")) {
 		case "0", "false", "off":
 		default:
@@ -211,8 +212,8 @@ type appState struct {
 	legacyScan                legacyScan
 	legacyScanned             bool
 	legacyScanning            bool
-	legacyImport              legacyImportRecord
-	legacyImportSet           bool
+	legacyScanFailed          bool
+	diagnosticsOpen           bool
 	notice                    string
 	noticeActionLabel         string
 	noticeAction              func()
@@ -268,6 +269,7 @@ type appState struct {
 	thinkingCommitSeq       uint64
 	piError                 string
 	piErrorCode             string
+	piErrorDetailsOpen      bool
 	piStatusPopoverOpen     bool
 	piConnecting            bool
 	piEpoch                 uint64
@@ -411,10 +413,6 @@ func newAppState() *appState {
 	s.syncPluginSettingForms()
 	if sources, err := defaultLegacyMigrationSources(); err == nil {
 		s.legacySources = sources
-	}
-	if record, ok := latestLegacyImport(configDir); ok {
-		s.legacyImport = record
-		s.legacyImportSet = true
 	}
 	return s
 }
@@ -666,6 +664,7 @@ func (s *appState) persistedPreferences() byopPreferences {
 	persisted.FollowUpStyle = current.FollowUpStyle
 	persisted.RunningSendMode = current.RunningSendMode
 	persisted.Workspace = current.Workspace
+	persisted.LegacyMigrationPromptDismissed = current.LegacyMigrationPromptDismissed
 	persisted.LastSessionByWorkspace = cloneByopPreferences(current).LastSessionByWorkspace
 	persisted.SessionOrganization = cloneByopPreferences(current).SessionOrganization
 	persisted.Drafts = cloneByopPreferences(current).Drafts
@@ -1421,6 +1420,7 @@ func (s *appState) connectPi() {
 	s.clearPiHUD()
 	s.piError = ""
 	s.piErrorCode = ""
+	s.piErrorDetailsOpen = false
 	s.piEpoch++
 	s.sessionGen++
 	epoch := s.piEpoch
@@ -1429,6 +1429,7 @@ func (s *appState) connectPi() {
 		s.piConn = piConnectionErr
 		s.piErrorCode = classifyPiConnectionError(err)
 		s.piError = uiErrorText(err, text("errorPiResolveFailed"))
+		s.piErrorDetailsOpen = false
 		return
 	}
 
@@ -1455,6 +1456,7 @@ func (s *appState) connectPi() {
 				s.piConn = piConnectionErr
 				s.piErrorCode = classifyPiConnectionError(err)
 				s.piError = uiErrorText(err, text("errorWorkspaceFailed"))
+				s.piErrorDetailsOpen = false
 				s.clearPiConnectingNotice()
 			})
 			return
@@ -1471,6 +1473,7 @@ func (s *appState) connectPi() {
 				s.piConn = piConnectionErr
 				s.piErrorCode = classifyPiConnectionError(err)
 				s.piError = uiErrorText(err, text("errorPiConnectFailed"))
+				s.piErrorDetailsOpen = false
 				s.clearPiConnectingNotice()
 			})
 			return
@@ -1488,6 +1491,7 @@ func (s *appState) connectPi() {
 				s.piConn = piConnectionErr
 				s.piErrorCode = classifyPiConnectionError(err)
 				s.piError = uiErrorText(err, text("errorPiRPCFailed"))
+				s.piErrorDetailsOpen = false
 				s.clearPiConnectingNotice()
 			})
 			return
@@ -1518,6 +1522,7 @@ func (s *appState) connectPi() {
 			}
 			s.piError = ""
 			s.piErrorCode = ""
+			s.piErrorDetailsOpen = false
 			s.resetRuntimeDiagnostics()
 			if modelsErr != nil || levelsErr != nil {
 				s.notice = text("noticePiConnectedNoModels")
@@ -1560,6 +1565,7 @@ func (s *appState) reconnectPi() {
 	}
 	s.piConn = piDisconnected
 	s.piErrorCode = ""
+	s.piErrorDetailsOpen = false
 	s.piStatusPopoverOpen = false
 	s.piCwd = ""
 	s.piSessionFile = ""
@@ -2099,6 +2105,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.piConn = piDisconnected
 		s.piErrorCode = piErrorCodeExited
 		s.piError = uiErrorFromText(fallback(event.StderrTail, event.Error), text("errorPiDisconnected"))
+		s.piErrorDetailsOpen = false
 		s.piSessionFile = ""
 		s.piSessionID = ""
 		s.piSessionName = ""

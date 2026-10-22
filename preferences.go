@@ -16,21 +16,22 @@ import (
 const byopPreferencesVersion = 1
 
 type byopPreferences struct {
-	Version                int                                   `json:"version"`
-	Theme                  string                                `json:"theme,omitempty"`
-	Contrast               string                                `json:"contrast,omitempty"`
-	Motion                 string                                `json:"motion,omitempty"`
-	PanelAnimationMS       int                                   `json:"panelAnimationMs,omitempty"`
-	UILanguage             string                                `json:"uiLanguage,omitempty"`
-	FollowUpStyle          string                                `json:"followUpStyle,omitempty"`
-	RunningSendMode        string                                `json:"runningSendMode,omitempty"`
-	NavCollapsed           bool                                  `json:"navCollapsed,omitempty"`
-	TasksOpen              bool                                  `json:"tasksOpen,omitempty"`
-	Workspace              string                                `json:"workspace,omitempty"`
-	LastSessionByWorkspace map[string]string                     `json:"lastSessionByWorkspace,omitempty"`
-	SessionOrganization    map[string]map[string]sessionOrgEntry `json:"sessionOrganization,omitempty"`
-	Drafts                 map[string]legacyDraft                `json:"drafts,omitempty"`
-	Legacy                 map[string]legacyValue                `json:"legacy,omitempty"`
+	Version                        int                                   `json:"version"`
+	Theme                          string                                `json:"theme,omitempty"`
+	Contrast                       string                                `json:"contrast,omitempty"`
+	Motion                         string                                `json:"motion,omitempty"`
+	PanelAnimationMS               int                                   `json:"panelAnimationMs,omitempty"`
+	UILanguage                     string                                `json:"uiLanguage,omitempty"`
+	FollowUpStyle                  string                                `json:"followUpStyle,omitempty"`
+	RunningSendMode                string                                `json:"runningSendMode,omitempty"`
+	NavCollapsed                   bool                                  `json:"navCollapsed,omitempty"`
+	TasksOpen                      bool                                  `json:"tasksOpen,omitempty"`
+	Workspace                      string                                `json:"workspace,omitempty"`
+	LegacyMigrationPromptDismissed bool                                  `json:"legacyMigrationPromptDismissed,omitempty"`
+	LastSessionByWorkspace         map[string]string                     `json:"lastSessionByWorkspace,omitempty"`
+	SessionOrganization            map[string]map[string]sessionOrgEntry `json:"sessionOrganization,omitempty"`
+	Drafts                         map[string]legacyDraft                `json:"drafts,omitempty"`
+	Legacy                         map[string]legacyValue                `json:"legacy,omitempty"`
 }
 
 type legacyValue struct {
