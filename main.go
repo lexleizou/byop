@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/egoist/mygo"
@@ -95,6 +97,14 @@ const (
 	piConnecting    piConnectionState = "connecting"
 	piConnected     piConnectionState = "connected"
 	piConnectionErr piConnectionState = "error"
+)
+
+const (
+	piErrorCodeNotFound         = "errorPiNotFound"
+	piErrorCodeNotExecutable    = "errorPiNotExecutable"
+	piErrorCodeHandshakeTimeout = "errorPiHandshakeTimeout"
+	piErrorCodeExited           = "errorPiExited"
+	piErrorCodeUnknown          = "errorPiUnknown"
 )
 
 type runState string
@@ -229,6 +239,8 @@ type appState struct {
 	thinkingCommitGen       uint64
 	thinkingCommitSeq       uint64
 	piError                 string
+	piErrorCode             string
+	piStatusPopoverOpen     bool
 	piConnecting            bool
 	piEpoch                 uint64
 	run                     runState
@@ -820,6 +832,13 @@ func (s *appState) clearNoticeAction() {
 	s.noticeAction = nil
 }
 
+func (s *appState) clearPiConnectingNotice() {
+	if s.notice == text("noticePiConnecting") {
+		s.notice = ""
+		s.clearNoticeAction()
+	}
+}
+
 func (s *appState) setAppIcon(win *mygo.Window) {
 	if err := mygo.App.Dock.SetIcon(byopLogoPNG); err != nil {
 		log.Printf("set Dock icon: %v", err)
@@ -1322,14 +1341,17 @@ func (s *appState) connectPi() {
 	if s.piConnecting || s.pi != nil {
 		return
 	}
+	s.clearPiConnectingNotice()
+	s.piError = ""
+	s.piErrorCode = ""
 	s.piEpoch++
 	s.sessionGen++
 	epoch := s.piEpoch
 	path, err := resolvePiPath()
 	if err != nil {
 		s.piConn = piConnectionErr
+		s.piErrorCode = classifyPiConnectionError(err)
 		s.piError = uiErrorText(err, text("errorPiResolveFailed"))
-		s.notice = s.piError
 		return
 	}
 
@@ -1349,10 +1371,14 @@ func (s *appState) connectPi() {
 		cwd, err := piWorkspaceCwd(savedWorkspace)
 		if err != nil {
 			s.postUI(func() {
+				if epoch != s.piEpoch {
+					return
+				}
 				s.piConnecting = false
 				s.piConn = piConnectionErr
+				s.piErrorCode = classifyPiConnectionError(err)
 				s.piError = uiErrorText(err, text("errorWorkspaceFailed"))
-				s.notice = textArgs("noticeWorkspaceFailed", map[string]any{"error": s.piError})
+				s.clearPiConnectingNotice()
 			})
 			return
 		}
@@ -1361,10 +1387,14 @@ func (s *appState) connectPi() {
 		})
 		if err != nil {
 			s.postUI(func() {
+				if epoch != s.piEpoch {
+					return
+				}
 				s.piConnecting = false
 				s.piConn = piConnectionErr
+				s.piErrorCode = classifyPiConnectionError(err)
 				s.piError = uiErrorText(err, text("errorPiConnectFailed"))
-				s.notice = textArgs("noticePiConnectFailed", map[string]any{"error": s.piError})
+				s.clearPiConnectingNotice()
 			})
 			return
 		}
@@ -1374,10 +1404,14 @@ func (s *appState) connectPi() {
 		if err != nil {
 			client.Close()
 			s.postUI(func() {
+				if epoch != s.piEpoch {
+					return
+				}
 				s.piConnecting = false
 				s.piConn = piConnectionErr
+				s.piErrorCode = classifyPiConnectionError(err)
 				s.piError = uiErrorText(err, text("errorPiRPCFailed"))
-				s.notice = textArgs("noticePiRPCFailed", map[string]any{"error": s.piError})
+				s.clearPiConnectingNotice()
 			})
 			return
 		}
@@ -1388,6 +1422,10 @@ func (s *appState) connectPi() {
 		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
 		levelsCancel()
 		s.postUI(func() {
+			if epoch != s.piEpoch {
+				client.Close()
+				return
+			}
 			s.pi = client
 			s.piCwd = client.cwd
 			s.piConnecting = false
@@ -1401,6 +1439,7 @@ func (s *appState) connectPi() {
 				s.piThinkingLevels = levels
 			}
 			s.piError = ""
+			s.piErrorCode = ""
 			s.resetRuntimeDiagnostics()
 			if modelsErr != nil || levelsErr != nil {
 				s.notice = text("noticePiConnectedNoModels")
@@ -1440,6 +1479,8 @@ func (s *appState) reconnectPi() {
 		old.Close()
 	}
 	s.piConn = piDisconnected
+	s.piErrorCode = ""
+	s.piStatusPopoverOpen = false
 	s.piCwd = ""
 	s.piSessionFile = ""
 	s.piSessionID = ""
@@ -1531,7 +1572,7 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 	}
 	s.resetRuntimeDiagnostics()
 	s.composerDraft = ""
-	s.notice = ""
+	s.clearPiConnectingNotice()
 	s.piError = ""
 	s.run = runSubmitting
 	s.runID = requestID
@@ -1905,9 +1946,6 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			s.run = runCompleted
 			s.ensureAssistantFallback(text("assistantEmptyFallback"))
 			s.setAssistantStatus("Complete")
-			if s.notice == "" {
-				s.notice = text("noticePiFinished")
-			}
 			if strings.TrimSpace(reply) != "" {
 				s.startFollowUpSuggestion(prompt, reply)
 			}
@@ -1923,10 +1961,12 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.piSessionBusy = false
 		s.cancelThinkingCommit()
 		s.cancelThinkingPending()
+		s.clearPiConnectingNotice()
 		s.pi = nil
 		s.piCwd = ""
 		s.piConnecting = false
 		s.piConn = piDisconnected
+		s.piErrorCode = piErrorCodeExited
 		s.piError = uiErrorFromText(fallback(event.StderrTail, event.Error), text("errorPiDisconnected"))
 		s.piSessionFile = ""
 		s.piSessionID = ""
@@ -1943,12 +1983,24 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			s.markOpenTools(toolCallInterrupted)
 			s.ensureAssistantFallback(text("assistantExitedFallback"))
 			s.setAssistantStatus("Interrupted")
-			s.notice = text("noticePiProcessExited")
 		} else if s.closed.Load() {
 			return
-		} else {
-			s.notice = text("noticePiDisconnectedEvent")
 		}
+	}
+}
+
+func classifyPiConnectionError(err error) string {
+	switch {
+	case errors.Is(err, os.ErrNotExist), errors.Is(err, exec.ErrNotFound):
+		return piErrorCodeNotFound
+	case errors.Is(err, os.ErrPermission), errors.Is(err, syscall.ENOEXEC):
+		return piErrorCodeNotExecutable
+	case errors.Is(err, context.DeadlineExceeded):
+		return piErrorCodeHandshakeTimeout
+	case errors.Is(err, errPiProcessExited):
+		return piErrorCodeExited
+	default:
+		return piErrorCodeUnknown
 	}
 }
 

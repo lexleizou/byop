@@ -52,10 +52,6 @@
   "@titleToggleTaskPanel": {
     "description": "Accessible label for the task panel toggle."
   },
-  "titleReconnectPi": "Reconnect external Pi CLI",
-  "@titleReconnectPi": {
-    "description": "Tooltip for the Pi connection status."
-  },
   "titleDismissNotice": "Dismiss notice",
   "@titleDismissNotice": {
     "description": "Accessible label for closing the notice banner."
@@ -155,18 +151,6 @@
   "noticeSessionPreferenceSave": "Pi session changed, but its preference could not be saved.",
   "@noticeSessionPreferenceSave": {
     "description": "User-interface text for notice Session Preference Save."
-  },
-  "noticeWorkspaceFailed": "Pi workspace failed: {error}",
-  "@noticeWorkspaceFailed": {
-    "description": "User-interface text for notice Workspace Failed."
-  },
-  "noticePiConnectFailed": "Pi connection failed: {error}",
-  "@noticePiConnectFailed": {
-    "description": "User-interface text for notice Pi Connect Failed."
-  },
-  "noticePiRPCFailed": "Pi RPC handshake failed: {error}",
-  "@noticePiRPCFailed": {
-    "description": "User-interface text for notice Pi R P C Failed."
   },
   "noticePiConnectedNoModels": "External Pi CLI connected; model metadata was unavailable.",
   "@noticePiConnectedNoModels": {
@@ -269,21 +253,34 @@
   "@noticePiProtocolWarning": {
     "description": "User-interface text for notice Pi Protocol Warning."
   },
-  "noticePiProcessExited": "Pi process exited before the run completed.",
-  "@noticePiProcessExited": {
-    "description": "User-interface text for notice Pi Process Exited."
-  },
-  "noticePiDisconnectedEvent": "Pi CLI disconnected.",
-  "@noticePiDisconnectedEvent": {
-    "description": "User-interface text for notice Pi Disconnected Event."
-  },
-  "noticePiFinished": "Pi finished and is ready for another message.",
-  "@noticePiFinished": {
-    "description": "User-interface text for notice Pi Finished."
-  },
   "errorPiUnavailable": "Pi is unavailable.",
   "@errorPiUnavailable": {
     "description": "User-interface text for error Pi Unavailable."
+  },
+  "errorPiNotFound": "Pi CLI was not found.",
+  "@errorPiNotFound": {
+    "description": "Connection error when the Pi executable cannot be found."
+  },
+  "errorPiNotExecutable": "Pi CLI could not be started because the file is not executable.",
+  "@errorPiNotExecutable": {
+    "description": "Connection error when the Pi executable cannot be run."
+  },
+  "errorPiHandshakeTimeout": "Timed out while starting Pi CLI.",
+  "@errorPiHandshakeTimeout": {
+    "description": "Connection error when the Pi handshake exceeds its deadline."
+  },
+  "errorPiExited": "Pi CLI exited.",
+  "@errorPiExited": {
+    "description": "Connection error when the Pi process exits."
+  },
+  "errorPiUnknown": "Unknown Pi connection error: {error}",
+  "@errorPiUnknown": {
+    "description": "Fallback connection error with the original error.",
+    "placeholders": {
+      "error": {
+        "description": "Original Pi connection error."
+      }
+    }
   },
   "errorPiStopFailed": "Pi stop failed.",
   "@errorPiStopFailed": {
@@ -365,7 +362,7 @@
   "@piPathFromPATH": {
     "description": "User-interface text for pi Path From P A T H."
   },
-  "piStatusLabel": "Pi CLI · {status}",
+  "piStatusLabel": "Pi CLI status: {status}",
   "@piStatusLabel": {
     "description": "User-interface text for pi Status Label."
   },
@@ -1125,6 +1122,10 @@
   "@chatEmptyTitle": {
     "description": "Empty chat prompt."
   },
+  "chatEmptyHint": "Ask anything about your workspace.",
+  "@chatEmptyHint": {
+    "description": "Neutral hint shown on an empty chat."
+  },
   "chatBackToLatest": "Back to latest",
   "@chatBackToLatest": {
     "description": "Control that returns the conversation to the latest message."
@@ -1665,6 +1666,10 @@
   "@piConnected": {
     "description": "Pi connected status."
   },
+  "piCliDetailsTitle": "Pi CLI",
+  "@piCliDetailsTitle": {
+    "description": "Title of the Pi connection status popover."
+  },
   "piConnecting": "Pi connecting",
   "@piConnecting": {
     "description": "Pi connecting status."
@@ -1692,18 +1697,6 @@
   "piSecondaryClickToConnect": "Click to connect",
   "@piSecondaryClickToConnect": {
     "description": "Pi secondary disconnected prompt."
-  },
-  "piDiagnosticConnected": "Pi CLI connected. Ready for a session.",
-  "@piDiagnosticConnected": {
-    "description": "Empty chat diagnostic when connected."
-  },
-  "piDiagnosticConnecting": "Connecting to Pi CLI…",
-  "@piDiagnosticConnecting": {
-    "description": "Empty chat diagnostic while connecting."
-  },
-  "piDiagnosticDisconnected": "Pi CLI is not connected. Open Settings to connect.",
-  "@piDiagnosticDisconnected": {
-    "description": "Empty chat diagnostic when disconnected."
   },
   "errorUnknown": "unknown error",
   "@errorUnknown": {
@@ -2094,16 +2087,6 @@
       "version": {
         "type": "String",
         "example": "1.3.0"
-      }
-    }
-  },
-  "piDiagnosticError": "Pi connection failed: {error}",
-  "@piDiagnosticError": {
-    "description": "Chat diagnostic connection error.",
-    "placeholders": {
-      "error": {
-        "type": "String",
-        "example": "timeout"
       }
     }
   },

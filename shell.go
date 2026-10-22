@@ -42,7 +42,7 @@ func (s *appState) view(c *ui.Context) {
 
 	ui.Column(c).Fill().Background(p.background).Children(func() {
 		s.titleBar(c, p)
-		ui.Row(c).Grow(1).FillWidth().AlignItems(ui.Stretch).Children(func() {
+		ui.Row(c).Grow(1).FillWidth().MinHeight(0).AlignItems(ui.Stretch).Children(func() {
 			s.navigation(c, p)
 			s.main(c, p)
 			s.taskPanel(c, p)
@@ -146,7 +146,7 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 				ui.Text(c, text("navWorkspace")).FontSize(fontCaption).FontWeight(650).TextColor(p.muted).
 					Padding(2, 10, 8, 10)
 			}
-			ui.Column(c).Gap(3).Children(func() {
+			ui.Column(c).Grow(1).MinHeight(0).Gap(3).Children(func() {
 				for _, item := range navItems {
 					s.navButton(c, p, item)
 					if item.id == pageChat && !s.navCollapsed && s.chatCapablePage() {
@@ -167,12 +167,22 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 					}
 				}
 			})
-			ui.Spacer(c)
-			ui.Divider(c).MarginY(8)
-			s.navButton(c, p, navItem{pageSettings, "navSettings", "settings"})
-			ui.Spacer(c)
-			s.integrationStatus(c, p)
+			s.navigationFooter(c, p)
 		})
+}
+
+func (s *appState) navigationFooter(c *ui.Context, p palette) {
+	if s.navCollapsed {
+		ui.Column(c).FillWidth().Shrink(0).Gap(6).AlignItems(ui.Center).Children(func() {
+			s.integrationStatus(c, p)
+			s.settingsGearButton(c, p)
+		})
+		return
+	}
+	ui.Row(c).FillWidth().Shrink(0).Gap(6).AlignItems(ui.Center).Children(func() {
+		s.integrationStatus(c, p)
+		s.settingsGearButton(c, p)
+	})
 }
 
 func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigationItem) {
@@ -308,7 +318,7 @@ func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
 		}
 	}
 	groups := s.piSessionsGroups
-	ui.Column(c).Gap(2).FillWidth().Children(func() {
+	ui.Column(c).Grow(1).MinHeight(0).Gap(2).FillWidth().Children(func() {
 		defer func() {
 			if !s.draggingSessionClear {
 				return
@@ -340,7 +350,7 @@ func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
 		if len(s.piSessions) == 0 {
 			return
 		}
-		ui.Scroll(c).FillWidth().Gap(3).MaxHeight(18 * 44).Children(func() {
+		ui.Scroll(c).Grow(1).MinHeight(0).FillWidth().Gap(3).Children(func() {
 			dragging := s.draggingSessionKey != ""
 			draggedFromArchived := false
 			if dragging {
@@ -829,39 +839,98 @@ func relativeSessionTime(updated time.Time) string {
 }
 
 func (s *appState) integrationStatus(c *ui.Context, p palette) {
+	label := textArgs("piStatusLabel", map[string]any{"status": s.connectionStateLabel()})
+	var box ui.Element
 	if s.navCollapsed {
-		box := ui.ButtonBase(c.Key("pi-connection-icon")).Height(36).Width(36).Radius(8).Center().
-			Label(s.piConnectionLabel()).Tooltip(s.piConnectionLabel()).Cursor(ui.CursorPointer)
+		box = ui.ButtonBase(c.Key("pi-connection-icon")).Size(36, 36).Radius(8).Center().
+			Label(label).Tooltip(label).Cursor(ui.CursorPointer)
 		box.Children(func() {
 			ui.Row(c).Size(20, 20).Center().Children(func() {
 				ui.Box(c).Size(8, 8).Radius(4).Background(s.piTone(p))
 			})
 		})
-		if box.Clicked() && s.piConn != piConnected {
-			s.reconnectPi()
+	} else {
+		box = ui.ButtonBase(c.Key("pi-connection")).Grow(1).MinWidth(0).Height(36).
+			Padding(0, 8).Radius(8).AlignItems(ui.Center).Gap(7).
+			Label(label).Tooltip(label).Cursor(ui.CursorPointer)
+		if box.Hovered() {
+			box.Background(p.surfaceHover)
 		}
-		return
-	}
-	box := ui.ButtonBase(c.Key("pi-connection")).FillWidth().Column().AlignItems(ui.Start).
-		Gap(4).Padding(10, 8).Radius(8).Background(p.surface).
-		Label(s.piConnectionLabel()).Tooltip(text("titleReconnectPi")).Cursor(ui.CursorPointer)
-	if box.Hovered() {
-		box.Background(p.surfaceHover)
-	}
-	box.Children(func() {
-		ui.Row(c).Gap(7).AlignItems(ui.Center).Children(func() {
-			ui.Box(c).Size(7, 7).Radius(4).Background(s.piTone(p))
-			ui.Text(c, "Pi CLI").FontSize(fontSmall).FontWeight(600).TextColor(p.text)
+		box.Children(func() {
+			ui.Box(c).Size(8, 8).Radius(4).Background(s.piTone(p))
+			ui.Text(c, s.connectionStateLabel()).FontSize(fontSmall).FontWeight(600).
+				TextColor(p.muted).SingleLine()
 		})
-		ui.Text(c, s.piSecondaryLabel()).FontSize(fontCaption).TextColor(p.muted).SingleLine()
+	}
+	if box.Clicked() {
+		s.piStatusPopoverOpen = !s.piStatusPopoverOpen
+	}
+	ui.Popover(c, box, &s.piStatusPopoverOpen, func() {
+		s.piConnectionPopover(c, p)
 	})
-	if box.Clicked() && s.piConn != piConnected {
-		s.reconnectPi()
+}
+
+func (s *appState) piConnectionPopover(c *ui.Context, p palette) {
+	ui.Column(c).Width(280).Gap(8).Children(func() {
+		ui.Text(c, text("piCliDetailsTitle")).FontSize(fontBody).FontWeight(650).TextColor(p.text)
+		ui.Row(c).Gap(7).AlignItems(ui.Center).Children(func() {
+			ui.Box(c).Size(8, 8).Radius(4).Background(s.piTone(p))
+			ui.Text(c, s.connectionStateLabel()).FontSize(fontSmall).TextColor(p.muted)
+		})
+		field := func(label, value string) {
+			ui.Column(c).Gap(2).Children(func() {
+				ui.Text(c, label).FontSize(fontCaption).FontWeight(650).TextColor(p.muted)
+				ui.Text(c, value).Font("monospace").FontSize(fontSmall).TextColor(p.text).
+					SingleLine().Tooltip(value)
+			})
+		}
+		field(text("settingsCliPath"), s.piPathLabel())
+		if s.piVersion != "" {
+			field(text("settingsVersion"), s.piVersion)
+		}
+		if message := s.piConnectionErrorText(); message != "" {
+			ui.Text(c, message).FontSize(fontSmall).LineHeight(1.4).TextColor(p.danger)
+		}
+		if detail := strings.TrimSpace(s.piError); detail != "" && detail != s.piConnectionErrorText() {
+			ui.Text(c, detail).Font("monospace").FontSize(fontCaption).LineHeight(1.4).
+				TextColor(p.muted)
+		}
+		if s.piConn != piConnecting {
+			secondaryAction(c, p, "pi-popover-reconnect", text("settingsReconnect"), func() {
+				s.piStatusPopoverOpen = false
+				s.reconnectPi()
+			})
+		}
+	})
+}
+
+func (s *appState) settingsGearButton(c *ui.Context, p palette) {
+	label := text("navSettings")
+	selected := s.page == pageSettings
+	bg, fg := ui.Color{}, p.muted
+	if selected {
+		bg, fg = p.surfaceHover, p.accent
+	}
+	size := float32(32)
+	if s.navCollapsed {
+		size = 36
+	}
+	button := ui.ButtonBase(c.Key("nav-settings-gear")).Size(size, size).Radius(8).
+		Background(bg).Center().Label(label).Tooltip(label).Cursor(ui.CursorPointer)
+	if !selected && button.Hovered() {
+		button.Background(p.surfaceHover)
+	}
+	button.Children(func() {
+		ui.Icon(c, icon("settings")).Size(16, 16).TextColor(fg)
+	})
+	if button.Clicked() {
+		s.setPage(pageSettings)
 	}
 }
 
 func (s *appState) main(c *ui.Context, p palette) {
-	ui.Column(c).Grow(1).MinWidth(0).FillHeight().Background(p.background).Children(func() {
+	ui.Column(c).Grow(1).MinWidth(0).MinHeight(0).FillHeight().
+		Clip().Background(p.background).Children(func() {
 		if s.notice != "" {
 			s.noticeBanner(c, p)
 		}
@@ -1151,6 +1220,9 @@ func (s *appState) piCompactLabel() string {
 }
 
 func (s *appState) piSecondaryLabel() string {
+	if message := s.piConnectionErrorText(); message != "" {
+		return message
+	}
 	switch s.piConn {
 	case piConnected:
 		if s.piModel != "" {
@@ -1160,28 +1232,32 @@ func (s *appState) piSecondaryLabel() string {
 	case piConnecting:
 		return text("piSecondaryStarting")
 	case piConnectionErr:
-		return fallback(s.piError, text("piSecondaryConnectionFailed"))
+		return text("piSecondaryConnectionFailed")
 	default:
 		return text("piSecondaryClickToConnect")
 	}
 }
 
-func (s *appState) piDiagnostic() string {
-	switch s.piConn {
-	case piConnected:
-		return text("piDiagnosticConnected")
-	case piConnecting:
-		return text("piDiagnosticConnecting")
-	case piConnectionErr:
-		return textArgs("piDiagnosticError", map[string]any{
-			"error": fallback(s.piError, text("errorUnknown")),
-		})
+func (s *appState) piConnectionErrorActive() bool {
+	return s.piErrorCode != "" && (s.piConn == piConnectionErr || s.piConn == piDisconnected)
+}
+
+func (s *appState) piConnectionErrorText() string {
+	switch s.piErrorCode {
+	case "":
+		return ""
+	case piErrorCodeUnknown:
+		raw := fallback(strings.TrimSpace(s.piError), text("errorUnknown"))
+		return textArgs("errorPiUnknown", map[string]any{"error": raw})
 	default:
-		return text("piDiagnosticDisconnected")
+		return text(s.piErrorCode)
 	}
 }
 
 func (s *appState) connectionStateLabel() string {
+	if s.piConnectionErrorActive() {
+		return text("connectionError")
+	}
 	switch s.piConn {
 	case piConnected:
 		return text("connectionConnected")
@@ -1195,6 +1271,9 @@ func (s *appState) connectionStateLabel() string {
 }
 
 func (s *appState) piTone(p palette) ui.Color {
+	if s.piConnectionErrorActive() {
+		return p.danger
+	}
 	switch s.piConn {
 	case piConnected:
 		return p.success

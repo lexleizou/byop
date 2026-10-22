@@ -80,6 +80,64 @@ func TestP9cRunningSendKeyDecision(t *testing.T) {
 	}
 }
 
+func TestAssistantToolOnly(t *testing.T) {
+	tests := []struct {
+		name    string
+		message *chatMessage
+		want    bool
+	}{
+		{
+			name: "tool groups only",
+			message: &chatMessage{
+				role: chatAssistant,
+				blocks: []chatBlock{
+					{kind: chatBlockText, text: " \n"},
+					{kind: chatBlockTool},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "assistant text breaks grouping",
+			message: &chatMessage{
+				role: chatAssistant,
+				blocks: []chatBlock{
+					{kind: chatBlockTool},
+					{kind: chatBlockText, text: "answer"},
+				},
+			},
+		},
+		{
+			name:    "user message",
+			message: &chatMessage{role: chatUser},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := assistantToolOnly(test.message); got != test.want {
+				t.Fatalf("assistantToolOnly() = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestPromptToolGroupEndIncludesAdjacentToolOnlyMessages(t *testing.T) {
+	messages := []chatMessage{
+		{role: chatUser},
+		{role: chatAssistant, blocks: []chatBlock{{kind: chatBlockTool}}},
+		{role: chatAssistant, blocks: []chatBlock{{kind: chatBlockTool}}},
+		{role: chatAssistant, blocks: []chatBlock{{kind: chatBlockText, text: "answer"}}},
+		{role: chatUser},
+		{role: chatAssistant, blocks: []chatBlock{{kind: chatBlockText, text: "answer"}}},
+	}
+	if got, ok := promptToolGroupEnd(messages, 0); !ok || got != 2 {
+		t.Fatalf("prompt tool group end = %d, %t; want 2, true", got, ok)
+	}
+	if got, ok := promptToolGroupEnd(messages, 4); ok || got != 4 {
+		t.Fatalf("text answer should not group: end=%d, ok=%t", got, ok)
+	}
+}
+
 func TestP9cQueueDisplayItems(t *testing.T) {
 	items, overflow := queueDisplayItems(
 		[]string{"steer one", " ", "steer two"},

@@ -142,14 +142,31 @@ func (s *appState) runActive() bool {
 	return s.run == runSubmitting || s.run == runStreaming || s.run == runStopping
 }
 
-func (s *appState) chatPage(c *ui.Context, _ palette) {
+func (s *appState) chatPage(c *ui.Context, p palette) {
 	if s.runActive() {
 		c.After(time.Second)
 	}
 	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
+		if s.piConnectionErrorActive() {
+			s.piConnectionAlert(c, p)
+		}
 		chat.FloatingConversation(c, &s.chatView.layout, &s.chatView.conversation, text("chatBackToLatest"),
 			func(c *ui.Context) { s.transcript(c) },
 			func(c *ui.Context) { s.chatComposer(c) })
+	})
+}
+
+func (s *appState) piConnectionAlert(c *ui.Context, p palette) {
+	message := s.piConnectionErrorText()
+	ui.Row(c).FillWidth().Justify(ui.Center).MarginY(8).Children(func() {
+		ui.Row(c).FillWidth().MaxWidth(chat.ContentWidth).MinWidth(0).Padding(9, 12).Gap(10).Radius(8).
+			Border(1, p.danger.Alpha(.35)).Background(p.danger.Alpha(.08)).
+			AlignItems(ui.Center).Children(func() {
+			ui.Icon(c, icon("info")).Size(16, 16).Shrink(0).TextColor(p.danger)
+			ui.Text(c, message).FontSize(fontBody).LineHeight(1.4).TextColor(p.text).
+				Grow(1).MinWidth(0).MaxLines(2).Tooltip(message)
+			secondaryAction(c, p, "chat-pi-reconnect", text("settingsReconnect"), s.reconnectPi)
+		})
 	})
 }
 
@@ -166,6 +183,17 @@ func (s *appState) transcript(c *ui.Context) {
 	}
 	for i := 0; i < len(s.chat); i++ {
 		start := i
+		if end, grouped := promptToolGroupEnd(s.chat, i); grouped {
+			ui.Column(c).Key(fmt.Sprintf("prompt-tool-turn-group-%d", start)).
+				FillWidth().MinWidth(0).Gap(8).Children(func() {
+				s.turnView(c, start, &s.chat[start], nil, false)
+				for j := start + 1; j <= end; j++ {
+					s.turnView(c, j, nil, &s.chat[j], j == lastAssistant && s.runActive())
+				}
+			})
+			i = end
+			continue
+		}
 		message := &s.chat[i]
 		var prompt *chatMessage
 		if message.role == chatUser {
@@ -176,15 +204,63 @@ func (s *appState) transcript(c *ui.Context) {
 				message = &s.chat[i]
 			}
 		}
+		if prompt == nil && assistantToolOnly(message) {
+			end := i
+			for end+1 < len(s.chat) &&
+				s.chat[end+1].role == chatAssistant &&
+				assistantToolOnly(&s.chat[end+1]) {
+				end++
+			}
+			if end > i {
+				ui.Column(c).Key(fmt.Sprintf("tool-turn-group-%d", start)).
+					FillWidth().MinWidth(0).Gap(8).Children(func() {
+					for j := start; j <= end; j++ {
+						s.turnView(c, j, nil, &s.chat[j], j == lastAssistant && s.runActive())
+					}
+				})
+				i = end
+				continue
+			}
+		}
 		s.turnView(c, start, prompt, message, message != nil && i == lastAssistant && s.runActive())
 	}
+}
+
+func promptToolGroupEnd(messages []chatMessage, start int) (int, bool) {
+	if start < 0 || start+1 >= len(messages) || messages[start].role != chatUser ||
+		!assistantToolOnly(&messages[start+1]) {
+		return start, false
+	}
+	end := start + 1
+	for end+1 < len(messages) && assistantToolOnly(&messages[end+1]) {
+		end++
+	}
+	return end, true
+}
+
+func assistantToolOnly(message *chatMessage) bool {
+	if message == nil || message.role != chatAssistant {
+		return false
+	}
+	hasTool := false
+	for _, block := range message.blocks {
+		switch block.kind {
+		case chatBlockText:
+			if strings.TrimSpace(block.text) != "" {
+				return false
+			}
+		case chatBlockTool:
+			hasTool = true
+		}
+	}
+	return hasTool
 }
 
 func (s *appState) emptyTranscript(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).FillWidth().Padding(96, 0, 0, 0).AlignItems(ui.Center).Gap(10).Children(func() {
 		components.Text(c, text("chatEmptyTitle")).FontSize(fontTitle).FontWeight(600).TextColor(t.Text)
-		components.Text(c, s.piDiagnostic()).FontSize(13.5).TextColor(t.TextMuted)
+		components.Text(c, text("chatEmptyHint")).FontSize(13.5).TextColor(t.TextMuted)
 	})
 }
 

@@ -216,20 +216,6 @@ func (msgs Messages) TitleToggleTaskPanel() string {
 	return Catalog.Format(msgs.locale, "titleToggleTaskPanel", nil)
 }
 
-// TitleReconnectPi says "Reconnect external Pi CLI"
-// in the language the app shows.
-//
-// Tooltip for the Pi connection status.
-func TitleReconnectPi() string { return In(i18n.Locale()).TitleReconnectPi() }
-
-// TitleReconnectPi says "Reconnect external Pi CLI"
-// in the language of msgs.
-//
-// Tooltip for the Pi connection status.
-func (msgs Messages) TitleReconnectPi() string {
-	return Catalog.Format(msgs.locale, "titleReconnectPi", nil)
-}
-
 // TitleDismissNotice says "Dismiss notice"
 // in the language the app shows.
 //
@@ -600,52 +586,6 @@ func (msgs Messages) NoticeSessionPreferenceSave() string {
 	return Catalog.Format(msgs.locale, "noticeSessionPreferenceSave", nil)
 }
 
-// NoticeWorkspaceFailed says "Pi workspace failed: {error}"
-// in the language the app shows.
-//
-// User-interface text for notice Workspace Failed.
-func NoticeWorkspaceFailed(error string) string {
-	return In(i18n.Locale()).NoticeWorkspaceFailed(error)
-}
-
-// NoticeWorkspaceFailed says "Pi workspace failed: {error}"
-// in the language of msgs.
-//
-// User-interface text for notice Workspace Failed.
-func (msgs Messages) NoticeWorkspaceFailed(error string) string {
-	return Catalog.Format(msgs.locale, "noticeWorkspaceFailed", map[string]any{"error": error})
-}
-
-// NoticePiConnectFailed says "Pi connection failed: {error}"
-// in the language the app shows.
-//
-// User-interface text for notice Pi Connect Failed.
-func NoticePiConnectFailed(error string) string {
-	return In(i18n.Locale()).NoticePiConnectFailed(error)
-}
-
-// NoticePiConnectFailed says "Pi connection failed: {error}"
-// in the language of msgs.
-//
-// User-interface text for notice Pi Connect Failed.
-func (msgs Messages) NoticePiConnectFailed(error string) string {
-	return Catalog.Format(msgs.locale, "noticePiConnectFailed", map[string]any{"error": error})
-}
-
-// NoticePiRPCFailed says "Pi RPC handshake failed: {error}"
-// in the language the app shows.
-//
-// User-interface text for notice Pi R P C Failed.
-func NoticePiRPCFailed(error string) string { return In(i18n.Locale()).NoticePiRPCFailed(error) }
-
-// NoticePiRPCFailed says "Pi RPC handshake failed: {error}"
-// in the language of msgs.
-//
-// User-interface text for notice Pi R P C Failed.
-func (msgs Messages) NoticePiRPCFailed(error string) string {
-	return Catalog.Format(msgs.locale, "noticePiRPCFailed", map[string]any{"error": error})
-}
-
 // NoticePiConnectedNoModels says "External Pi CLI connected; model metadata was unavailable."
 // in the language the app shows.
 //
@@ -998,48 +938,6 @@ func (msgs Messages) NoticePiProtocolWarning(error string) string {
 	return Catalog.Format(msgs.locale, "noticePiProtocolWarning", map[string]any{"error": error})
 }
 
-// NoticePiProcessExited says "Pi process exited before the run completed."
-// in the language the app shows.
-//
-// User-interface text for notice Pi Process Exited.
-func NoticePiProcessExited() string { return In(i18n.Locale()).NoticePiProcessExited() }
-
-// NoticePiProcessExited says "Pi process exited before the run completed."
-// in the language of msgs.
-//
-// User-interface text for notice Pi Process Exited.
-func (msgs Messages) NoticePiProcessExited() string {
-	return Catalog.Format(msgs.locale, "noticePiProcessExited", nil)
-}
-
-// NoticePiDisconnectedEvent says "Pi CLI disconnected."
-// in the language the app shows.
-//
-// User-interface text for notice Pi Disconnected Event.
-func NoticePiDisconnectedEvent() string { return In(i18n.Locale()).NoticePiDisconnectedEvent() }
-
-// NoticePiDisconnectedEvent says "Pi CLI disconnected."
-// in the language of msgs.
-//
-// User-interface text for notice Pi Disconnected Event.
-func (msgs Messages) NoticePiDisconnectedEvent() string {
-	return Catalog.Format(msgs.locale, "noticePiDisconnectedEvent", nil)
-}
-
-// NoticePiFinished says "Pi finished and is ready for another message."
-// in the language the app shows.
-//
-// User-interface text for notice Pi Finished.
-func NoticePiFinished() string { return In(i18n.Locale()).NoticePiFinished() }
-
-// NoticePiFinished says "Pi finished and is ready for another message."
-// in the language of msgs.
-//
-// User-interface text for notice Pi Finished.
-func (msgs Messages) NoticePiFinished() string {
-	return Catalog.Format(msgs.locale, "noticePiFinished", nil)
-}
-
 // ErrorPiUnavailable says "Pi is unavailable."
 // in the language the app shows.
 //
@@ -1052,6 +950,76 @@ func ErrorPiUnavailable() string { return In(i18n.Locale()).ErrorPiUnavailable()
 // User-interface text for error Pi Unavailable.
 func (msgs Messages) ErrorPiUnavailable() string {
 	return Catalog.Format(msgs.locale, "errorPiUnavailable", nil)
+}
+
+// ErrorPiNotFound says "Pi CLI was not found."
+// in the language the app shows.
+//
+// Connection error when the Pi executable cannot be found.
+func ErrorPiNotFound() string { return In(i18n.Locale()).ErrorPiNotFound() }
+
+// ErrorPiNotFound says "Pi CLI was not found."
+// in the language of msgs.
+//
+// Connection error when the Pi executable cannot be found.
+func (msgs Messages) ErrorPiNotFound() string {
+	return Catalog.Format(msgs.locale, "errorPiNotFound", nil)
+}
+
+// ErrorPiNotExecutable says "Pi CLI could not be started because the file is not executable."
+// in the language the app shows.
+//
+// Connection error when the Pi executable cannot be run.
+func ErrorPiNotExecutable() string { return In(i18n.Locale()).ErrorPiNotExecutable() }
+
+// ErrorPiNotExecutable says "Pi CLI could not be started because the file is not executable."
+// in the language of msgs.
+//
+// Connection error when the Pi executable cannot be run.
+func (msgs Messages) ErrorPiNotExecutable() string {
+	return Catalog.Format(msgs.locale, "errorPiNotExecutable", nil)
+}
+
+// ErrorPiHandshakeTimeout says "Timed out while starting Pi CLI."
+// in the language the app shows.
+//
+// Connection error when the Pi handshake exceeds its deadline.
+func ErrorPiHandshakeTimeout() string { return In(i18n.Locale()).ErrorPiHandshakeTimeout() }
+
+// ErrorPiHandshakeTimeout says "Timed out while starting Pi CLI."
+// in the language of msgs.
+//
+// Connection error when the Pi handshake exceeds its deadline.
+func (msgs Messages) ErrorPiHandshakeTimeout() string {
+	return Catalog.Format(msgs.locale, "errorPiHandshakeTimeout", nil)
+}
+
+// ErrorPiExited says "Pi CLI exited."
+// in the language the app shows.
+//
+// Connection error when the Pi process exits.
+func ErrorPiExited() string { return In(i18n.Locale()).ErrorPiExited() }
+
+// ErrorPiExited says "Pi CLI exited."
+// in the language of msgs.
+//
+// Connection error when the Pi process exits.
+func (msgs Messages) ErrorPiExited() string {
+	return Catalog.Format(msgs.locale, "errorPiExited", nil)
+}
+
+// ErrorPiUnknown says "Unknown Pi connection error: {error}"
+// in the language the app shows.
+//
+// Fallback connection error with the original error.
+func ErrorPiUnknown(error string) string { return In(i18n.Locale()).ErrorPiUnknown(error) }
+
+// ErrorPiUnknown says "Unknown Pi connection error: {error}"
+// in the language of msgs.
+//
+// Fallback connection error with the original error.
+func (msgs Messages) ErrorPiUnknown(error string) string {
+	return Catalog.Format(msgs.locale, "errorPiUnknown", map[string]any{"error": error})
 }
 
 // ErrorPiStopFailed says "Pi stop failed."
@@ -1336,13 +1304,13 @@ func (msgs Messages) PiPathFromPATH() string {
 	return Catalog.Format(msgs.locale, "piPathFromPATH", nil)
 }
 
-// PiStatusLabel says "Pi CLI · {status}"
+// PiStatusLabel says "Pi CLI status: {status}"
 // in the language the app shows.
 //
 // User-interface text for pi Status Label.
 func PiStatusLabel(status string) string { return In(i18n.Locale()).PiStatusLabel(status) }
 
-// PiStatusLabel says "Pi CLI · {status}"
+// PiStatusLabel says "Pi CLI status: {status}"
 // in the language of msgs.
 //
 // User-interface text for pi Status Label.
@@ -4108,6 +4076,20 @@ func (msgs Messages) ChatEmptyTitle() string {
 	return Catalog.Format(msgs.locale, "chatEmptyTitle", nil)
 }
 
+// ChatEmptyHint says "Ask anything about your workspace."
+// in the language the app shows.
+//
+// Neutral hint shown on an empty chat.
+func ChatEmptyHint() string { return In(i18n.Locale()).ChatEmptyHint() }
+
+// ChatEmptyHint says "Ask anything about your workspace."
+// in the language of msgs.
+//
+// Neutral hint shown on an empty chat.
+func (msgs Messages) ChatEmptyHint() string {
+	return Catalog.Format(msgs.locale, "chatEmptyHint", nil)
+}
+
 // ChatBackToLatest says "Back to latest"
 // in the language the app shows.
 //
@@ -5770,6 +5752,20 @@ func (msgs Messages) PiConnected() string {
 	return Catalog.Format(msgs.locale, "piConnected", nil)
 }
 
+// PiCliDetailsTitle says "Pi CLI"
+// in the language the app shows.
+//
+// Title of the Pi connection status popover.
+func PiCliDetailsTitle() string { return In(i18n.Locale()).PiCliDetailsTitle() }
+
+// PiCliDetailsTitle says "Pi CLI"
+// in the language of msgs.
+//
+// Title of the Pi connection status popover.
+func (msgs Messages) PiCliDetailsTitle() string {
+	return Catalog.Format(msgs.locale, "piCliDetailsTitle", nil)
+}
+
 // PiConnecting says "Pi connecting"
 // in the language the app shows.
 //
@@ -5866,48 +5862,6 @@ func PiSecondaryClickToConnect() string { return In(i18n.Locale()).PiSecondaryCl
 // Pi secondary disconnected prompt.
 func (msgs Messages) PiSecondaryClickToConnect() string {
 	return Catalog.Format(msgs.locale, "piSecondaryClickToConnect", nil)
-}
-
-// PiDiagnosticConnected says "Pi CLI connected. Ready for a session."
-// in the language the app shows.
-//
-// Empty chat diagnostic when connected.
-func PiDiagnosticConnected() string { return In(i18n.Locale()).PiDiagnosticConnected() }
-
-// PiDiagnosticConnected says "Pi CLI connected. Ready for a session."
-// in the language of msgs.
-//
-// Empty chat diagnostic when connected.
-func (msgs Messages) PiDiagnosticConnected() string {
-	return Catalog.Format(msgs.locale, "piDiagnosticConnected", nil)
-}
-
-// PiDiagnosticConnecting says "Connecting to Pi CLI…"
-// in the language the app shows.
-//
-// Empty chat diagnostic while connecting.
-func PiDiagnosticConnecting() string { return In(i18n.Locale()).PiDiagnosticConnecting() }
-
-// PiDiagnosticConnecting says "Connecting to Pi CLI…"
-// in the language of msgs.
-//
-// Empty chat diagnostic while connecting.
-func (msgs Messages) PiDiagnosticConnecting() string {
-	return Catalog.Format(msgs.locale, "piDiagnosticConnecting", nil)
-}
-
-// PiDiagnosticDisconnected says "Pi CLI is not connected. Open Settings to connect."
-// in the language the app shows.
-//
-// Empty chat diagnostic when disconnected.
-func PiDiagnosticDisconnected() string { return In(i18n.Locale()).PiDiagnosticDisconnected() }
-
-// PiDiagnosticDisconnected says "Pi CLI is not connected. Open Settings to connect."
-// in the language of msgs.
-//
-// Empty chat diagnostic when disconnected.
-func (msgs Messages) PiDiagnosticDisconnected() string {
-	return Catalog.Format(msgs.locale, "piDiagnosticDisconnected", nil)
 }
 
 // ErrorUnknown says "unknown error"
@@ -6920,20 +6874,6 @@ func PiCliConnectedVersion(version string) string {
 // Pi CLI connected with version.
 func (msgs Messages) PiCliConnectedVersion(version string) string {
 	return Catalog.Format(msgs.locale, "piCliConnectedVersion", map[string]any{"version": version})
-}
-
-// PiDiagnosticError says "Pi connection failed: {error}"
-// in the language the app shows.
-//
-// Chat diagnostic connection error.
-func PiDiagnosticError(error string) string { return In(i18n.Locale()).PiDiagnosticError(error) }
-
-// PiDiagnosticError says "Pi connection failed: {error}"
-// in the language of msgs.
-//
-// Chat diagnostic connection error.
-func (msgs Messages) PiDiagnosticError(error string) string {
-	return Catalog.Format(msgs.locale, "piDiagnosticError", map[string]any{"error": error})
 }
 
 // PiSecondaryConnectedModel says "Connected · {model}"

@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -130,6 +135,55 @@ func TestProcessExitInterruptsRunningTool(t *testing.T) {
 	}
 	if state.run != runInterrupted {
 		t.Fatalf("run = %q, want %q", state.run, runInterrupted)
+	}
+}
+
+func TestClassifyPiConnectionError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{name: "missing path", err: os.ErrNotExist, want: piErrorCodeNotFound},
+		{name: "missing executable", err: exec.ErrNotFound, want: piErrorCodeNotFound},
+		{name: "permission", err: os.ErrPermission, want: piErrorCodeNotExecutable},
+		{name: "exec format", err: syscall.ENOEXEC, want: piErrorCodeNotExecutable},
+		{name: "deadline", err: context.DeadlineExceeded, want: piErrorCodeHandshakeTimeout},
+		{name: "process exited", err: fmt.Errorf("handshake: %w", errPiProcessExited), want: piErrorCodeExited},
+		{name: "unknown", err: errors.New("socket closed"), want: piErrorCodeUnknown},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := classifyPiConnectionError(test.err); got != test.want {
+				t.Fatalf("classifyPiConnectionError(%v) = %q, want %q", test.err, got, test.want)
+			}
+		})
+	}
+}
+
+func TestClearPiConnectingNoticeLeavesOtherNotices(t *testing.T) {
+	state := &appState{notice: text("noticePiConnecting"), noticeActionLabel: "Retry"}
+	state.clearPiConnectingNotice()
+	if state.notice != "" || state.noticeActionLabel != "" {
+		t.Fatalf("connecting notice was not cleared: %#v", state)
+	}
+
+	state.notice = text("noticePiConnected")
+	state.noticeActionLabel = "Keep"
+	state.clearPiConnectingNotice()
+	if state.notice != text("noticePiConnected") || state.noticeActionLabel != "Keep" {
+		t.Fatalf("ordinary notice was cleared: notice=%q action=%q", state.notice, state.noticeActionLabel)
+	}
+}
+
+func TestResolvePiPathDirectoryIsNotExecutable(t *testing.T) {
+	t.Setenv("BYOP_PI_PATH", t.TempDir())
+	_, err := resolvePiPath()
+	if err == nil {
+		t.Fatal("resolvePiPath accepted a directory")
+	}
+	if got := classifyPiConnectionError(err); got != piErrorCodeNotExecutable {
+		t.Fatalf("directory classification = %q, want %q: %v", got, piErrorCodeNotExecutable, err)
 	}
 }
 

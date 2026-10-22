@@ -52,10 +52,6 @@
   "@titleToggleTaskPanel": {
     "description": "Accessible label for the task panel toggle."
   },
-  "titleReconnectPi": "重新连接外部 Pi CLI",
-  "@titleReconnectPi": {
-    "description": "Tooltip for the Pi connection status."
-  },
   "titleDismissNotice": "关闭通知",
   "@titleDismissNotice": {
     "description": "Accessible label for closing the notice banner."
@@ -156,18 +152,6 @@
   "@noticeSessionPreferenceSave": {
     "description": "User-interface text for notice Session Preference Save."
   },
-  "noticeWorkspaceFailed": "Pi 工作区连接失败：{error}",
-  "@noticeWorkspaceFailed": {
-    "description": "User-interface text for notice Workspace Failed."
-  },
-  "noticePiConnectFailed": "Pi 连接失败：{error}",
-  "@noticePiConnectFailed": {
-    "description": "User-interface text for notice Pi Connect Failed."
-  },
-  "noticePiRPCFailed": "Pi RPC 握手失败：{error}",
-  "@noticePiRPCFailed": {
-    "description": "User-interface text for notice Pi R P C Failed."
-  },
   "noticePiConnectedNoModels": "外部 Pi CLI 已连接，但模型元数据不可用。",
   "@noticePiConnectedNoModels": {
     "description": "User-interface text for notice Pi Connected No Models."
@@ -264,21 +248,34 @@
   "@noticePiProtocolWarning": {
     "description": "User-interface text for notice Pi Protocol Warning."
   },
-  "noticePiProcessExited": "Pi 进程在运行完成前退出。",
-  "@noticePiProcessExited": {
-    "description": "User-interface text for notice Pi Process Exited."
-  },
-  "noticePiDisconnectedEvent": "Pi CLI 已断开连接。",
-  "@noticePiDisconnectedEvent": {
-    "description": "User-interface text for notice Pi Disconnected Event."
-  },
-  "noticePiFinished": "Pi 已完成，可以继续发送消息。",
-  "@noticePiFinished": {
-    "description": "User-interface text for notice Pi Finished."
-  },
   "errorPiUnavailable": "Pi 当前不可用。",
   "@errorPiUnavailable": {
     "description": "User-interface text for error Pi Unavailable."
+  },
+  "errorPiNotFound": "未找到 Pi CLI。",
+  "@errorPiNotFound": {
+    "description": "无法找到 Pi 可执行文件时的连接错误。"
+  },
+  "errorPiNotExecutable": "Pi CLI 无法启动：文件不可执行。",
+  "@errorPiNotExecutable": {
+    "description": "无法运行 Pi 可执行文件时的连接错误。"
+  },
+  "errorPiHandshakeTimeout": "启动 Pi CLI 时超时。",
+  "@errorPiHandshakeTimeout": {
+    "description": "Pi 握手超过时限时的连接错误。"
+  },
+  "errorPiExited": "Pi CLI 已退出。",
+  "@errorPiExited": {
+    "description": "Pi 进程退出时的连接错误。"
+  },
+  "errorPiUnknown": "未知 Pi 连接错误：{error}",
+  "@errorPiUnknown": {
+    "description": "附带原始错误的未知连接错误。",
+    "placeholders": {
+      "error": {
+        "description": "原始 Pi 连接错误。"
+      }
+    }
   },
   "errorPiStopFailed": "Pi 停止操作失败。",
   "@errorPiStopFailed": {
@@ -360,7 +357,7 @@
   "@piPathFromPATH": {
     "description": "User-interface text for pi Path From P A T H."
   },
-  "piStatusLabel": "Pi CLI · {status}",
+  "piStatusLabel": "Pi CLI 状态：{status}",
   "@piStatusLabel": {
     "description": "User-interface text for pi Status Label."
   },
@@ -1120,6 +1117,10 @@
   "@chatEmptyTitle": {
     "description": "Empty chat prompt."
   },
+  "chatEmptyHint": "可以问 Pi 关于当前工作区的任何问题。",
+  "@chatEmptyHint": {
+    "description": "空聊天中显示的中性提示。"
+  },
   "chatBackToLatest": "返回最新",
   "@chatBackToLatest": {
     "description": "Control that returns the conversation to the latest message."
@@ -1602,6 +1603,10 @@
   "@piConnected": {
     "description": "Pi connected status."
   },
+  "piCliDetailsTitle": "Pi CLI",
+  "@piCliDetailsTitle": {
+    "description": "Pi 连接状态浮层标题。"
+  },
   "piConnecting": "Pi 正在连接",
   "@piConnecting": {
     "description": "Pi connecting status."
@@ -1629,18 +1634,6 @@
   "piSecondaryClickToConnect": "点击连接",
   "@piSecondaryClickToConnect": {
     "description": "Pi secondary disconnected prompt."
-  },
-  "piDiagnosticConnected": "Pi CLI 已连接，可以开始会话。",
-  "@piDiagnosticConnected": {
-    "description": "Empty chat diagnostic when connected."
-  },
-  "piDiagnosticConnecting": "正在连接 Pi CLI…",
-  "@piDiagnosticConnecting": {
-    "description": "Empty chat diagnostic while connecting."
-  },
-  "piDiagnosticDisconnected": "Pi CLI 尚未连接。请打开设置进行连接。",
-  "@piDiagnosticDisconnected": {
-    "description": "Empty chat diagnostic when disconnected."
   },
   "errorUnknown": "未知错误",
   "@errorUnknown": {
@@ -1925,10 +1918,6 @@
   "piCliConnectedVersion": "Pi CLI · {version}",
   "@piCliConnectedVersion": {
     "description": "Pi CLI connected with version."
-  },
-  "piDiagnosticError": "Pi 连接失败：{error}",
-  "@piDiagnosticError": {
-    "description": "Chat diagnostic connection error."
   },
   "piSecondaryConnectedModel": "已连接 · {model}",
   "@piSecondaryConnectedModel": {

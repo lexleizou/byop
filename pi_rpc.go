@@ -15,8 +15,11 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
+
+var errPiProcessExited = errors.New("Pi RPC process exited")
 
 type piEventKind string
 
@@ -147,6 +150,7 @@ type piRPCResponse struct {
 	Success bool            `json:"success"`
 	Error   string          `json:"error"`
 	Data    json.RawMessage `json:"data"`
+	Err     error           `json:"-"`
 }
 
 type piClient struct {
@@ -245,7 +249,7 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 			Error:      processExitError(client.waitErr),
 			StderrTail: client.stderrSnapshot(),
 		})
-		client.failPending(errors.New("Pi RPC process exited"))
+		client.failPending(fmt.Errorf("wait for Pi RPC process: %w", errPiProcessExited))
 	}()
 
 	return client, nil
@@ -256,13 +260,13 @@ func resolvePiPath() (string, error) {
 		if info, err := os.Stat(configured); err != nil {
 			return "", fmt.Errorf("BYOP_PI_PATH: %w", err)
 		} else if info.IsDir() {
-			return "", fmt.Errorf("BYOP_PI_PATH points to a directory: %s", configured)
+			return "", fmt.Errorf("BYOP_PI_PATH points to a directory: %s: %w", configured, syscall.ENOEXEC)
 		}
 		return filepath.Clean(configured), nil
 	}
 	path, err := exec.LookPath("pi")
 	if err != nil {
-		return "", errors.New("Pi CLI was not found. Install Pi separately or set BYOP_PI_PATH.")
+		return "", fmt.Errorf("Pi CLI was not found. Install Pi separately or set BYOP_PI_PATH: %w", exec.ErrNotFound)
 	}
 	return path, nil
 }
@@ -529,6 +533,9 @@ func (p *piClient) requestWithID(ctx context.Context, payload map[string]any, id
 		return nil, ctx.Err()
 	case result := <-response:
 		if !result.Success {
+			if result.Err != nil {
+				return nil, result.Err
+			}
 			return nil, errors.New(fallback(result.Error, "Pi command failed"))
 		}
 		return result.Data, nil
@@ -886,7 +893,7 @@ func (p *piClient) failPending(err error) {
 	p.mu.Unlock()
 	for _, ch := range pending {
 		select {
-		case ch <- piRPCResponse{Type: "response", Success: false, Error: err.Error()}:
+		case ch <- piRPCResponse{Type: "response", Success: false, Error: err.Error(), Err: err}:
 		default:
 		}
 	}
