@@ -1,0 +1,6 @@
+{
+  "manifestName": "Hello WebView",
+  "manifestDescription": "Contract fixture for BYOP language packs, isolated WebView hosting, and the page bridge.",
+  "navigationTitle": "Hello WebView",
+  "webviewTitle": "Hello WebView"
+}

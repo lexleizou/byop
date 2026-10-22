@@ -65,7 +65,20 @@ func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, pa
 		if h.themeDark != nil {
 			dark = h.themeDark()
 		}
-		return pluginHandleResult{Value: currentPluginThemePayload(dark)}
+		high := false
+		if h.themeHighContrast != nil {
+			high = h.themeHighContrast()
+		}
+		return pluginHandleResult{Value: currentPluginThemePayload(dark, high)}
+	case "host.getLocale":
+		if err := requireEmptyPluginParams(params); err != nil {
+			return pluginHostFailure(pluginRPCInvalidParams, err.Error())
+		}
+		locale := "en"
+		if h.locale != nil && strings.TrimSpace(h.locale()) != "" {
+			locale = strings.TrimSpace(h.locale())
+		}
+		return pluginHandleResult{Value: map[string]any{"locale": locale}}
 	case "host.getSettings":
 		if err := requireEmptyPluginParams(params); err != nil {
 			return pluginHostFailure(pluginRPCInvalidParams, err.Error())
@@ -122,7 +135,7 @@ func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, pa
 			h.onTaskUpdate(pluginTaskUpdate{
 				PluginID: entry.ID,
 				TaskID:   request.ID,
-				Title:    task.Title,
+				Title:    pluginLocalizedText(entry.Manifest, task.Title),
 				Detail:   detail,
 				Status:   status,
 				Tone:     tone,
@@ -382,8 +395,8 @@ func atomicWritePluginFile(filename string, content []byte) error {
 	return nil
 }
 
-func currentPluginThemePayload(dark bool) map[string]any {
-	palette := themePalette(dark)
+func currentPluginThemePayload(dark, high bool) map[string]any {
+	palette := themePaletteWithContrast(dark, high)
 	mode := "light"
 	if dark {
 		mode = "dark"

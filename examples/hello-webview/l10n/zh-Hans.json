@@ -1,0 +1,6 @@
+{
+  "manifestName": "Hello WebView",
+  "manifestDescription": "用于检查 BYOP 语言包、隔离 WebView 托管和页面桥接的契约示例。",
+  "navigationTitle": "Hello WebView",
+  "webviewTitle": "Hello WebView"
+}

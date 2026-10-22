@@ -46,7 +46,7 @@ func (s *appState) setFollowUpStyle(style followUpStyle) {
 	style = normalizeFollowUpStyle(string(style))
 	s.preferences.FollowUpStyle = string(style)
 	if err := s.persistPreferences(); err != nil {
-		s.showNotice("Follow-up style changed, but preferences could not be saved.")
+		s.showNotice(text("noticePreferenceSaveFollowUp"))
 	}
 }
 
@@ -330,15 +330,15 @@ func (s *appState) followUpSuggestionCard(c *ui.Context) {
 	ui.Column(c).Key("follow-up-suggestion").FillWidth().MinWidth(0).Margin(0, 0, 8, 0).
 		Padding(12, 14).Radius(12).Border(1, t.Border).Background(t.Surface.Alpha(.9)).Gap(8).Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
-			components.Text(c, "Suggested next").FontSize(fontSmall).FontWeight(600).TextColor(t.TextMuted)
+			components.Text(c, text("followUpSuggestedNext")).FontSize(fontSmall).FontWeight(600).TextColor(t.TextMuted)
 			ui.Spacer(c)
-			if chat.IconAction(c, "Dismiss follow-up suggestion", lu.X).Clicked() {
+			if chat.IconAction(c, text("followUpDismiss"), lu.X).Clicked() {
 				s.dismissFollowUpSuggestion()
 			}
 		})
 		components.Text(c, s.followUpSuggestion).FontSize(fontBody).LineHeight(1.45).TextColor(t.Text)
 		ui.Row(c).Children(func() {
-			use := chat.Chip(c, "Use", chat.ChipOptions{Icon: lu.ArrowUpRight})
+			use := chat.Chip(c, text("followUpUse"), chat.ChipOptions{Icon: lu.ArrowUpRight})
 			if use.Clicked() {
 				s.adoptFollowUpSuggestion(true)
 			}

@@ -46,6 +46,64 @@
           "$value": "{onevra.color.dark.success}",
           "$description": "Business status alias; do not use color alone."
         }
+      },
+      "contrast": {
+        "high": {
+          "light": {
+            "background": {
+              "$type": "color",
+              "$value": "#ffffff",
+              "$description": "High-contrast light background; matches themePaletteWithContrast in theme.go."
+            },
+            "border": {
+              "$type": "color",
+              "$value": "#74726b",
+              "$description": "High-contrast light border with at least 3:1 contrast against the background."
+            },
+            "muted": {
+              "$type": "color",
+              "$value": "#55534d",
+              "$description": "High-contrast light muted text with at least 4.5:1 contrast against the background."
+            },
+            "surfaceHover": {
+              "$type": "color",
+              "$value": "#d9d5cc",
+              "$description": "High-contrast light hover surface with stronger separation from the background."
+            },
+            "focus": {
+              "$type": "color",
+              "$value": "#bd481b",
+              "$description": "Opaque high-contrast light focus outline using the product accent."
+            }
+          },
+          "dark": {
+            "background": {
+              "$type": "color",
+              "$value": "#141311",
+              "$description": "High-contrast dark background; matches themePaletteWithContrast in theme.go."
+            },
+            "border": {
+              "$type": "color",
+              "$value": "#9a9387",
+              "$description": "High-contrast dark border with at least 3:1 contrast against the background."
+            },
+            "muted": {
+              "$type": "color",
+              "$value": "#d9d3c8",
+              "$description": "High-contrast dark muted text with at least 4.5:1 contrast against the background."
+            },
+            "surfaceHover": {
+              "$type": "color",
+              "$value": "#37332d",
+              "$description": "High-contrast dark hover surface with stronger separation from the background."
+            },
+            "focus": {
+              "$type": "color",
+              "$value": "#ed986e",
+              "$description": "Opaque high-contrast dark focus outline using the product accent."
+            }
+          }
+        }
       }
     },
     "dimension": {

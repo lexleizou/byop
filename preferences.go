@@ -16,15 +16,21 @@ import (
 const byopPreferencesVersion = 1
 
 type byopPreferences struct {
-	Version                int                    `json:"version"`
-	Theme                  string                 `json:"theme,omitempty"`
-	FollowUpStyle          string                 `json:"followUpStyle,omitempty"`
-	NavCollapsed           bool                   `json:"navCollapsed,omitempty"`
-	TasksOpen              bool                   `json:"tasksOpen,omitempty"`
-	Workspace              string                 `json:"workspace,omitempty"`
-	LastSessionByWorkspace map[string]string      `json:"lastSessionByWorkspace,omitempty"`
-	Drafts                 map[string]legacyDraft `json:"drafts,omitempty"`
-	Legacy                 map[string]legacyValue `json:"legacy,omitempty"`
+	Version                int                                   `json:"version"`
+	Theme                  string                                `json:"theme,omitempty"`
+	Contrast               string                                `json:"contrast,omitempty"`
+	Motion                 string                                `json:"motion,omitempty"`
+	PanelAnimationMS       int                                   `json:"panelAnimationMs,omitempty"`
+	UILanguage             string                                `json:"uiLanguage,omitempty"`
+	FollowUpStyle          string                                `json:"followUpStyle,omitempty"`
+	RunningSendMode        string                                `json:"runningSendMode,omitempty"`
+	NavCollapsed           bool                                  `json:"navCollapsed,omitempty"`
+	TasksOpen              bool                                  `json:"tasksOpen,omitempty"`
+	Workspace              string                                `json:"workspace,omitempty"`
+	LastSessionByWorkspace map[string]string                     `json:"lastSessionByWorkspace,omitempty"`
+	SessionOrganization    map[string]map[string]sessionOrgEntry `json:"sessionOrganization,omitempty"`
+	Drafts                 map[string]legacyDraft                `json:"drafts,omitempty"`
+	Legacy                 map[string]legacyValue                `json:"legacy,omitempty"`
 }
 
 type legacyValue struct {
@@ -49,8 +55,14 @@ func defaultByopPreferences() byopPreferences {
 	return byopPreferences{
 		Version:                byopPreferencesVersion,
 		Theme:                  string(themeSystem),
+		Contrast:               string(contrastSystem),
+		Motion:                 string(motionSystem),
+		PanelAnimationMS:       defaultPanelAnimationMS,
+		UILanguage:             "system",
 		FollowUpStyle:          string(followUpStyleGhost),
+		RunningSendMode:        string(runningSendQueue),
 		LastSessionByWorkspace: make(map[string]string),
+		SessionOrganization:    make(map[string]map[string]sessionOrgEntry),
 		Drafts:                 make(map[string]legacyDraft),
 		Legacy:                 make(map[string]legacyValue),
 	}
@@ -106,9 +118,17 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 	default:
 		preferences.Theme = string(themeSystem)
 	}
+	preferences.UILanguage = normalizeUILanguage(preferences.UILanguage)
 	preferences.FollowUpStyle = string(normalizeFollowUpStyle(preferences.FollowUpStyle))
+	preferences.RunningSendMode = string(normalizeRunningSendMode(preferences.RunningSendMode))
+	preferences.Contrast = string(normalizeContrastMode(preferences.Contrast))
+	preferences.Motion = string(normalizeMotionMode(preferences.Motion))
+	preferences.PanelAnimationMS = normalizePanelAnimationMS(preferences.PanelAnimationMS)
 	if preferences.LastSessionByWorkspace == nil {
 		preferences.LastSessionByWorkspace = make(map[string]string)
+	}
+	if preferences.SessionOrganization == nil {
+		preferences.SessionOrganization = make(map[string]map[string]sessionOrgEntry)
 	}
 	if preferences.Drafts == nil {
 		preferences.Drafts = make(map[string]legacyDraft)
@@ -123,6 +143,14 @@ func cloneByopPreferences(preferences byopPreferences) byopPreferences {
 	clone.LastSessionByWorkspace = make(map[string]string, len(preferences.LastSessionByWorkspace))
 	for key, value := range preferences.LastSessionByWorkspace {
 		clone.LastSessionByWorkspace[key] = value
+	}
+	clone.SessionOrganization = make(map[string]map[string]sessionOrgEntry, len(preferences.SessionOrganization))
+	for workspace, entries := range preferences.SessionOrganization {
+		clonedEntries := make(map[string]sessionOrgEntry, len(entries))
+		for key, entry := range entries {
+			clonedEntries[key] = entry
+		}
+		clone.SessionOrganization[workspace] = clonedEntries
 	}
 	clone.Drafts = make(map[string]legacyDraft, len(preferences.Drafts))
 	for key, value := range preferences.Drafts {

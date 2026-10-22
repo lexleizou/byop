@@ -23,6 +23,7 @@ type pluginSettingForm struct {
 func (s *appState) syncPluginSettingForms() {
 	index := make(map[string]struct{})
 	for _, entry := range s.pluginRegistrySnapshot().Entries {
+		entry = pluginLocalizedEntry(entry)
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
 			continue
 		}
@@ -79,6 +80,7 @@ func (s *appState) syncPluginSettingForms() {
 func (s *appState) pluginSettingsSection(c *ui.Context, p palette) {
 	hasSettings := false
 	for _, entry := range s.pluginRegistrySnapshot().Entries {
+		entry = pluginLocalizedEntry(entry)
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
 			continue
 		}
@@ -92,8 +94,9 @@ func (s *appState) pluginSettingsSection(c *ui.Context, p palette) {
 	}
 	ui.Column(c).FillWidth().Gap(8).Padding(16).Radius(12).
 		Border(1, p.border).Background(p.surface).Children(func() {
-		ui.Text(c, "No plugin settings").FontSize(fontBody).FontWeight(650).TextColor(p.text)
-		ui.Text(c, "Registered plugins have not declared typed setting fields.").FontSize(fontSmall).
+		ui.Text(c, text("pluginsSettingsEmptyTitle")).FontSize(fontBody).
+			FontWeight(650).TextColor(p.text)
+		ui.Text(c, text("pluginsSettingsEmptyDescription")).FontSize(fontSmall).
 			TextColor(p.muted)
 	})
 }
@@ -109,8 +112,7 @@ func (s *appState) pluginSettingCard(
 	if form == nil {
 		return
 	}
-	description := fallback(contribution.Description,
-		"Settings are stored locally by BYOP and passed to the plugin when it starts.")
+	description := fallback(contribution.Description, text("pluginsSettingsDefaultDescription"))
 	settingsCard(c, p, contribution.Title, description, func() {
 		ui.Text(c, fallback(entry.Name, entry.ID)).FontSize(fontCaption).
 			FontWeight(650).TextColor(p.accent)
@@ -119,16 +121,16 @@ func (s *appState) pluginSettingCard(
 				TextColor(p.warning)
 		}
 		if len(contribution.Fields) == 0 {
-			ui.Text(c, "This setting contribution does not declare editable fields.").
+			ui.Text(c, text("pluginsSettingsNoFields")).
 				FontSize(fontSmall).TextColor(p.muted)
 		}
 		for _, field := range contribution.Fields {
 			s.pluginSettingField(c, p, entry, form, field)
 		}
 		ui.Row(c).AlignItems(ui.Center).Gap(8).Children(func() {
-			label := "Save"
+			label := text("pluginsSettingsSave")
 			if form.saving {
-				label = "Saving…"
+				label = text("pluginsSettingsSaving")
 			}
 			secondaryAction(c, p,
 				"plugin-settings-save-"+entry.ID+"-"+contribution.ID,
@@ -174,7 +176,8 @@ func (s *appState) pluginSettingField(
 			})
 			if field.Type == "number" && input != nil && strings.TrimSpace(*input) != "" {
 				if _, err := parsePluginSettingNumber(*input); err != nil {
-					ui.Text(c, "Enter a valid number.").FontSize(fontCaption).TextColor(p.danger)
+					ui.Text(c, text("pluginsSettingsInvalidNumber")).FontSize(fontCaption).
+						TextColor(p.danger)
 				}
 			}
 		case "boolean":
@@ -191,7 +194,7 @@ func (s *appState) pluginSettingField(
 					option := option
 					selected := form.selections[field.Key] == option
 					textButton(c, p, "plugin-setting-"+entry.ID+"-"+field.Key+"-"+option,
-						option, selected, func() {
+						pluginLocalizedText(entry.Manifest, option), selected, func() {
 							form.selections[field.Key] = option
 						})
 				}
@@ -215,13 +218,13 @@ func (s *appState) savePluginSettings(
 		case "number":
 			input := form.inputs[field.Key]
 			if input == nil {
-				form.status = "Enter a valid number."
+				form.status = text("pluginsSettingsInvalidNumber")
 				form.statusError = true
 				return
 			}
 			number, err := parsePluginSettingNumber(*input)
 			if err != nil {
-				form.status = "Enter a valid number."
+				form.status = text("pluginsSettingsInvalidNumber")
 				form.statusError = true
 				return
 			}
@@ -235,7 +238,7 @@ func (s *appState) savePluginSettings(
 		}
 	}
 	form.saving = true
-	form.status = "Saving…"
+	form.status = text("pluginsSettingsSaving")
 	form.statusError = false
 	go func() {
 		err := s.plugins.savePluginSettings(entry, values)
@@ -248,11 +251,11 @@ func (s *appState) savePluginSettings(
 				}
 			}
 			if err != nil {
-				form.status = uiErrorSummary(err, "Plugin settings could not be loaded.", 220)
+				form.status = uiErrorSummary(err, text("pluginsSettingsSaveFailed"), 220)
 				form.statusError = true
 				return
 			}
-			form.status = "Saved"
+			form.status = text("pluginsSettingsSaved")
 			form.statusError = false
 		})
 	}()

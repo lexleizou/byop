@@ -414,14 +414,14 @@ func rebuildChatFromPiMessages(rawMessages []json.RawMessage) ([]chatMessage, er
 		timestamp := piMessageTime(message.Timestamp)
 		switch message.Role {
 		case "user":
-			text := contentText(message.Content)
-			if strings.TrimSpace(text) == "" {
+			userText := contentText(message.Content)
+			if strings.TrimSpace(userText) == "" {
 				continue
 			}
 			chat = append(chat, chatMessage{
 				role:   chatUser,
-				status: "sent",
-				blocks: []chatBlock{{kind: chatBlockText, text: text}},
+				status: text("chatStatusSent"),
+				blocks: []chatBlock{{kind: chatBlockText, text: userText}},
 			})
 			lastAssistant = nil
 		case "assistant":
@@ -433,7 +433,7 @@ func rebuildChatFromPiMessages(rawMessages []json.RawMessage) ([]chatMessage, er
 			switch message.StopReason {
 			case "error":
 				status = "failed"
-				errorText := fallback(strings.TrimSpace(message.ErrorMessage), "Pi stopped after an error.")
+				errorText := fallback(strings.TrimSpace(message.ErrorMessage), text("assistantErrorFallback"))
 				blocks = append(blocks, chatBlock{kind: chatBlockText, text: errorText})
 			case "aborted":
 				status = "Stopped"
@@ -447,7 +447,7 @@ func rebuildChatFromPiMessages(rawMessages []json.RawMessage) ([]chatMessage, er
 				if message.StopReason != "aborted" {
 					continue
 				}
-				blocks = append(blocks, chatBlock{kind: chatBlockText, text: "Pi stopped before adding response text."})
+				blocks = append(blocks, chatBlock{kind: chatBlockText, text: text("assistantStoppedFallback")})
 			}
 			chat = append(chat, chatMessage{
 				role:      chatAssistant,

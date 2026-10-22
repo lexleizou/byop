@@ -8,16 +8,18 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 const (
 	pluginManifestSchemaVersion = 1
 	pluginAPIVersion            = "1"
-	pluginHostVersion           = "0.7.0"
+	pluginHostVersion           = "0.9.0"
 	pluginManifestFilename      = "plugin.json"
 	maxPluginManifestBytes      = 1 << 20
 	maxPluginSettingFields      = 50
@@ -35,6 +37,7 @@ type pluginManifest struct {
 	Name          string              `json:"name"`
 	Version       string              `json:"version"`
 	Description   string              `json:"description,omitempty"`
+	L10n          string              `json:"l10n,omitempty"`
 	Runtime       string              `json:"runtime"`
 	Entry         string              `json:"entry"`
 	Icon          string              `json:"icon,omitempty"`
@@ -42,6 +45,14 @@ type pluginManifest struct {
 	Contributes   pluginContributions `json:"contributes"`
 	Activation    pluginActivation    `json:"activation,omitempty"`
 	Capabilities  pluginCapabilities  `json:"capabilities,omitempty"`
+
+	sourceDirectory string
+	localization    *pluginLocalizationCache
+}
+
+type pluginLocalizationCache struct {
+	mu      sync.Mutex
+	locales map[string]map[string]string
 }
 
 type pluginCompatibility struct {
@@ -175,6 +186,10 @@ func loadPluginManifest(filename string) (*pluginManifest, error) {
 	if err := validatePluginManifest(&manifest); err != nil {
 		return nil, err
 	}
+	manifest.sourceDirectory = filepath.Dir(filename)
+	manifest.localization = &pluginLocalizationCache{
+		locales: make(map[string]map[string]string),
+	}
 	return &manifest, nil
 }
 
@@ -195,6 +210,8 @@ func validatePluginManifest(manifest *pluginManifest) error {
 		"id must be 2-128 lowercase letters, digits, dots, underscores, or hyphens")
 	add(pluginRequiredTextInvalid(manifest.Name, 80), "name must contain 1-80 printable characters")
 	add(pluginTextInvalid(manifest.Description, 500), "description must contain at most 500 printable characters")
+	add(manifest.L10n != "" && !safePluginRelativePath(manifest.L10n),
+		"l10n must be a safe relative directory inside the plugin folder")
 	add(!pluginVersionPattern.MatchString(manifest.Version), "version must be semantic versioning such as 0.1.0")
 	add(manifest.Runtime != "node" && manifest.Runtime != "native",
 		"runtime must be node or native")

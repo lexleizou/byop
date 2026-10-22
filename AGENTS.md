@@ -17,6 +17,7 @@ BYOP（Build You Own Pi）是 MyGo 原生 UI + 外部 Pi CLI 的多插件工作�
 ## 产品约束
 
 - 产品名 BYOP，标识使用 Pi 图标；UI token 以 `design-system/onevra/tokens.json` 为准，扩展写在 `design-system/pi-workbench/`。
+- 界面文字一律写入 locales/ 语言包（en 为源语言），不得在代码中硬编码用户可见文字；新增文字需同时补齐所有语言包并重新生成 locales/catalog_gen.go。
 - 正文 14px，其他字号按现有 `font*` 常量换算；右侧任务栏默认收起。
 - Pi 以独立安装的 Pi CLI 运行，BYOP 通过 JSONL RPC 调用，不内置 Pi 内核，不复制凭据。
 - 插件开发暂停：插件平台能力可以继续建设，但在 Lex 明确要求前不开发任何功能插件（包括原设计中的 Library、Document）。`examples/` 只放契约 fixture。

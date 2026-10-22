@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -146,7 +147,7 @@ func (s *appState) chatPage(c *ui.Context, _ palette) {
 		c.After(time.Second)
 	}
 	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
-		chat.FloatingConversation(c, &s.chatView.layout, &s.chatView.conversation, "Back to latest",
+		chat.FloatingConversation(c, &s.chatView.layout, &s.chatView.conversation, text("chatBackToLatest"),
 			func(c *ui.Context) { s.transcript(c) },
 			func(c *ui.Context) { s.chatComposer(c) })
 	})
@@ -182,7 +183,7 @@ func (s *appState) transcript(c *ui.Context) {
 func (s *appState) emptyTranscript(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).FillWidth().Padding(96, 0, 0, 0).AlignItems(ui.Center).Gap(10).Children(func() {
-		components.Text(c, "What should Pi work on?").FontSize(fontTitle).FontWeight(600).TextColor(t.Text)
+		components.Text(c, text("chatEmptyTitle")).FontSize(fontTitle).FontWeight(600).TextColor(t.Text)
 		components.Text(c, s.piDiagnostic()).FontSize(13.5).TextColor(t.TextMuted)
 	})
 }
@@ -196,8 +197,8 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 	if message != nil {
 		options.Status = assistantTurnStatus(message, live)
 		elapsed := turnElapsed(c, message, live)
-		options.Summary = "Worked for " + elapsed
-		options.Working = "Working · " + elapsed
+		options.Summary = textArgs("chatWorkedFor", map[string]any{"duration": elapsed})
+		options.Working = textArgs("chatWorkingFor", map[string]any{"duration": elapsed})
 		plan := planAssistantTurn(message, live)
 		for stepIndex, step := range plan.steps {
 			isLast := stepIndex == len(plan.steps)-1
@@ -266,12 +267,12 @@ func toolActivityContent(c *ui.Context, tool toolCallView) {
 	note := toolCallStatusLabel(tool.status)
 	switch tool.status {
 	case toolCallRunning:
-		note = "Waiting for tool output…"
+		note = text("chatWaitingForTool")
 		if tool.partial != "" {
 			note = ""
 		}
 	case toolCallInterrupted:
-		note = "Interrupted when Pi disconnected"
+		note = text("chatInterruptedWhenDisconnected")
 	}
 	if tool.durationMS > 0 {
 		note = strings.TrimPrefix(note+" · "+formatToolDuration(tool.durationMS), " · ")
@@ -289,32 +290,32 @@ func activityGroupTitle(activities []chat.Activity, live bool) string {
 		latest := activities[len(activities)-1]
 		return strings.TrimSpace(latest.Action + " " + latest.Detail)
 	}
-	if len(activities) == 1 {
-		return "Ran 1 tool"
-	}
-	return fmt.Sprintf("Ran %d tools", len(activities))
+	return textArgs("chatRanTools", map[string]any{"count": len(activities)})
 }
 
 func turnElapsed(c *ui.Context, message *chatMessage, live bool) string {
 	if message.startedAt.IsZero() {
-		return "0m 0s"
+		return textArgs("chatDuration", map[string]any{"minutes": 0, "seconds": 0})
 	}
 	end := message.endedAt
 	if live || end.IsZero() {
 		end = c.Now()
 	}
 	seconds := max(0, int(end.Sub(message.startedAt).Seconds()))
-	return fmt.Sprintf("%dm %ds", seconds/60, seconds%60)
+	return textArgs("chatDuration", map[string]any{
+		"minutes": seconds / 60,
+		"seconds": seconds % 60,
+	})
 }
 
 func turnEndLabel(status string) string {
 	switch strings.ToLower(status) {
 	case "stopped":
-		return "Stopped"
+		return text("chatStopped")
 	case "interrupted":
-		return "Interrupted"
+		return text("chatInterrupted")
 	default:
-		return "Failed"
+		return text("chatFailed")
 	}
 }
 
@@ -339,39 +340,47 @@ func (s *appState) chatComposer(c *ui.Context) {
 		placeholder = s.followUpSuggestion
 	}
 	cardVisible := visible && style == followUpStyleCard
+	running := s.runActive() && s.run != runStopping
+	sendLabel := text("chatSend")
+	if running {
+		// GlassComposer only reserves its built-in Stop action while the draft is
+		// empty. With text present it renders the primary action as Send, so use
+		// that slot for Stop and keep queue/steer in the trailing control.
+		sendLabel = text("chatStop")
+	}
 	ui.Column(c).FillWidth().MinWidth(0).Children(func() {
-		if cardVisible {
-			s.followUpSuggestionCard(c)
-		}
+		s.runningQueueBar(c)
+		s.followUpAnimatedCard(c, cardVisible)
 		result := chat.GlassComposer(c, &s.chatView.layout, &s.composerDraft, chat.ComposerOptions{
-			Label:        "Message",
+			Label:        text("chatMessageLabel"),
 			Placeholder:  placeholder,
-			SendLabel:    "Send",
-			StopLabel:    "Stop",
-			Running:      s.runActive() && s.run != runStopping,
-			SendDisabled: s.piConn != piConnected,
+			SendLabel:    sendLabel,
+			StopLabel:    text("chatStop"),
+			Running:      running,
+			SendDisabled: !running && s.piConn != piConnected,
 			Accessory: func(c *ui.Context) {
 				s.composerChoices(c)
 			},
 			Trailing: func(c *ui.Context) {
-				if chat.IconAction(c, "Attachments are not connected yet", lu.Paperclip).Clicked() {
-					s.showNotice("Attachments remain outside the current RPC boundary.")
+				if chat.IconAction(c, text("chatAttachmentUnavailable"), lu.Paperclip).Clicked() {
+					s.showNotice(text("chatAttachmentNotice"))
 				}
+				s.runningSendButton(c)
 			},
 			Footer: func(c *ui.Context) {
 				chat.Chip(c, s.piCompactLabel(), chat.ChipOptions{Icon: lu.Terminal, ReadOnly: true})
 				ui.Spacer(c)
 				switch {
 				case visible && style == followUpStyleGhost:
-					components.Text(c, "Tab to use · Esc to dismiss").FontSize(fontSmall).TextColor(t.TextMuted)
+					components.Text(c, text("chatFollowUpHint")).FontSize(fontSmall).TextColor(t.TextMuted)
 				case s.run == runStopping:
-					chat.Shimmer(c, "Stopping Pi", 12.5, t.TextMuted, t.Text)
+					s.statusShimmer(c, text("chatStoppingPi"), t)
 				case s.retrying:
-					chat.Shimmer(c, s.retryStatusLabel(c), 12.5, t.TextMuted, t.Text)
+					s.statusShimmer(c, s.retryStatusLabel(c), t)
 				case s.compacting:
-					chat.Shimmer(c, "Compacting context", 12.5, t.TextMuted, t.Text)
+					s.statusShimmer(c, text("chatCompactingContext"), t)
 				case s.runActive():
-					chat.Shimmer(c, "Pi is working", 12.5, t.TextMuted, t.Text)
+					s.statusShimmer(c, text("chatPiWorking"), t)
 				}
 			},
 		})
@@ -380,19 +389,257 @@ func (s *appState) chatComposer(c *ui.Context) {
 		if !cardVisible {
 			s.applyPendingFollowUpAdoption(result.Input)
 		}
+		if result.Input.Focused() {
+			result.Input.OnTextKey(func(k ui.TextKey) bool {
+				return s.handleComposerTextKey(k)
+			})
+		}
 		if visible && result.Input.Focused() {
 			composing := result.Input.Composing()
 			result.Input.HandleInput(func(ev ui.InputEvent) bool {
 				return s.handleFollowUpComposerInput(ev, composing)
 			})
+		} else if running && result.Input.Focused() && strings.TrimSpace(s.composerDraft) != "" {
+			composing := result.Input.Composing()
+			result.Input.HandleInput(func(ev ui.InputEvent) bool {
+				return handleRunningComposerInput(
+					ev,
+					composing,
+					s.composerDraft,
+					s.currentRunningSendMode(),
+					s.sendRunningPrompt,
+				)
+			})
 		}
-		if result.Send {
+		if result.Send && running {
+			s.stopPrompt()
+		} else if result.Send {
 			s.sendPrompt()
 		}
 		if result.Stop {
 			s.stopPrompt()
 		}
 	})
+}
+
+func handleRunningComposerInput(ev ui.InputEvent, composing bool, draft string,
+	defaultMode runningSendMode, send func(string, runningSendMode),
+) bool {
+	prompt := strings.TrimSpace(draft)
+	decision := runningSendKeyDecision(ev.Key, ev.Mods, prompt != "", true, defaultMode)
+	if composing || ev.Kind != ui.InputKeyDown || !decision.handled || !decision.running {
+		return false
+	}
+	send(prompt, decision.mode)
+	return true
+}
+
+func (s *appState) runningSendButton(c *ui.Context) {
+	if !s.runActive() || s.run == runStopping || strings.TrimSpace(s.composerDraft) == "" {
+		return
+	}
+	mode := s.currentRunningSendMode()
+	key := oppositeShortcutText()
+	label := runningSendModeLabel(mode)
+	button := ui.ButtonBase(c.Key("running-send-"+string(mode))).Height(26).Padding(0, 9).
+		Radius(13).Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label).
+		Tooltip(textArgs("runningSendOppositeTooltip", map[string]any{
+			"mode":     runningSendModeLabel(oppositeRunningSendMode(mode)),
+			"shortcut": key,
+		}))
+	if button.Hovered() {
+		button.Background(c.Theme().SurfaceHover)
+	}
+	button.Children(func() {
+		components.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(c.Theme().TextMuted)
+	})
+	if button.Clicked() {
+		s.sendRunningPrompt(strings.TrimSpace(s.composerDraft), mode)
+	}
+}
+
+func oppositeShortcutText() string {
+	if runtime.GOOS == "darwin" {
+		return "⌘+Enter"
+	}
+	return "Ctrl+Enter"
+}
+
+type queueDisplayItem struct {
+	label string
+	text  string
+}
+
+func queueDisplayItems(steering, followUp []string, limit int) ([]queueDisplayItem, int) {
+	filtered := func(values []string) []string {
+		result := make([]string, 0, len(values))
+		for _, value := range values {
+			if value = strings.TrimSpace(value); value != "" {
+				result = append(result, value)
+			}
+		}
+		return result
+	}
+	steering = filtered(steering)
+	followUp = filtered(followUp)
+	total := len(steering) + len(followUp)
+	if limit <= 0 {
+		return nil, total
+	}
+	items := make([]queueDisplayItem, 0, min(limit, total))
+	appendItems := func(values []string, key string) {
+		for _, value := range values {
+			if len(items) < limit {
+				items = append(items, queueDisplayItem{label: text(key), text: value})
+			}
+		}
+	}
+	appendItems(steering, "queueSteerLabel")
+	appendItems(followUp, "queueFollowUpLabel")
+	return items, max(0, total-len(items))
+}
+
+func (s *appState) queueItemCount() int {
+	return s.queueSteeringCount + s.queueFollowUpCount
+}
+
+func (s *appState) runningQueueBar(c *ui.Context) {
+	t := c.Theme()
+	bar := ui.Column(c).Key("running-queue")
+	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
+	target := float32(0)
+	if s.queueItemCount() > 0 {
+		target = 1
+	}
+	height := float32(0)
+	if duration == 0 {
+		height = target
+	} else {
+		height = bar.AnimateWith("running-queue-height", target, duration, ui.EaseOut)
+	}
+	bar.FillWidth().MinWidth(0).MaxHeight(88 * height).Clip()
+	if height == 0 {
+		return
+	}
+	bar.Margin(8, 0).Padding(8, 10).Radius(9).Border(1, t.Border).Background(t.Surface).
+		Gap(5).Children(func() {
+		ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(8).Children(func() {
+			ui.Icon(c, icon("list")).Size(13, 13).TextColor(t.TextMuted)
+			ui.Text(c, text("queueTitle")).FontSize(fontSmall).FontWeight(650).TextColor(t.Text).Grow(1)
+			label := text("queueClear")
+			if s.queueClearPending {
+				label = text("queueClearPending")
+			}
+			action := ui.ButtonBase(c.Key("queue-clear")).Padding(3, 7).Radius(6).
+				Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
+			if action.Hovered() && !s.queueClearPending {
+				action.Background(t.SurfaceHover)
+			}
+			action.Children(func() {
+				components.Text(c, label).FontSize(fontCaption).FontWeight(600).TextColor(t.TextMuted)
+			})
+			if action.Clicked() && !s.queueClearPending {
+				s.queueClear()
+			}
+		})
+		items, overflow := queueDisplayItems(s.queueSteering, s.queueFollowUp, 3)
+		for index, item := range items {
+			ui.Row(c).Key(fmt.Sprintf("queue-item-%d", index)).FillWidth().MinWidth(0).
+				Gap(7).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, item.label).FontSize(fontMicro).FontWeight(700).TextColor(t.Accent)
+				ui.Text(c, item.text).FontSize(fontSmall).TextColor(t.TextMuted).SingleLine().Grow(1)
+			})
+		}
+		if overflow > 0 {
+			ui.Text(c, textArgs("queueMore", map[string]any{"count": overflow})).
+				FontSize(fontCaption).TextColor(t.TextMuted)
+		}
+	})
+}
+
+func (s *appState) followUpAnimatedCard(c *ui.Context, visible bool) {
+	card := ui.Column(c).Key("follow-up-suggestion-slot")
+	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
+	target := float32(0)
+	if visible {
+		target = 1
+	}
+	height := float32(0)
+	if duration == 0 {
+		height = target
+	} else {
+		height = card.AnimateWith("follow-up-suggestion-height", target, duration, ui.EaseOut)
+	}
+	card.FillWidth().MinWidth(0).MaxHeight(220 * height).Clip()
+	if height == 0 {
+		return
+	}
+	card.Children(func() {
+		s.followUpSuggestionCard(c)
+	})
+}
+
+func (s *appState) handleComposerTextKey(k ui.TextKey) bool {
+	textValue := strings.TrimSpace(k.Text())
+	decision := runningSendKeyDecision(
+		k.Key,
+		k.Mods,
+		textValue != "",
+		s.runActive() && s.run != runStopping,
+		s.currentRunningSendMode(),
+	)
+	if !decision.handled {
+		return false
+	}
+	if decision.running {
+		s.composerDraft = textValue
+		s.sendRunningPrompt(textValue, decision.mode)
+		k.SetText("")
+		return true
+	}
+	s.composerDraft = textValue
+	s.sendPrompt()
+	if s.composerDraft == "" {
+		k.SetText("")
+	}
+	return true
+}
+
+type composerSendDecision struct {
+	handled bool
+	running bool
+	mode    runningSendMode
+}
+
+func runningSendKeyDecision(key ui.Key, mods ui.Modifiers, hasText, running bool, defaultMode runningSendMode) composerSendDecision {
+	if key != ui.KeyEnter || mods == ui.Shift {
+		return composerSendDecision{}
+	}
+	if mods != 0 && mods != ui.Cmd {
+		return composerSendDecision{}
+	}
+	if !hasText {
+		return composerSendDecision{}
+	}
+	if running {
+		mode := defaultMode
+		if mods == ui.Cmd {
+			mode = oppositeRunningSendMode(mode)
+		}
+		return composerSendDecision{handled: true, running: true, mode: mode}
+	}
+	if mods != 0 {
+		return composerSendDecision{}
+	}
+	return composerSendDecision{handled: true}
+}
+
+func (s *appState) statusShimmer(c *ui.Context, label string, t *ui.Theme) {
+	if s.reducedMotionActive(currentAppearanceReduceMotion()) {
+		components.Text(c, label).FontSize(12.5).TextColor(t.TextMuted)
+		return
+	}
+	chat.Shimmer(c, label, 12.5, t.TextMuted, t.Text)
 }
 
 func (s *appState) composerChoices(c *ui.Context) {
@@ -418,8 +665,8 @@ func (s *appState) composerChoices(c *ui.Context) {
 			Options:     options,
 			Selected:    piModelChoiceID(s.piModelProvider, s.piModelID),
 			Searchable:  5,
-			SearchLabel: "Search models",
-			EmptyText:   "No models",
+			SearchLabel: text("modelsSearch"),
+			EmptyText:   text("modelsNone"),
 			Width:       300,
 		})
 		if result.Chosen != "" {
@@ -450,14 +697,14 @@ func (s *appState) composerChoices(c *ui.Context) {
 		s.chatView.effortPicker.Open = false
 		label := thinkingLevelLabel(selected)
 		chip := chat.Chip(c, label, chat.ChipOptions{Icon: lu.Brain, ReadOnly: true})
-		components.Tooltip(c, chip, "Thinking · "+label)
+		components.Tooltip(c, chip, textArgs("thinkingTooltip", map[string]any{"level": label}))
 		return
 	}
 
 	wasOpen := s.chatView.effortPicker.Open
 	result := chat.EffortPicker(c.Key("thinking-picker"), &s.chatView.effortPicker, chat.EffortPickerOptions{
-		Label:    "Thinking",
-		Tooltip:  "Thinking · " + thinkingLevelLabel(selected),
+		Label:    text("thinkingTitle"),
+		Tooltip:  textArgs("thinkingTooltip", map[string]any{"level": thinkingLevelLabel(selected)}),
 		Icon:     lu.Brain,
 		Levels:   levels,
 		Selected: selected,
@@ -567,7 +814,7 @@ func (s *appState) stopThinkingCommitTimer() {
 }
 
 func (s *appState) retryStatusLabel(c *ui.Context) string {
-	label := "Retrying"
+	label := text("diagnosticRetrying")
 	if s.retryAttempt > 0 {
 		label += fmt.Sprintf(" %d", s.retryAttempt)
 		if s.retryMax > 0 {
@@ -581,7 +828,10 @@ func (s *appState) retryStatusLabel(c *ui.Context) string {
 	if remaining < 0 {
 		remaining = 0
 	}
-	return fmt.Sprintf("%s · %ds", label, (remaining+999)/1000)
+	return textArgs("retryStatus", map[string]any{
+		"label":   label,
+		"seconds": (remaining + 999) / 1000,
+	})
 }
 
 func messageText(message *chatMessage) string {
@@ -624,10 +874,10 @@ func toolCallIcon(name string) func() *ui.SVG {
 func composerPlaceholder(conn piConnectionState) string {
 	switch conn {
 	case piConnected:
-		return "Ask Pi. Enter sends, Shift+Enter adds a new line."
+		return text("chatConnectionConnected")
 	case piConnecting:
-		return "Connecting to Pi…"
+		return text("chatConnectionConnecting")
 	default:
-		return "Pi CLI is not connected"
+		return text("chatConnectionNotConnected")
 	}
 }

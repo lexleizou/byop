@@ -1,12 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/egoist/mygo/i18n"
+	"github.com/egoist/mygo/transfer"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -17,26 +21,31 @@ type navItem struct {
 }
 
 var navItems = []navItem{
-	{pageChat, "Chat", "chat"},
-	{pagePlugins, "Plugins", "plugins"},
-	{pageAutomations, "Automations", "automations"},
+	{pageChat, "navChat", "chat"},
+	{pagePlugins, "navPlugins", "plugins"},
+	{pageAutomations, "navAutomations", "automations"},
 }
 
 func (s *appState) view(c *ui.Context) {
 	dark := currentAppearanceDark()
-	s.syncPluginWebViewTheme(dark)
-	t, p := nativeTheme(dark)
+	high := s.highContrastActive(currentAppearanceHighContrast())
+	s.syncPluginWebViewTheme(dark, high)
+	t, p := nativeThemeWithContrast(dark, high)
 	c.SetTheme(t)
 	c.Root().Background(p.background)
+	c.OnShortcut(ui.Cmd, ui.KeyB, func() {
+		s.setNavCollapsed(!s.navCollapsed)
+	})
+	c.OnShortcut(ui.Cmd|ui.Alt, ui.KeyB, func() {
+		s.setTasksOpen(!s.tasksOpen)
+	})
 
 	ui.Column(c).Fill().Background(p.background).Children(func() {
 		s.titleBar(c, p)
 		ui.Row(c).Grow(1).FillWidth().AlignItems(ui.Stretch).Children(func() {
 			s.navigation(c, p)
 			s.main(c, p)
-			if s.tasksOpen {
-				s.taskPanel(c, p)
-			}
+			s.taskPanel(c, p)
 		})
 	})
 }
@@ -62,16 +71,58 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 
 		ui.Spacer(c)
 
-		statusPill(c, p, "P9A · FOLLOW-UP", p.accent)
+		statusPill(c, p, text("headerPhase"), p.accent)
 		ui.Spacer(c)
 
-		iconButton(c, p, "nav-toggle", "panel-left", "Toggle navigation", s.navCollapsed, func() {
+		panelToggleGroup(c, p, func() {
 			s.setNavCollapsed(!s.navCollapsed)
-		})
-		iconButton(c, p, "tasks-toggle", "panel-right", "Toggle task panel", s.tasksOpen, func() {
+		}, func() {
 			s.setTasksOpen(!s.tasksOpen)
-		})
+		}, s.navCollapsed, s.tasksOpen)
 	})
+}
+
+func panelToggleGroup(c *ui.Context, p palette, toggleNavigation, toggleTasks func(), navigationCollapsed, tasksOpen bool) {
+	modifier := "Ctrl"
+	if runtime.GOOS == "darwin" {
+		modifier = "⌘"
+	}
+	ui.Row(c).Height(34).Radius(8).Border(1, p.border).Background(p.surface).
+		AlignItems(ui.Center).Children(func() {
+		panelToggleButton(c, p, "nav-toggle", "panel-left",
+			textArgs("titleToggleNavigationShortcut", map[string]any{"shortcut": modifier + "B"}),
+			navigationCollapsed, toggleNavigation)
+		ui.Box(c).Width(1).Height(18).Shrink(0).Background(p.border)
+		taskShortcut := modifier + "+B"
+		if runtime.GOOS == "darwin" {
+			taskShortcut = modifier + "⌥B"
+		} else {
+			taskShortcut = "Ctrl+Alt+B"
+		}
+		panelToggleButton(c, p, "tasks-toggle", "panel-right",
+			textArgs("titleToggleTaskPanelShortcut", map[string]any{"shortcut": taskShortcut}),
+			tasksOpen, toggleTasks)
+	})
+}
+
+func panelToggleButton(c *ui.Context, p palette, key, iconName, label string, selected bool, click func()) {
+	bg := ui.Color{}
+	fg := p.muted
+	if selected {
+		bg = p.surfaceHover
+		fg = p.accent
+	}
+	btn := ui.ButtonBase(c.Key(key)).Width(36).Height(32).Background(bg).Radius(7).
+		Center().Cursor(ui.CursorPointer).Label(label).Tooltip(label)
+	if !selected && btn.Hovered() {
+		btn.Background(p.surfaceHover)
+	}
+	btn.Children(func() {
+		ui.Icon(c, icon(iconName)).Size(17, 17).TextColor(fg)
+	})
+	if btn.Clicked() {
+		click()
+	}
 }
 
 func brandMark(c *ui.Context, p palette, size float32) ui.Element {
@@ -85,11 +136,14 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 		width = 56
 	}
 
-	ui.Column(c).Width(width).FillHeight().Shrink(0).Padding(12, 8).
+	nav := ui.Column(c)
+	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
+	animatedWidth := nav.AnimateWith("navigation-width", width, duration, ui.EaseOut)
+	nav.Width(animatedWidth).FillHeight().Shrink(0).Padding(12, 8).
 		BorderWidth(0, 1, 0, 0).BorderColor(p.border).Background(p.background).
 		Children(func() {
 			if !s.navCollapsed {
-				ui.Text(c, "WORKSPACE").FontSize(fontCaption).FontWeight(650).TextColor(p.muted).
+				ui.Text(c, text("navWorkspace")).FontSize(fontCaption).FontWeight(650).TextColor(p.muted).
 					Padding(2, 10, 8, 10)
 			}
 			ui.Column(c).Gap(3).Children(func() {
@@ -105,7 +159,7 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 				pluginItems := s.pluginNavigationItems()
 				if len(pluginItems) > 0 {
 					if !s.navCollapsed {
-						ui.Text(c, "PLUGINS").FontSize(fontCaption).FontWeight(700).
+						ui.Text(c, text("navPluginsSection")).FontSize(fontCaption).FontWeight(700).
 							TextColor(p.muted).Padding(8, 10, 4, 10)
 					}
 					for _, item := range pluginItems {
@@ -115,7 +169,7 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 			})
 			ui.Spacer(c)
 			ui.Divider(c).MarginY(8)
-			s.navButton(c, p, navItem{pageSettings, "Settings", "settings"})
+			s.navButton(c, p, navItem{pageSettings, "navSettings", "settings"})
 			ui.Spacer(c)
 			s.integrationStatus(c, p)
 		})
@@ -126,10 +180,10 @@ func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigati
 	selected := s.page == pagePluginView && s.pluginViewPluginID == item.entry.ID &&
 		s.pluginViewID == viewID
 	bg := ui.Color{}
-	text := p.muted
+	foreground := p.muted
 	if selected {
 		bg = p.surfaceHover
-		text = p.text
+		foreground = p.text
 	}
 	label := fallback(item.nav.Title, viewID)
 	key := "nav-plugin-" + item.entry.ID + "-" + item.nav.ID
@@ -147,13 +201,13 @@ func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigati
 	btn.Children(func() {
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Row(c).Size(20, 20).Shrink(0).Center().Children(func() {
-				ic := ui.Icon(c, iconOr(item.nav.Icon, "plugins")).Size(17, 17).TextColor(text)
+				ic := ui.Icon(c, iconOr(item.nav.Icon, "plugins")).Size(17, 17).TextColor(foreground)
 				if selected {
 					ic.TextColor(p.accent)
 				}
 			})
 			if !s.navCollapsed {
-				ui.Text(c, label).FontSize(fontBody).FontWeight(550).TextColor(text)
+				ui.Text(c, label).FontSize(fontBody).FontWeight(550).TextColor(foreground)
 			}
 		})
 	})
@@ -170,15 +224,16 @@ func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigati
 func (s *appState) navButton(c *ui.Context, p palette, item navItem) {
 	selected := s.page == item.id
 	bg := ui.Color{}
-	text := p.muted
+	foreground := p.muted
 	if selected {
 		bg = p.surfaceHover
-		text = p.text
+		foreground = p.text
 	}
+	label := text(item.label)
 	btn := ui.ButtonBase(c.Key("nav-"+item.id)).Height(38).FillWidth().Padding(0, 10).
-		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(item.label)
+		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(label)
 	if s.navCollapsed {
-		btn.Tooltip(item.label)
+		btn.Tooltip(label)
 		btn.Justify(ui.Center)
 	} else {
 		btn.Justify(ui.Start)
@@ -191,13 +246,13 @@ func (s *appState) navButton(c *ui.Context, p palette, item navItem) {
 			// Keep a fixed optical slot so every Lucide path shares the same
 			// left edge, including expanded and collapsed navigation states.
 			ui.Row(c).Size(20, 20).Shrink(0).Center().Children(func() {
-				ic := ui.Icon(c, icon(item.icon)).Size(17, 17).TextColor(text)
+				ic := ui.Icon(c, icon(item.icon)).Size(17, 17).TextColor(foreground)
 				if selected {
 					ic.TextColor(p.accent)
 				}
 			})
 			if !s.navCollapsed {
-				ui.Text(c, item.label).FontSize(fontBody).FontWeight(550).TextColor(text)
+				ui.Text(c, label).FontSize(fontBody).FontWeight(550).TextColor(foreground)
 			}
 		})
 	})
@@ -211,42 +266,252 @@ func (s *appState) navButton(c *ui.Context, p palette, item navItem) {
 	}
 }
 
+const sessionDragFormat transfer.Format = "application/vnd.byop.session+json"
+
+type sessionDragPayload struct {
+	Key string `json:"key"`
+}
+
 func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
-	recent := s.piSessions
-	showAll := len(recent) > 8
-	visible := recent
-	if !s.piSessionsExpanded && len(visible) > 8 {
-		visible = visible[:8]
+	cwd, err := s.sessionWorkspaceCwd()
+	if err == nil {
+		cwd = canonicalPiPath(cwd)
+		if s.piSessionsOrgWorkspace != cwd {
+			s.refreshSessionOrganization(time.Now())
+		}
 	}
+	groups := s.piSessionsGroups
 	ui.Column(c).Gap(2).FillWidth().Children(func() {
 		ui.Row(c).Height(30).FillWidth().Padding(0, 10).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, "SESSIONS").FontSize(fontCaption).FontWeight(700).TextColor(p.muted).Grow(1)
-			iconButton(c, p, "sessions-new", "plus", "New session", false, func() {
+			ui.Text(c, text("navSessions")).FontSize(fontCaption).FontWeight(700).TextColor(p.muted).Grow(1)
+			iconButton(c, p, "sessions-new", "plus", text("navNewSession"), false, func() {
 				s.newPiSession()
 			})
 		})
-		if len(visible) == 0 {
+		if len(s.piSessions) == 0 {
 			return
 		}
-		container := ui.Scroll(c).FillWidth().Gap(2).MaxHeight(16 * 44)
-		if !s.piSessionsExpanded {
-			container = ui.Column(c).FillWidth().Gap(2)
-		}
-		container.Children(func() {
-			for _, summary := range visible {
-				s.sessionNavRow(c, p, summary)
+		ui.Scroll(c).FillWidth().Gap(3).MaxHeight(18 * 44).Children(func() {
+			dragging := s.draggingSessionKey != ""
+			if len(groups.pinned) > 0 || dragging {
+				s.sessionSection(c, p, "pinned", text("navPinned"), groups.pinned,
+					sessionStatePinned, false, true)
 			}
-			if showAll {
-				label := "Show all"
-				if s.piSessionsExpanded {
-					label = "Show recent"
-				}
-				secondarySessionAction(c, p, "sessions-show-all", label, func() {
-					s.piSessionsExpanded = !s.piSessionsExpanded
-				})
+			s.sessionSection(c, p, "sessions", text("navRecentSessions"), groups.sessions,
+				"", true, true)
+			if len(groups.later) > 0 || dragging {
+				s.sessionSection(c, p, "later", text("navLater"), groups.later,
+					sessionStateLater, false, true)
+			}
+			if len(groups.archived) > 0 || dragging {
+				s.archivedSessionSection(c, p, groups)
 			}
 		})
 	})
+}
+
+func (s *appState) sessionSection(c *ui.Context, p palette, key, label string, sessions []piSessionSummary,
+	state string, collapsible, showAll bool,
+) {
+	visible := sessions
+	if showAll && !s.piSessionsExpanded && len(visible) > 8 {
+		visible = visible[:8]
+	}
+	// The parent navigation row already names the default Sessions group.
+	// Keep its drop area and list, but avoid rendering a duplicate header.
+	if key != "sessions" {
+		s.sessionSectionHeader(c, p, key, label, state, len(sessions), collapsible)
+	}
+	s.sessionDropArea(c, p, "sessions-drop-"+key, state, label, len(sessions) == 0, func() {
+		for _, summary := range visible {
+			s.sessionNavRow(c, p, summary)
+		}
+	})
+	if showAll && len(sessions) > 8 {
+		actionLabel := text("navShowAll")
+		if s.piSessionsExpanded {
+			actionLabel = text("navShowRecent")
+		}
+		secondarySessionAction(c, p, "sessions-show-all-"+key, actionLabel, func() {
+			s.piSessionsExpanded = !s.piSessionsExpanded
+		})
+	}
+}
+
+func (s *appState) archivedSessionSection(c *ui.Context, p palette, groups sessionGroups) {
+	s.sessionSectionHeader(c, p, "archived", textArgs("navArchived", map[string]any{
+		"count": len(groups.archived),
+	}), sessionStateArchived, len(groups.archived), true)
+	expanded := s.archivedExpanded || s.draggingSessionKey != ""
+	target := float32(0)
+	if expanded {
+		target = float32(len(groups.archived))*42 + 8
+	}
+	body := ui.Column(c)
+	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
+	animatedHeight := body.AnimateWith("archived-sessions-height", target, duration, ui.EaseOut)
+	body.FillWidth().MaxHeight(animatedHeight).Clip().Children(func() {
+		if !expanded {
+			return
+		}
+		s.sessionDropArea(c, p, "sessions-drop-archived", sessionStateArchived,
+			text("navArchivedAction"), len(groups.archived) == 0, func() {
+				for _, summary := range groups.archived {
+					s.sessionNavRow(c, p, summary)
+				}
+			})
+	})
+}
+
+func (s *appState) sessionSectionHeader(c *ui.Context, p palette, key, label, state string,
+	count int, collapsible bool,
+) {
+	header := ui.ButtonBase(c.Key("session-section-"+key)).Height(28).FillWidth().
+		Padding(0, 10).Radius(6).Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
+	if header.Hovered() {
+		header.Background(p.surfaceHover)
+	}
+	header.Children(func() {
+		ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(6).Children(func() {
+			ui.Text(c, label).FontSize(fontCaption).FontWeight(700).TextColor(p.muted).Grow(1)
+			if collapsible {
+				iconName := "chevron-down"
+				if key == "archived" && !s.archivedExpanded {
+					iconName = "chevron-right"
+				}
+				ui.Icon(c, icon(iconName)).Size(13, 13).TextColor(p.muted)
+			}
+		})
+	})
+	if _, over := ui.DragOver[sessionDragPayload](header); over {
+		header.Border(1, p.accent)
+	}
+	if drop, ok := ui.Drop[sessionDragPayload](header); ok {
+		s.applySessionDrop(drop, state, "")
+	}
+	opts := sessionDropOptions()
+	if _, over := ui.DataDragOver(header, opts); over {
+		header.Border(1, p.accent)
+	}
+	if drop, ok := ui.DropData(header, opts); ok {
+		if payload, valid := decodeSessionDrop(drop); valid {
+			s.applySessionDrop(payload, state, "")
+		}
+	}
+	if header.Clicked() && key == "archived" {
+		s.archivedExpanded = !s.archivedExpanded
+	}
+}
+
+func (s *appState) sessionDropArea(c *ui.Context, p palette, key, state, label string, empty bool, children func()) {
+	area := ui.Column(c).FillWidth().MinHeight(8).Gap(2)
+	_, localOver := ui.DragOver[sessionDragPayload](area)
+	_, nativeOver := ui.DataDragOver(area, sessionDropOptions())
+	over := localOver || nativeOver
+	if over {
+		area.Border(1, p.accent).Padding(3).Background(p.surface)
+	}
+	area.Children(func() {
+		if over && len(s.piSessions) > 0 && empty {
+			s.sessionDropPlaceholder(c, p, label)
+		}
+		children()
+		if over {
+			ui.Row(c).FillWidth().Justify(ui.End).Padding(0, 5).Children(func() {
+				s.sessionDropBadge(c, p, state)
+			})
+		}
+	})
+	if drop, ok := ui.Drop[sessionDragPayload](area); ok {
+		s.applySessionDrop(drop, state, "")
+	}
+	if drop, ok := ui.DropData(area, sessionDropOptions()); ok {
+		if payload, valid := decodeSessionDrop(drop); valid {
+			s.applySessionDrop(payload, state, "")
+		}
+	}
+}
+
+func (s *appState) sessionDropPlaceholder(c *ui.Context, p palette, label string) {
+	ui.Row(c).Height(32).FillWidth().Padding(0, 9).AlignItems(ui.Center).
+		Radius(7).Border(1, p.accent).Children(func() {
+		ui.Text(c, label).FontSize(fontCaption).TextColor(p.muted)
+	})
+}
+
+func (s *appState) sessionDropBadge(c *ui.Context, p palette, state string) {
+	label := text("sessionMoveToSessions")
+	switch state {
+	case sessionStatePinned:
+		label = text("sessionMoveToPinned")
+	case sessionStateLater:
+		label = text("sessionMoveToLater")
+	case sessionStateArchived:
+		label = text("sessionMoveToArchived")
+	}
+	ui.Row(c).Padding(3, 7).Radius(999).Background(p.accent).Children(func() {
+		ui.Text(c, label).FontSize(fontMicro).FontWeight(700).TextColor(p.accentText)
+	})
+}
+
+func sessionDropOptions() transfer.DropOptions {
+	return transfer.DropOptions{
+		Formats:    []transfer.Format{sessionDragFormat},
+		Operations: transfer.Copy,
+	}
+}
+
+func decodeSessionDrop(drop transfer.Drop) (sessionDragPayload, bool) {
+	data, err := drop.Data.Read(sessionDragFormat)
+	if err != nil {
+		return sessionDragPayload{}, false
+	}
+	var payload sessionDragPayload
+	if json.Unmarshal(data, &payload) != nil {
+		return sessionDragPayload{}, false
+	}
+	payload.Key = filepath.Clean(strings.TrimSpace(payload.Key))
+	return payload, payload.Key != "" && payload.Key != "."
+}
+
+func (s *appState) sessionSummaryByKey(key string) (piSessionSummary, bool) {
+	for _, summary := range s.piSessions {
+		if sessionOrgKey(summary) == key {
+			return summary, true
+		}
+	}
+	return piSessionSummary{}, false
+}
+
+func (s *appState) applySessionDrop(payload sessionDragPayload, state string, beforeKey string) {
+	summary, ok := s.sessionSummaryByKey(payload.Key)
+	if !ok {
+		return
+	}
+	entries := s.sessionOrganizationEntries()
+	snapshot := cloneSessionOrgEntries(entries)
+	now := time.Now()
+	if state == sessionStatePinned && beforeKey != "" {
+		reorderPinnedSessions(entries, s.piSessions, payload.Key, beforeKey, now)
+	} else {
+		setSessionOrgState(entries, summary, state, "", now)
+	}
+	if state == sessionStateArchived || state == sessionStateLater {
+		undoKey := sessionOrgKey(summary)
+		if state == sessionStatePinned && beforeKey != "" {
+			undoKey = ""
+		}
+		s.recordSessionUndo(untitledSessionLabel(summary.Title), undoKey, snapshot)
+	}
+	if err := s.persistPreferences(); err != nil {
+		replaceSessionOrgEntries(entries, snapshot)
+		s.showNotice(text("noticeSessionOrganizationSave"))
+		return
+	}
+	s.refreshSessionOrganization(now)
+	if state == sessionStateArchived || state == sessionStateLater {
+		s.showSessionUndoNotice(state, untitledSessionLabel(summary.Title))
+	}
 }
 
 func (s *appState) chatCapablePage() bool {
@@ -263,27 +528,132 @@ func (s *appState) chatCapablePage() bool {
 
 func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSummary) {
 	active := s.isActivePiSession(summary)
+	title := untitledSessionLabel(summary.Title)
+	key := sessionOrgKey(summary)
+	entry, organized := s.sessionOrganizationState(summary)
 	bg := ui.Color{}
-	text := p.muted
+	foreground := p.muted
 	if active {
 		bg = p.surfaceHover
-		text = p.text
+		foreground = p.text
 	}
 	btn := ui.ButtonBase(c.Key("session-"+summary.Path)).Height(40).FillWidth().Padding(0, 10).
-		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(summary.Title)
+		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(title)
 	btn.Justify(ui.Start)
+	payload := sessionDragPayload{Key: key}
+	btn.Drag(payload).DragDataFrom(func() transfer.Data {
+		s.draggingSessionKey = key
+		data, _ := json.Marshal(payload)
+		return transfer.New(transfer.NewItem(transfer.Bytes(sessionDragFormat, data)))
+	}, transfer.DragOptions{
+		Operations: transfer.Copy,
+		Done: func(transfer.Result) {
+			if s.draggingSessionKey == key {
+				s.draggingSessionKey = ""
+				if s.window != nil {
+					s.window.Invalidate()
+				}
+			}
+		},
+	})
 	if btn.Hovered() && !active {
 		btn.Background(p.surfaceHover)
+	}
+	if btn.Dragging() {
+		btn.Opacity(0.5)
 	}
 	btn.Children(func() {
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Row(c).Size(20, 20).Shrink(0).Center().Children(func() {
-				ui.Icon(c, icon("chat")).Size(15, 15).TextColor(text)
+				ui.Icon(c, icon("chat")).Size(15, 15).TextColor(foreground)
 			})
-			ui.Text(c, summary.Title).FontSize(fontBody).TextColor(text).SingleLine().Grow(1)
-			ui.Text(c, relativeSessionTime(summary.Updated)).FontSize(fontCaption).
-				TextColor(p.muted).SingleLine()
+			ui.Text(c, title).FontSize(fontBody).TextColor(foreground).SingleLine().Grow(1)
+			if s.piSessionsGroups.due[key] {
+				ui.Box(c).Size(7, 7).Radius(4).Background(p.accent).Tooltip(text("sessionLaterDue"))
+			}
+			if btn.Hovered() || btn.Focused() {
+				pinned := organized && entry.State == sessionStatePinned
+				pinLabel, pinIcon := text("sessionPin"), "pin"
+				if pinned {
+					pinLabel, pinIcon = text("sessionUnpin"), "pin-off"
+				}
+				s.sessionRowAction(c, p, "pin-"+key, pinIcon, pinLabel, func() {
+					next := sessionStatePinned
+					if pinned {
+						next = ""
+					}
+					s.setSessionOrganization(summary, next, "", false)
+				})
+				archived := organized && entry.State == sessionStateArchived
+				archiveLabel, archiveIcon := text("sessionArchive"), "archive"
+				next := sessionStateArchived
+				if archived {
+					archiveLabel, archiveIcon, next = text("sessionRestore"), "archive-restore", ""
+				}
+				s.sessionRowAction(c, p, "archive-"+key, archiveIcon, archiveLabel, func() {
+					s.setSessionOrganization(summary, next, "", next == sessionStateArchived)
+				})
+			} else {
+				ui.Text(c, relativeSessionTime(summary.Updated)).FontSize(fontCaption).
+					TextColor(p.muted).SingleLine()
+			}
 		})
+	})
+	if _, over := ui.DragOver[sessionDragPayload](btn); over {
+		btn.Border(1, p.accent).Background(p.surfaceHover)
+		targetState := ""
+		if organized {
+			targetState = entry.State
+		}
+		ui.Row(c).Justify(ui.End).Children(func() {
+			s.sessionDropBadge(c, p, targetState)
+		})
+	}
+	if drop, ok := ui.Drop[sessionDragPayload](btn); ok {
+		targetState := ""
+		if organized {
+			targetState = entry.State
+		}
+		s.applySessionDrop(drop, targetState, key)
+	}
+	btn.ContextMenu(func(m *ui.Menu) {
+		pinned := organized && entry.State == sessionStatePinned
+		pinLabel := text("sessionPin")
+		if pinned {
+			pinLabel = text("sessionUnpin")
+		}
+		if m.Item(pinLabel).Chosen() {
+			next := sessionStatePinned
+			if pinned {
+				next = ""
+			}
+			s.setSessionOrganization(summary, next, "", false)
+		}
+		m.Submenu(text("sessionLaterMenu"), func(later *ui.Menu) {
+			now := time.Now()
+			if later.Item(text("sessionLaterHour")).Chosen() {
+				s.setSessionOrganization(summary, sessionStateLater, laterAtHour(now, false), true)
+			}
+			if later.Item(text("sessionLaterTomorrow")).Chosen() {
+				s.setSessionOrganization(summary, sessionStateLater, laterAtHour(now, true), true)
+			}
+			if later.Item(text("sessionLaterMonday")).Chosen() {
+				s.setSessionOrganization(summary, sessionStateLater, laterNextMonday(now), true)
+			}
+			if later.Item(text("sessionLaterClear")).Chosen() {
+				s.setSessionOrganization(summary, sessionStateLater, "", true)
+			}
+		})
+		m.Separator()
+		archived := organized && entry.State == sessionStateArchived
+		archiveLabel := text("sessionArchive")
+		next := sessionStateArchived
+		if archived {
+			archiveLabel, next = text("sessionRestore"), ""
+		}
+		if m.Item(archiveLabel).Chosen() {
+			s.setSessionOrganization(summary, next, "", next == sessionStateArchived)
+		}
 	})
 	if active {
 		btn.Draw(func(painter *ui.Painter, r ui.Rect) {
@@ -295,6 +665,20 @@ func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSumm
 	}
 }
 
+func (s *appState) sessionRowAction(c *ui.Context, p palette, key, iconName, label string, click func()) {
+	btn := ui.ButtonBase(c.Key(key)).Size(22, 22).Radius(5).Background(ui.Color{}).
+		Center().Cursor(ui.CursorPointer).Label(label).Tooltip(label)
+	if btn.Hovered() {
+		btn.Background(p.surfacePressed)
+	}
+	btn.Children(func() {
+		ui.Icon(c, icon(iconName)).Size(14, 14).TextColor(p.muted)
+	})
+	if btn.Clicked() {
+		click()
+	}
+}
+
 func (s *appState) isActivePiSession(summary piSessionSummary) bool {
 	if s.piSessionFile != "" && summary.Path != "" {
 		return filepath.Clean(summary.Path) == filepath.Clean(s.piSessionFile)
@@ -303,7 +687,7 @@ func (s *appState) isActivePiSession(summary piSessionSummary) bool {
 }
 
 func (s *appState) collapsedNewSessionButton(c *ui.Context, p palette) {
-	iconButton(c, p, "sessions-new-collapsed", "plus", "New session", false, func() {
+	iconButton(c, p, "sessions-new-collapsed", "plus", text("navNewSession"), false, func() {
 		s.newPiSession()
 	})
 }
@@ -329,15 +713,15 @@ func relativeSessionTime(updated time.Time) string {
 	elapsed := time.Since(updated)
 	switch {
 	case elapsed < time.Minute:
-		return "now"
+		return text("relativeNow")
 	case elapsed < time.Hour:
-		return fmt.Sprintf("%dm", int(elapsed.Minutes()))
+		return textArgs("relativeMinutes", map[string]any{"count": int(elapsed.Minutes())})
 	case elapsed < 24*time.Hour:
-		return fmt.Sprintf("%dh", int(elapsed.Hours()))
+		return textArgs("relativeHours", map[string]any{"count": int(elapsed.Hours())})
 	case elapsed < 7*24*time.Hour:
-		return fmt.Sprintf("%dd", int(elapsed.Hours()/24))
+		return textArgs("relativeDays", map[string]any{"count": int(elapsed.Hours() / 24)})
 	default:
-		return updated.Format("Jan 2")
+		return i18n.FormatDate(i18n.Locale(), updated, i18n.DateOptions{Skeleton: "MMMd"})
 	}
 }
 
@@ -357,7 +741,7 @@ func (s *appState) integrationStatus(c *ui.Context, p palette) {
 	}
 	box := ui.ButtonBase(c.Key("pi-connection")).FillWidth().Column().AlignItems(ui.Start).
 		Gap(4).Padding(10, 8).Radius(8).Background(p.surface).
-		Label(s.piConnectionLabel()).Tooltip("Reconnect external Pi CLI").Cursor(ui.CursorPointer)
+		Label(s.piConnectionLabel()).Tooltip(text("titleReconnectPi")).Cursor(ui.CursorPointer)
 	if box.Hovered() {
 		box.Background(p.surfaceHover)
 	}
@@ -399,33 +783,45 @@ func (s *appState) noticeBanner(c *ui.Context, p palette) {
 		Children(func() {
 			ui.Icon(c, icon("info")).Size(16, 16).TextColor(p.accent)
 			ui.Text(c, s.notice).FontSize(fontBody).TextColor(p.text).Grow(1)
-			iconButton(c, p, "notice-close", "x", "Dismiss notice", false, func() {
+			if s.noticeAction != nil && s.noticeActionLabel != "" {
+				secondaryAction(c, p, "notice-action", s.noticeActionLabel, s.noticeAction)
+			}
+			iconButton(c, p, "notice-close", "x", text("titleDismissNotice"), false, func() {
 				s.notice = ""
+				s.noticeActionLabel = ""
+				s.noticeAction = nil
 			})
 		})
 }
 
 func (s *appState) taskPanel(c *ui.Context, p palette) {
-	ui.Column(c).Width(320).MinWidth(230).FillHeight().Shrink(0).
+	target := float32(0)
+	if s.tasksOpen {
+		target = 320
+	}
+	panel := ui.Column(c)
+	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
+	animatedWidth := panel.AnimateWith("task-panel-width", target, duration, ui.EaseOut)
+	panel.Width(animatedWidth).MinWidth(0).FillHeight().Shrink(0).Clip().
 		BorderWidth(0, 0, 0, 1).BorderColor(p.border).Background(p.surface).
 		Children(func() {
 			ui.Row(c).Height(52).FillWidth().Padding(0, 14).AlignItems(ui.Center).
 				BorderWidth(0, 0, 1, 0).BorderColor(p.border).Children(func() {
 				ui.Column(c).Gap(1).Grow(1).Children(func() {
-					ui.Text(c, "Tasks").FontSize(fontBodyLarge).FontWeight(650).TextColor(p.text)
-					ui.Text(c, "Run activity and background work").FontSize(fontCaption).TextColor(p.muted)
+					ui.Text(c, text("tasksTitle")).FontSize(fontBodyLarge).FontWeight(650).TextColor(p.text)
+					ui.Text(c, text("tasksDescription")).FontSize(fontCaption).TextColor(p.muted)
 				})
-				iconButton(c, p, "tasks-close", "x", "Close task panel", false, func() {
+				iconButton(c, p, "tasks-close", "x", text("titleCloseTaskPanel"), false, func() {
 					s.setTasksOpen(false)
 				})
 			})
 
 			ui.Scroll(c).Grow(1).Padding(12).Children(func() {
 				ui.Column(c).Gap(9).Children(func() {
-					s.taskCard(c, p, "Pi JSONL RPC", s.piSecondaryLabel(), s.connectionStateLabel(), s.piTone(p))
-					s.taskCard(c, p, "Current run", s.currentRunTaskDetail(), s.runLabel(), s.runTone(p))
-					s.taskCard(c, p, "Runtime diagnostics", s.runtimeDiagnosticDetail(), s.runtimeDiagnosticLabel(), s.runtimeDiagnosticTone(p))
-					s.taskCard(c, p, "Plugin registry", s.pluginRegistryTaskDetail(), s.pluginRegistryTaskLabel(), s.pluginRegistryTaskTone(p))
+					s.taskCard(c, p, text("tasksPiRpc"), s.piSecondaryLabel(), s.connectionStateLabel(), s.piTone(p))
+					s.taskCard(c, p, text("tasksCurrentRun"), s.currentRunTaskDetail(), s.runLabel(), s.runTone(p))
+					s.taskCard(c, p, text("tasksRuntimeDiagnostics"), s.runtimeDiagnosticDetail(), s.runtimeDiagnosticLabel(), s.runtimeDiagnosticTone(p))
+					s.taskCard(c, p, text("tasksPluginRegistry"), s.pluginRegistryTaskDetail(), s.pluginRegistryTaskLabel(), s.pluginRegistryTaskTone(p))
 					for _, key := range s.pluginTaskKeys() {
 						update := s.pluginTasks[key]
 						status := fallback(update.Status, strings.ToUpper(update.Tone))
@@ -438,7 +834,7 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 			ui.Row(c).Padding(12, 14).Gap(8).AlignItems(ui.Center).
 				BorderWidth(1, 0, 0, 0).BorderColor(p.border).Children(func() {
 				ui.Icon(c, icon("info")).Size(14, 14).TextColor(p.muted)
-				ui.Text(c, "Pi owns sessions, credentials, models, and extensions").FontSize(fontCaption).TextColor(p.muted)
+				ui.Text(c, text("tasksOwnership")).FontSize(fontCaption).TextColor(p.muted)
 			})
 		})
 }
@@ -458,27 +854,32 @@ func (s *appState) pluginRegistryTaskDetail() string {
 	if s.plugins != nil {
 		active = s.plugins.activeCount()
 	}
-	return fmt.Sprintf("%d registered · %d active · %d contribution(s) · %d issue(s)",
-		registry.registeredCount(), active, registry.contributionCount(), registry.problemCount())
+	return textArgs("tasksPluginRegistryDetail", map[string]any{
+		"registered":    registry.registeredCount(),
+		"active":        active,
+		"contributions": registry.contributionCount(),
+		"issues":        registry.problemCount(),
+	})
 }
 
 func (s *appState) pluginRegistryTaskLabel() string {
 	registry := s.pluginRegistrySnapshot()
 	switch {
 	case registry.problemCount() > 0:
-		return "ATTENTION"
+		return text("statusAttention")
 	case registry.registeredCount() > 0:
-		return "REGISTERED"
+		return text("statusRegistered")
 	default:
-		return "EMPTY"
+		return text("statusEmpty")
 	}
 }
 
 func (s *appState) pluginRegistryTaskTone(p palette) ui.Color {
-	switch s.pluginRegistryTaskLabel() {
-	case "ATTENTION":
+	registry := s.pluginRegistrySnapshot()
+	switch {
+	case registry.problemCount() > 0:
 		return p.warning
-	case "REGISTERED":
+	case registry.registeredCount() > 0:
 		return p.success
 	default:
 		return p.muted
@@ -537,7 +938,7 @@ func iconButton(c *ui.Context, p palette, key, iconName, label string, selected 
 
 func sendButton(c *ui.Context, p palette, click func()) {
 	btn := ui.ButtonBase(c.Key("send")).Size(34, 34).Radius(8).Background(p.accent).
-		Center().Cursor(ui.CursorPointer).Label("Send message").Tooltip("Send to Pi")
+		Center().Cursor(ui.CursorPointer).Label(text("chatSendMessage")).Tooltip(text("chatSendToPi"))
 	if btn.Hovered() {
 		btn.Background(p.accentHover)
 	}
@@ -551,7 +952,7 @@ func sendButton(c *ui.Context, p palette, click func()) {
 
 func stopButton(c *ui.Context, p palette, click func()) {
 	btn := ui.ButtonBase(c.Key("stop")).Size(34, 34).Radius(8).Background(p.danger).
-		Center().Cursor(ui.CursorPointer).Label("Stop current Pi run").Tooltip("Clear queue and abort")
+		Center().Cursor(ui.CursorPointer).Label(text("chatStopCurrentRun")).Tooltip(text("chatStopTooltip"))
 	btn.Children(func() {
 		ui.Icon(c, icon("stop")).Size(15, 15).TextColor(p.accentText)
 	})
@@ -628,20 +1029,20 @@ func sectionLabel(c *ui.Context, p palette, text string) {
 func (s *appState) piConnectionLabel() string {
 	switch s.piConn {
 	case piConnected:
-		return "Pi CLI connected"
+		return text("piConnected")
 	case piConnecting:
-		return "Pi CLI connecting"
+		return text("piConnecting")
 	case piConnectionErr:
-		return "Pi CLI connection error"
+		return text("piConnectionError")
 	default:
-		return "Pi CLI disconnected"
+		return text("piDisconnected")
 	}
 }
 
 func (s *appState) piCompactLabel() string {
 	label := "Pi CLI · " + s.connectionStateLabel()
 	if s.piVersion != "" && s.piConn == piConnected {
-		label = "Pi CLI " + s.piVersion + " · connected"
+		label = textArgs("piCliConnectedVersion", map[string]any{"version": s.piVersion})
 	}
 	return label
 }
@@ -650,41 +1051,43 @@ func (s *appState) piSecondaryLabel() string {
 	switch s.piConn {
 	case piConnected:
 		if s.piModel != "" {
-			return "Connected · " + s.piModel
+			return textArgs("piSecondaryConnectedModel", map[string]any{"model": s.piModel})
 		}
-		return "Connected · RPC ready"
+		return text("piSecondaryRPCReady")
 	case piConnecting:
-		return "Starting external process"
+		return text("piSecondaryStarting")
 	case piConnectionErr:
-		return fallback(s.piError, "Connection failed")
+		return fallback(s.piError, text("piSecondaryConnectionFailed"))
 	default:
-		return "Click to connect external CLI"
+		return text("piSecondaryClickToConnect")
 	}
 }
 
 func (s *appState) piDiagnostic() string {
 	switch s.piConn {
 	case piConnected:
-		return "Connected to an external Pi CLI through JSONL RPC."
+		return text("piDiagnosticConnected")
 	case piConnecting:
-		return "Starting Pi and waiting for a get_state response."
+		return text("piDiagnosticConnecting")
 	case piConnectionErr:
-		return "Connection failed: " + fallback(s.piError, "unknown error")
+		return textArgs("piDiagnosticError", map[string]any{
+			"error": fallback(s.piError, text("errorUnknown")),
+		})
 	default:
-		return "Pi is not connected. Open Settings or click the sidebar status to retry."
+		return text("piDiagnosticDisconnected")
 	}
 }
 
 func (s *appState) connectionStateLabel() string {
 	switch s.piConn {
 	case piConnected:
-		return "connected"
+		return text("connectionConnected")
 	case piConnecting:
-		return "connecting"
+		return text("connectionConnecting")
 	case piConnectionErr:
-		return "error"
+		return text("connectionError")
 	default:
-		return "disconnected"
+		return text("connectionDisconnected")
 	}
 }
 
@@ -704,48 +1107,48 @@ func (s *appState) piTone(p palette) ui.Color {
 func (s *appState) runLabel() string {
 	switch s.run {
 	case runSubmitting:
-		return "SENDING"
+		return text("runSending")
 	case runStreaming:
-		return "PI RUNNING"
+		return text("runPiRunning")
 	case runStopping:
-		return "STOPPING"
+		return text("runStopping")
 	case runCompleted:
-		return "COMPLETE"
+		return text("runComplete")
 	case runStopped:
-		return "STOPPED"
+		return text("runStopped")
 	case runInterrupted:
-		return "INTERRUPTED"
+		return text("runInterrupted")
 	case runFailed:
-		return "FAILED"
+		return text("runFailed")
 	default:
 		if s.piConn == piConnected {
-			return "READY"
+			return text("runReady")
 		}
-		return "OFFLINE"
+		return text("runOffline")
 	}
 }
 
 func (s *appState) runDetail() string {
 	switch s.run {
 	case runSubmitting:
-		return "Prompt sent; waiting for acceptance"
+		return text("runDetailSubmitting")
 	case runStreaming:
-		return "Streaming Pi events"
+		return text("runDetailStreaming")
 	case runStopping:
-		return "clear_queue followed by abort"
+		return text("runDetailStopping")
 	case runCompleted:
-		return "agent_settled received"
+		return text("runDetailCompleted")
 	case runStopped:
-		return "Run aborted"
+		return text("runDetailStopped")
 	case runInterrupted:
-		return "Process exited before agent_settled"
+		return text("runDetailInterrupted")
 	case runFailed:
-		return fallback(s.piError, "Prompt rejected")
+		return fallback(s.piError, text("runDetailFailed"))
 	default:
 		if s.piConn == piConnected {
-			return "No active agent run"
+			return text("runDetailIdle")
 		}
-		return "External Pi CLI is offline"
+		return text("runDetailOffline")
 	}
 }
 
@@ -771,10 +1174,13 @@ func (s *appState) runtimeDiagnosticDetail() string {
 	parts := make([]string, 0, 5)
 	queued := s.queueSteeringCount + s.queueFollowUpCount
 	if queued > 0 {
-		parts = append(parts, fmt.Sprintf("Queued %d steering and %d follow-up message(s)", s.queueSteeringCount, s.queueFollowUpCount))
+		parts = append(parts, textArgs("diagnosticQueued", map[string]any{
+			"steering": s.queueSteeringCount,
+			"followUp": s.queueFollowUpCount,
+		}))
 	}
 	if s.retrying {
-		retry := "Retrying"
+		retry := text("diagnosticRetrying")
 		if s.retryAttempt > 0 {
 			retry += fmt.Sprintf(" %d", s.retryAttempt)
 			if s.retryMax > 0 {
@@ -786,25 +1192,34 @@ func (s *appState) runtimeDiagnosticDetail() string {
 		}
 		parts = append(parts, retry)
 	} else if s.retryError != "" {
-		parts = append(parts, "Retry failed · "+summarizeLine(s.retryError, 120))
+		parts = append(parts, textArgs("diagnosticRetryFailed", map[string]any{
+			"error": summarizeLine(s.retryError, 120),
+		}))
 	}
 	if s.compacting {
-		parts = append(parts, "Compacting context · "+fallback(s.compactionReason, "automatic"))
+		parts = append(parts, textArgs("diagnosticCompacting", map[string]any{
+			"reason": fallback(s.compactionReason, text("diagnosticAutomatic")),
+		}))
 	} else if s.compactionResult != "" {
 		parts = append(parts, s.compactionResult)
 	}
 	if s.compactionError != "" {
-		parts = append(parts, "Compaction error · "+summarizeLine(s.compactionError, 120))
+		parts = append(parts, textArgs("diagnosticCompactionError", map[string]any{
+			"error": summarizeLine(s.compactionError, 120),
+		}))
 	}
 	if s.extensionError != "" {
 		source := extensionDisplayName(s.extensionPath)
 		if source != "" && s.extensionEvent != "" {
 			source += " · " + s.extensionEvent
 		}
-		parts = append(parts, "Extension error · "+fallback(source, "unknown extension")+" · "+summarizeLine(s.extensionError, 120))
+		parts = append(parts, textArgs("diagnosticExtensionError", map[string]any{
+			"source": fallback(source, text("diagnosticUnknownExtension")),
+			"error":  summarizeLine(s.extensionError, 120),
+		}))
 	}
 	if len(parts) == 0 {
-		return "No queue, compaction, retry, or extension events in this run"
+		return text("diagnosticClear")
 	}
 	return strings.Join(parts, "\n")
 }
@@ -812,19 +1227,19 @@ func (s *appState) runtimeDiagnosticDetail() string {
 func (s *appState) runtimeDiagnosticLabel() string {
 	switch {
 	case s.extensionError != "" || s.compactionError != "" || (s.retryError != "" && !s.retrying):
-		return "ATTENTION"
+		return text("statusAttention")
 	case s.retrying || s.compacting || s.queueSteeringCount+s.queueFollowUpCount > 0:
-		return "ACTIVE"
+		return text("statusActive")
 	default:
-		return "CLEAR"
+		return text("statusClear")
 	}
 }
 
 func (s *appState) runtimeDiagnosticTone(p palette) ui.Color {
 	switch s.runtimeDiagnosticLabel() {
-	case "ATTENTION":
+	case text("statusAttention"):
 		return p.danger
-	case "ACTIVE":
+	case text("statusActive"):
 		return p.warning
 	default:
 		return p.success
@@ -844,16 +1259,18 @@ func compactionResultLabel(event piEvent) string {
 		return ""
 	}
 	if event.CompactAborted {
-		return "Context compaction cancelled"
+		return text("compactionCancelled")
 	}
 	if event.CompactBefore <= 0 && event.CompactAfter <= 0 {
 		if event.CompactSummary != "" {
-			return "Context compacted"
+			return text("compactionCompleted")
 		}
 		return ""
 	}
-	return fmt.Sprintf("Context compacted · %s → %s tokens",
-		formatTokenCount(event.CompactBefore), formatTokenCount(event.CompactAfter))
+	return textArgs("compactionCompletedTokens", map[string]any{
+		"before": formatTokenCount(event.CompactBefore),
+		"after":  formatTokenCount(event.CompactAfter),
+	})
 }
 
 func formatTokenCount(tokens int64) string {

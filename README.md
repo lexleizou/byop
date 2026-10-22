@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P9a：每轮 Pi 正常结束后，BYOP 通过独立的一次性 Pi 进程生成一条简短后续消息。默认以 ghost text 显示，Tab 采纳、Esc 关闭；Settings 可切换为输入框上方的卡片。生成不使用主 JSONL RPC 会话，也不会自动发送。P8 的主题、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好继续保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本完成 P9c：原生界面可在跟随系统、English 和简体中文之间即时切换，宿主 UI 与插件清单文字都从语言包读取；会话可按置顶、会话、稍后处理和已归档整理，运行中消息可排队或插话，外观可独立设置对比度、动效和面板动画速度。P9a 的后续消息建议仍保留：每轮 Pi 正常结束后，BYOP 通过独立的一次性 Pi 进程生成一条简短消息，默认以 ghost text 显示，Tab 采纳、Esc 关闭；Settings 可切换为输入框上方的卡片。生成不使用主 JSONL RPC 会话，也不会自动发送。主题、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好继续保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -15,8 +15,14 @@
 - MyGo 原生窗口与按插件视图懒创建的隔离 WebView；
 - Onevra 语义色、间距、圆角和 14 px 默认正文；Chat 输入框也调整为 14 px；
 - Chat、Plugins、Automations、Settings 导航；
+- Settings 顶部提供跟随系统、English 与简体中文；切换后原生界面、窗口标题、插件清单显示文字和现有 WebView 立即刷新，无需重启；
+- 宿主界面文字来自 `locales/<tag>.json`，新增语言只需复制源语言文件、翻译、重新生成访问器并构建；
 - Light、Dark、System 三种主题；
+- 对比度可跟随系统、固定标准或增强；增强主题使用单独的高对比度 palette，并同步到插件 WebView；
+- 动效可跟随系统、固定标准或减少；减少动效时状态文字保持静态，不启动持续重绘；
+- 面板动画支持 0 / 150 / 250 / 400 ms，默认 150 ms；导航栏、任务栏、归档分区、队列条和后续建议卡使用同一时长；
 - 默认收起的右侧任务栏；
+- 顶栏将导航栏与任务栏开关合并为单个分组，支持 `⌘B` / `Ctrl+B` 与 `⌘⌥B` / `Ctrl+Alt+B`；
 - 偏好持久化到 `<config>/preferences.json`，环境变量 `BYOP_THEME`、`BYOP_TASKS`、`BYOP_NAV`、`BYOP_WORKSPACE` 优先于文件；
 - Settings Migration 只读扫描旧桌面版本、localStorage 与 Pi scheduled-task 计数；旧主题、工作区、最近会话关联、草稿和兼容偏好经预览后显式导入；
 - 旧 Pi 会话按 header 的 ID 和 canonical workspace 关联；不复制会话正文、凭据或模型配置；
@@ -25,6 +31,8 @@
 - `get_state` 握手、`prompt` 发送、流式 `message_update`、最终 `message_end`；
 - 只读扫描 Pi 当前工作区 session 目录，显示最近 50 条中的前 8 条；展开后最多显示 16 条并可滚动；
 - Chat 导航支持新建会话和切换会话；运行或压缩中拒绝切换；切换后重建 user、assistant 和 tool 时间线；
+- 会话区按 Pinned、Sessions、Later、Archived 分区；支持置顶顺序拖拽、右键整理、归档与恢复，以及 8 秒内撤销；
+- Later 到期后回到 Sessions 并显示 accent 圆点；打开会话后清除 BYOP 侧整理状态，Pi 会话文件始终不变；
 - 连接、创建或切换会话后加载可用模型和 thinking levels；composer 使用 Onevra `Picker` 和 `EffortPicker`，通过 Pi RPC 切换模型与思考强度；
 - 按 `toolCallId` 关联 `tool_execution_start/update/end`；
 - 原生会话时间线按“文字 → 工具 → 文字”的真实顺序保留内容块；
@@ -41,6 +49,8 @@
 - Stop、进程退出和重连分别把未完成工具标记为 Cancelled 或 Interrupted；
 - 以 `agent_settled` 作为真实运行完成信号；
 - Stop 使用 `clear_queue → abort`，并用 `agent_settled(aborted:true)` 确认结果；
+- 运行中可继续编辑并发送；默认排队或插话可由 Settings 选择，`Enter` 使用默认方式，`⌘Enter` / `Ctrl+Enter` 使用相反方式；
+- 运行中发送沿用当前 `activeRequest` 和 `runID`，不创建新的本地轮次；队列条最多显示 3 条并提供清空队列；
 - 重试等待中的 Stop 先发送 `abort_retry`，再清空队列并中止当前运行；
 - 订阅 `queue_update`，在任务栏显示 steering 与 follow-up 队列数量；
 - 订阅 `compaction_start/end`，显示 manual、threshold、overflow 压缩状态及压缩前后 token 估算；
@@ -52,7 +62,8 @@
 - 固定 20 px 导航图标槽位，展开与收起状态保持左边缘对齐；
 - 扫描 `~/.byop/plugins` 与 `<cwd>/.byop/plugins`，也可通过 `BYOP_PLUGINS_DIR` 指定一个或多个目录；
 - 严格解析 schema 1 `plugin.json`，拒绝未知字段、尾随 JSON、超过 1 MiB 的清单和不安全 entry 路径；
-- 检查宿主版本 `0.7.0` 与 Plugin API `1` 兼容性；
+- 检查宿主版本 `0.9.0` 与 Plugin API `1` 兼容性；
+- 插件可通过可选 `l10n` 目录把 manifest 和插件视图里的 `%key%` 解析为当前语言；先查当前语言，再回退英文，最后保留原字符串；
 - 标记插件 ID、跨插件贡献 ID 和同插件内重复贡献 ID；
 - Plugins 页面支持搜索、空状态、问题提示、重新扫描，以及 navigation、command、view、task panel、setting 和 WebView 元数据预览；
 - native 与 Node 插件按声明的 `onCommand:<id>`、`onView:<id>` 或 `lazy: true` 懒启动；两者都拒绝越出插件目录的 entry（含符号链接），native 还要求可执行文件，Node 只接受 `.js`、`.mjs`、`.cjs`；
@@ -68,7 +79,7 @@
 - WebView 响应使用 5 MiB 文件上限、`nosniff`、`no-store` 和严格 CSP；只有 `network: true` 时把 `connect-src` 放宽为 `https:`；
 - WebView bridge 通过 `mygo.CallerPage(ctx)` 反查唯一的插件视图，不信任页面传入的插件 ID；每次调用都重新检查当前 URL、插件注册状态、视图声明以及清单/根目录指纹；
 - `host.*` 与 Node/native 插件共用同一套能力检查；`plugin.postMessage` 限制 64 KiB，并按插件限制并发；
-- WebView 提供 Light/Dark CSS 变量、运行时主题事件和固定 14 px 正文字号；加载或渲染进程失败时显示原生错误卡，可 Reload 或返回 Plugins；
+- WebView 提供 Light/Dark CSS 变量、运行时主题事件和固定 14 px 正文字号；页面可调用 `host.getLocale`，读取 `window.byop.locale`，并用 `window.byop.onLocale` 订阅运行时语言变化；加载或渲染进程失败时显示原生错误卡，可 Reload 或返回 Plugins；
 - 重新扫描、停用、进程停止和关闭窗口时销毁相关 WebView；离开页面只隐藏实例；
 - 重新扫描和关闭窗口前会停用全部插件进程；插件意外退出时标记为 failed 并保留 stderr 尾部摘要。
 - 插件可声明 manual、once、scheduledLoop 和 sessionLoop 自动化；自动化命令必须同时是插件已声明的 command，并出现在 `activation.events` 的精确 `onCommand:<command>` 项中；
@@ -193,6 +204,19 @@ go run .
 
 从侧栏打开 **Hello Node** 可检查类型化视图、设置、任务更新、通知、README 宿主读取和 `settingsChanged → refreshView` 流程。打开 **Hello WebView** 可检查隔离页面、主题变量、能力拒绝、插件回传和被拦截的外部链接。两个目录都只是契约 fixture，不是功能插件。
 
+`en` 是源语言，`locales/en.json` 使用 ARB 风格保留每个键的 `@key` 描述与占位符类型。添加语言：
+
+```sh
+cp locales/en.json locales/ja.json
+# 翻译 ja.json 的消息值，并把 @@locale 改为 ja
+go run github.com/egoist/mygo/cmd/mygo@v0.5.5 generate .
+go build -o byop .
+```
+
+Settings 自动列出 `locales/Catalog.Languages()` 中的标签。测试可用 MyGo 已有的 `MYGO_LOCALE=en` 或 `MYGO_LOCALE=zh-Hans` 覆盖当前进程语言。
+
+插件清单的 `%key%` 按当前界面语言从 `<plugin>/<l10n>/<tag>.json` 读取，再尝试 `en.json`，最后显示原始字符串。语言目录必须留在插件根目录内，每个语言文件上限 256 KiB；重新扫描会丢弃缓存。
+
 截图和本地走查参数：
 
 ```sh
@@ -229,7 +253,7 @@ BYOP_PI_INTEGRATION=1 go test \
 
 该测试会向已登录的 Pi 发送短提示，启动、停止一次较长回复，要求 Pi 连续执行两次安全的 `bash` 命令，并调用一次手动压缩 RPC。时间线测试验证两个工具各自关联正确，且 `BETWEEN_TOOLS` 文字位于两者之间、最终文字位于第二个工具之后。若未设置 `BYOP_PI_INTEGRATION=1`，集成测试会跳过。
 
-验证记录见 [P9a-validation.md](docs/P9a-validation.md)、[P8-validation.md](docs/P8-validation.md)、[P7-validation.md](docs/P7-validation.md)、[P6b-validation.md](docs/P6b-validation.md)、[P6-validation.md](docs/P6-validation.md)、[P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
+验证记录见 [P9c-validation.md](docs/P9c-validation.md)、[P9b-validation.md](docs/P9b-validation.md)、[P9a-validation.md](docs/P9a-validation.md)、[P8-validation.md](docs/P8-validation.md)、[P7-validation.md](docs/P7-validation.md)、[P6b-validation.md](docs/P6b-validation.md)、[P6-validation.md](docs/P6-validation.md)、[P5-validation.md](docs/P5-validation.md)、[P4.2-validation.md](docs/P4.2-validation.md)、[P4.1-validation.md](docs/P4.1-validation.md)、[P4-validation.md](docs/P4-validation.md) 和 [P3-validation.md](docs/P3-validation.md)，P2 最小 RPC 闭环见 [P2-validation.md](docs/P2-validation.md)，P1 原生外壳走查见 [P1-validation.md](docs/P1-validation.md)。
 
 ## 设计系统
 

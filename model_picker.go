@@ -56,7 +56,7 @@ func buildPiModelChoices(models []piModel) ([]chat.Option, map[string]piModelCho
 }
 
 func piModelDisplayName(name, model string) string {
-	return fallback(firstNonEmpty(strings.TrimSpace(name), strings.TrimSpace(model)), "Pi default")
+	return fallback(firstNonEmpty(strings.TrimSpace(name), strings.TrimSpace(model)), text("settingsPiDefault"))
 }
 
 func formatContextWindow(tokens int) string {
@@ -119,17 +119,17 @@ func buildPiThinkingOptions(levels []string) []chat.Option {
 func thinkingLevelLabel(level string) string {
 	switch strings.ToLower(strings.TrimSpace(level)) {
 	case "off":
-		return "Off"
+		return text("thinkingOff")
 	case "minimal":
-		return "Minimal"
+		return text("thinkingMinimal")
 	case "low":
-		return "Low"
+		return text("thinkingLow")
 	case "medium":
-		return "Medium"
+		return text("thinkingMedium")
 	case "high":
-		return "High"
+		return text("thinkingHigh")
 	case "xhigh":
-		return "XHigh"
+		return text("thinkingXHigh")
 	}
 	words := strings.FieldsFunc(strings.TrimSpace(level), func(r rune) bool {
 		return r == '_' || r == '-' || unicode.IsSpace(r)

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"sync/atomic"
+
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -42,8 +44,12 @@ type palette struct {
 }
 
 func themePalette(dark bool) palette {
+	return themePaletteWithContrast(dark, false)
+}
+
+func themePaletteWithContrast(dark bool, high bool) palette {
 	if dark {
-		return palette{
+		p := palette{
 			background:     ui.Hex("#211f1c"),
 			surface:        ui.Hex("#2b2925"),
 			surfaceHover:   ui.Hex("#36332e"),
@@ -63,8 +69,20 @@ func themePalette(dark bool) palette {
 			scrollbar:      ui.RGBA(238, 234, 226, 89),
 			shadow:         ui.RGBA(0, 0, 0, 56),
 		}
+		if high {
+			p.background = ui.Hex("#141311")
+			p.surface = ui.Hex("#201e1a")
+			p.surfaceHover = ui.Hex("#37332d")
+			p.surfacePressed = ui.Hex("#48433b")
+			p.border = ui.Hex("#9a9387")
+			p.text = ui.Hex("#fffdf8")
+			p.muted = ui.Hex("#d9d3c8")
+			p.focus = p.accent
+			p.selection = ui.RGBA(237, 152, 110, 102)
+		}
+		return p
 	}
-	return palette{
+	p := palette{
 		background:     ui.Hex("#fcfbf9"),
 		surface:        ui.Hex("#fefefd"),
 		surfaceHover:   ui.Hex("#eceae4"),
@@ -84,10 +102,26 @@ func themePalette(dark bool) palette {
 		scrollbar:      ui.RGBA(51, 51, 47, 77),
 		shadow:         ui.RGBA(51, 43, 34, 20),
 	}
+	if high {
+		p.background = ui.Hex("#ffffff")
+		p.surface = ui.Hex("#f5f3ef")
+		p.surfaceHover = ui.Hex("#d9d5cc")
+		p.surfacePressed = ui.Hex("#c2bdb3")
+		p.border = ui.Hex("#74726b")
+		p.text = ui.Hex("#11110f")
+		p.muted = ui.Hex("#55534d")
+		p.focus = p.accent
+		p.selection = ui.RGBA(189, 72, 27, 89)
+	}
+	return p
 }
 
 func nativeTheme(dark bool) (*ui.Theme, palette) {
-	p := themePalette(dark)
+	return nativeThemeWithContrast(dark, false)
+}
+
+func nativeThemeWithContrast(dark, high bool) (*ui.Theme, palette) {
+	p := themePaletteWithContrast(dark, high)
 	t := ui.LightTheme()
 	if dark {
 		t = ui.DarkTheme()
@@ -118,4 +152,24 @@ func nativeTheme(dark bool) (*ui.Theme, palette) {
 
 var currentAppearanceDark = func() bool {
 	return mygo.Theme.IsDark()
+}
+
+var appearanceReady atomic.Bool
+
+var currentAppearanceHighContrast = appearanceHighContrast
+
+var currentAppearanceReduceMotion = appearanceReduceMotion
+
+func appearanceHighContrast() bool {
+	if !appearanceReady.Load() {
+		return false
+	}
+	return mygo.Theme.Preferences().HighContrast
+}
+
+func appearanceReduceMotion() bool {
+	if !appearanceReady.Load() {
+		return false
+	}
+	return mygo.Theme.Preferences().ReduceMotion
 }

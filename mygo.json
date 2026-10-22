@@ -1,0 +1,8 @@
+{
+  "name": "BYOP",
+  "identifier": "io.github.lexleizou.byop",
+  "i18n": {
+    "dir": "locales",
+    "source": "en"
+  }
+}

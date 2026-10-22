@@ -25,7 +25,10 @@ const (
 	maxPluginWebViewMessageBytes = 64 << 10
 )
 
-var pluginWebViewThemeEvent = mygo.NewEvent[map[string]any]("byop.theme")
+var (
+	pluginWebViewThemeEvent  = mygo.NewEvent[map[string]any]("byop.theme")
+	pluginWebViewLocaleEvent = mygo.NewEvent[map[string]any]("byop.locale")
+)
 
 type pluginWebViewState struct {
 	webView             *mygo.WebView
@@ -137,12 +140,14 @@ func (s *appState) ensurePluginWebView(
 
 	s.pluginWebViewsMu.RLock()
 	dark := s.pluginWebViewDark
+	high := s.pluginWebViewHighContrast
 	s.pluginWebViewsMu.RUnlock()
+	locale := s.locale()
 	webView, err := s.window.NewWebView(mygo.WebViewOptions{
 		URL:             "byop-plugin://" + entry.ID + "/" + view.Entry,
-		BackgroundColor: pluginColorHex(themePalette(dark).background),
+		BackgroundColor: pluginColorHex(themePaletteWithContrast(dark, high).background),
 		Page: mygo.PageOptions{
-			PreloadScript: pluginWebViewBridgeScript(dark),
+			PreloadScript: pluginWebViewBridgeScript(dark, high, locale),
 		},
 	})
 	if err != nil {
@@ -153,7 +158,7 @@ func (s *appState) ensurePluginWebView(
 			sourceDirectory:     entry.SourceDirectory,
 			manifestFingerprint: fingerprint,
 			status:              pluginWebViewFailed,
-			error:               uiErrorText(err, "Plugin WebView could not be created."),
+			error:               uiErrorText(err, text("pluginsWebViewCreateFailed")),
 		}
 		s.pluginWebViewsMu.Lock()
 		s.pluginWebViews[key] = state
@@ -196,11 +201,13 @@ func (s *appState) ensurePluginWebView(
 		})
 		s.pluginWebViewsMu.RLock()
 		dark := s.pluginWebViewDark
+		high := s.pluginWebViewHighContrast
 		s.pluginWebViewsMu.RUnlock()
-		_ = pluginWebViewThemeEvent.EmitPage(page, currentPluginThemePayload(dark))
+		_ = pluginWebViewThemeEvent.EmitPage(page, currentPluginThemePayload(dark, high))
+		_ = pluginWebViewLocaleEvent.EmitPage(page, currentPluginLocalePayload(s.locale()))
 	})
 	page.OnDidFailLoad(func(loadErr *mygo.LoadError) {
-		message := "WebView failed to load"
+		message := text("pluginsWebViewLoadFailed")
 		if loadErr != nil {
 			message = uiErrorFromText(loadErr.Error(), message)
 		}
@@ -210,10 +217,12 @@ func (s *appState) ensurePluginWebView(
 		})
 	})
 	page.OnRenderProcessGone(func(reason string) {
-		message := uiErrorFromText(reason, "Web content process exited")
+		message := uiErrorFromText(reason, text("pluginsWebViewProcessExited"))
 		s.updatePluginWebViewState(state, func(current *pluginWebViewState) {
 			current.status = pluginWebViewFailed
-			current.error = "Web content process exited: " + message
+			current.error = textArgs("pluginsWebViewProcessExitedDetail", map[string]any{
+				"error": message,
+			})
 		})
 	})
 
@@ -280,7 +289,7 @@ func (s *appState) markPluginWebViewFailed(pluginID, viewID string, err error) {
 	state := s.pluginWebViews[pluginViewCacheKey(pluginID, viewID)]
 	if state != nil {
 		state.status = pluginWebViewFailed
-		state.error = uiErrorText(err, "WebView unavailable")
+		state.error = uiErrorText(err, text("pluginsWebViewUnavailable"))
 	}
 	s.pluginWebViewsMu.Unlock()
 }
@@ -419,27 +428,45 @@ func (s *appState) removePluginWebView(key string, expected *pluginWebViewState)
 	}
 }
 
-func (s *appState) syncPluginWebViewTheme(dark bool) {
+func (s *appState) syncPluginWebViewTheme(dark, high bool) {
 	s.pluginWebViewsMu.Lock()
-	if s.pluginWebViewDark == dark {
+	if s.pluginWebViewDark == dark && s.pluginWebViewHighContrast == high {
 		s.pluginWebViewsMu.Unlock()
 		return
 	}
 	s.pluginWebViewDark = dark
+	s.pluginWebViewHighContrast = high
 	views := make([]*pluginWebViewState, 0, len(s.pluginWebViews))
 	for _, state := range s.pluginWebViews {
 		views = append(views, state)
 	}
 	s.pluginWebViewsMu.Unlock()
 
-	payload := currentPluginThemePayload(dark)
-	background := pluginColorHex(themePalette(dark).background)
+	payload := currentPluginThemePayload(dark, high)
+	background := pluginColorHex(themePaletteWithContrast(dark, high).background)
 	for _, state := range views {
 		if state.webView == nil || state.webView.IsDestroyed() {
 			continue
 		}
 		_ = state.webView.SetBackgroundColor(background)
 		_ = pluginWebViewThemeEvent.EmitPage(state.webView.Page(), payload)
+	}
+}
+
+func (s *appState) syncPluginWebViewLocale() {
+	s.pluginWebViewsMu.RLock()
+	views := make([]*pluginWebViewState, 0, len(s.pluginWebViews))
+	for _, state := range s.pluginWebViews {
+		views = append(views, state)
+	}
+	s.pluginWebViewsMu.RUnlock()
+
+	payload := currentPluginLocalePayload(s.locale())
+	for _, state := range views {
+		if state.webView == nil || state.webView.IsDestroyed() {
+			continue
+		}
+		_ = pluginWebViewLocaleEvent.EmitPage(state.webView.Page(), payload)
 	}
 }
 
@@ -603,13 +630,21 @@ func errorText(err error) string {
 	return err.Error()
 }
 
-func pluginWebViewBridgeScript(dark bool) string {
-	initialTheme, _ := json.Marshal(currentPluginThemePayload(dark))
+func currentPluginLocalePayload(locale string) map[string]any {
+	return map[string]any{"locale": fallback(strings.TrimSpace(locale), "en")}
+}
+
+func pluginWebViewBridgeScript(dark, high bool, locale string) string {
+	initialTheme, _ := json.Marshal(currentPluginThemePayload(dark, high))
+	initialLocale, _ := json.Marshal(currentPluginLocalePayload(locale))
 	return fmt.Sprintf(`(() => {
   "use strict";
   const initialTheme = %s;
+  const initialLocale = %s;
   let theme = initialTheme;
-  const listeners = new Set();
+  let locale = initialLocale.locale;
+  const themeListeners = new Set();
+  const localeListeners = new Set();
 
   function applyTheme(next) {
     theme = next;
@@ -633,8 +668,15 @@ func pluginWebViewBridgeScript(dark bool) string {
       if (value) root.style.setProperty(name, value);
     }
     root.style.colorScheme = next && next.mode === "dark" ? "dark" : "light";
-    for (const listener of listeners) {
+    for (const listener of themeListeners) {
       try { listener(theme); } catch (_) {}
+    }
+  }
+
+  function applyLocale(next) {
+    locale = next && typeof next.locale === "string" ? next.locale : locale;
+    for (const listener of localeListeners) {
+      try { listener(locale); } catch (_) {}
     }
   }
 
@@ -651,6 +693,7 @@ func pluginWebViewBridgeScript(dark bool) string {
 
   if (window.mygo && typeof window.mygo.on === "function") {
     window.mygo.on("byop.theme", (next) => applyTheme(next));
+    window.mygo.on("byop.locale", (next) => applyLocale(next));
   }
   if (document.documentElement) applyTheme(initialTheme);
   document.addEventListener("DOMContentLoaded", () => applyTheme(theme), { once: true });
@@ -666,13 +709,22 @@ func pluginWebViewBridgeScript(dark bool) string {
     },
     onTheme(listener) {
       if (typeof listener !== "function") return () => {};
-      listeners.add(listener);
+      themeListeners.add(listener);
       try { listener(theme); } catch (_) {}
-      return () => listeners.delete(listener);
+      return () => themeListeners.delete(listener);
+    },
+    onLocale(listener) {
+      if (typeof listener !== "function") return () => {};
+      localeListeners.add(listener);
+      try { listener(locale); } catch (_) {}
+      return () => localeListeners.delete(listener);
     },
     get theme() {
       return theme;
+    },
+    get locale() {
+      return locale;
     }
   };
-})();`, initialTheme)
+})();`, initialTheme, initialLocale)
 }

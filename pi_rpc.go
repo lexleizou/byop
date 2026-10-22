@@ -23,6 +23,7 @@ type piEventKind string
 const (
 	piEventResponse     piEventKind = "response"
 	piEventRunStarted   piEventKind = "run_started"
+	piEventUserMessage  piEventKind = "user_message"
 	piEventText         piEventKind = "text"
 	piEventMessage      piEventKind = "message"
 	piEventToolStart    piEventKind = "tool_start"
@@ -127,6 +128,16 @@ type piEvent struct {
 	RetrySucceeded bool
 	ExtensionPath  string
 	ExtensionEvent string
+}
+
+type piStopResult struct {
+	QueueCleared int
+	RetryStopped bool
+}
+
+type piPromptResult struct {
+	RequestID   string
+	Disposition string
 }
 
 type piRPCResponse struct {
@@ -384,14 +395,46 @@ func (p *piClient) SetThinkingLevel(ctx context.Context, level string) error {
 	return err
 }
 
-func (p *piClient) Prompt(message string) (string, error) {
+func (p *piClient) Prompt(message, streamingBehavior string) (string, error) {
 	id := p.newRequestID("prompt")
-	_, err := p.send(map[string]any{
+	payload := map[string]any{
 		"id":      id,
 		"type":    "prompt",
 		"message": message,
-	})
+	}
+	if streamingBehavior != "" {
+		payload["streamingBehavior"] = streamingBehavior
+	}
+	_, err := p.send(payload)
 	return id, err
+}
+
+func (p *piClient) PromptRequest(ctx context.Context, message, streamingBehavior string) (piPromptResult, error) {
+	id := p.newRequestID("prompt")
+	payload := map[string]any{
+		"id":      id,
+		"type":    "prompt",
+		"message": message,
+	}
+	if streamingBehavior != "" {
+		payload["streamingBehavior"] = streamingBehavior
+	}
+	data, err := p.requestWithID(ctx, payload, id)
+	if err != nil {
+		return piPromptResult{RequestID: id}, err
+	}
+	var response struct {
+		Disposition string `json:"disposition"`
+	}
+	if len(data) > 0 && string(data) != "null" {
+		if err := json.Unmarshal(data, &response); err != nil {
+			return piPromptResult{RequestID: id}, fmt.Errorf("parse prompt response: %w", err)
+		}
+	}
+	return piPromptResult{
+		RequestID:   id,
+		Disposition: response.Disposition,
+	}, nil
 }
 
 func (p *piClient) Compact(ctx context.Context, instructions string) error {
@@ -403,40 +446,45 @@ func (p *piClient) Compact(ctx context.Context, instructions string) error {
 	return err
 }
 
-func (p *piClient) Stop(ctx context.Context, abortRetry bool) (string, error) {
+func (p *piClient) ClearQueue(ctx context.Context) ([]string, []string, error) {
+	data, err := p.request(ctx, map[string]any{"type": "clear_queue"})
+	if err != nil {
+		return nil, nil, err
+	}
+	var queue struct {
+		Steering []string `json:"steering"`
+		FollowUp []string `json:"followUp"`
+	}
+	if err := json.Unmarshal(data, &queue); err != nil {
+		return nil, nil, fmt.Errorf("parse cleared queue: %w", err)
+	}
+	return append([]string(nil), queue.Steering...), append([]string(nil), queue.FollowUp...), nil
+}
+
+func (p *piClient) Stop(ctx context.Context, abortRetry bool) (piStopResult, error) {
+	var result piStopResult
 	var retryErr error
 	if abortRetry {
 		_, retryErr = p.request(ctx, map[string]any{"type": "abort_retry"})
+		result.RetryStopped = retryErr == nil
 	}
-	clearData, clearErr := p.request(ctx, map[string]any{"type": "clear_queue"})
-	var clearNote string
+	steering, followUp, clearErr := p.ClearQueue(ctx)
 	if clearErr == nil {
-		var queue struct {
-			Steering []string `json:"steering"`
-			FollowUp []string `json:"followUp"`
-		}
-		if err := json.Unmarshal(clearData, &queue); err != nil {
-			clearNote = "queue response could not be parsed"
-		} else if len(queue.Steering)+len(queue.FollowUp) > 0 {
-			clearNote = fmt.Sprintf("cleared %d queued message(s)", len(queue.Steering)+len(queue.FollowUp))
-		}
+		result.QueueCleared = len(steering) + len(followUp)
 	}
 
 	_, abortErr := p.request(ctx, map[string]any{"type": "abort"})
-	if retryErr == nil && abortRetry {
-		clearNote = strings.TrimPrefix(clearNote+" · retry stopped", " · ")
-	}
 	switch {
 	case clearErr != nil && abortErr != nil:
-		return "", fmt.Errorf("clear queue failed: %v; abort failed: %w", clearErr, abortErr)
+		return result, fmt.Errorf("clear queue failed: %v; abort failed: %w", clearErr, abortErr)
 	case clearErr != nil:
-		return "", fmt.Errorf("abort sent, but queue state is unknown because clear_queue failed: %w", clearErr)
+		return result, fmt.Errorf("abort sent, but queue state is unknown because clear_queue failed: %w", clearErr)
 	case abortErr != nil:
-		return clearNote, fmt.Errorf("%s; abort failed: %w", fallback(clearNote, "queue cleared"), abortErr)
+		return result, fmt.Errorf("queue cleared, but abort failed: %w", abortErr)
 	case retryErr != nil:
-		return clearNote, fmt.Errorf("%s; abort_retry failed: %w", fallback(clearNote, "queue cleared"), retryErr)
+		return result, fmt.Errorf("queue cleared, but abort_retry failed: %w", retryErr)
 	default:
-		return clearNote, nil
+		return result, nil
 	}
 }
 
@@ -456,6 +504,10 @@ func (p *piClient) Close() {
 
 func (p *piClient) request(ctx context.Context, payload map[string]any) (json.RawMessage, error) {
 	id := p.newRequestID(firstNonEmpty(stringValue(payload["type"]), "request"))
+	return p.requestWithID(ctx, payload, id)
+}
+
+func (p *piClient) requestWithID(ctx context.Context, payload map[string]any, id string) (json.RawMessage, error) {
 	payload["id"] = id
 	response := make(chan piRPCResponse, 1)
 
@@ -796,10 +848,18 @@ func (p *piClient) handleMessageEnd(line []byte) {
 	if err := json.Unmarshal(line, &event); err != nil {
 		return
 	}
-	if event.Message.Role != "assistant" {
+	text := contentText(event.Message.Content)
+	switch event.Message.Role {
+	case "user":
+		if text == "" {
+			return
+		}
+		p.emit(piEvent{Kind: piEventUserMessage, Text: text})
+		return
+	case "assistant":
+	default:
 		return
 	}
-	text := contentText(event.Message.Content)
 	if text == "" && event.Message.ErrorMessage == "" {
 		p.resetStream()
 		return

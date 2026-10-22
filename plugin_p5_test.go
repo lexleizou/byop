@@ -16,7 +16,7 @@ import (
 func TestNewAppStateDoesNotReadAppearanceBeforeAppRun(t *testing.T) {
 	t.Setenv("BYOP_CONFIG_DIR", t.TempDir())
 	state := newAppState()
-	if state.pluginWebViewDark {
+	if state.pluginWebViewDark || state.pluginWebViewHighContrast {
 		t.Fatal("plugin WebView appearance should start unset until App.WhenReady")
 	}
 }

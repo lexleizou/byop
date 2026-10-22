@@ -57,12 +57,14 @@ type pluginRuntimeStatus struct {
 // pluginHost owns lazy activation, lifecycle state and command routing for
 // local plugin processes. Each plugin communicates over JSONL JSON-RPC.
 type pluginHost struct {
-	hostVersion   string
-	onChange      func()
-	onNotice      func(pluginID, pluginName, text, tone string)
-	onTaskUpdate  func(update pluginTaskUpdate)
-	onRefreshView func(pluginID, viewID string)
-	themeDark     func() bool
+	hostVersion       string
+	onChange          func()
+	onNotice          func(pluginID, pluginName, text, tone string)
+	onTaskUpdate      func(update pluginTaskUpdate)
+	onRefreshView     func(pluginID, viewID string)
+	themeDark         func() bool
+	themeHighContrast func() bool
+	locale            func() string
 
 	workspaceRoot string
 	settings      *pluginSettingsStore
@@ -119,6 +121,18 @@ func pluginHostTheme(dark func() bool) pluginHostOption {
 	}
 }
 
+func pluginHostHighContrast(high func() bool) pluginHostOption {
+	return func(host *pluginHost) {
+		host.themeHighContrast = high
+	}
+}
+
+func pluginHostLocale(locale func() string) pluginHostOption {
+	return func(host *pluginHost) {
+		host.locale = locale
+	}
+}
+
 func newPluginHost(hostVersion string, onChange func(), options ...pluginHostOption) *pluginHost {
 	workspace, err := os.Getwd()
 	if configured := strings.TrimSpace(os.Getenv("BYOP_WORKSPACE")); configured != "" {
@@ -137,15 +151,17 @@ func newPluginHost(hostVersion string, onChange func(), options ...pluginHostOpt
 		configDir = filepath.Join(os.TempDir(), "byop-config")
 	}
 	host := &pluginHost{
-		hostVersion:      hostVersion,
-		onChange:         onChange,
-		processes:        make(map[string]*pluginProcess),
-		statuses:         make(map[string]pluginRuntimeStatus),
-		starting:         make(map[string]*sync.Mutex),
-		workspaceRoot:    workspace,
-		settings:         newPluginSettingsStore(configDir),
-		settingsByPlugin: make(map[string]map[string]any),
-		themeDark:        func() bool { return false },
+		hostVersion:       hostVersion,
+		onChange:          onChange,
+		processes:         make(map[string]*pluginProcess),
+		statuses:          make(map[string]pluginRuntimeStatus),
+		starting:          make(map[string]*sync.Mutex),
+		workspaceRoot:     workspace,
+		settings:          newPluginSettingsStore(configDir),
+		settingsByPlugin:  make(map[string]map[string]any),
+		themeDark:         func() bool { return false },
+		themeHighContrast: func() bool { return false },
+		locale:            func() string { return "en" },
 	}
 	for _, option := range options {
 		if option != nil {

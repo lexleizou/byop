@@ -1,0 +1,2716 @@
+{
+  "@@locale": "en",
+  "appWindowTitle": "Build You Own Pi",
+  "@appWindowTitle": {
+    "description": "The application window title."
+  },
+  "navWorkspace": "WORKSPACE",
+  "@navWorkspace": {
+    "description": "Sidebar section label for primary navigation."
+  },
+  "navChat": "Chat",
+  "@navChat": {
+    "description": "Primary navigation label for the chat page."
+  },
+  "navPlugins": "Plugins",
+  "@navPlugins": {
+    "description": "Primary navigation label for the plugins page."
+  },
+  "navAutomations": "Automations",
+  "@navAutomations": {
+    "description": "Primary navigation label for the automations page."
+  },
+  "navSettings": "Settings",
+  "@navSettings": {
+    "description": "Primary navigation label for the settings page."
+  },
+  "navPluginsSection": "PLUGINS",
+  "@navPluginsSection": {
+    "description": "Sidebar section label for plugin navigation."
+  },
+  "navSessions": "SESSIONS",
+  "@navSessions": {
+    "description": "Sidebar section label for Pi sessions."
+  },
+  "navNewSession": "New session",
+  "@navNewSession": {
+    "description": "Accessible label and tooltip for creating a new Pi session."
+  },
+  "navShowAll": "Show all",
+  "@navShowAll": {
+    "description": "Action that expands the recent sessions list."
+  },
+  "navShowRecent": "Show recent",
+  "@navShowRecent": {
+    "description": "Action that collapses the sessions list to recent items."
+  },
+  "titleToggleNavigation": "Toggle navigation",
+  "@titleToggleNavigation": {
+    "description": "Accessible label for the navigation toggle."
+  },
+  "titleToggleTaskPanel": "Toggle task panel",
+  "@titleToggleTaskPanel": {
+    "description": "Accessible label for the task panel toggle."
+  },
+  "titleReconnectPi": "Reconnect external Pi CLI",
+  "@titleReconnectPi": {
+    "description": "Tooltip for the Pi connection status."
+  },
+  "titleDismissNotice": "Dismiss notice",
+  "@titleDismissNotice": {
+    "description": "Accessible label for closing the notice banner."
+  },
+  "titleCloseTaskPanel": "Close task panel",
+  "@titleCloseTaskPanel": {
+    "description": "Accessible label for closing the task panel."
+  },
+  "tasksTitle": "Tasks",
+  "@tasksTitle": {
+    "description": "Title of the right-side task panel."
+  },
+  "tasksDescription": "Run activity and background work",
+  "@tasksDescription": {
+    "description": "Description below the task panel title."
+  },
+  "tasksPiRpc": "Pi JSONL RPC",
+  "@tasksPiRpc": {
+    "description": "Task card title for the Pi RPC connection."
+  },
+  "tasksCurrentRun": "Current run",
+  "@tasksCurrentRun": {
+    "description": "Task card title for the current Pi run."
+  },
+  "tasksRuntimeDiagnostics": "Runtime diagnostics",
+  "@tasksRuntimeDiagnostics": {
+    "description": "Task card title for runtime diagnostics."
+  },
+  "tasksPluginRegistry": "Plugin registry",
+  "@tasksPluginRegistry": {
+    "description": "Task card title for plugin registry status."
+  },
+  "tasksOwnership": "Pi owns sessions, credentials, models, and extensions",
+  "@tasksOwnership": {
+    "description": "Footer explaining ownership of Pi state."
+  },
+  "noticeWaitSessionOperation": "Wait for the current Pi session operation before changing {change}.",
+  "@noticeWaitSessionOperation": {
+    "description": "User-interface text for notice Wait Session Operation."
+  },
+  "noticeStopBeforeChange": "Stop the active Pi run before changing {change}.",
+  "@noticeStopBeforeChange": {
+    "description": "User-interface text for notice Stop Before Change."
+  },
+  "noticePiDisconnected": "Pi CLI is not connected. Reconnect from Settings.",
+  "@noticePiDisconnected": {
+    "description": "User-interface text for notice Pi Disconnected."
+  },
+  "noticeSessionCreateFailed": "Could not create a Pi session: {error}",
+  "@noticeSessionCreateFailed": {
+    "description": "User-interface text for notice Session Create Failed."
+  },
+  "noticeSessionCreateCancelled": "Pi canceled the new session.",
+  "@noticeSessionCreateCancelled": {
+    "description": "User-interface text for notice Session Create Cancelled."
+  },
+  "noticeSessionCreateUnconfirmed": "New Pi session was created, but its state could not be confirmed: {error}",
+  "@noticeSessionCreateUnconfirmed": {
+    "description": "User-interface text for notice Session Create Unconfirmed."
+  },
+  "noticeSessionCreated": "New Pi session created.",
+  "@noticeSessionCreated": {
+    "description": "User-interface text for notice Session Created."
+  },
+  "noticeSessionSwitchUnavailable": "Session switching is unavailable while BYOP_PI_EPHEMERAL is enabled.",
+  "@noticeSessionSwitchUnavailable": {
+    "description": "User-interface text for notice Session Switch Unavailable."
+  },
+  "noticeSessionSwitchFailed": "Could not switch Pi session: {error}",
+  "@noticeSessionSwitchFailed": {
+    "description": "User-interface text for notice Session Switch Failed."
+  },
+  "noticeSessionSwitchCancelled": "Pi canceled the session switch.",
+  "@noticeSessionSwitchCancelled": {
+    "description": "User-interface text for notice Session Switch Cancelled."
+  },
+  "noticeSessionTranscriptRestoreFailed": "Session changed, but its transcript could not be restored: {error}",
+  "@noticeSessionTranscriptRestoreFailed": {
+    "description": "User-interface text for notice Session Transcript Restore Failed."
+  },
+  "noticeSessionTranscriptReadFailed": "Session transcript could not be read: {error}",
+  "@noticeSessionTranscriptReadFailed": {
+    "description": "User-interface text for notice Session Transcript Read Failed."
+  },
+  "noticeSessionSwitched": "Switched Pi session.",
+  "@noticeSessionSwitched": {
+    "description": "User-interface text for notice Session Switched."
+  },
+  "noticeSessionStateUnconfirmed": "{notice} Pi state could not be confirmed: {error}",
+  "@noticeSessionStateUnconfirmed": {
+    "description": "User-interface text for notice Session State Unconfirmed."
+  },
+  "noticeSessionMismatch": "{notice} Pi reported a different session.",
+  "@noticeSessionMismatch": {
+    "description": "User-interface text for notice Session Mismatch."
+  },
+  "noticeSessionPreferenceSave": "Pi session changed, but its preference could not be saved.",
+  "@noticeSessionPreferenceSave": {
+    "description": "User-interface text for notice Session Preference Save."
+  },
+  "noticeWorkspaceFailed": "Pi workspace failed: {error}",
+  "@noticeWorkspaceFailed": {
+    "description": "User-interface text for notice Workspace Failed."
+  },
+  "noticePiConnectFailed": "Pi connection failed: {error}",
+  "@noticePiConnectFailed": {
+    "description": "User-interface text for notice Pi Connect Failed."
+  },
+  "noticePiRPCFailed": "Pi RPC handshake failed: {error}",
+  "@noticePiRPCFailed": {
+    "description": "User-interface text for notice Pi R P C Failed."
+  },
+  "noticePiConnectedNoModels": "External Pi CLI connected; model metadata was unavailable.",
+  "@noticePiConnectedNoModels": {
+    "description": "User-interface text for notice Pi Connected No Models."
+  },
+  "noticePiConnected": "External Pi CLI connected.",
+  "@noticePiConnected": {
+    "description": "User-interface text for notice Pi Connected."
+  },
+  "noticePiConnecting": "Connecting to external Pi CLI…",
+  "@noticePiConnecting": {
+    "description": "User-interface text for notice Pi Connecting."
+  },
+  "noticePiResolveFailed": "Pi CLI could not be resolved.",
+  "@noticePiResolveFailed": {
+    "description": "User-interface text for notice Pi Resolve Failed."
+  },
+  "noticeCurrentChangeSession": "sessions",
+  "@noticeCurrentChangeSession": {
+    "description": "User-interface text for notice Current Change Session."
+  },
+  "noticeCurrentChangeModel": "the current model",
+  "@noticeCurrentChangeModel": {
+    "description": "User-interface text for notice Current Change Model."
+  },
+  "noticeCurrentChangeThinking": "the current thinking level",
+  "@noticeCurrentChangeThinking": {
+    "description": "User-interface text for notice Current Change Thinking."
+  },
+  "noticeModelChangeFailed": "Could not change Pi model: {error}",
+  "@noticeModelChangeFailed": {
+    "description": "User-interface text for notice Model Change Failed."
+  },
+  "noticeModelLevelsRefreshFailed": "Model changed, but thinking levels could not be refreshed.",
+  "@noticeModelLevelsRefreshFailed": {
+    "description": "User-interface text for notice Model Levels Refresh Failed."
+  },
+  "noticeThinkingChangeFailed": "Could not change Pi thinking level: {error}",
+  "@noticeThinkingChangeFailed": {
+    "description": "User-interface text for notice Thinking Change Failed."
+  },
+  "noticeMessageEmpty": "Type a message before sending.",
+  "@noticeMessageEmpty": {
+    "description": "User-interface text for notice Message Empty."
+  },
+  "noticeSessionOperationBeforeSend": "Wait for the current Pi session operation before sending a message.",
+  "@noticeSessionOperationBeforeSend": {
+    "description": "User-interface text for notice Session Operation Before Send."
+  },
+  "noticeThinkingBeforeSend": "Wait for the current thinking level update before sending a message.",
+  "@noticeThinkingBeforeSend": {
+    "description": "User-interface text for notice Thinking Before Send."
+  },
+  "noticePiAlreadyWorking": "Pi is already working. Stop the current run before sending another message.",
+  "@noticePiAlreadyWorking": {
+    "description": "User-interface text for notice Pi Already Working."
+  },
+  "noticeSendFailed": "Could not send to Pi: {error}",
+  "@noticeSendFailed": {
+    "description": "User-interface text for notice Send Failed."
+  },
+  "noticeStopFailed": "Stop was sent, but {error}",
+  "@noticeStopFailed": {
+    "description": "User-interface text for notice Stop Failed."
+  },
+  "noticeStopRequestedDetail": "Stop requested. {detail}.",
+  "@noticeStopRequestedDetail": {
+    "description": "User-interface text for notice Stop Requested Detail."
+  },
+  "noticeStopRequested": "Stop requested. Queue cleared and abort sent.",
+  "@noticeStopRequested": {
+    "description": "User-interface text for notice Stop Requested."
+  },
+  "noticeStopRequestedQueue": "Stop requested. Queue cleared ({count, plural, one {# message} other {# messages}}) and abort sent.",
+  "@noticeStopRequestedQueue": {
+    "description": "Notice shown after Stop clears queued messages.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeStopRequestedRetry": "Stop requested. Retry stopped, queue cleared, and abort sent.",
+  "@noticeStopRequestedRetry": {
+    "description": "Notice shown after Stop also cancels an automatic retry."
+  },
+  "noticePromptRejected": "Pi rejected the prompt: {error}",
+  "@noticePromptRejected": {
+    "description": "User-interface text for notice Prompt Rejected."
+  },
+  "noticePiHandledExtension": "Pi handled this as an extension command.",
+  "@noticePiHandledExtension": {
+    "description": "User-interface text for notice Pi Handled Extension."
+  },
+  "noticePiExtensionError": "Pi extension error: {error}",
+  "@noticePiExtensionError": {
+    "description": "User-interface text for notice Pi Extension Error."
+  },
+  "noticePiProtocolWarning": "Pi protocol warning: {error}",
+  "@noticePiProtocolWarning": {
+    "description": "User-interface text for notice Pi Protocol Warning."
+  },
+  "noticePiProcessExited": "Pi process exited before the run completed.",
+  "@noticePiProcessExited": {
+    "description": "User-interface text for notice Pi Process Exited."
+  },
+  "noticePiDisconnectedEvent": "Pi CLI disconnected.",
+  "@noticePiDisconnectedEvent": {
+    "description": "User-interface text for notice Pi Disconnected Event."
+  },
+  "noticePiFinished": "Pi finished and is ready for another message.",
+  "@noticePiFinished": {
+    "description": "User-interface text for notice Pi Finished."
+  },
+  "errorPiUnavailable": "Pi is unavailable.",
+  "@errorPiUnavailable": {
+    "description": "User-interface text for error Pi Unavailable."
+  },
+  "errorPiStopFailed": "Pi stop failed.",
+  "@errorPiStopFailed": {
+    "description": "User-interface text for error Pi Stop Failed."
+  },
+  "errorPiPromptRejected": "Pi rejected the prompt.",
+  "@errorPiPromptRejected": {
+    "description": "User-interface text for error Pi Prompt Rejected."
+  },
+  "errorPiMessageFailed": "Pi message failed.",
+  "@errorPiMessageFailed": {
+    "description": "User-interface text for error Pi Message Failed."
+  },
+  "errorCompactionFailed": "Context compaction failed.",
+  "@errorCompactionFailed": {
+    "description": "User-interface text for error Compaction Failed."
+  },
+  "errorRetryFailed": "Pi retry failed.",
+  "@errorRetryFailed": {
+    "description": "User-interface text for error Retry Failed."
+  },
+  "errorExtensionFailed": "Pi extension failed.",
+  "@errorExtensionFailed": {
+    "description": "User-interface text for error Extension Failed."
+  },
+  "errorProtocolWarning": "Pi protocol warning.",
+  "@errorProtocolWarning": {
+    "description": "User-interface text for error Protocol Warning."
+  },
+  "errorPiDisconnected": "Pi CLI disconnected.",
+  "@errorPiDisconnected": {
+    "description": "User-interface text for error Pi Disconnected."
+  },
+  "errorToolFallback": "tool",
+  "@errorToolFallback": {
+    "description": "User-interface text for error Tool Fallback."
+  },
+  "runDetailCurrentTool": "{tool} · {status} in {duration}",
+  "@runDetailCurrentTool": {
+    "description": "User-interface text for run Detail Current Tool."
+  },
+  "toolStatusRunning": "Running",
+  "@toolStatusRunning": {
+    "description": "User-interface text for tool Status Running."
+  },
+  "toolStatusCompleted": "Completed",
+  "@toolStatusCompleted": {
+    "description": "User-interface text for tool Status Completed."
+  },
+  "toolStatusFailed": "Failed",
+  "@toolStatusFailed": {
+    "description": "User-interface text for tool Status Failed."
+  },
+  "toolStatusCancelled": "Cancelled",
+  "@toolStatusCancelled": {
+    "description": "User-interface text for tool Status Cancelled."
+  },
+  "toolStatusInterrupted": "Interrupted",
+  "@toolStatusInterrupted": {
+    "description": "User-interface text for tool Status Interrupted."
+  },
+  "toolStatusUnknown": "Unknown",
+  "@toolStatusUnknown": {
+    "description": "User-interface text for tool Status Unknown."
+  },
+  "toolOutputTruncated": "\n… output truncated",
+  "@toolOutputTruncated": {
+    "description": "User-interface text for tool Output Truncated."
+  },
+  "toolImageFallback": "image",
+  "@toolImageFallback": {
+    "description": "User-interface text for tool Image Fallback."
+  },
+  "piPathNotResolved": "Not resolved",
+  "@piPathNotResolved": {
+    "description": "User-interface text for pi Path Not Resolved."
+  },
+  "piPathFromPATH": "pi (resolved from PATH)",
+  "@piPathFromPATH": {
+    "description": "User-interface text for pi Path From P A T H."
+  },
+  "piStatusLabel": "Pi CLI · {status}",
+  "@piStatusLabel": {
+    "description": "User-interface text for pi Status Label."
+  },
+  "sessionUntitled": "Untitled session",
+  "@sessionUntitled": {
+    "description": "User-interface text for session Untitled."
+  },
+  "uiPathLocalFile": "local file",
+  "@uiPathLocalFile": {
+    "description": "User-interface text for ui Path Local File."
+  },
+  "assistantWaiting": "Waiting for Pi…",
+  "@assistantWaiting": {
+    "description": "User-interface text for assistant Waiting."
+  },
+  "assistantStoppedFallback": "Pi stopped before adding response text.",
+  "@assistantStoppedFallback": {
+    "description": "User-interface text for assistant Stopped Fallback."
+  },
+  "assistantErrorFallback": "Pi stopped after an error. See runtime details for the error.",
+  "@assistantErrorFallback": {
+    "description": "User-interface text for assistant Error Fallback."
+  },
+  "assistantEmptyFallback": "Pi completed without assistant text.",
+  "@assistantEmptyFallback": {
+    "description": "User-interface text for assistant Empty Fallback."
+  },
+  "assistantExitedFallback": "Pi exited before adding response text.",
+  "@assistantExitedFallback": {
+    "description": "User-interface text for assistant Exited Fallback."
+  },
+  "pluginsWorkbench": "WORKBENCH",
+  "@pluginsWorkbench": {
+    "description": "User-interface text for plugins Workbench."
+  },
+  "pluginsTitle": "Plugins",
+  "@pluginsTitle": {
+    "description": "User-interface text for plugins Title."
+  },
+  "pluginsDescription": "Discover local plugins, open typed native views, or host isolated HTML in a capability-checked WebView. Native and Node runtimes start lazily and share the same host API.",
+  "@pluginsDescription": {
+    "description": "User-interface text for plugins Description."
+  },
+  "pluginsScan": "Scan plugins",
+  "@pluginsScan": {
+    "description": "User-interface text for plugins Scan."
+  },
+  "pluginsSearch": "Search plugins",
+  "@pluginsSearch": {
+    "description": "User-interface text for plugins Search."
+  },
+  "pluginsFolders": "Plugin folders",
+  "@pluginsFolders": {
+    "description": "User-interface text for plugins Folders."
+  },
+  "pluginsRoots": "Plugin roots · {roots}",
+  "@pluginsRoots": {
+    "description": "User-interface text for plugins Roots."
+  },
+  "pluginsRegistrySummary": "{registered} REGISTERED · {contributions} CONTRIBUTIONS",
+  "@pluginsRegistrySummary": {
+    "description": "User-interface text for plugins Registry Summary."
+  },
+  "pluginsDiscovered": "DISCOVERED PLUGINS",
+  "@pluginsDiscovered": {
+    "description": "User-interface text for plugins Discovered."
+  },
+  "pluginsContractPreview": "PLUGIN CONTRACT PREVIEW",
+  "@pluginsContractPreview": {
+    "description": "User-interface text for plugins Contract Preview."
+  },
+  "pluginsContractDescription": "Host {host} validates schema {schema} and plugin API {api}. P5 activates native and Node plugins on demand, renders typed native views, and hosts isolated WebViews through the byop-plugin scheme with a strict CSP. Page calls cross one identity-checked bridge into the same capability-checked host API.",
+  "@pluginsContractDescription": {
+    "description": "User-interface text for plugins Contract Description."
+  },
+  "pluginsContractCommands": "commands",
+  "@pluginsContractCommands": {
+    "description": "User-interface text for plugins Contract Commands."
+  },
+  "pluginsContractViews": "views",
+  "@pluginsContractViews": {
+    "description": "User-interface text for plugins Contract Views."
+  },
+  "pluginsContractWebViews": "webviews",
+  "@pluginsContractWebViews": {
+    "description": "User-interface text for plugins Contract Web Views."
+  },
+  "pluginsContractTasks": "tasks",
+  "@pluginsContractTasks": {
+    "description": "User-interface text for plugins Contract Tasks."
+  },
+  "pluginsContractSettings": "settings",
+  "@pluginsContractSettings": {
+    "description": "User-interface text for plugins Contract Settings."
+  },
+  "pluginsContractHostCalls": "host calls",
+  "@pluginsContractHostCalls": {
+    "description": "User-interface text for plugins Contract Host Calls."
+  },
+  "pluginsContractNodePermissions": "node permissions",
+  "@pluginsContractNodePermissions": {
+    "description": "User-interface text for plugins Contract Node Permissions."
+  },
+  "pluginsContractSchemeCSP": "custom scheme CSP",
+  "@pluginsContractSchemeCSP": {
+    "description": "User-interface text for plugins Contract Scheme C S P."
+  },
+  "pluginsRegistryScanIssues": "Registry scan issues",
+  "@pluginsRegistryScanIssues": {
+    "description": "User-interface text for plugins Registry Scan Issues."
+  },
+  "pluginsRegistryEmpty": "Registry is empty",
+  "@pluginsRegistryEmpty": {
+    "description": "User-interface text for plugins Registry Empty."
+  },
+  "pluginsManifestsNotFound": "No plugin.json manifests were found in the configured roots.",
+  "@pluginsManifestsNotFound": {
+    "description": "User-interface text for plugins Manifests Not Found."
+  },
+  "pluginsNoMatch": "No registered plugin matches “{query}”.",
+  "@pluginsNoMatch": {
+    "description": "User-interface text for plugins No Match."
+  },
+  "pluginsNoDescription": "No description declared.",
+  "@pluginsNoDescription": {
+    "description": "User-interface text for plugins No Description."
+  },
+  "pluginsManifestRejected": "Manifest rejected",
+  "@pluginsManifestRejected": {
+    "description": "User-interface text for plugins Manifest Rejected."
+  },
+  "pluginsContributionCount": "{count, plural, =0 {No contributions declared} one {# contribution} other {# contributions}}",
+  "@pluginsContributionCount": {
+    "description": "User-interface text for plugins Contribution Count."
+  },
+  "pluginsRuntimeMeta": "runtime {runtime} · {count, plural, one {# contribution} other {# contributions}}",
+  "@pluginsRuntimeMeta": {
+    "description": "User-interface text for plugins Runtime Meta."
+  },
+  "pluginsWebViewMeta": "{title} · {entry} · Isolated · byop-plugin scheme · CSP",
+  "@pluginsWebViewMeta": {
+    "description": "User-interface text for plugins Web View Meta."
+  },
+  "pluginsSecondaryViews": "Secondary views · {views}",
+  "@pluginsSecondaryViews": {
+    "description": "User-interface text for plugins Secondary Views."
+  },
+  "pluginsFailedFallback": "Plugin failed.",
+  "@pluginsFailedFallback": {
+    "description": "User-interface text for plugins Failed Fallback."
+  },
+  "pluginsHostCallCount": "{count, plural, one {# host call} other {# host calls}}",
+  "@pluginsHostCallCount": {
+    "description": "User-interface text for plugins Host Call Count."
+  },
+  "pluginsDenied": "Denied: {detail}",
+  "@pluginsDenied": {
+    "description": "User-interface text for plugins Denied."
+  },
+  "pluginsDeactivate": "Deactivate",
+  "@pluginsDeactivate": {
+    "description": "User-interface text for plugins Deactivate."
+  },
+  "pluginsOpen": "Open {title}",
+  "@pluginsOpen": {
+    "description": "User-interface text for plugins Open."
+  },
+  "pluginsRunning": "Running {title}…",
+  "@pluginsRunning": {
+    "description": "User-interface text for plugins Running."
+  },
+  "pluginsCommandFailed": "{title} failed: {error}",
+  "@pluginsCommandFailed": {
+    "description": "User-interface text for plugins Command Failed."
+  },
+  "pluginsStoppedWithError": "{name} stopped with an error: {error}",
+  "@pluginsStoppedWithError": {
+    "description": "User-interface text for plugins Stopped With Error."
+  },
+  "pluginsDeactivated": "{name} deactivated and its process exited.",
+  "@pluginsDeactivated": {
+    "description": "User-interface text for plugins Deactivated."
+  },
+  "pluginsPermissions": "workspace {workspace} · files {files} · network {network} · process {process}",
+  "@pluginsPermissions": {
+    "description": "User-interface text for plugins Permissions."
+  },
+  "pluginsValueNone": "none",
+  "@pluginsValueNone": {
+    "description": "User-interface text for plugins Value None."
+  },
+  "pluginsValueOff": "off",
+  "@pluginsValueOff": {
+    "description": "User-interface text for plugins Value Off."
+  },
+  "pluginsValueOn": "on",
+  "@pluginsValueOn": {
+    "description": "User-interface text for plugins Value On."
+  },
+  "pluginsEnforcementNode": "Node permission model + host checks",
+  "@pluginsEnforcementNode": {
+    "description": "User-interface text for plugins Enforcement Node."
+  },
+  "pluginsEnforcementHost": "Host checks only · process unsandboxed",
+  "@pluginsEnforcementHost": {
+    "description": "User-interface text for plugins Enforcement Host."
+  },
+  "pluginsStatusRegistered": "REGISTERED",
+  "@pluginsStatusRegistered": {
+    "description": "User-interface text for plugins Status Registered."
+  },
+  "pluginsStatusInvalid": "INVALID",
+  "@pluginsStatusInvalid": {
+    "description": "User-interface text for plugins Status Invalid."
+  },
+  "pluginsStatusIncompatible": "INCOMPATIBLE",
+  "@pluginsStatusIncompatible": {
+    "description": "User-interface text for plugins Status Incompatible."
+  },
+  "pluginsStatusDuplicateID": "DUPLICATE ID",
+  "@pluginsStatusDuplicateID": {
+    "description": "User-interface text for plugins Status Duplicate I D."
+  },
+  "pluginsStatusConflict": "CONFLICT",
+  "@pluginsStatusConflict": {
+    "description": "User-interface text for plugins Status Conflict."
+  },
+  "pluginsStatusUnknown": "UNKNOWN",
+  "@pluginsStatusUnknown": {
+    "description": "User-interface text for plugins Status Unknown."
+  },
+  "pluginsStatusInactive": "INACTIVE",
+  "@pluginsStatusInactive": {
+    "description": "User-interface text for plugins Status Inactive."
+  },
+  "pluginsStatusStarting": "STARTING",
+  "@pluginsStatusStarting": {
+    "description": "User-interface text for plugins Status Starting."
+  },
+  "pluginsStatusActive": "ACTIVE",
+  "@pluginsStatusActive": {
+    "description": "User-interface text for plugins Status Active."
+  },
+  "pluginsStatusRunning": "RUNNING",
+  "@pluginsStatusRunning": {
+    "description": "User-interface text for plugins Status Running."
+  },
+  "pluginsStatusStopping": "STOPPING",
+  "@pluginsStatusStopping": {
+    "description": "User-interface text for plugins Status Stopping."
+  },
+  "pluginsStatusFailed": "FAILED",
+  "@pluginsStatusFailed": {
+    "description": "User-interface text for plugins Status Failed."
+  },
+  "taskStatusAttention": "ATTENTION",
+  "@taskStatusAttention": {
+    "description": "User-interface text for task Status Attention."
+  },
+  "taskStatusRegistered": "REGISTERED",
+  "@taskStatusRegistered": {
+    "description": "User-interface text for task Status Registered."
+  },
+  "taskStatusEmpty": "EMPTY",
+  "@taskStatusEmpty": {
+    "description": "User-interface text for task Status Empty."
+  },
+  "taskStatusInfo": "INFO",
+  "@taskStatusInfo": {
+    "description": "User-interface text for task Status Info."
+  },
+  "taskStatusSuccess": "SUCCESS",
+  "@taskStatusSuccess": {
+    "description": "User-interface text for task Status Success."
+  },
+  "taskStatusWarning": "WARNING",
+  "@taskStatusWarning": {
+    "description": "User-interface text for task Status Warning."
+  },
+  "taskStatusError": "ERROR",
+  "@taskStatusError": {
+    "description": "User-interface text for task Status Error."
+  },
+  "pluginsSummaryNavigation": "{count, plural, one {# navigation} other {# navigation}}",
+  "@pluginsSummaryNavigation": {
+    "description": "User-interface text for plugins Summary Navigation."
+  },
+  "pluginsSummaryCommand": "{count, plural, one {# command} other {# commands}}",
+  "@pluginsSummaryCommand": {
+    "description": "User-interface text for plugins Summary Command."
+  },
+  "pluginsSummaryNativeView": "{count, plural, one {# native view} other {# native views}}",
+  "@pluginsSummaryNativeView": {
+    "description": "User-interface text for plugins Summary Native View."
+  },
+  "pluginsSummaryTaskPanel": "{count, plural, one {# task panel} other {# task panels}}",
+  "@pluginsSummaryTaskPanel": {
+    "description": "User-interface text for plugins Summary Task Panel."
+  },
+  "pluginsSummarySetting": "{count, plural, one {# setting} other {# settings}}",
+  "@pluginsSummarySetting": {
+    "description": "User-interface text for plugins Summary Setting."
+  },
+  "pluginsSummaryWebView": "{count, plural, one {# WebView} other {# WebViews}}",
+  "@pluginsSummaryWebView": {
+    "description": "User-interface text for plugins Summary Web View."
+  },
+  "pluginsSummaryAutomation": "{count, plural, one {# automation} other {# automations}}",
+  "@pluginsSummaryAutomation": {
+    "description": "User-interface text for plugins Summary Automation."
+  },
+  "pluginsSettingsEmptyTitle": "No plugin settings",
+  "@pluginsSettingsEmptyTitle": {
+    "description": "User-interface text for plugins Settings Empty Title."
+  },
+  "pluginsSettingsEmptyDescription": "Registered plugins have not declared typed setting fields.",
+  "@pluginsSettingsEmptyDescription": {
+    "description": "User-interface text for plugins Settings Empty Description."
+  },
+  "pluginsSettingsDefaultDescription": "Settings are stored locally by BYOP and passed to the plugin when it starts.",
+  "@pluginsSettingsDefaultDescription": {
+    "description": "User-interface text for plugins Settings Default Description."
+  },
+  "pluginsSettingsSave": "Save",
+  "@pluginsSettingsSave": {
+    "description": "User-interface text for plugins Settings Save."
+  },
+  "pluginsSettingsSaving": "Saving…",
+  "@pluginsSettingsSaving": {
+    "description": "User-interface text for plugins Settings Saving."
+  },
+  "pluginsSettingsSaved": "Saved",
+  "@pluginsSettingsSaved": {
+    "description": "User-interface text for plugins Settings Saved."
+  },
+  "pluginsSettingsInvalidNumber": "Enter a valid number.",
+  "@pluginsSettingsInvalidNumber": {
+    "description": "User-interface text for plugins Settings Invalid Number."
+  },
+  "pluginsSettingsSaveFailed": "Plugin settings could not be saved.",
+  "@pluginsSettingsSaveFailed": {
+    "description": "User-interface text for plugins Settings Save Failed."
+  },
+  "pluginsViewRefresh": "Refresh",
+  "@pluginsViewRefresh": {
+    "description": "User-interface text for plugins View Refresh."
+  },
+  "pluginsViewDefaultDescription": "Plugin view",
+  "@pluginsViewDefaultDescription": {
+    "description": "User-interface text for plugins View Default Description."
+  },
+  "pluginsViewUnavailableSection": "PLUGINS",
+  "@pluginsViewUnavailableSection": {
+    "description": "User-interface text for plugins View Unavailable Section."
+  },
+  "pluginsViewUnavailableTitle": "View unavailable",
+  "@pluginsViewUnavailableTitle": {
+    "description": "User-interface text for plugins View Unavailable Title."
+  },
+  "pluginsViewUnavailableDescription": "The selected plugin view is no longer registered. Returning to Plugins.",
+  "@pluginsViewUnavailableDescription": {
+    "description": "User-interface text for plugins View Unavailable Description."
+  },
+  "pluginsViewRendering": "Rendering plugin view…",
+  "@pluginsViewRendering": {
+    "description": "User-interface text for plugins View Rendering."
+  },
+  "pluginsViewFailed": "View failed to render",
+  "@pluginsViewFailed": {
+    "description": "User-interface text for plugins View Failed."
+  },
+  "pluginsViewRetry": "Retry",
+  "@pluginsViewRetry": {
+    "description": "User-interface text for plugins View Retry."
+  },
+  "pluginsViewEmpty": "The plugin returned an empty view.",
+  "@pluginsViewEmpty": {
+    "description": "User-interface text for plugins View Empty."
+  },
+  "pluginsViewUnsupportedBlock": "Unsupported block",
+  "@pluginsViewUnsupportedBlock": {
+    "description": "User-interface text for plugins View Unsupported Block."
+  },
+  "pluginsWebViewIsolated": "ISOLATED",
+  "@pluginsWebViewIsolated": {
+    "description": "User-interface text for plugins Web View Isolated."
+  },
+  "pluginsWebViewReload": "Reload",
+  "@pluginsWebViewReload": {
+    "description": "User-interface text for plugins Web View Reload."
+  },
+  "pluginsWebViewBack": "Back to Plugins",
+  "@pluginsWebViewBack": {
+    "description": "User-interface text for plugins Web View Back."
+  },
+  "pluginsWebViewSection": "ISOLATED WEBVIEW",
+  "@pluginsWebViewSection": {
+    "description": "User-interface text for plugins Web View Section."
+  },
+  "pluginsWebViewDescription": "{plugin} · byop-plugin scheme · strict CSP",
+  "@pluginsWebViewDescription": {
+    "description": "User-interface text for plugins Web View Description."
+  },
+  "pluginsWebViewUnavailableFallback": "The isolated WebView is unavailable.",
+  "@pluginsWebViewUnavailableFallback": {
+    "description": "User-interface text for plugins Web View Unavailable Fallback."
+  },
+  "pluginsWebViewUnavailable": "WebView unavailable",
+  "@pluginsWebViewUnavailable": {
+    "description": "User-interface text for plugins Web View Unavailable."
+  },
+  "pluginsWebViewCreateFailed": "Plugin WebView could not be created.",
+  "@pluginsWebViewCreateFailed": {
+    "description": "User-interface text for plugins Web View Create Failed."
+  },
+  "pluginsWebViewLoadFailed": "WebView failed to load",
+  "@pluginsWebViewLoadFailed": {
+    "description": "User-interface text for plugins Web View Load Failed."
+  },
+  "pluginsWebViewProcessExited": "Web content process exited",
+  "@pluginsWebViewProcessExited": {
+    "description": "User-interface text for plugins Web View Process Exited."
+  },
+  "pluginsWebViewProcessExitedDetail": "Web content process exited: {error}",
+  "@pluginsWebViewProcessExitedDetail": {
+    "description": "User-interface text for plugins Web View Process Exited Detail."
+  },
+  "automationsSection": "AUTOMATE",
+  "@automationsSection": {
+    "description": "User-interface text for automations Section."
+  },
+  "automationsTitle": "Automations",
+  "@automationsTitle": {
+    "description": "User-interface text for automations Title."
+  },
+  "automationsDescription": "Plugin-registered automations and Loops. Declared rules are validated and displayed; P7 runs them manually.",
+  "@automationsDescription": {
+    "description": "User-interface text for automations Description."
+  },
+  "automationsRegistered": "{count} REGISTERED",
+  "@automationsRegistered": {
+    "description": "User-interface text for automations Registered."
+  },
+  "automationsPausedCount": "{count} PAUSED",
+  "@automationsPausedCount": {
+    "description": "User-interface text for automations Paused Count."
+  },
+  "automationsManualNote": "Timed triggers arrive in a later phase; runs are manual in P7.",
+  "@automationsManualNote": {
+    "description": "User-interface text for automations Manual Note."
+  },
+  "automationsRegisteredSection": "REGISTERED AUTOMATIONS",
+  "@automationsRegisteredSection": {
+    "description": "User-interface text for automations Registered Section."
+  },
+  "automationsEmptyTitle": "No automation contributions",
+  "@automationsEmptyTitle": {
+    "description": "User-interface text for automations Empty Title."
+  },
+  "automationsEmptyBefore": "Plugins declare ",
+  "@automationsEmptyBefore": {
+    "description": "User-interface text for automations Empty Before."
+  },
+  "automationsEmptyField": "contributes.automations",
+  "@automationsEmptyField": {
+    "description": "User-interface text for automations Empty Field."
+  },
+  "automationsEmptyAfter": " in plugin.json.",
+  "@automationsEmptyAfter": {
+    "description": "User-interface text for automations Empty After."
+  },
+  "automationsFailures": "FAILURES {count}/{max}",
+  "@automationsFailures": {
+    "description": "User-interface text for automations Failures."
+  },
+  "automationsLastRun": "Last run {time} · {state}",
+  "@automationsLastRun": {
+    "description": "User-interface text for automations Last Run."
+  },
+  "automationsNoRuns": "No runs yet",
+  "@automationsNoRuns": {
+    "description": "User-interface text for automations No Runs."
+  },
+  "automationsRunNow": "Run now",
+  "@automationsRunNow": {
+    "description": "User-interface text for automations Run Now."
+  },
+  "automationsPause": "Pause",
+  "@automationsPause": {
+    "description": "User-interface text for automations Pause."
+  },
+  "automationsResume": "Resume",
+  "@automationsResume": {
+    "description": "User-interface text for automations Resume."
+  },
+  "automationsRecentRuns": "RECENT RUNS",
+  "@automationsRecentRuns": {
+    "description": "User-interface text for automations Recent Runs."
+  },
+  "automationsKindScheduledLoop": "Scheduled loop · {rule}",
+  "@automationsKindScheduledLoop": {
+    "description": "User-interface text for automations Kind Scheduled Loop."
+  },
+  "automationsKindSessionLoop": "Session loop · {rule}",
+  "@automationsKindSessionLoop": {
+    "description": "User-interface text for automations Kind Session Loop."
+  },
+  "automationsKindOnce": "Once · {rule}",
+  "@automationsKindOnce": {
+    "description": "User-interface text for automations Kind Once."
+  },
+  "automationsKindManual": "Manual",
+  "@automationsKindManual": {
+    "description": "User-interface text for automations Kind Manual."
+  },
+  "automationsRuleNone": "No rule",
+  "@automationsRuleNone": {
+    "description": "User-interface text for automations Rule None."
+  },
+  "automationsRuleEveryMinutes": "every {count} min",
+  "@automationsRuleEveryMinutes": {
+    "description": "User-interface text for automations Rule Every Minutes."
+  },
+  "automationsRuleCron": "cron {rule}",
+  "@automationsRuleCron": {
+    "description": "User-interface text for automations Rule Cron."
+  },
+  "automationsRuleAfterSettled": "after settled",
+  "@automationsRuleAfterSettled": {
+    "description": "User-interface text for automations Rule After Settled."
+  },
+  "automationsStatusRunning": "RUNNING",
+  "@automationsStatusRunning": {
+    "description": "User-interface text for automations Status Running."
+  },
+  "automationsStatusAutoPaused": "AUTO-PAUSED",
+  "@automationsStatusAutoPaused": {
+    "description": "User-interface text for automations Status Auto Paused."
+  },
+  "automationsStatusPaused": "PAUSED",
+  "@automationsStatusPaused": {
+    "description": "User-interface text for automations Status Paused."
+  },
+  "automationsStatusReady": "READY",
+  "@automationsStatusReady": {
+    "description": "User-interface text for automations Status Ready."
+  },
+  "automationsPausedConsecutiveFailures": "5 consecutive failures",
+  "@automationsPausedConsecutiveFailures": {
+    "description": "User-interface text for automations Paused Consecutive Failures."
+  },
+  "automationsPausedAppRestarted": "App restarted",
+  "@automationsPausedAppRestarted": {
+    "description": "User-interface text for automations Paused App Restarted."
+  },
+  "automationsRunStateRunning": "running",
+  "@automationsRunStateRunning": {
+    "description": "User-interface text for automations Run State Running."
+  },
+  "automationsRunStateSucceeded": "succeeded",
+  "@automationsRunStateSucceeded": {
+    "description": "User-interface text for automations Run State Succeeded."
+  },
+  "automationsRunStateFailed": "failed",
+  "@automationsRunStateFailed": {
+    "description": "User-interface text for automations Run State Failed."
+  },
+  "automationsRunStateAborted": "aborted",
+  "@automationsRunStateAborted": {
+    "description": "User-interface text for automations Run State Aborted."
+  },
+  "automationsErrorTimeLimit": "Time limit reached",
+  "@automationsErrorTimeLimit": {
+    "description": "User-interface text for automations Error Time Limit."
+  },
+  "automationsErrorPluginError": "Plugin error",
+  "@automationsErrorPluginError": {
+    "description": "User-interface text for automations Error Plugin Error."
+  },
+  "automationsErrorStopped": "Stopped",
+  "@automationsErrorStopped": {
+    "description": "User-interface text for automations Error Stopped."
+  },
+  "automationsErrorInterrupted": "Interrupted",
+  "@automationsErrorInterrupted": {
+    "description": "Automation error label for an interrupted run."
+  },
+  "automationsWarningRunPathUnresolved": "An automation run path could not be resolved.",
+  "@automationsWarningRunPathUnresolved": {
+    "description": "Warning when an automation run path cannot be resolved."
+  },
+  "automationTriggerManual": "Manual",
+  "@automationTriggerManual": {
+    "description": "Label for a manually triggered automation run."
+  },
+  "automationTriggerScheduled": "Scheduled",
+  "@automationTriggerScheduled": {
+    "description": "Label for a scheduled automation run."
+  },
+  "automationTriggerUnknown": "Unknown trigger",
+  "@automationTriggerUnknown": {
+    "description": "Fallback label for an unknown automation trigger."
+  },
+  "automationsWarningStorageUnavailable": "Automation storage could not be opened.",
+  "@automationsWarningStorageUnavailable": {
+    "description": "User-interface text for automations Warning Storage Unavailable."
+  },
+  "automationsWarningRunStorageUnavailable": "Automation run storage could not be opened.",
+  "@automationsWarningRunStorageUnavailable": {
+    "description": "User-interface text for automations Warning Run Storage Unavailable."
+  },
+  "automationsWarningStateUnreadable": "Automation state could not be read; defaults are in use.",
+  "@automationsWarningStateUnreadable": {
+    "description": "User-interface text for automations Warning State Unreadable."
+  },
+  "automationsWarningRunHistoryUnavailable": "Automation run history could not be loaded.",
+  "@automationsWarningRunHistoryUnavailable": {
+    "description": "User-interface text for automations Warning Run History Unavailable."
+  },
+  "automationsWarningRecoveryUnsaved": "Automation recovery state could not be saved.",
+  "@automationsWarningRecoveryUnsaved": {
+    "description": "User-interface text for automations Warning Recovery Unsaved."
+  },
+  "automationsWarningHistoryScanFailed": "Automation run history could not be scanned.",
+  "@automationsWarningHistoryScanFailed": {
+    "description": "User-interface text for automations Warning History Scan Failed."
+  },
+  "automationsWarningLegacyRunIgnored": "An obsolete legacy automation run file was ignored.",
+  "@automationsWarningLegacyRunIgnored": {
+    "description": "User-interface text for automations Warning Legacy Run Ignored."
+  },
+  "automationsWarningRunIncomplete": "An automation run file could not be read completely.",
+  "@automationsWarningRunIncomplete": {
+    "description": "User-interface text for automations Warning Run Incomplete."
+  },
+  "automationsWarningRunQuarantined": "An automation run file was corrupt and was quarantined.",
+  "@automationsWarningRunQuarantined": {
+    "description": "User-interface text for automations Warning Run Quarantined."
+  },
+  "automationsWarningInterruptedRecoveryFailed": "An interrupted automation run could not be recovered.",
+  "@automationsWarningInterruptedRecoveryFailed": {
+    "description": "User-interface text for automations Warning Interrupted Recovery Failed."
+  },
+  "automationsWarningRollbackUnsaved": "Automation state rollback could not be saved.",
+  "@automationsWarningRollbackUnsaved": {
+    "description": "User-interface text for automations Warning Rollback Unsaved."
+  },
+  "automationsWarningOversizedRunNotTrimmed": "An oversized automation run file could not be trimmed.",
+  "@automationsWarningOversizedRunNotTrimmed": {
+    "description": "User-interface text for automations Warning Oversized Run Not Trimmed."
+  },
+  "automationsWarningStateQuarantineFailed": "Corrupt automation state could not be quarantined before saving.",
+  "@automationsWarningStateQuarantineFailed": {
+    "description": "User-interface text for automations Warning State Quarantine Failed."
+  },
+  "automationsWarningStateQuarantined": "Automation state was corrupt and was quarantined; defaults are in use.",
+  "@automationsWarningStateQuarantined": {
+    "description": "User-interface text for automations Warning State Quarantined."
+  },
+  "automationsWarningHistoryUnreadable": "Automation run history could not be read.",
+  "@automationsWarningHistoryUnreadable": {
+    "description": "User-interface text for automations Warning History Unreadable."
+  },
+  "automationsWarningRunIgnored": "An automation run file was corrupt and is ignored.",
+  "@automationsWarningRunIgnored": {
+    "description": "User-interface text for automations Warning Run Ignored."
+  },
+  "automationsWarningRunUnreadable": "An automation run file could not be read.",
+  "@automationsWarningRunUnreadable": {
+    "description": "User-interface text for automations Warning Run Unreadable."
+  },
+  "automationsWarningHistoryQuarantineFailed": "Corrupt automation run history could not be quarantined before saving.",
+  "@automationsWarningHistoryQuarantineFailed": {
+    "description": "User-interface text for automations Warning History Quarantine Failed."
+  },
+  "automationsRunningDuration": "running",
+  "@automationsRunningDuration": {
+    "description": "User-interface text for automations Running Duration."
+  },
+  "automationsFailedFallback": "Automation failed.",
+  "@automationsFailedFallback": {
+    "description": "User-interface text for automations Failed Fallback."
+  },
+  "automationsNoResult": "No result summary",
+  "@automationsNoResult": {
+    "description": "User-interface text for automations No Result."
+  },
+  "automationsRuntimeUnavailable": "Automation runtime is unavailable.",
+  "@automationsRuntimeUnavailable": {
+    "description": "User-interface text for automations Runtime Unavailable."
+  },
+  "automationsResumeBeforeRun": "Resume the automation before running it.",
+  "@automationsResumeBeforeRun": {
+    "description": "User-interface text for automations Resume Before Run."
+  },
+  "automationsAlreadyRunning": "This automation is already running.",
+  "@automationsAlreadyRunning": {
+    "description": "User-interface text for automations Already Running."
+  },
+  "automationsStartFailed": "Could not start automation: {error}",
+  "@automationsStartFailed": {
+    "description": "User-interface text for automations Start Failed."
+  },
+  "automationsRunningNotice": "Running {title}…",
+  "@automationsRunningNotice": {
+    "description": "User-interface text for automations Running Notice."
+  },
+  "automationsFinishSaveFailed": "Automation finished, but its run record could not be saved: {error}",
+  "@automationsFinishSaveFailed": {
+    "description": "User-interface text for automations Finish Save Failed."
+  },
+  "automationsCompleted": "{title} · {result}",
+  "@automationsCompleted": {
+    "description": "User-interface text for automations Completed."
+  },
+  "automationsCommandCompleted": "Command completed",
+  "@automationsCommandCompleted": {
+    "description": "User-interface text for automations Command Completed."
+  },
+  "automationsTimedOut": "{title} timed out after {count, plural, one {# minute} other {# minutes}}.",
+  "@automationsTimedOut": {
+    "description": "User-interface text for automations Timed Out."
+  },
+  "automationsStopped": "{title} stopped because its plugin was deactivated.",
+  "@automationsStopped": {
+    "description": "User-interface text for automations Stopped."
+  },
+  "automationsFailed": "{title} failed: {error}",
+  "@automationsFailed": {
+    "description": "User-interface text for automations Failed."
+  },
+  "automationsAutoPausedNotice": "{title} paused after {count} consecutive failures.",
+  "@automationsAutoPausedNotice": {
+    "description": "User-interface text for automations Auto Paused Notice."
+  },
+  "automationsStateSaveFailed": "Automation state could not be saved: {error}",
+  "@automationsStateSaveFailed": {
+    "description": "User-interface text for automations State Save Failed."
+  },
+  "pluginScanStopping": "Stopping active plugins before rescanning…",
+  "@pluginScanStopping": {
+    "description": "User-interface text for plugin Scan Stopping."
+  },
+  "pluginScanFoundIssues": "Plugin scan found {registered, plural, one {# registered plugin} other {# registered plugins}}, {contributions, plural, one {# contribution} other {# contributions}}, and {issues, plural, one {# issue} other {# issues}}.",
+  "@pluginScanFoundIssues": {
+    "description": "User-interface text for plugin Scan Found Issues."
+  },
+  "pluginScanFoundNone": "Plugin scan completed. No plugin manifests were found.",
+  "@pluginScanFoundNone": {
+    "description": "User-interface text for plugin Scan Found None."
+  },
+  "pluginScanFound": "Plugin scan found {registered, plural, one {# registered plugin} other {# registered plugins}} and {contributions, plural, one {# contribution} other {# contributions}}.",
+  "@pluginScanFound": {
+    "description": "User-interface text for plugin Scan Found."
+  },
+  "chatEmptyTitle": "What should Pi work on?",
+  "@chatEmptyTitle": {
+    "description": "Empty chat prompt."
+  },
+  "chatBackToLatest": "Back to latest",
+  "@chatBackToLatest": {
+    "description": "Control that returns the conversation to the latest message."
+  },
+  "chatMessageLabel": "Message",
+  "@chatMessageLabel": {
+    "description": "Accessible label for the chat composer."
+  },
+  "chatSend": "Send",
+  "@chatSend": {
+    "description": "Chat composer send button."
+  },
+  "chatStatusSent": "sent",
+  "@chatStatusSent": {
+    "description": "Internal status for a user message accepted by Pi; this value is not displayed as interface copy."
+  },
+  "chatStop": "Stop",
+  "@chatStop": {
+    "description": "Chat composer stop button."
+  },
+  "chatAttachmentUnavailable": "Attachments are not connected yet",
+  "@chatAttachmentUnavailable": {
+    "description": "Tooltip for the attachment action."
+  },
+  "chatAttachmentNotice": "Attachments remain outside the current RPC boundary.",
+  "@chatAttachmentNotice": {
+    "description": "Notice shown when attachment support is requested."
+  },
+  "chatFollowUpHint": "Tab to use · Esc to dismiss",
+  "@chatFollowUpHint": {
+    "description": "Keyboard hint for the follow-up suggestion."
+  },
+  "chatStoppingPi": "Stopping Pi",
+  "@chatStoppingPi": {
+    "description": "Composer status while stopping a Pi run."
+  },
+  "chatCompactingContext": "Compacting context",
+  "@chatCompactingContext": {
+    "description": "Composer status while Pi compacts context."
+  },
+  "chatPiWorking": "Pi is working",
+  "@chatPiWorking": {
+    "description": "Composer status while Pi runs."
+  },
+  "chatWorkedFor": "Worked for {duration}",
+  "@chatWorkedFor": {
+    "description": "Summary of a completed assistant turn.",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "1m 4s"
+      }
+    }
+  },
+  "chatWorkingFor": "Working · {duration}",
+  "@chatWorkingFor": {
+    "description": "Summary of a running assistant turn.",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "0m 12s"
+      }
+    }
+  },
+  "chatRanTools": "{count, plural, =0 {Ran no tools} one {Ran # tool} other {Ran # tools}}",
+  "@chatRanTools": {
+    "description": "Summary for a group of tool calls.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "chatWaitingForTool": "Waiting for tool output…",
+  "@chatWaitingForTool": {
+    "description": "Tool status while output is pending."
+  },
+  "chatInterruptedWhenDisconnected": "Interrupted when Pi disconnected",
+  "@chatInterruptedWhenDisconnected": {
+    "description": "Tool status when the Pi process disconnects."
+  },
+  "chatStopped": "Stopped",
+  "@chatStopped": {
+    "description": "Stopped assistant turn status."
+  },
+  "chatInterrupted": "Interrupted",
+  "@chatInterrupted": {
+    "description": "Interrupted assistant turn status."
+  },
+  "chatFailed": "Failed",
+  "@chatFailed": {
+    "description": "Failed assistant turn status."
+  },
+  "chatDuration": "{minutes}m {seconds}s",
+  "@chatDuration": {
+    "description": "Compact assistant turn duration.",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "example": "2"
+      },
+      "seconds": {
+        "type": "int",
+        "example": "8"
+      }
+    }
+  },
+  "chatConnectionNotConnected": "Pi CLI is not connected. Reconnect from Settings.",
+  "@chatConnectionNotConnected": {
+    "description": "Chat composer placeholder when Pi is disconnected."
+  },
+  "chatConnectionConnecting": "Connecting to Pi CLI…",
+  "@chatConnectionConnecting": {
+    "description": "Chat composer placeholder while Pi connects."
+  },
+  "chatConnectionConnected": "Message Pi…",
+  "@chatConnectionConnected": {
+    "description": "Chat composer placeholder when Pi is connected."
+  },
+  "chatConnectionError": "Pi connection failed. Open Settings for details.",
+  "@chatConnectionError": {
+    "description": "Chat composer placeholder after a Pi connection failure."
+  },
+  "followUpSuggestedNext": "Suggested next",
+  "@followUpSuggestedNext": {
+    "description": "Label above a suggested follow-up message."
+  },
+  "followUpUse": "Use",
+  "@followUpUse": {
+    "description": "Button that inserts the follow-up suggestion."
+  },
+  "followUpDismiss": "Dismiss",
+  "@followUpDismiss": {
+    "description": "Button that dismisses the follow-up suggestion."
+  },
+  "toolRunning": "Running",
+  "@toolRunning": {
+    "description": "Running tool status."
+  },
+  "toolCompleted": "Completed",
+  "@toolCompleted": {
+    "description": "Completed tool status."
+  },
+  "toolFailed": "Failed",
+  "@toolFailed": {
+    "description": "Failed tool status."
+  },
+  "toolCancelled": "Cancelled",
+  "@toolCancelled": {
+    "description": "Cancelled tool status."
+  },
+  "toolInterrupted": "Interrupted",
+  "@toolInterrupted": {
+    "description": "Interrupted tool status."
+  },
+  "toolUnknown": "Unknown",
+  "@toolUnknown": {
+    "description": "Unknown tool status."
+  },
+  "outputTruncated": "output truncated",
+  "@outputTruncated": {
+    "description": "Suffix added to truncated tool output."
+  },
+  "settingsSection": "PREFERENCES",
+  "@settingsSection": {
+    "description": "Page section label for settings."
+  },
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Settings page title."
+  },
+  "settingsDescription": "Theme and external runtime controls for the native BYOP workbench.",
+  "@settingsDescription": {
+    "description": "Settings page description."
+  },
+  "settingsLanguageTitle": "Language",
+  "@settingsLanguageTitle": {
+    "description": "Language settings card title."
+  },
+  "settingsLanguageDescription": "Changes interface text only. Pi replies, model names, file paths, and plugin-provided text that has no translation stay unchanged.",
+  "@settingsLanguageDescription": {
+    "description": "Language settings card description."
+  },
+  "settingsLanguageSystem": "System",
+  "@settingsLanguageSystem": {
+    "description": "Option that follows the operating system language."
+  },
+  "settingsAppearanceTitle": "Appearance",
+  "@settingsAppearanceTitle": {
+    "description": "Appearance settings card title."
+  },
+  "settingsAppearanceDescription": "System, Light, and Dark share the Onevra semantic colors and native text scale.",
+  "@settingsAppearanceDescription": {
+    "description": "Appearance settings card description."
+  },
+  "settingsAppearanceSystem": "System",
+  "@settingsAppearanceSystem": {
+    "description": "System theme option."
+  },
+  "settingsAppearanceLight": "Light",
+  "@settingsAppearanceLight": {
+    "description": "Light theme option."
+  },
+  "settingsAppearanceDark": "Dark",
+  "@settingsAppearanceDark": {
+    "description": "Dark theme option."
+  },
+  "settingsFollowUpTitle": "Follow-up suggestion",
+  "@settingsFollowUpTitle": {
+    "description": "Follow-up suggestion settings card title."
+  },
+  "settingsFollowUpDescription": "After a completed reply, BYOP can suggest one short next message. Suggestions never send automatically.",
+  "@settingsFollowUpDescription": {
+    "description": "Follow-up suggestion settings card description."
+  },
+  "settingsFollowUpGhost": "Grey text",
+  "@settingsFollowUpGhost": {
+    "description": "Ghost follow-up display style."
+  },
+  "settingsFollowUpCard": "Card",
+  "@settingsFollowUpCard": {
+    "description": "Card follow-up display style."
+  },
+  "settingsPiTitle": "External Pi CLI",
+  "@settingsPiTitle": {
+    "description": "External Pi settings card title."
+  },
+  "settingsPiDescription": "BYOP starts a separately installed Pi process and uses its versioned JSONL RPC protocol. It does not replace Pi with an embedded SDK.",
+  "@settingsPiDescription": {
+    "description": "External Pi settings card description."
+  },
+  "settingsConnect": "Connect",
+  "@settingsConnect": {
+    "description": "Action that connects Pi."
+  },
+  "settingsReconnect": "Reconnect",
+  "@settingsReconnect": {
+    "description": "Action that reconnects Pi."
+  },
+  "settingsCliPath": "CLI path",
+  "@settingsCliPath": {
+    "description": "Label for the Pi CLI path."
+  },
+  "settingsVersion": "Version",
+  "@settingsVersion": {
+    "description": "Label for the Pi CLI version."
+  },
+  "settingsModel": "Model",
+  "@settingsModel": {
+    "description": "Label for the current Pi model."
+  },
+  "settingsSession": "Session",
+  "@settingsSession": {
+    "description": "Label for the current Pi session."
+  },
+  "settingsRunState": "Run state",
+  "@settingsRunState": {
+    "description": "Label for the current run state."
+  },
+  "settingsPluginSettings": "PLUGIN SETTINGS",
+  "@settingsPluginSettings": {
+    "description": "Section label for plugin settings."
+  },
+  "settingsWorkbenchTitle": "Workbench preferences",
+  "@settingsWorkbenchTitle": {
+    "description": "Workbench preferences card title."
+  },
+  "settingsWorkbenchDescription": "Layout, external Pi, and plugin platform status for this native workbench.",
+  "@settingsWorkbenchDescription": {
+    "description": "Workbench preferences card description."
+  },
+  "settingsNativeRuntime": "Native runtime",
+  "@settingsNativeRuntime": {
+    "description": "Label for the native runtime."
+  },
+  "settingsNativeRuntimeValue": "MyGo · fixed baseline",
+  "@settingsNativeRuntimeValue": {
+    "description": "Native runtime value."
+  },
+  "settingsRpcTransport": "RPC transport",
+  "@settingsRpcTransport": {
+    "description": "Label for the Pi RPC transport."
+  },
+  "settingsRpcTransportValue": "Strict JSONL over stdin/stdout",
+  "@settingsRpcTransportValue": {
+    "description": "Pi RPC transport value."
+  },
+  "settingsPiOwnership": "Pi ownership",
+  "@settingsPiOwnership": {
+    "description": "Label for state owned by Pi."
+  },
+  "settingsPiOwnershipValue": "Sessions, models, credentials, extensions",
+  "@settingsPiOwnershipValue": {
+    "description": "Pi ownership value."
+  },
+  "settingsPluginRegistry": "Plugin registry",
+  "@settingsPluginRegistry": {
+    "description": "Label for plugin registry counts."
+  },
+  "settingsPluginRuntime": "Plugin runtime",
+  "@settingsPluginRuntime": {
+    "description": "Label for plugin runtime support."
+  },
+  "settingsPluginRuntimeValue": "Native + Node · native and WebView surfaces",
+  "@settingsPluginRuntimeValue": {
+    "description": "Plugin runtime value."
+  },
+  "settingsWebViewBoundary": "WebView boundary",
+  "@settingsWebViewBoundary": {
+    "description": "Label for the WebView security boundary."
+  },
+  "settingsWebViewBoundaryValue": "byop-plugin · strict CSP · locked navigation",
+  "@settingsWebViewBoundaryValue": {
+    "description": "WebView security boundary value."
+  },
+  "settingsPluginRegistryValue": "{registered} registered · {contributions} contributions",
+  "@settingsPluginRegistryValue": {
+    "description": "Settings plugin registry counts.",
+    "placeholders": {
+      "registered": {
+        "type": "int",
+        "example": "2"
+      },
+      "contributions": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "settingsAboutTitle": "About",
+  "@settingsAboutTitle": {
+    "description": "About card title."
+  },
+  "settingsAboutDescription": "Build You Own Pi is a multi-plugin workbench shell for an externally installed Pi CLI.",
+  "@settingsAboutDescription": {
+    "description": "About card description."
+  },
+  "settingsAboutVersion": "P9c · 2026-10-22",
+  "@settingsAboutVersion": {
+    "description": "Current BYOP phase and date."
+  },
+  "settingsNotAssigned": "Not assigned",
+  "@settingsNotAssigned": {
+    "description": "Session value when no Pi session is assigned."
+  },
+  "settingsEphemeral": "ephemeral",
+  "@settingsEphemeral": {
+    "description": "Session value indicating an ephemeral session."
+  },
+  "settingsPiDefault": "Pi default",
+  "@settingsPiDefault": {
+    "description": "Model value when Pi uses its default model."
+  },
+  "settingsThinking": "thinking {level}",
+  "@settingsThinking": {
+    "description": "Current Pi thinking level.",
+    "placeholders": {
+      "level": {
+        "type": "String",
+        "example": "high"
+      }
+    }
+  },
+  "settingsPendingHandshake": "Pending handshake",
+  "@settingsPendingHandshake": {
+    "description": "Pi version value before connection completes."
+  },
+  "noticePreferenceSaveTheme": "Theme changed, but preferences could not be saved.",
+  "@noticePreferenceSaveTheme": {
+    "description": "Notice when the theme changed but could not be persisted."
+  },
+  "noticePreferenceSaveNavigation": "Navigation changed, but preferences could not be saved.",
+  "@noticePreferenceSaveNavigation": {
+    "description": "Notice when navigation visibility changed but could not be persisted."
+  },
+  "noticePreferenceSaveTaskPanel": "Task panel changed, but preferences could not be saved.",
+  "@noticePreferenceSaveTaskPanel": {
+    "description": "Notice when task panel visibility changed but could not be persisted."
+  },
+  "noticePreferenceSaveLanguage": "Language changed, but preferences could not be saved; the previous language was restored.",
+  "@noticePreferenceSaveLanguage": {
+    "description": "Notice when the UI language changed but could not be persisted."
+  },
+  "preferencesWarningRead": "Preferences could not be read; defaults are in use.",
+  "@preferencesWarningRead": {
+    "description": "Warning when the preferences file cannot be read."
+  },
+  "preferencesWarningEmpty": "Preferences are empty; defaults are in use.",
+  "@preferencesWarningEmpty": {
+    "description": "Warning when the preferences file is empty."
+  },
+  "preferencesWarningDamaged": "Preferences file is damaged; defaults are in use and the original file is preserved.",
+  "@preferencesWarningDamaged": {
+    "description": "Warning when the preferences file cannot be decoded."
+  },
+  "relativeNow": "now",
+  "@relativeNow": {
+    "description": "Relative session time under one minute."
+  },
+  "relativeMinutes": "{count} min",
+  "@relativeMinutes": {
+    "description": "Compact relative session time in minutes.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "relativeHours": "{count} hr",
+  "@relativeHours": {
+    "description": "Compact relative session time in hours.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "relativeDays": "{count}d",
+  "@relativeDays": {
+    "description": "Compact relative session time in days.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "headerPhase": "P9C",
+  "@headerPhase": {
+    "description": "Top-bar badge showing the current implementation phase."
+  },
+  "modelsSearch": "Search models",
+  "@modelsSearch": {
+    "description": "Model picker search field."
+  },
+  "modelsNone": "No models",
+  "@modelsNone": {
+    "description": "Empty model picker state."
+  },
+  "thinkingOff": "Off",
+  "@thinkingOff": {
+    "description": "Thinking level off."
+  },
+  "thinkingMinimal": "Minimal",
+  "@thinkingMinimal": {
+    "description": "Thinking level minimal."
+  },
+  "thinkingLow": "Low",
+  "@thinkingLow": {
+    "description": "Thinking level low."
+  },
+  "thinkingMedium": "Medium",
+  "@thinkingMedium": {
+    "description": "Thinking level medium."
+  },
+  "thinkingHigh": "High",
+  "@thinkingHigh": {
+    "description": "Thinking level high."
+  },
+  "thinkingXHigh": "XHigh",
+  "@thinkingXHigh": {
+    "description": "Thinking level extra high."
+  },
+  "thinkingTitle": "Thinking",
+  "@thinkingTitle": {
+    "description": "Thinking picker label."
+  },
+  "thinkingTooltip": "Thinking · {level}",
+  "@thinkingTooltip": {
+    "description": "Thinking picker tooltip.",
+    "placeholders": {
+      "level": {
+        "type": "String",
+        "example": "high"
+      }
+    }
+  },
+  "diagnosticRetrying": "Retrying",
+  "@diagnosticRetrying": {
+    "description": "Runtime retry status."
+  },
+  "diagnosticAutomatic": "automatic",
+  "@diagnosticAutomatic": {
+    "description": "Automatic compaction reason."
+  },
+  "diagnosticUnknownExtension": "extension",
+  "@diagnosticUnknownExtension": {
+    "description": "Unknown extension source."
+  },
+  "diagnosticClear": "No runtime issues",
+  "@diagnosticClear": {
+    "description": "Runtime diagnostics clear state."
+  },
+  "compactionCancelled": "Compaction cancelled",
+  "@compactionCancelled": {
+    "description": "Compaction result when cancelled."
+  },
+  "compactionCompleted": "Context compacted",
+  "@compactionCompleted": {
+    "description": "Compaction result without token counts."
+  },
+  "noticePreferenceSaveFollowUp": "Follow-up style changed, but preferences could not be saved.",
+  "@noticePreferenceSaveFollowUp": {
+    "description": "Notice when follow-up style persistence fails."
+  },
+  "pluginsSettingsNoFields": "No settings fields were declared.",
+  "@pluginsSettingsNoFields": {
+    "description": "Plugin settings with no fields."
+  },
+  "pluginsCommandFallback": "Command",
+  "@pluginsCommandFallback": {
+    "description": "Fallback label for a plugin command."
+  },
+  "pluginsUndeclaredCommand": "This command is not declared by the plugin.",
+  "@pluginsUndeclaredCommand": {
+    "description": "Disabled plugin view command tooltip."
+  },
+  "chatSendMessage": "Send message",
+  "@chatSendMessage": {
+    "description": "Accessible label for send action."
+  },
+  "chatSendToPi": "Send to Pi",
+  "@chatSendToPi": {
+    "description": "Tooltip for send action."
+  },
+  "chatStopCurrentRun": "Stop current run",
+  "@chatStopCurrentRun": {
+    "description": "Accessible label for stop action."
+  },
+  "chatStopTooltip": "Stop Pi run",
+  "@chatStopTooltip": {
+    "description": "Tooltip for stop action."
+  },
+  "piConnected": "Pi connected",
+  "@piConnected": {
+    "description": "Pi connected status."
+  },
+  "piConnecting": "Pi connecting",
+  "@piConnecting": {
+    "description": "Pi connecting status."
+  },
+  "piConnectionError": "Pi connection error",
+  "@piConnectionError": {
+    "description": "Pi connection error status."
+  },
+  "piDisconnected": "Pi disconnected",
+  "@piDisconnected": {
+    "description": "Pi disconnected status."
+  },
+  "piSecondaryRPCReady": "RPC ready",
+  "@piSecondaryRPCReady": {
+    "description": "Pi secondary status when RPC is ready."
+  },
+  "piSecondaryStarting": "Starting Pi CLI…",
+  "@piSecondaryStarting": {
+    "description": "Pi secondary status while starting."
+  },
+  "piSecondaryConnectionFailed": "Connection failed",
+  "@piSecondaryConnectionFailed": {
+    "description": "Pi secondary disconnected error."
+  },
+  "piSecondaryClickToConnect": "Click to connect",
+  "@piSecondaryClickToConnect": {
+    "description": "Pi secondary disconnected prompt."
+  },
+  "piDiagnosticConnected": "Pi CLI connected. Ready for a session.",
+  "@piDiagnosticConnected": {
+    "description": "Empty chat diagnostic when connected."
+  },
+  "piDiagnosticConnecting": "Connecting to Pi CLI…",
+  "@piDiagnosticConnecting": {
+    "description": "Empty chat diagnostic while connecting."
+  },
+  "piDiagnosticDisconnected": "Pi CLI is not connected. Open Settings to connect.",
+  "@piDiagnosticDisconnected": {
+    "description": "Empty chat diagnostic when disconnected."
+  },
+  "errorUnknown": "unknown error",
+  "@errorUnknown": {
+    "description": "Fallback error text."
+  },
+  "errorPiResolveFailed": "Pi CLI could not be resolved.",
+  "@errorPiResolveFailed": {
+    "description": "Placeholder-free fallback when Pi CLI cannot be resolved."
+  },
+  "errorWorkspaceFailed": "Pi workspace could not be opened.",
+  "@errorWorkspaceFailed": {
+    "description": "Placeholder-free fallback when the Pi workspace cannot be opened."
+  },
+  "errorPiConnectFailed": "Pi connection failed.",
+  "@errorPiConnectFailed": {
+    "description": "Placeholder-free fallback when the Pi connection fails."
+  },
+  "errorPiRPCFailed": "Pi RPC handshake failed.",
+  "@errorPiRPCFailed": {
+    "description": "Placeholder-free fallback when the Pi RPC handshake fails."
+  },
+  "errorPluginViewRender": "Plugin view could not be rendered.",
+  "@errorPluginViewRender": {
+    "description": "Fallback when a native plugin view cannot be rendered."
+  },
+  "connectionConnected": "Connected",
+  "@connectionConnected": {
+    "description": "Connection state connected."
+  },
+  "connectionConnecting": "Connecting",
+  "@connectionConnecting": {
+    "description": "Connection state connecting."
+  },
+  "connectionError": "Error",
+  "@connectionError": {
+    "description": "Connection state error."
+  },
+  "connectionDisconnected": "Disconnected",
+  "@connectionDisconnected": {
+    "description": "Connection state disconnected."
+  },
+  "runSending": "Sending",
+  "@runSending": {
+    "description": "Run state sending."
+  },
+  "runPiRunning": "Pi running",
+  "@runPiRunning": {
+    "description": "Run state Pi running."
+  },
+  "runStopping": "Stopping",
+  "@runStopping": {
+    "description": "Run state stopping."
+  },
+  "runComplete": "Complete",
+  "@runComplete": {
+    "description": "Run state complete."
+  },
+  "runStopped": "Stopped",
+  "@runStopped": {
+    "description": "Run state stopped."
+  },
+  "runInterrupted": "Interrupted",
+  "@runInterrupted": {
+    "description": "Run state interrupted."
+  },
+  "runFailed": "Failed",
+  "@runFailed": {
+    "description": "Run state failed."
+  },
+  "runReady": "Ready",
+  "@runReady": {
+    "description": "Run state ready."
+  },
+  "runOffline": "Offline",
+  "@runOffline": {
+    "description": "Run state offline."
+  },
+  "runDetailSubmitting": "Sending the current prompt to Pi.",
+  "@runDetailSubmitting": {
+    "description": "Run detail submitting."
+  },
+  "runDetailStreaming": "Pi is streaming output.",
+  "@runDetailStreaming": {
+    "description": "Run detail streaming."
+  },
+  "runDetailStopping": "Waiting for Pi to stop.",
+  "@runDetailStopping": {
+    "description": "Run detail stopping."
+  },
+  "runDetailCompleted": "The last run completed.",
+  "@runDetailCompleted": {
+    "description": "Run detail completed."
+  },
+  "runDetailStopped": "The last run was stopped.",
+  "@runDetailStopped": {
+    "description": "Run detail stopped."
+  },
+  "runDetailInterrupted": "The last run was interrupted.",
+  "@runDetailInterrupted": {
+    "description": "Run detail interrupted."
+  },
+  "runDetailFailed": "The last run failed.",
+  "@runDetailFailed": {
+    "description": "Run detail failed."
+  },
+  "runDetailIdle": "Ready for another message.",
+  "@runDetailIdle": {
+    "description": "Run detail idle connected."
+  },
+  "runDetailOffline": "Connect Pi CLI to start a run.",
+  "@runDetailOffline": {
+    "description": "Run detail idle disconnected."
+  },
+  "statusAttention": "ATTENTION",
+  "@statusAttention": {
+    "description": "Task status attention."
+  },
+  "statusRegistered": "Registered",
+  "@statusRegistered": {
+    "description": "Task status registered."
+  },
+  "statusEmpty": "Empty",
+  "@statusEmpty": {
+    "description": "Task status empty."
+  },
+  "statusActive": "ACTIVE",
+  "@statusActive": {
+    "description": "Task status active."
+  },
+  "statusClear": "CLEAR",
+  "@statusClear": {
+    "description": "Task status clear."
+  },
+  "legacyTitle": "Migrate from Pi Agent Desktop",
+  "@legacyTitle": {
+    "description": "Legacy migration card title."
+  },
+  "legacyDescription": "Read-only scan of the old desktop app. Nothing is deleted; Pi sessions are linked, not copied.",
+  "@legacyDescription": {
+    "description": "Legacy migration card description."
+  },
+  "legacyWorkspaceMissing": "saved workspace missing",
+  "@legacyWorkspaceMissing": {
+    "description": "Legacy workspace warning."
+  },
+  "legacyScan": "Scan",
+  "@legacyScan": {
+    "description": "Legacy scan action."
+  },
+  "legacyScanning": "Scanning…",
+  "@legacyScanning": {
+    "description": "Legacy scanning action."
+  },
+  "legacyImport": "Import",
+  "@legacyImport": {
+    "description": "Legacy import action."
+  },
+  "legacyUpToDate": "Already up to date",
+  "@legacyUpToDate": {
+    "description": "Legacy scan current state."
+  },
+  "legacyScanFailed": "Legacy scan failed.",
+  "@legacyScanFailed": {
+    "description": "Legacy scan failed notice."
+  },
+  "legacyImportedHistoryFailed": "Legacy preferences imported, but migration history could not be saved.",
+  "@legacyImportedHistoryFailed": {
+    "description": "Legacy import history failure notice."
+  },
+  "legacyImportFailed": "Legacy import failed.",
+  "@legacyImportFailed": {
+    "description": "Legacy import failure notice."
+  },
+  "legacyWorkspaceSaved": "Workspace saved; reconnect Pi to use it",
+  "@legacyWorkspaceSaved": {
+    "description": "Legacy workspace imported notice."
+  },
+  "legacyImported": "Legacy preferences imported.",
+  "@legacyImported": {
+    "description": "Legacy import success notice."
+  },
+  "legacyUnknown": "Unknown",
+  "@legacyUnknown": {
+    "description": "Unknown legacy value."
+  },
+  "legacyNoPreferences": "No migratable legacy preferences were found.",
+  "@legacyNoPreferences": {
+    "description": "Legacy empty state."
+  },
+  "legacyStatusNew": "NEW",
+  "@legacyStatusNew": {
+    "description": "Legacy new status."
+  },
+  "legacyStatusSame": "SAME",
+  "@legacyStatusSame": {
+    "description": "Legacy same status."
+  },
+  "legacyStatusConflict": "CONFLICT",
+  "@legacyStatusConflict": {
+    "description": "Legacy conflict status."
+  },
+  "legacyStatusKept": "KEPT",
+  "@legacyStatusKept": {
+    "description": "Legacy kept status."
+  },
+  "legacyStatusLinked": "LINKED",
+  "@legacyStatusLinked": {
+    "description": "Legacy linked status."
+  },
+  "legacyStatusMissing": "MISSING",
+  "@legacyStatusMissing": {
+    "description": "Legacy missing status."
+  },
+  "legacyStatusInfo": "INFO",
+  "@legacyStatusInfo": {
+    "description": "Legacy info status."
+  },
+  "legacyStatusIgnored": "IGNORED",
+  "@legacyStatusIgnored": {
+    "description": "Legacy ignored status."
+  },
+  "legacyStatusUnknown": "UNKNOWN",
+  "@legacyStatusUnknown": {
+    "description": "Legacy unknown status."
+  },
+  "legacyImportConflictingValue": "IMPORT CONFLICTING VALUE",
+  "@legacyImportConflictingValue": {
+    "description": "Legacy import conflict status."
+  },
+  "legacyImportConflictCopy": "IMPORT AS CONFLICT COPY",
+  "@legacyImportConflictCopy": {
+    "description": "Legacy import conflict-copy status."
+  },
+  "legacyFound": "FOUND",
+  "@legacyFound": {
+    "description": "Legacy source found."
+  },
+  "legacyUnavailable": "UNAVAILABLE",
+  "@legacyUnavailable": {
+    "description": "Legacy source unavailable."
+  },
+  "legacyNotFound": "NOT FOUND",
+  "@legacyNotFound": {
+    "description": "Legacy source missing."
+  },
+  "legacyLastImport": "Last import {time} · {counts}",
+  "@legacyLastImport": {
+    "description": "Legacy last import summary.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "2026-10-22 10:00"
+      },
+      "counts": {
+        "type": "String",
+        "example": "new 2"
+      }
+    }
+  },
+  "legacyVersion": "LEGACY {version}",
+  "@legacyVersion": {
+    "description": "Legacy version pill.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0"
+      }
+    }
+  },
+  "legacyCountsSummary": "new {new} · same {same} · conflict {conflict} · kept {kept} · linked {linked} · missing {missing} · unknown {unknown} · ignored {ignored} · info {info}",
+  "@legacyCountsSummary": {
+    "description": "Legacy import counts.",
+    "placeholders": {
+      "new": {
+        "type": "int",
+        "example": "1"
+      },
+      "same": {
+        "type": "int",
+        "example": "1"
+      },
+      "conflict": {
+        "type": "int",
+        "example": "1"
+      },
+      "kept": {
+        "type": "int",
+        "example": "1"
+      },
+      "linked": {
+        "type": "int",
+        "example": "1"
+      },
+      "missing": {
+        "type": "int",
+        "example": "1"
+      },
+      "unknown": {
+        "type": "int",
+        "example": "1"
+      },
+      "ignored": {
+        "type": "int",
+        "example": "1"
+      },
+      "info": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "compactionCompletedTokens": "Context compacted · {before} → {after} tokens",
+  "@compactionCompletedTokens": {
+    "description": "Compaction result with token count.",
+    "placeholders": {
+      "before": {
+        "type": "String",
+        "example": "12k"
+      },
+      "after": {
+        "type": "String",
+        "example": "4k"
+      }
+    }
+  },
+  "diagnosticCompacting": "Compacting · {reason}",
+  "@diagnosticCompacting": {
+    "description": "Runtime diagnostic while compacting.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "automatic"
+      }
+    }
+  },
+  "diagnosticCompactionError": "Compaction error · {error}",
+  "@diagnosticCompactionError": {
+    "description": "Runtime compaction error.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "failed"
+      }
+    }
+  },
+  "diagnosticExtensionError": "Extension error · {source} · {error}",
+  "@diagnosticExtensionError": {
+    "description": "Runtime extension error.",
+    "placeholders": {
+      "source": {
+        "type": "String",
+        "example": "extension"
+      },
+      "error": {
+        "type": "String",
+        "example": "failed"
+      }
+    }
+  },
+  "diagnosticQueued": "Queued · {steering} steering · {followUp} follow-up",
+  "@diagnosticQueued": {
+    "description": "Runtime queued messages.",
+    "placeholders": {
+      "steering": {
+        "type": "int",
+        "example": "1"
+      },
+      "followUp": {
+        "type": "int",
+        "example": "0"
+      }
+    }
+  },
+  "diagnosticRetryFailed": "Retry failed · {error}",
+  "@diagnosticRetryFailed": {
+    "description": "Runtime retry error.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "timeout"
+      }
+    }
+  },
+  "piCliConnectedVersion": "Pi CLI · {version}",
+  "@piCliConnectedVersion": {
+    "description": "Pi CLI connected with version.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.3.0"
+      }
+    }
+  },
+  "piDiagnosticError": "Pi connection failed: {error}",
+  "@piDiagnosticError": {
+    "description": "Chat diagnostic connection error.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "timeout"
+      }
+    }
+  },
+  "piSecondaryConnectedModel": "Connected · {model}",
+  "@piSecondaryConnectedModel": {
+    "description": "Pi secondary status with model.",
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "example": "provider / model"
+      }
+    }
+  },
+  "retryStatus": "{label} · {seconds}s",
+  "@retryStatus": {
+    "description": "Retry countdown.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Retrying 1/3"
+      },
+      "seconds": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "tasksPluginRegistryDetail": "{registered} registered · {active} active · {contributions} contributions · {issues} issues",
+  "@tasksPluginRegistryDetail": {
+    "description": "Task panel plugin registry detail.",
+    "placeholders": {
+      "registered": {
+        "type": "int",
+        "example": "2"
+      },
+      "active": {
+        "type": "int",
+        "example": "1"
+      },
+      "contributions": {
+        "type": "int",
+        "example": "2"
+      },
+      "issues": {
+        "type": "int",
+        "example": "0"
+      }
+    }
+  },
+  "legacySourceNoAppDirectory": "No app directory",
+  "@legacySourceNoAppDirectory": {
+    "description": "Legacy app directory missing."
+  },
+  "legacySourceAppDirectoryFound": "App directory found",
+  "@legacySourceAppDirectoryFound": {
+    "description": "Legacy app directory available."
+  },
+  "legacySourceNoLocalStorage": "No legacy localStorage database",
+  "@legacySourceNoLocalStorage": {
+    "description": "Legacy localStorage database missing."
+  },
+  "legacySourceSQLiteUnavailable": "sqlite3 is unavailable",
+  "@legacySourceSQLiteUnavailable": {
+    "description": "Legacy localStorage dependency unavailable."
+  },
+  "legacySourceLocalStorageUnreadable": "Legacy localStorage could not be read",
+  "@legacySourceLocalStorageUnreadable": {
+    "description": "Legacy localStorage read failed."
+  },
+  "legacySourceNoScheduledTasks": "No legacy scheduled tasks",
+  "@legacySourceNoScheduledTasks": {
+    "description": "No legacy scheduled tasks available."
+  },
+  "legacySummaryWindowState": "Window state present",
+  "@legacySummaryWindowState": {
+    "description": "Legacy window state summary."
+  },
+  "legacySummaryVersion": "version {version}",
+  "@legacySummaryVersion": {
+    "description": "Legacy version summary.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.3.0"
+      }
+    }
+  },
+  "legacySummaryWindow": "Window {width} × {height}",
+  "@legacySummaryWindow": {
+    "description": "Legacy window dimensions.",
+    "placeholders": {
+      "width": {
+        "type": "int",
+        "example": "800"
+      },
+      "height": {
+        "type": "int",
+        "example": "600"
+      }
+    }
+  },
+  "legacySummaryPreferenceKeys": "{count, plural, one {# preference key} other {# preference keys}}",
+  "@legacySummaryPreferenceKeys": {
+    "description": "Legacy preference key count.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "legacySummaryUndecodable": "{count, plural, one {# undecodable} other {# undecodable}}",
+  "@legacySummaryUndecodable": {
+    "description": "Undecodable preference count.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "legacySummaryLatestDatabase": "latest of {count, plural, one {# database} other {# databases}}",
+  "@legacySummaryLatestDatabase": {
+    "description": "Duplicate legacy database count.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "legacySummaryScheduledTasks": "{count, plural, one {# scheduled task found} other {# scheduled tasks found}} — not imported in P8 (P7 automations are plugin-owned)",
+  "@legacySummaryScheduledTasks": {
+    "description": "Legacy scheduled task count.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "legacySummaryUndecodableValue": "Undecodable localStorage value",
+  "@legacySummaryUndecodableValue": {
+    "description": "Undecodable preference entry."
+  },
+  "legacySummaryServerPort": "Server port is managed by BYOP/Pi",
+  "@legacySummaryServerPort": {
+    "description": "Server-managed preference entry."
+  },
+  "legacySummaryUnknownPreference": "Unknown preference key",
+  "@legacySummaryUnknownPreference": {
+    "description": "Unknown preference entry."
+  },
+  "legacySummaryThemeLocalStorageWins": "Theme also exists in localStorage; localStorage wins",
+  "@legacySummaryThemeLocalStorageWins": {
+    "description": "Theme source conflict entry."
+  },
+  "legacySummaryDuplicateAppTheme": "Duplicate app-directory theme; first value wins",
+  "@legacySummaryDuplicateAppTheme": {
+    "description": "Duplicate theme entry."
+  },
+  "legacySummaryDuplicateLocalValue": "Duplicate value in localStorage; localStorage wins",
+  "@legacySummaryDuplicateLocalValue": {
+    "description": "Duplicate localStorage entry."
+  },
+  "legacySummaryUnsupportedTheme": "Unsupported theme value kept as legacy",
+  "@legacySummaryUnsupportedTheme": {
+    "description": "Unsupported theme entry."
+  },
+  "legacySummaryWorkspaceValueUnknown": "Workspace value is unrecognized",
+  "@legacySummaryWorkspaceValueUnknown": {
+    "description": "Unknown workspace entry."
+  },
+  "legacySummaryWorkspacePathUnknown": "Workspace path is unrecognized",
+  "@legacySummaryWorkspacePathUnknown": {
+    "description": "Unknown workspace path entry."
+  },
+  "legacySummaryWorkspaceMissing": "Workspace folder is missing",
+  "@legacySummaryWorkspaceMissing": {
+    "description": "Missing workspace entry."
+  },
+  "legacySummaryWorkspaceSessionDuplicate": "Workspace session also exists in last-open map",
+  "@legacySummaryWorkspaceSessionDuplicate": {
+    "description": "Duplicate workspace session entry."
+  },
+  "legacySummaryNoWorkspaceFields": "No workspace fields",
+  "@legacySummaryNoWorkspaceFields": {
+    "description": "Workspace fields missing."
+  },
+  "legacySummaryWorkspaceSessionUnknown": "Workspace session reference is unrecognized",
+  "@legacySummaryWorkspaceSessionUnknown": {
+    "description": "Unknown workspace session entry."
+  },
+  "legacySummaryRightPanelKept": "Right panel preference kept as legacy",
+  "@legacySummaryRightPanelKept": {
+    "description": "Legacy right panel entry."
+  },
+  "legacySummaryFileTabsKept": "Open file tabs kept as legacy",
+  "@legacySummaryFileTabsKept": {
+    "description": "Legacy file tabs entry."
+  },
+  "legacySummaryActiveFileTabKept": "Active file tab kept as legacy",
+  "@legacySummaryActiveFileTabKept": {
+    "description": "Legacy active file tab entry."
+  },
+  "legacySummaryWorkspaceSessionKept": "Workspace session reference kept as legacy",
+  "@legacySummaryWorkspaceSessionKept": {
+    "description": "Legacy workspace session entry."
+  },
+  "legacySummaryWorkspaceFieldKept": "Workspace field kept as legacy",
+  "@legacySummaryWorkspaceFieldKept": {
+    "description": "Legacy workspace field entry."
+  },
+  "legacySummaryLastSessionMapUnknown": "Last-session map is unrecognized",
+  "@legacySummaryLastSessionMapUnknown": {
+    "description": "Unknown last-session entry."
+  },
+  "legacySummaryNoSavedSessions": "No saved sessions",
+  "@legacySummaryNoSavedSessions": {
+    "description": "No saved session entry."
+  },
+  "legacySummaryDraftMapUnknown": "Draft map is unrecognized",
+  "@legacySummaryDraftMapUnknown": {
+    "description": "Unknown draft map entry."
+  },
+  "legacySummaryNoDrafts": "No drafts",
+  "@legacySummaryNoDrafts": {
+    "description": "No draft entry."
+  },
+  "legacySummaryDraftValueUnknown": "Unrecognized draft value",
+  "@legacySummaryDraftValueUnknown": {
+    "description": "Unknown draft value entry."
+  },
+  "legacySummaryKeptBodySize": "Kept as legacy value (BYOP body stays 14px)",
+  "@legacySummaryKeptBodySize": {
+    "description": "Legacy body size entry."
+  },
+  "legacySummaryWidthKept": "Width kept as legacy value",
+  "@legacySummaryWidthKept": {
+    "description": "Legacy width entry."
+  },
+  "legacySummaryPreferenceKept": "Preference kept as legacy value",
+  "@legacySummaryPreferenceKept": {
+    "description": "Legacy preference entry."
+  },
+  "legacySummaryTheme": "Theme: {theme}",
+  "@legacySummaryTheme": {
+    "description": "Legacy theme entry.",
+    "placeholders": {
+      "theme": {
+        "type": "String",
+        "example": "dark"
+      }
+    }
+  },
+  "legacySummaryWorkspace": "Workspace: {workspace}",
+  "@legacySummaryWorkspace": {
+    "description": "Legacy workspace entry.",
+    "placeholders": {
+      "workspace": {
+        "type": "String",
+        "example": "/tmp/workspace"
+      }
+    }
+  },
+  "legacySummaryWorkspaceSessionWorkspaceMissing": "Workspace session {session} · workspace missing",
+  "@legacySummaryWorkspaceSessionWorkspaceMissing": {
+    "description": "Legacy workspace session with missing workspace.",
+    "placeholders": {
+      "session": {
+        "type": "String",
+        "example": "abc"
+      }
+    }
+  },
+  "legacySummaryWorkspaceSessionMissing": "Workspace session {session} · session missing",
+  "@legacySummaryWorkspaceSessionMissing": {
+    "description": "Legacy workspace session missing.",
+    "placeholders": {
+      "session": {
+        "type": "String",
+        "example": "abc"
+      }
+    }
+  },
+  "legacySummaryWorkspaceSession": "Workspace session {session}",
+  "@legacySummaryWorkspaceSession": {
+    "description": "Legacy workspace session summary.",
+    "placeholders": {
+      "session": {
+        "type": "String",
+        "example": "abc"
+      }
+    }
+  },
+  "legacySummarySessionWorkspaceMissing": "{session} · workspace missing",
+  "@legacySummarySessionWorkspaceMissing": {
+    "description": "Legacy session with missing workspace.",
+    "placeholders": {
+      "session": {
+        "type": "String",
+        "example": "abc"
+      }
+    }
+  },
+  "legacySummarySessionMissing": "{session} · session missing",
+  "@legacySummarySessionMissing": {
+    "description": "Missing legacy session reference.",
+    "placeholders": {
+      "session": {
+        "type": "String",
+        "example": "abc"
+      }
+    }
+  },
+  "legacySummaryDraftCharacters": "Draft · {count, plural, one {# character} other {# characters}}",
+  "@legacySummaryDraftCharacters": {
+    "description": "Legacy draft length summary.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "legacyTargetInfoOnly": "Info only",
+  "@legacyTargetInfoOnly": {
+    "description": "Migration target label."
+  },
+  "legacyTargetNotImported": "Not imported",
+  "@legacyTargetNotImported": {
+    "description": "Migration target label."
+  },
+  "legacyTargetIgnored": "Ignored",
+  "@legacyTargetIgnored": {
+    "description": "Migration target label."
+  },
+  "legacyTargetLegacy": "Legacy",
+  "@legacyTargetLegacy": {
+    "description": "Migration target label."
+  },
+  "legacyTargetTheme": "Theme",
+  "@legacyTargetTheme": {
+    "description": "Migration target label."
+  },
+  "legacyTargetWorkspace": "Workspace",
+  "@legacyTargetWorkspace": {
+    "description": "Migration target label."
+  },
+  "legacyTargetLastSession": "Last session",
+  "@legacyTargetLastSession": {
+    "description": "Migration target label."
+  },
+  "legacyTargetSessionLinks": "Session links",
+  "@legacyTargetSessionLinks": {
+    "description": "Migration target label."
+  },
+  "legacyTargetDrafts": "Drafts",
+  "@legacyTargetDrafts": {
+    "description": "Migration target label."
+  },
+  "legacyWarningLocalStorageRead": "Legacy localStorage could not be read.",
+  "@legacyWarningLocalStorageRead": {
+    "description": "Legacy localStorage scan warning."
+  },
+  "errorRunningSendUnavailable": "Pi cannot accept a running message right now.",
+  "@errorRunningSendUnavailable": {
+    "description": "Fallback error when a running message cannot be queued."
+  },
+  "navArchived": "Archived ({count})",
+  "@navArchived": {
+    "description": "Archived sessions section heading with a count."
+  },
+  "navArchivedAction": "Archived",
+  "@navArchivedAction": {
+    "description": "Drop target label for archived sessions."
+  },
+  "navLater": "Later",
+  "@navLater": {
+    "description": "Later sessions section heading."
+  },
+  "navPinned": "Pinned",
+  "@navPinned": {
+    "description": "Pinned sessions section heading."
+  },
+  "navRecentSessions": "Sessions",
+  "@navRecentSessions": {
+    "description": "Unorganized sessions section heading."
+  },
+  "noticePreferenceSaveContrast": "Contrast changed, but preferences could not be saved.",
+  "@noticePreferenceSaveContrast": {
+    "description": "Notice when saving contrast preference fails."
+  },
+  "noticePreferenceSaveMotion": "Motion changed, but preferences could not be saved.",
+  "@noticePreferenceSaveMotion": {
+    "description": "Notice when saving motion preference fails."
+  },
+  "noticePreferenceSavePanelAnimation": "Panel animation changed, but preferences could not be saved.",
+  "@noticePreferenceSavePanelAnimation": {
+    "description": "Notice when saving panel animation preference fails."
+  },
+  "noticePreferenceSaveRunningSend": "Running-send mode changed, but preferences could not be saved.",
+  "@noticePreferenceSaveRunningSend": {
+    "description": "Notice when saving running-send preference fails."
+  },
+  "noticeQueueClearFailed": "Could not clear the Pi queue: {error}",
+  "@noticeQueueClearFailed": {
+    "description": "Notice when clearing the Pi queue fails."
+  },
+  "noticeQueueCleared": "Cleared {count, plural, =0 {no queued messages} one {# queued message} other {# queued messages}}.",
+  "@noticeQueueCleared": {
+    "description": "Notice after clearing queued messages."
+  },
+  "noticeRunningSendAccepted": "Sent {mode}.",
+  "@noticeRunningSendAccepted": {
+    "description": "Notice confirming a running message was accepted."
+  },
+  "noticeRunningSendFailed": "Could not send the running message: {error}",
+  "@noticeRunningSendFailed": {
+    "description": "Notice when a running message cannot be sent."
+  },
+  "noticeRunningSendUnavailable": "Wait for the current Pi operation before sending another message.",
+  "@noticeRunningSendUnavailable": {
+    "description": "Notice when running send is currently unavailable."
+  },
+  "noticeSessionOrganizationSave": "Session organization changed, but preferences could not be saved.",
+  "@noticeSessionOrganizationSave": {
+    "description": "Notice when saving session organization fails."
+  },
+  "queueClear": "Clear queue",
+  "@queueClear": {
+    "description": "Action that clears queued running messages."
+  },
+  "queueClearPending": "Clearing…",
+  "@queueClearPending": {
+    "description": "Label while clearing queued messages."
+  },
+  "queueMore": "{count, plural, one {# more message} other {# more messages}}",
+  "@queueMore": {
+    "description": "Overflow count for hidden queued messages."
+  },
+  "queueTitle": "Queued messages",
+  "@queueTitle": {
+    "description": "Heading for the running message queue."
+  },
+  "runningSendOppositeTooltip": "{mode} · {shortcut}",
+  "@runningSendOppositeTooltip": {
+    "description": "Tooltip explaining the opposite running-send shortcut."
+  },
+  "runningSendQueue": "Queue",
+  "@runningSendQueue": {
+    "description": "Running-send mode that queues a follow-up message."
+  },
+  "runningSendSteer": "Steer",
+  "@runningSendSteer": {
+    "description": "Running-send mode that steers the current task."
+  },
+  "sessionArchive": "Archive",
+  "@sessionArchive": {
+    "description": "Action that archives a session."
+  },
+  "sessionArchivedNotice": "Archived “{title}”.",
+  "@sessionArchivedNotice": {
+    "description": "Notice after archiving a session."
+  },
+  "sessionLaterClear": "No reminder",
+  "@sessionLaterClear": {
+    "description": "Later-session option with no reminder time."
+  },
+  "sessionLaterDue": "Later reminder is due",
+  "@sessionLaterDue": {
+    "description": "Tooltip for a due later-session reminder."
+  },
+  "sessionLaterHour": "In 1 hour",
+  "@sessionLaterHour": {
+    "description": "Later-session option for one hour."
+  },
+  "sessionLaterMenu": "Later",
+  "@sessionLaterMenu": {
+    "description": "Submenu for later-session options."
+  },
+  "sessionLaterMonday": "Next Monday at 9:00",
+  "@sessionLaterMonday": {
+    "description": "Later-session option for next Monday."
+  },
+  "sessionLaterTomorrow": "Tomorrow at 9:00",
+  "@sessionLaterTomorrow": {
+    "description": "Later-session option for tomorrow morning."
+  },
+  "sessionMoveToArchived": "Move to Archived",
+  "@sessionMoveToArchived": {
+    "description": "Drop badge for moving to archived."
+  },
+  "sessionMoveToLater": "Move to Later",
+  "@sessionMoveToLater": {
+    "description": "Drop badge for moving to later."
+  },
+  "sessionMoveToPinned": "Move to Pinned",
+  "@sessionMoveToPinned": {
+    "description": "Drop badge for moving to pinned."
+  },
+  "sessionMoveToSessions": "Move to Sessions",
+  "@sessionMoveToSessions": {
+    "description": "Drop badge for moving to sessions."
+  },
+  "sessionMovedLaterNotice": "Moved “{title}” to Later.",
+  "@sessionMovedLaterNotice": {
+    "description": "Notice after moving a session to later."
+  },
+  "sessionPin": "Pin",
+  "@sessionPin": {
+    "description": "Action that pins a session."
+  },
+  "sessionRestore": "Restore",
+  "@sessionRestore": {
+    "description": "Action that restores a session."
+  },
+  "sessionRestored": "Restored session.",
+  "@sessionRestored": {
+    "description": "Notice after restoring a session."
+  },
+  "sessionUndo": "Undo",
+  "@sessionUndo": {
+    "description": "Action that undoes a session organization change."
+  },
+  "sessionUnpin": "Unpin",
+  "@sessionUnpin": {
+    "description": "Action that unpins a session."
+  },
+  "settingsContrastDescription": "Follow the system or choose a stronger contrast palette.",
+  "@settingsContrastDescription": {
+    "description": "Contrast preference description."
+  },
+  "settingsContrastHigh": "High",
+  "@settingsContrastHigh": {
+    "description": "High contrast option."
+  },
+  "settingsContrastStandard": "Standard",
+  "@settingsContrastStandard": {
+    "description": "Standard contrast option."
+  },
+  "settingsContrastSystem": "System",
+  "@settingsContrastSystem": {
+    "description": "System contrast option."
+  },
+  "settingsContrastTitle": "Contrast",
+  "@settingsContrastTitle": {
+    "description": "Contrast preference title."
+  },
+  "settingsMotionDescription": "Follow the system or turn panel motion on and off.",
+  "@settingsMotionDescription": {
+    "description": "Motion preference description."
+  },
+  "settingsMotionReduced": "Reduced",
+  "@settingsMotionReduced": {
+    "description": "Reduced motion option."
+  },
+  "settingsMotionStandard": "Standard",
+  "@settingsMotionStandard": {
+    "description": "Standard motion option."
+  },
+  "settingsMotionSystem": "System",
+  "@settingsMotionSystem": {
+    "description": "System motion option."
+  },
+  "settingsMotionTitle": "Motion",
+  "@settingsMotionTitle": {
+    "description": "Motion preference title."
+  },
+  "settingsPanelAnimation0": "0 ms",
+  "@settingsPanelAnimation0": {
+    "description": "No panel animation option."
+  },
+  "settingsPanelAnimation150": "150 ms",
+  "@settingsPanelAnimation150": {
+    "description": "Default panel animation option."
+  },
+  "settingsPanelAnimation250": "250 ms",
+  "@settingsPanelAnimation250": {
+    "description": "Medium panel animation option."
+  },
+  "settingsPanelAnimation400": "400 ms",
+  "@settingsPanelAnimation400": {
+    "description": "Long panel animation option."
+  },
+  "settingsPanelAnimationDescription": "Controls sidebar, task panel, archive, follow-up, and queue transitions.",
+  "@settingsPanelAnimationDescription": {
+    "description": "Panel animation preference description."
+  },
+  "settingsPanelAnimationTitle": "Panel animation",
+  "@settingsPanelAnimationTitle": {
+    "description": "Panel animation preference title."
+  },
+  "settingsRunningSendDescription": "While Pi is running, Enter queues the message after this turn, or inserts it into the current task.",
+  "@settingsRunningSendDescription": {
+    "description": "Running-send preference description."
+  },
+  "settingsRunningSendTitle": "Running send",
+  "@settingsRunningSendTitle": {
+    "description": "Running-send preference title."
+  },
+  "titleToggleNavigationShortcut": "Toggle navigation ({shortcut})",
+  "@titleToggleNavigationShortcut": {
+    "description": "Navigation toggle tooltip with shortcut."
+  },
+  "titleToggleTaskPanelShortcut": "Toggle task panel ({shortcut})",
+  "@titleToggleTaskPanelShortcut": {
+    "description": "Task panel toggle tooltip with shortcut."
+  }
+}

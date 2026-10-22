@@ -77,6 +77,9 @@ var lucideIcons = map[string]string{
 	"moon": `<path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>`,
 	"monitor": `<rect width="20" height="14" x="2" y="3" rx="2"/>
 		<path d="M8 21h8M12 17v4"/>`,
+	"languages": `<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/>
+		<path d="M2 5h12M7 2h1"/><path d="m22 22-5-10-5 10"/>
+		<path d="M14 18h6"/>`,
 	"send":      `<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>`,
 	"stop":      `<rect width="14" height="14" x="5" y="5" rx="2"/>`,
 	"paperclip": `<path d="m21.4 11.6-8.9 8.9a6 6 0 0 1-8.5-8.5l9.6-9.6a4 4 0 1 1 5.7 5.7l-9.6 9.6a2 2 0 1 1-2.8-2.8l8.9-8.9"/>`,
@@ -88,11 +91,25 @@ var lucideIcons = map[string]string{
 	"terminal": `<polyline points="4 17 10 11 4 5"/><path d="M12 19h8"/>`,
 	"package": `<path d="m16.5 9.4-9-5.2M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
 		<path d="M3.3 7 12 12l8.7-5M12 22V12"/>`,
-	"clock":        `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`,
-	"play":         `<polygon points="7 4 20 12 7 20 7 4"/>`,
-	"chevron-down": `<path d="m6 9 6 6 6-6"/>`,
-	"x":            `<path d="M18 6 6 18M6 6l12 12"/>`,
-	"info":         `<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>`,
+	"clock":   `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`,
+	"pin":     `<path d="M12 17v5"/><path d="M9 10.8V4l-1-1h8l-1 1v6.8l3 3.2H7Z"/>`,
+	"pin-off": `<path d="M12 17v5"/><path d="m2 2 20 20"/><path d="M9 10.8V4l-1-1h9"/><path d="m7 14 3-3"/><path d="M7 14h8"/>`,
+	"archive": `<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>`,
+	"archive-restore": `<rect width="20" height="5" x="2" y="3" rx="1"/>
+		<path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/>
+		<path d="m9 14 3-3 3 3M12 11v6"/>`,
+	"undo": `<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>`,
+	"grip-vertical": `<circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+		<circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>`,
+	"list":           `<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>`,
+	"corner-up-left": `<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/>`,
+	"contrast":       `<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z"/>`,
+	"activity":       `<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>`,
+	"play":           `<polygon points="7 4 20 12 7 20 7 4"/>`,
+	"chevron-down":   `<path d="m6 9 6 6 6-6"/>`,
+	"chevron-right":  `<path d="m9 18 6-6-6-6"/>`,
+	"x":              `<path d="M18 6 6 18M6 6l12 12"/>`,
+	"info":           `<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>`,
 	"sparkles": `<path d="m12 3-1.4 3.6L7 8l3.6 1.4L12 13l1.4-3.6L17 8l-3.6-1.4Z"/>
 		<path d="m5 14-1 2.5L1.5 18 4 19l1 3 1-3 2.5-1L6 16.5Z"/>
 		<path d="m19 14-.8 2.2L16 17l2.2.8L19 20l.8-2.2L22 17l-2.2-.8Z"/>`,

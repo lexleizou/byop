@@ -9,21 +9,20 @@ import (
 )
 
 func (s *appState) legacyMigrationSection(c *ui.Context, p palette) {
-	settingsCard(c, p, "Migrate from Pi Agent Desktop",
-		"Read-only scan of the old desktop app. Nothing is deleted; Pi sessions are linked, not copied.",
+	settingsCard(c, p, text("legacyTitle"), text("legacyDescription"),
 		func() {
 			if s.preferencesWarning != "" {
-				ui.Text(c, s.preferencesWarning).FontSize(fontCaption).LineHeight(1.4).
+				ui.Text(c, preferencesWarningLabel(s.preferencesWarning)).FontSize(fontCaption).LineHeight(1.4).
 					TextColor(p.danger)
 			}
 			if s.savedWorkspaceMiss {
-				ui.Text(c, "saved workspace missing").FontSize(fontCaption).LineHeight(1.4).
+				ui.Text(c, text("legacyWorkspaceMissing")).FontSize(fontCaption).LineHeight(1.4).
 					TextColor(p.warning)
 			}
 			ui.Row(c).Wrap().GapX(8).GapY(8).AlignItems(ui.Center).Children(func() {
-				label := "Scan"
+				label := text("legacyScan")
 				if s.legacyScanning {
-					label = "Scanning…"
+					label = text("legacyScanning")
 				}
 				migrationAction(c, p, "legacy-migration-scan", label, false,
 					s.legacyScanning, func() {
@@ -31,24 +30,26 @@ func (s *appState) legacyMigrationSection(c *ui.Context, p palette) {
 					})
 				if s.legacyScanned {
 					if s.legacyScan.canImport {
-						migrationAction(c, p, "legacy-migration-import", "Import", true,
+						migrationAction(c, p, "legacy-migration-import", text("legacyImport"), true,
 							s.legacyScanning, func() {
 								s.importLegacyMigration()
 							})
 					} else {
-						ui.Text(c, "Already up to date").FontSize(fontSmall).
+						ui.Text(c, text("legacyUpToDate")).FontSize(fontSmall).
 							FontWeight(600).TextColor(p.success)
 					}
 				}
 			})
 
 			if s.legacyImportSet {
-				ui.Text(c, "Last import "+legacyImportTimestamp(s.legacyImport.At)+
-					" · "+legacyImportCountsSummary(s.legacyImport.Counts)).
+				ui.Text(c, textArgs("legacyLastImport", map[string]any{
+					"time":   legacyImportTimestamp(s.legacyImport.At),
+					"counts": legacyImportCountsSummary(s.legacyImport.Counts),
+				})).
 					FontSize(fontCaption).LineHeight(1.4).TextColor(p.muted)
 			}
 			if s.legacyScan.ScanWarning != "" {
-				ui.Text(c, s.legacyScan.ScanWarning).FontSize(fontCaption).
+				ui.Text(c, legacyScanWarningLabel(s.legacyScan.ScanWarning)).FontSize(fontCaption).
 					LineHeight(1.4).TextColor(p.warning)
 			}
 			if s.legacyScanned {
@@ -71,7 +72,7 @@ func (s *appState) scanLegacyMigration() {
 		s.postUI(func() {
 			s.legacyScanning = false
 			if err != nil {
-				s.showNotice("Legacy scan failed.")
+				s.showNotice(text("legacyScanFailed"))
 				return
 			}
 			s.legacyScan = scan
@@ -106,18 +107,18 @@ func (s *appState) completeLegacyImport(scan legacyScan) {
 	}
 	if err != nil {
 		if persistence.PreferencesSaved && !persistence.HistorySaved {
-			s.showNotice("Legacy preferences imported, but migration history could not be saved.")
+			s.showNotice(text("legacyImportedHistoryFailed"))
 			s.startLegacyRescan()
 			return
 		}
-		s.showNotice("Legacy import failed.")
+		s.showNotice(text("legacyImportFailed"))
 		return
 	}
 	if result.WorkspaceChange {
 		s.savedWorkspaceMiss = false
-		s.showNotice("Workspace saved; reconnect Pi to use it")
+		s.showNotice(text("legacyWorkspaceSaved"))
 	} else {
-		s.showNotice("Legacy preferences imported.")
+		s.showNotice(text("legacyImported"))
 	}
 	s.startLegacyRescan()
 }
@@ -133,7 +134,7 @@ func (s *appState) startLegacyRescan() {
 		s.postUI(func() {
 			s.legacyScanning = false
 			if err != nil {
-				s.showNotice("Legacy scan failed.")
+				s.showNotice(text("legacyScanFailed"))
 				return
 			}
 			s.legacyScan = scan
@@ -143,24 +144,24 @@ func (s *appState) startLegacyRescan() {
 }
 
 func (s *appState) legacyMigrationPreview(c *ui.Context, p palette) {
-	version := fallback(s.legacyScan.Version, "Unknown")
+	version := fallback(s.legacyScan.Version, text("legacyUnknown"))
 	ui.Row(c).Wrap().GapX(8).GapY(7).AlignItems(ui.Center).Children(func() {
-		statusPill(c, p, "LEGACY "+version, p.muted)
+		statusPill(c, p, textArgs("legacyVersion", map[string]any{"version": version}), p.muted)
 		counts := legacyScanCounts(s.legacyScan.Entries)
 		for _, count := range []struct {
 			label string
 			value int
 			tone  ui.Color
 		}{
-			{"NEW", counts.New, p.accent},
-			{"SAME", counts.Same, p.success},
-			{"CONFLICT", counts.Conflict, p.warning},
-			{"KEPT", counts.Kept, p.muted},
-			{"LINKED", counts.Linked, p.success},
-			{"MISSING", counts.Missing, p.warning},
-			{"UNKNOWN", counts.Unknown, p.muted},
-			{"IGNORED", counts.Ignored, p.muted},
-			{"INFO", counts.Info, p.muted},
+			{text("legacyStatusNew"), counts.New, p.accent},
+			{text("legacyStatusSame"), counts.Same, p.success},
+			{text("legacyStatusConflict"), counts.Conflict, p.warning},
+			{text("legacyStatusKept"), counts.Kept, p.muted},
+			{text("legacyStatusLinked"), counts.Linked, p.success},
+			{text("legacyStatusMissing"), counts.Missing, p.warning},
+			{text("legacyStatusUnknown"), counts.Unknown, p.muted},
+			{text("legacyStatusIgnored"), counts.Ignored, p.muted},
+			{text("legacyStatusInfo"), counts.Info, p.muted},
 		} {
 			if count.value == 0 {
 				continue
@@ -182,15 +183,15 @@ func (s *appState) legacyMigrationPreview(c *ui.Context, p palette) {
 				ui.Box(c).Size(7, 7).Radius(4).Background(tone)
 				ui.Text(c, source.Source).Font("monospace").FontSize(fontCaption).
 					TextColor(p.text).Width(92)
-				ui.Text(c, source.Status).FontSize(fontCaption).FontWeight(650).
+				ui.Text(c, legacySourceStatusLabel(source.Status)).FontSize(fontCaption).FontWeight(650).
 					TextColor(tone).Width(78)
-				ui.Text(c, source.Summary).FontSize(fontCaption).TextColor(p.muted).Grow(1)
+				ui.Text(c, legacySourceSummaryLabel(source.Summary)).FontSize(fontCaption).TextColor(p.muted).Grow(1)
 			})
 		}
 	})
 
 	if len(s.legacyScan.Entries) == 0 {
-		ui.Text(c, "No migratable legacy preferences were found.").FontSize(fontSmall).
+		ui.Text(c, text("legacyNoPreferences")).FontSize(fontSmall).
 			TextColor(p.muted)
 		return
 	}
@@ -203,9 +204,9 @@ func (s *appState) legacyMigrationPreview(c *ui.Context, p palette) {
 			ui.Row(c).FillWidth().Padding(8, 10).Gap(9).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, entry.Source).Font("monospace").FontSize(fontMicro).
 					TextColor(p.muted).Width(78)
-				ui.Text(c, entry.Summary).FontSize(fontCaption).LineHeight(1.35).
+				ui.Text(c, legacyEntrySummaryLabel(entry.Summary)).FontSize(fontCaption).LineHeight(1.35).
 					TextColor(p.text).Grow(1)
-				ui.Text(c, entry.Target).FontSize(fontMicro).TextColor(p.muted).Width(82)
+				ui.Text(c, legacyTargetLabel(entry.Target)).FontSize(fontMicro).TextColor(p.muted).Width(82)
 				statusPill(c, p, entry.statusLabel(),
 					legacyStatusTone(p, entry.Status))
 			})
@@ -268,13 +269,26 @@ func legacyStatusTone(p palette, status legacyImportStatus) ui.Color {
 func legacyImportTimestamp(value string) string {
 	parsed, err := time.Parse(time.RFC3339Nano, value)
 	if err != nil {
-		return fallback(value, "Unknown")
+		return fallback(value, text("legacyUnknown"))
 	}
 	return parsed.Local().Format("2006-01-02 15:04:05")
 }
 
 func legacyImportCountsSummary(counts legacyImportCounts) string {
-	return fmt.Sprintf("new %d · same %d · conflict %d · kept %d · linked %d · missing %d · unknown %d · ignored %d · info %d",
-		counts.New, counts.Same, counts.Conflict, counts.Kept, counts.Linked,
-		counts.Missing, counts.Unknown, counts.Ignored, counts.Info)
+	return textArgs("legacyCountsSummary", map[string]any{
+		"new": counts.New, "same": counts.Same, "conflict": counts.Conflict,
+		"kept": counts.Kept, "linked": counts.Linked, "missing": counts.Missing,
+		"unknown": counts.Unknown, "ignored": counts.Ignored, "info": counts.Info,
+	})
+}
+
+func legacySourceStatusLabel(status string) string {
+	switch status {
+	case "found":
+		return text("legacyFound")
+	case "unavailable":
+		return text("legacyUnavailable")
+	default:
+		return text("legacyNotFound")
+	}
 }

@@ -26,6 +26,7 @@ const (
 func (s *appState) pluginNavigationItems() []pluginNavigationItem {
 	var items []pluginNavigationItem
 	for _, entry := range s.pluginRegistrySnapshot().Entries {
+		entry = pluginLocalizedEntry(entry)
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
 			continue
 		}
@@ -100,7 +101,7 @@ func (s *appState) loadPluginViewByID(pluginID, viewID string) {
 			}
 			s.pluginViewLoading = false
 			if err != nil {
-				s.pluginViewError = uiErrorText(err, "Plugin view could not be rendered.")
+				s.pluginViewError = uiErrorText(err, text("errorPluginViewRender"))
 				return
 			}
 			s.pluginViewModels[pluginViewCacheKey(pluginID, viewID)] = model
@@ -127,7 +128,7 @@ func (s *appState) pluginViewStillRegistered() bool {
 func (s *appState) registeredPluginEntry(pluginID string) (pluginRegistryEntry, bool) {
 	for _, entry := range s.pluginRegistrySnapshot().Entries {
 		if entry.ID == pluginID && entry.Status == pluginRegistered {
-			return entry, true
+			return pluginLocalizedEntry(entry), true
 		}
 	}
 	return pluginRegistryEntry{}, false
@@ -155,23 +156,24 @@ func (s *appState) pluginViewPage(c *ui.Context, p palette) {
 		return
 	}
 	model := s.pluginViewModels[pluginViewCacheKey(entry.ID, view.ID)]
-	title := pluginViewTitle(view, model)
+	title := pluginLocalizedText(entry.Manifest, pluginViewTitle(view, model))
 	ui.Scroll(c).Fill().Children(func() {
 		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
 			ui.Column(c).Grow(1).MaxWidth(880).Gap(22).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.End).Gap(16).Children(func() {
 					ui.Column(c).Grow(1).Children(func() {
 						pageHeader(c, p, strings.ToUpper(entry.Name), title,
-							fallback(entry.Description, "Plugin view"))
+							fallback(entry.Description, text("pluginsViewDefaultDescription")))
 					})
 					secondaryAction(c, p, "plugin-view-refresh-"+entry.ID+"-"+view.ID,
-						"Refresh", func() {
+						text("pluginsViewRefresh"), func() {
 							s.loadPluginViewByID(entry.ID, view.ID)
 						})
 					if s.plugins.status(entry.ID).State == pluginStateActive {
-						secondaryAction(c, p, "plugin-view-stop-"+entry.ID, "Deactivate", func() {
-							s.deactivatePlugin(entry)
-						})
+						secondaryAction(c, p, "plugin-view-stop-"+entry.ID,
+							text("pluginsDeactivate"), func() {
+								s.deactivatePlugin(entry)
+							})
 					}
 				})
 				switch {
@@ -207,8 +209,8 @@ func (s *appState) pluginViewUnavailable(
 	ui.Scroll(c).Fill().Children(func() {
 		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
 			ui.Column(c).Grow(1).MaxWidth(880).Gap(14).Children(func() {
-				pageHeader(c, p, "PLUGINS", "View unavailable",
-					"The selected plugin view is no longer registered. Returning to Plugins.")
+				pageHeader(c, p, text("pluginsViewUnavailableSection"),
+					text("pluginsViewUnavailableTitle"), text("pluginsViewUnavailableDescription"))
 			})
 		})
 	})
@@ -218,7 +220,7 @@ func (s *appState) pluginViewLoadingState(c *ui.Context, p palette) {
 	ui.Row(c).FillWidth().Padding(16).Radius(12).Border(1, p.border).
 		Background(p.surface).AlignItems(ui.Center).Gap(9).Children(func() {
 		ui.Icon(c, icon("clock")).Size(15, 15).TextColor(p.accent)
-		ui.Text(c, "Rendering plugin view…").FontSize(fontBody).TextColor(p.muted)
+		ui.Text(c, text("pluginsViewRendering")).FontSize(fontBody).TextColor(p.muted)
 	})
 }
 
@@ -230,11 +232,13 @@ func (s *appState) pluginViewErrorState(
 ) {
 	ui.Column(c).FillWidth().Gap(10).Padding(16).Radius(12).
 		Border(1, p.border).Background(p.surface).Children(func() {
-		ui.Text(c, "View failed to render").FontSize(fontBody).FontWeight(650).TextColor(p.danger)
+		ui.Text(c, text("pluginsViewFailed")).FontSize(fontBody).FontWeight(650).
+			TextColor(p.danger)
 		ui.Text(c, s.pluginViewError).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
-		secondaryAction(c, p, "plugin-view-retry-"+entry.ID+"-"+view.ID, "Retry", func() {
-			s.loadPluginViewByID(entry.ID, view.ID)
-		})
+		secondaryAction(c, p, "plugin-view-retry-"+entry.ID+"-"+view.ID,
+			text("pluginsViewRetry"), func() {
+				s.loadPluginViewByID(entry.ID, view.ID)
+			})
 	})
 }
 
@@ -245,11 +249,12 @@ func (s *appState) pluginViewBlocks(
 	blocks []pluginViewBlock,
 ) {
 	if len(blocks) == 0 {
-		ui.Text(c, "The plugin returned an empty view.").FontSize(fontBody).TextColor(p.muted)
+		ui.Text(c, text("pluginsViewEmpty")).FontSize(fontBody).TextColor(p.muted)
 		return
 	}
 	ui.Column(c).FillWidth().Gap(14).Children(func() {
 		for index, block := range blocks {
+			block.Text = pluginLocalizedText(entry.Manifest, block.Text)
 			switch block.Type {
 			case "heading":
 				ui.Text(c, block.Text).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
@@ -267,12 +272,16 @@ func (s *appState) pluginViewBlocks(
 			case "keyValue":
 				ui.Column(c).FillWidth().Gap(2).Children(func() {
 					for _, item := range block.Items {
+						item.Label = pluginLocalizedText(entry.Manifest, item.Label)
+						item.Value = pluginLocalizedText(entry.Manifest, item.Value)
 						settingsValue(c, p, item.Label, item.Value)
 					}
 				})
 			case "list":
 				ui.Column(c).FillWidth().Gap(7).Children(func() {
 					for _, item := range block.Items {
+						item.Title = pluginLocalizedText(entry.Manifest, item.Title)
+						item.Detail = pluginLocalizedText(entry.Manifest, item.Detail)
 						ui.Column(c).FillWidth().Gap(3).Padding(11).Radius(9).
 							Border(1, p.border).Background(p.surface).Children(func() {
 							if item.Title != "" {
@@ -295,7 +304,8 @@ func (s *appState) pluginViewBlocks(
 			case "button":
 				s.pluginViewButton(c, p, entry, index, block)
 			default:
-				ui.Text(c, "Unsupported block").FontSize(fontSmall).TextColor(p.muted)
+				ui.Text(c, text("pluginsViewUnsupportedBlock")).FontSize(fontSmall).
+					TextColor(p.muted)
 			}
 		}
 	})
@@ -309,12 +319,13 @@ func (s *appState) pluginViewButton(
 	block pluginViewBlock,
 ) {
 	declared := pluginDeclaresCommand(entry.Manifest, block.Command)
-	label := fallback(block.Label, fallback(block.Command, "Command"))
+	label := fallback(pluginLocalizedText(entry.Manifest, block.Label),
+		fallback(block.Command, text("pluginsCommandFallback")))
 	key := fmt.Sprintf("plugin-view-button-%s-%d", entry.ID, index)
 	btn := ui.ButtonBase(c.Key(key)).Padding(6, 10).Radius(7).Border(1, p.border).
 		Background(p.background).Cursor(ui.CursorPointer).Label(label)
 	if !declared {
-		btn.Disabled(true).Tooltip("Undeclared command")
+		btn.Disabled(true).Tooltip(text("pluginsUndeclaredCommand"))
 	} else {
 		btn.Tooltip(block.Command)
 		if btn.Hovered() {

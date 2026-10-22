@@ -23,7 +23,7 @@ func TestPiRPCIntegrationMinimalLoop(t *testing.T) {
 	}
 	t.Logf("handshake: streaming=%t model=%s", state.IsStreaming, state.Model.Name)
 
-	requestID, err := client.Prompt("Reply with exactly BYOP_RPC_OK and no other text.")
+	requestID, err := client.Prompt("Reply with exactly BYOP_RPC_OK and no other text.", "")
 	if err != nil {
 		t.Fatalf("prompt: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestPiRPCIntegrationStop(t *testing.T) {
 	}
 	cancel()
 
-	requestID, err := client.Prompt("Count slowly from 1 to 1000. Output one number per line and do not use tools.")
+	requestID, err := client.Prompt("Count slowly from 1 to 1000. Output one number per line and do not use tools.", "")
 	if err != nil {
 		t.Fatalf("prompt: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestPiRPCIntegrationStop(t *testing.T) {
 	}
 
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	note, err := client.Stop(stopCtx, false)
+	result, err := client.Stop(stopCtx, false)
 	stopCancel()
 	if err != nil {
 		t.Fatalf("stop: %v", err)
@@ -104,7 +104,7 @@ func TestPiRPCIntegrationStop(t *testing.T) {
 	if !event.Aborted {
 		t.Fatal("agent_settled did not report an aborted run")
 	}
-	t.Logf("stop: queue_note=%q aborted=%t", note, event.Aborted)
+	t.Logf("stop: queue_cleared=%d aborted=%t", result.QueueCleared, event.Aborted)
 }
 
 func TestPiRPCIntegrationCompact(t *testing.T) {
@@ -138,8 +138,9 @@ func TestPiRPCIntegrationTool(t *testing.T) {
 	cancel()
 
 	requestID, err := client.Prompt(
-		"Use the bash tool exactly once to run this exact command: printf 'BYOP_TOOL_OK'. " +
+		"Use the bash tool exactly once to run this exact command: printf 'BYOP_TOOL_OK'. "+
 			"Do not inspect files or use any other tool. After it succeeds, reply with exactly BYOP_TOOL_DONE.",
+		"",
 	)
 	if err != nil {
 		t.Fatalf("prompt: %v", err)

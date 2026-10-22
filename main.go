@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -13,7 +14,10 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/i18n"
 	"github.com/egoist/mygo/ui"
+
+	"byop/locales"
 )
 
 const (
@@ -31,10 +35,17 @@ func main() {
 	}
 	mygo.BindAs("BYOPWebView", &pluginWebViewBridge{state: state})
 
+	mygo.App.OnLocaleChanged(func(tag string) {
+		state.setEffectiveLocale(tag)
+	})
+
 	mygo.App.WhenReady(func() {
-		state.syncPluginWebViewTheme(currentAppearanceDark())
+		appearanceReady.Store(true)
+		state.applyUILanguage()
+		state.syncPluginWebViewTheme(currentAppearanceDark(), state.highContrastActive(currentAppearanceHighContrast()))
+		state.syncPluginWebViewLocale()
 		win := mygo.NewWindow(mygo.WindowOptions{
-			Title:           appTitle,
+			Title:           locales.AppWindowTitle(),
 			Width:           1180,
 			Height:          760,
 			MinWidth:        760,
@@ -149,42 +160,47 @@ type chatMessage struct {
 }
 
 type appState struct {
-	page               pageID
-	themeMode          themeMode
-	navCollapsed       bool
-	tasksOpen          bool
-	configDir          string
-	preferences        byopPreferences
-	preferencesStore   *byopPreferencesStore
-	preferencesWarning string
-	savedWorkspaceMiss bool
-	legacySources      legacyMigrationSources
-	legacyScan         legacyScan
-	legacyScanned      bool
-	legacyScanning     bool
-	legacyImport       legacyImportRecord
-	legacyImportSet    bool
-	notice             string
-	composerDraft      string
-	pluginSearch       string
-	pluginRegistry     pluginRegistry
-	pluginRegistryMu   sync.RWMutex
-	plugins            *pluginHost
-	pluginSettingForms map[string]*pluginSettingForm
-	pluginTasks        map[string]pluginTaskUpdate
-	pluginViewPluginID string
-	pluginViewID       string
-	pluginViewKind     pluginViewKind
-	pluginViewModels   map[string]pluginViewModel
-	pluginViewLoading  bool
-	pluginViewError    string
-	pluginViewEpoch    uint64
-	pluginWebViews     map[string]*pluginWebViewState
-	pluginWebViewsMu   sync.RWMutex
-	pluginWebViewDark  bool
-	pluginBridgeSlots  map[string]chan struct{}
-	pluginBridgeMu     sync.Mutex
-	automations        *automationStore
+	page                      pageID
+	themeMode                 themeMode
+	uiLanguage                string
+	effectiveLocale           atomic.Pointer[string]
+	navCollapsed              bool
+	tasksOpen                 bool
+	configDir                 string
+	preferences               byopPreferences
+	preferencesStore          *byopPreferencesStore
+	preferencesWarning        string
+	savedWorkspaceMiss        bool
+	legacySources             legacyMigrationSources
+	legacyScan                legacyScan
+	legacyScanned             bool
+	legacyScanning            bool
+	legacyImport              legacyImportRecord
+	legacyImportSet           bool
+	notice                    string
+	noticeActionLabel         string
+	noticeAction              func()
+	composerDraft             string
+	pluginSearch              string
+	pluginRegistry            pluginRegistry
+	pluginRegistryMu          sync.RWMutex
+	plugins                   *pluginHost
+	pluginSettingForms        map[string]*pluginSettingForm
+	pluginTasks               map[string]pluginTaskUpdate
+	pluginViewPluginID        string
+	pluginViewID              string
+	pluginViewKind            pluginViewKind
+	pluginViewModels          map[string]pluginViewModel
+	pluginViewLoading         bool
+	pluginViewError           string
+	pluginViewEpoch           uint64
+	pluginWebViews            map[string]*pluginWebViewState
+	pluginWebViewsMu          sync.RWMutex
+	pluginWebViewDark         bool
+	pluginWebViewHighContrast bool
+	pluginBridgeSlots         map[string]chan struct{}
+	pluginBridgeMu            sync.Mutex
+	automations               *automationStore
 
 	window                  *mygo.Window
 	closed                  atomic.Bool
@@ -228,22 +244,36 @@ type appState struct {
 	followUpAdoptionPending bool
 	followUpAdoptionFocus   bool
 
-	queueSteeringCount int
-	queueFollowUpCount int
-	compacting         bool
-	compactionReason   string
-	compactionResult   string
-	compactionError    string
-	retrying           bool
-	retryAttempt       int
-	retryMax           int
-	retryDelayMS       int64
-	retryStartedAt     time.Time
-	retryError         string
-	extensionError     string
-	extensionPath      string
-	extensionEvent     string
-	agentWillRetry     bool
+	queueSteeringCount  int
+	queueFollowUpCount  int
+	queueSteering       []string
+	queueFollowUp       []string
+	queueClearPending   bool
+	runningSendPending  bool
+	runningSendPrompt   string
+	runningSendEchoSeen bool
+	pendingPiUserEcho   string
+	compacting          bool
+	compactionReason    string
+	compactionResult    string
+	compactionError     string
+	retrying            bool
+	retryAttempt        int
+	retryMax            int
+	retryDelayMS        int64
+	retryStartedAt      time.Time
+	retryError          string
+	extensionError      string
+	extensionPath       string
+	extensionEvent      string
+	agentWillRetry      bool
+
+	piSessionsOrgWorkspace string
+	piSessionsGroups       sessionGroups
+	archivedExpanded       bool
+	draggingSessionKey     string
+	sessionUndo            *sessionUndoState
+	sessionLaterTimer      *time.Timer
 }
 
 func newAppState() *appState {
@@ -256,6 +286,7 @@ func newAppState() *appState {
 	s := &appState{
 		page:               configuredPage(),
 		themeMode:          themeMode(preferences.Theme),
+		uiLanguage:         normalizeUILanguage(preferences.UILanguage),
 		navCollapsed:       preferences.NavCollapsed,
 		tasksOpen:          preferences.TasksOpen,
 		configDir:          configDir,
@@ -270,6 +301,7 @@ func newAppState() *appState {
 		pluginWebViews:     make(map[string]*pluginWebViewState),
 		pluginBridgeSlots:  make(map[string]chan struct{}),
 	}
+	s.storeEffectiveLocale(effectiveUILanguage(preferences.UILanguage))
 	if mode, ok := parsePreferenceTheme(os.Getenv("BYOP_THEME")); ok {
 		s.themeMode = mode
 	}
@@ -295,6 +327,12 @@ func newAppState() *appState {
 	s.plugins = newPluginHost(pluginHostVersion, func() { s.postUI(func() {}) },
 		pluginHostWorkspace(workspace),
 		pluginHostTheme(currentAppearanceDark),
+		pluginHostHighContrast(func() bool {
+			return s.highContrastActive(currentAppearanceHighContrast())
+		}),
+		pluginHostLocale(func() string {
+			return s.locale()
+		}),
 		pluginHostNoticeHandler(func(pluginID, pluginName, text, tone string) {
 			s.postUI(func() {
 				s.notice = pluginName + ": " + text
@@ -361,7 +399,7 @@ func parsePreferenceBool(value string, trueValues ...string) (bool, bool) {
 
 func (s *appState) scanPlugins(announce bool) {
 	if s.plugins != nil && s.plugins.activeCount() > 0 {
-		s.notice = "Stopping active plugins before rescanning…"
+		s.notice = text("pluginScanStopping")
 		go func() {
 			s.plugins.stopAll()
 			s.postUI(func() { s.scanPlugins(announce) })
@@ -391,13 +429,18 @@ func (s *appState) scanPlugins(announce bool) {
 	problems := registry.problemCount()
 	switch {
 	case problems > 0:
-		s.notice = fmt.Sprintf("Plugin scan found %d registered plugin(s), %d contribution(s), and %d issue(s).",
-			registered, contributions, problems)
+		s.notice = textArgs("pluginScanFoundIssues", map[string]any{
+			"registered":    registered,
+			"contributions": contributions,
+			"issues":        problems,
+		})
 	case registered == 0:
-		s.notice = "Plugin scan completed. No plugin manifests were found."
+		s.notice = text("pluginScanFoundNone")
 	default:
-		s.notice = fmt.Sprintf("Plugin scan found %d registered plugin(s) and %d contribution(s).",
-			registered, contributions)
+		s.notice = textArgs("pluginScanFound", map[string]any{
+			"registered":    registered,
+			"contributions": contributions,
+		})
 	}
 }
 
@@ -511,40 +554,243 @@ func (s *appState) setTheme(mode themeMode) {
 	if s.themeMode == mode {
 		return
 	}
+	previous := s.preferences.Theme
 	s.preferences.Theme = string(mode)
 	s.applyTheme(mode)
-	if err := s.persistPreferences(); err != nil {
-		s.showNotice("Theme changed, but preferences could not be saved.")
+	if err := s.persistTheme(mode); err != nil {
+		s.preferences.Theme = previous
+		s.applyTheme(themeMode(previous))
+		s.showNotice(text("noticePreferenceSaveTheme"))
 	}
 }
 
 func (s *appState) applyTheme(mode themeMode) {
 	s.themeMode = mode
 	setMygoThemeSource(themeSource(mode))
-	s.syncPluginWebViewTheme(currentAppearanceDark())
+	s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()))
 }
 
 func (s *appState) setNavCollapsed(collapsed bool) {
+	previousPreference := s.preferences.NavCollapsed
+	previousCollapsed := s.navCollapsed
 	s.preferences.NavCollapsed = collapsed
 	s.navCollapsed = collapsed
-	if err := s.persistPreferences(); err != nil {
-		s.showNotice("Navigation changed, but preferences could not be saved.")
+	if err := s.persistNavigationCollapsed(collapsed); err != nil {
+		s.preferences.NavCollapsed = previousPreference
+		s.navCollapsed = previousCollapsed
+		s.showNotice(text("noticePreferenceSaveNavigation"))
 	}
 }
 
 func (s *appState) setTasksOpen(open bool) {
-	s.preferences.TasksOpen = open
+	previousOpen := s.tasksOpen
 	s.tasksOpen = open
-	if err := s.persistPreferences(); err != nil {
-		s.showNotice("Task panel changed, but preferences could not be saved.")
+	if err := s.persistTaskPanelOpen(open); err != nil {
+		s.tasksOpen = previousOpen
+		s.showNotice(text("noticePreferenceSaveTaskPanel"))
 	}
+}
+
+func (s *appState) persistedPreferences() byopPreferences {
+	saved, _ := s.preferencesStore.load()
+	persisted := cloneByopPreferences(saved)
+	current := s.preferences
+
+	if _, overridden := parsePreferenceTheme(os.Getenv("BYOP_THEME")); !overridden {
+		persisted.Theme = current.Theme
+	}
+	if _, overridden := parsePreferenceBool(os.Getenv("BYOP_NAV"), "collapsed", "collapsed-true"); !overridden {
+		persisted.NavCollapsed = current.NavCollapsed
+	}
+	if _, overridden := parsePreferenceBool(os.Getenv("BYOP_TASKS"), "open"); !overridden {
+		persisted.TasksOpen = current.TasksOpen
+	}
+
+	persisted.Contrast = current.Contrast
+	persisted.Motion = current.Motion
+	persisted.PanelAnimationMS = current.PanelAnimationMS
+	persisted.UILanguage = current.UILanguage
+	persisted.FollowUpStyle = current.FollowUpStyle
+	persisted.RunningSendMode = current.RunningSendMode
+	persisted.Workspace = current.Workspace
+	persisted.LastSessionByWorkspace = cloneByopPreferences(current).LastSessionByWorkspace
+	persisted.SessionOrganization = cloneByopPreferences(current).SessionOrganization
+	persisted.Drafts = cloneByopPreferences(current).Drafts
+	persisted.Legacy = cloneByopPreferences(current).Legacy
+	return persisted
+}
+
+func (s *appState) persistTheme(mode themeMode) error {
+	return s.persistPreferencePatch(func(preferences *byopPreferences) {
+		preferences.Theme = string(mode)
+	})
+}
+
+func (s *appState) persistNavigationCollapsed(collapsed bool) error {
+	return s.persistPreferencePatch(func(preferences *byopPreferences) {
+		preferences.NavCollapsed = collapsed
+	})
+}
+
+func (s *appState) persistTaskPanelOpen(open bool) error {
+	return s.persistPreferencePatch(func(preferences *byopPreferences) {
+		preferences.TasksOpen = open
+	})
+}
+
+func (s *appState) persistPreferencePatch(patch func(*byopPreferences)) error {
+	if s.preferencesStore == nil {
+		return nil
+	}
+	persisted, warning := s.preferencesStore.load()
+	if warning != "" && s.preferencesWarning == "" {
+		return errors.New(warning)
+	}
+	patch(&persisted)
+	if err := s.preferencesStore.save(persisted); err != nil {
+		return err
+	}
+	s.preferencesWarning = s.preferencesStore.warningSnapshot()
+	return nil
+}
+
+func (s *appState) setContrast(mode contrastMode) {
+	mode = normalizeContrastMode(string(mode))
+	if normalizeContrastMode(s.preferences.Contrast) == mode {
+		return
+	}
+	previous := s.preferences.Contrast
+	s.preferences.Contrast = string(mode)
+	s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()))
+	if s.window != nil {
+		s.window.Invalidate()
+	}
+	if err := s.persistPreferences(); err != nil {
+		s.preferences.Contrast = previous
+		s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()))
+		if s.window != nil {
+			s.window.Invalidate()
+		}
+		s.showNotice(text("noticePreferenceSaveContrast"))
+	}
+}
+
+func (s *appState) setMotion(mode motionMode) {
+	mode = normalizeMotionMode(string(mode))
+	if normalizeMotionMode(s.preferences.Motion) == mode {
+		return
+	}
+	previous := s.preferences.Motion
+	s.preferences.Motion = string(mode)
+	if s.window != nil {
+		s.window.Invalidate()
+	}
+	if err := s.persistPreferences(); err != nil {
+		s.preferences.Motion = previous
+		if s.window != nil {
+			s.window.Invalidate()
+		}
+		s.showNotice(text("noticePreferenceSaveMotion"))
+	}
+}
+
+func (s *appState) setPanelAnimationMS(milliseconds int) {
+	milliseconds = normalizePanelAnimationMS(milliseconds)
+	if normalizePanelAnimationMS(s.preferences.PanelAnimationMS) == milliseconds {
+		return
+	}
+	previous := s.preferences.PanelAnimationMS
+	s.preferences.PanelAnimationMS = milliseconds
+	if s.window != nil {
+		s.window.Invalidate()
+	}
+	if err := s.persistPreferences(); err != nil {
+		s.preferences.PanelAnimationMS = previous
+		if s.window != nil {
+			s.window.Invalidate()
+		}
+		s.showNotice(text("noticePreferenceSavePanelAnimation"))
+	}
+}
+
+func (s *appState) setRunningSendMode(mode runningSendMode) {
+	mode = normalizeRunningSendMode(string(mode))
+	if s.currentRunningSendMode() == mode {
+		return
+	}
+	previous := s.preferences.RunningSendMode
+	s.preferences.RunningSendMode = string(mode)
+	if err := s.persistPreferences(); err != nil {
+		s.preferences.RunningSendMode = previous
+		s.showNotice(text("noticePreferenceSaveRunningSend"))
+	}
+}
+
+func (s *appState) setUILanguage(value string) {
+	value = normalizeUILanguage(value)
+	if s.uiLanguage == value {
+		return
+	}
+	previous := s.uiLanguage
+	s.uiLanguage = value
+	s.preferences.UILanguage = value
+	s.applyUILanguage()
+	if err := s.persistPreferences(); err != nil {
+		s.uiLanguage = previous
+		s.preferences.UILanguage = previous
+		s.applyUILanguage()
+		s.showNotice(text("noticePreferenceSaveLanguage"))
+	}
+}
+
+func (s *appState) applyUILanguage() {
+	if strings.TrimSpace(os.Getenv("MYGO_LOCALE")) != "" {
+		s.setEffectiveLocale(mygo.App.Locale())
+		return
+	}
+	tag := s.uiLanguage
+	if tag == uiLanguageSystem {
+		tag = ""
+	}
+	mygo.App.SetLocale(tag)
+	s.setEffectiveLocale(mygo.App.Locale())
+}
+
+func (s *appState) setEffectiveLocale(locale string) {
+	if tag := i18n.Match([]string{locale}, locales.Catalog.Languages()); tag != "" {
+		s.storeEffectiveLocale(tag)
+	} else {
+		s.storeEffectiveLocale(effectiveUILanguage(s.uiLanguage))
+	}
+	if s.window != nil {
+		s.window.SetTitle(locales.AppWindowTitle())
+		s.window.Invalidate()
+	}
+	s.syncPluginWebViewLocale()
+}
+
+func (s *appState) storeEffectiveLocale(locale string) {
+	if strings.TrimSpace(locale) == "" {
+		locale = locales.Catalog.Source()
+	}
+	s.effectiveLocale.Store(&locale)
+}
+
+func (s *appState) locale() string {
+	if locale := s.effectiveLocale.Load(); locale != nil && strings.TrimSpace(*locale) != "" {
+		return *locale
+	}
+	return locales.Catalog.Source()
 }
 
 func (s *appState) persistPreferences() error {
 	if s.preferencesStore == nil {
 		return nil
 	}
-	if err := s.preferencesStore.save(s.preferences); err != nil {
+	if _, warning := s.preferencesStore.load(); warning != "" && s.preferencesWarning == "" {
+		return errors.New(warning)
+	}
+	if err := s.preferencesStore.save(s.persistedPreferences()); err != nil {
 		return err
 	}
 	s.preferencesWarning = s.preferencesStore.warningSnapshot()
@@ -554,10 +800,23 @@ func (s *appState) persistPreferences() error {
 func (s *appState) setPage(p pageID) {
 	s.page = p
 	s.notice = ""
+	s.clearNoticeAction()
 }
 
 func (s *appState) showNotice(text string) {
 	s.notice = text
+	s.clearNoticeAction()
+}
+
+func (s *appState) showNoticeAction(text, actionLabel string, action func()) {
+	s.notice = text
+	s.noticeActionLabel = actionLabel
+	s.noticeAction = action
+}
+
+func (s *appState) clearNoticeAction() {
+	s.noticeActionLabel = ""
+	s.noticeAction = nil
 }
 
 func (s *appState) setAppIcon(win *mygo.Window) {
@@ -623,8 +882,14 @@ func (s *appState) refreshPiSessions() {
 			s.piSessionsTimer.Stop()
 			s.piSessionsTimer = nil
 		}
+		if s.sessionLaterTimer != nil {
+			s.sessionLaterTimer.Stop()
+			s.sessionLaterTimer = nil
+		}
 		s.piSessions = nil
 		s.piSessionsExpanded = false
+		s.piSessionsOrgWorkspace = ""
+		s.piSessionsGroups = sessionGroups{}
 		return
 	}
 	refresh := s.piSessionsRefresh.Add(1)
@@ -649,6 +914,8 @@ func (s *appState) refreshPiSessions() {
 			}
 			if err == nil {
 				s.piSessions = sessions
+				s.refreshSessionOrganization(time.Now())
+				s.startSessionOrganizationTimer()
 			}
 		})
 	})
@@ -659,20 +926,20 @@ func (s *appState) schedulePiSessionsRefresh() {
 }
 
 func (s *appState) sessionMutationAllowed() bool {
-	return s.piMutationAllowed("sessions")
+	return s.piMutationAllowed(text("noticeCurrentChangeSession"))
 }
 
 func (s *appState) piMutationAllowed(change string) bool {
 	if s.piSessionBusy || s.thinkingCommitInFlight {
-		s.showNotice("Wait for the current Pi session operation before changing " + change + ".")
+		s.showNotice(textArgs("noticeWaitSessionOperation", map[string]any{"change": change}))
 		return false
 	}
 	if s.runActive() || s.compacting {
-		s.showNotice("Stop the active Pi run before changing " + change + ".")
+		s.showNotice(textArgs("noticeStopBeforeChange", map[string]any{"change": change}))
 		return false
 	}
 	if s.pi == nil || s.piConn != piConnected {
-		s.showNotice("Pi CLI is not connected. Reconnect from Settings.")
+		s.showNotice(text("noticePiDisconnected"))
 		return false
 	}
 	return true
@@ -699,7 +966,7 @@ func (s *appState) finishPiSessionOperation(client *piClient, epoch, gen uint64)
 }
 
 func (s *appState) beginThinkingCommit(level string) (*piClient, uint64, uint64, bool) {
-	if !s.piMutationAllowed("thinking level") {
+	if !s.piMutationAllowed(text("noticeCurrentChangeThinking")) {
 		return nil, 0, 0, false
 	}
 	client := s.pi
@@ -729,7 +996,7 @@ func (s *appState) cancelThinkingCommit() {
 func (s *appState) newPiSession() {
 	s.resetFollowUpSuggestion()
 	s.cancelThinkingPending()
-	client, epoch, gen, ok := s.beginPiSessionOperation("sessions")
+	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeSession"))
 	if !ok {
 		return
 	}
@@ -740,7 +1007,9 @@ func (s *appState) newPiSession() {
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Could not create a Pi session: " + uiErrorText(err, "unknown error"))
+					s.showNotice(textArgs("noticeSessionCreateFailed", map[string]any{
+						"error": uiErrorText(err, text("errorUnknown")),
+					}))
 				}
 			})
 			return
@@ -748,7 +1017,7 @@ func (s *appState) newPiSession() {
 		if cancelled {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Pi canceled the new session.")
+					s.showNotice(text("noticeSessionCreateCancelled"))
 				}
 			})
 			return
@@ -759,24 +1028,26 @@ func (s *appState) newPiSession() {
 		if stateErr != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("New Pi session was created, but its state could not be confirmed: " +
-						uiErrorText(stateErr, "unknown error"))
+					s.showNotice(textArgs("noticeSessionCreateUnconfirmed", map[string]any{
+						"error": uiErrorText(stateErr, text("errorUnknown")),
+					}))
 				}
 			})
 			return
 		}
-		s.loadPiSession(client, epoch, gen, state.SessionFile, state.SessionID, "New Pi session created.")
+		s.loadPiSession(client, epoch, gen, state.SessionFile, state.SessionID,
+			text("noticeSessionCreated"))
 	}()
 }
 
 func (s *appState) switchPiSession(summary piSessionSummary) {
 	if piEphemeralSessions() {
-		s.showNotice("Session switching is unavailable while BYOP_PI_EPHEMERAL is enabled.")
+		s.showNotice(text("noticeSessionSwitchUnavailable"))
 		return
 	}
 	s.resetFollowUpSuggestion()
 	s.cancelThinkingPending()
-	client, epoch, gen, ok := s.beginPiSessionOperation("sessions")
+	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeSession"))
 	if !ok {
 		return
 	}
@@ -787,7 +1058,9 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Could not switch Pi session: " + uiErrorText(err, "unknown error"))
+					s.showNotice(textArgs("noticeSessionSwitchFailed", map[string]any{
+						"error": uiErrorText(err, text("errorUnknown")),
+					}))
 				}
 			})
 			return
@@ -795,12 +1068,12 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 		if cancelled {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Pi canceled the session switch.")
+					s.showNotice(text("noticeSessionSwitchCancelled"))
 				}
 			})
 			return
 		}
-		s.loadPiSession(client, epoch, gen, summary.Path, summary.ID, "Switched Pi session.")
+		s.loadPiSession(client, epoch, gen, summary.Path, summary.ID, text("noticeSessionSwitched"))
 	}()
 }
 
@@ -813,8 +1086,9 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Session changed, but its transcript could not be restored: " +
-						uiErrorText(err, "unknown error"))
+					s.showNotice(textArgs("noticeSessionTranscriptRestoreFailed", map[string]any{
+						"error": uiErrorText(err, text("errorUnknown")),
+					}))
 				}
 			})
 			return
@@ -823,7 +1097,9 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Session transcript could not be read: " + uiErrorText(err, "unknown error"))
+					s.showNotice(textArgs("noticeSessionTranscriptReadFailed", map[string]any{
+						"error": uiErrorText(err, text("errorUnknown")),
+					}))
 				}
 			})
 			return
@@ -860,14 +1136,18 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			s.piError = ""
 			s.notice = notice
 			if stateErr != nil {
-				s.notice = notice + " Pi state could not be confirmed: " +
-					uiErrorText(stateErr, "unknown error")
+				s.notice = textArgs("noticeSessionStateUnconfirmed", map[string]any{
+					"notice": notice,
+					"error":  uiErrorText(stateErr, text("errorUnknown")),
+				})
 			} else if (strings.TrimSpace(expectedPath) != "" || strings.TrimSpace(expectedID) != "") &&
 				!samePiSession(canonicalPiPathIfPresent(expectedPath), expectedID, s.piSessionFile, state.SessionID) {
-				s.notice = notice + " Pi reported a different session."
+				s.notice = textArgs("noticeSessionMismatch", map[string]any{"notice": notice})
 			}
 			s.page = pageChat
 			s.refreshPiSessions()
+			s.clearDueLaterSession(s.activePiSession(), time.Now())
+			s.refreshActiveSessionOrganization(time.Now())
 		})
 	}()
 }
@@ -893,7 +1173,7 @@ func (s *appState) recordLastSession(sessionID string) {
 		return
 	}
 	if err := s.persistPreferences(); err != nil {
-		s.showNotice("Pi session changed, but its preference could not be saved.")
+		s.showNotice(text("noticeSessionPreferenceSave"))
 	}
 }
 
@@ -921,7 +1201,7 @@ func canonicalPiPathIfPresent(value string) string {
 
 func (s *appState) selectModel(provider, id string) {
 	s.cancelThinkingPending()
-	client, epoch, gen, ok := s.beginPiSessionOperation("model")
+	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeModel"))
 	if !ok {
 		return
 	}
@@ -932,7 +1212,9 @@ func (s *appState) selectModel(provider, id string) {
 		if err != nil {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice("Could not change Pi model: " + uiErrorText(err, "unknown error"))
+					s.showNotice(textArgs("noticeModelChangeFailed", map[string]any{
+						"error": uiErrorText(err, text("errorUnknown")),
+					}))
 				}
 			})
 			return
@@ -957,7 +1239,7 @@ func (s *appState) selectModel(provider, id string) {
 			if stateErr == nil {
 				s.applyPiSessionState(state)
 			} else if levelsErr != nil {
-				s.showNotice("Model changed, but thinking levels could not be refreshed.")
+				s.showNotice(text("noticeModelLevelsRefreshFailed"))
 				return
 			}
 		})
@@ -978,8 +1260,9 @@ func (s *appState) selectThinkingLevel(level string) bool {
 			s.postUI(func() {
 				if s.finishThinkingCommit(client, epoch, gen) {
 					s.dropThinkingPending()
-					s.showNotice("Could not change Pi thinking level: " +
-						uiErrorText(err, "unknown error"))
+					s.showNotice(textArgs("noticeThinkingChangeFailed", map[string]any{
+						"error": uiErrorText(err, text("errorUnknown")),
+					}))
 				}
 			})
 			return
@@ -1044,7 +1327,7 @@ func (s *appState) connectPi() {
 	path, err := resolvePiPath()
 	if err != nil {
 		s.piConn = piConnectionErr
-		s.piError = uiErrorText(err, "Pi CLI could not be resolved.")
+		s.piError = uiErrorText(err, text("errorPiResolveFailed"))
 		s.notice = s.piError
 		return
 	}
@@ -1054,7 +1337,7 @@ func (s *appState) connectPi() {
 	s.piCwd = ""
 	s.piPath = path
 	s.piError = ""
-	s.notice = "Connecting to external Pi CLI…"
+	s.notice = text("noticePiConnecting")
 	s.refreshPiSessions()
 
 	savedWorkspace := s.preferences.Workspace
@@ -1067,8 +1350,8 @@ func (s *appState) connectPi() {
 			s.postUI(func() {
 				s.piConnecting = false
 				s.piConn = piConnectionErr
-				s.piError = uiErrorText(err, "Pi workspace failed.")
-				s.notice = "Pi workspace failed: " + s.piError
+				s.piError = uiErrorText(err, text("errorWorkspaceFailed"))
+				s.notice = textArgs("noticeWorkspaceFailed", map[string]any{"error": s.piError})
 			})
 			return
 		}
@@ -1079,8 +1362,8 @@ func (s *appState) connectPi() {
 			s.postUI(func() {
 				s.piConnecting = false
 				s.piConn = piConnectionErr
-				s.piError = uiErrorText(err, "Pi connection failed.")
-				s.notice = "Pi connection failed: " + s.piError
+				s.piError = uiErrorText(err, text("errorPiConnectFailed"))
+				s.notice = textArgs("noticePiConnectFailed", map[string]any{"error": s.piError})
 			})
 			return
 		}
@@ -1092,8 +1375,8 @@ func (s *appState) connectPi() {
 			s.postUI(func() {
 				s.piConnecting = false
 				s.piConn = piConnectionErr
-				s.piError = uiErrorText(err, "Pi RPC handshake failed.")
-				s.notice = "Pi RPC handshake failed: " + s.piError
+				s.piError = uiErrorText(err, text("errorPiRPCFailed"))
+				s.notice = textArgs("noticePiRPCFailed", map[string]any{"error": s.piError})
 			})
 			return
 		}
@@ -1119,9 +1402,9 @@ func (s *appState) connectPi() {
 			s.piError = ""
 			s.resetRuntimeDiagnostics()
 			if modelsErr != nil || levelsErr != nil {
-				s.notice = "External Pi CLI connected; model metadata was unavailable."
+				s.notice = text("noticePiConnectedNoModels")
 			} else {
-				s.notice = "External Pi CLI connected."
+				s.notice = text("noticePiConnected")
 			}
 			s.refreshPiSessions()
 		})
@@ -1138,7 +1421,13 @@ func (s *appState) reconnectPi() {
 		s.piSessionsTimer.Stop()
 		s.piSessionsTimer = nil
 	}
+	if s.sessionLaterTimer != nil {
+		s.sessionLaterTimer.Stop()
+		s.sessionLaterTimer = nil
+	}
 	s.piSessionsRefresh.Add(1)
+	s.piSessionsOrgWorkspace = ""
+	s.piSessionsGroups = sessionGroups{}
 	if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
 		s.markOpenTools(toolCallInterrupted)
 		s.setAssistantStatus("Interrupted")
@@ -1170,6 +1459,10 @@ func (s *appState) reconnectPi() {
 func (s *appState) shutdownPi() {
 	s.closed.Store(true)
 	s.resetFollowUpSuggestion()
+	if s.sessionLaterTimer != nil {
+		s.sessionLaterTimer.Stop()
+		s.sessionLaterTimer = nil
+	}
 	s.sessionGen++
 	s.piSessionBusy = false
 	s.cancelThinkingCommit()
@@ -1190,25 +1483,33 @@ func (s *appState) shutdownPi() {
 }
 
 func (s *appState) sendPrompt() {
-	text := strings.TrimSpace(s.composerDraft)
-	if text == "" {
-		s.showNotice("Type a message before sending.")
+	s.sendPromptWithMode(s.currentRunningSendMode())
+}
+
+func (s *appState) sendPromptWithMode(mode runningSendMode) {
+	prompt := strings.TrimSpace(s.composerDraft)
+	if prompt == "" {
+		s.showNotice(text("noticeMessageEmpty"))
 		return
 	}
 	if s.pi == nil || s.piConn != piConnected {
-		s.showNotice("Pi CLI is not connected. Reconnect from Settings.")
+		s.showNotice(text("noticePiDisconnected"))
 		return
 	}
 	if s.piSessionBusy {
-		s.showNotice("Wait for the current Pi session operation before sending a message.")
+		s.showNotice(text("noticeSessionOperationBeforeSend"))
 		return
 	}
 	if s.thinkingCommitInFlight {
-		s.showNotice("Wait for the current thinking level update before sending a message.")
+		s.showNotice(text("noticeThinkingBeforeSend"))
 		return
 	}
-	if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
-		s.showNotice("Pi is already working. Stop the current run before sending another message.")
+	if s.run == runStopping || s.compacting {
+		s.showNotice(text("noticeRunningSendUnavailable"))
+		return
+	}
+	if s.run == runSubmitting || s.run == runStreaming {
+		s.sendRunningPrompt(prompt, mode)
 		return
 	}
 
@@ -1217,14 +1518,14 @@ func (s *appState) sendPrompt() {
 	s.sessionGen++
 	gen := s.sessionGen
 	s.piSessionBusy = true
-	requestID, err := s.pi.Prompt(text)
+	requestID, err := s.pi.Prompt(prompt, "")
 	if err != nil {
 		if gen == s.sessionGen {
 			s.piSessionBusy = false
 		}
 		s.run = runFailed
-		s.piError = uiErrorText(err, "Pi is unavailable.")
-		s.showNotice("Could not send to Pi: " + s.piError)
+		s.piError = uiErrorText(err, text("errorPiUnavailable"))
+		s.showNotice(textArgs("noticeSendFailed", map[string]any{"error": s.piError}))
 		return
 	}
 	s.resetRuntimeDiagnostics()
@@ -1234,24 +1535,164 @@ func (s *appState) sendPrompt() {
 	s.run = runSubmitting
 	s.runID = requestID
 	s.activeRequest = requestID
-	s.activePrompt = text
+	s.activePrompt = prompt
 	s.piSessionBusy = false
+	s.startAssistantPrompt(prompt)
+}
+
+func (s *appState) startAssistantPrompt(prompt string) {
 	s.chat = append(s.chat,
 		chatMessage{
 			role: chatUser,
 			blocks: []chatBlock{{
 				kind: chatBlockText,
-				text: text,
+				text: prompt,
 			}},
-			status: "sent",
+			status: text("chatStatusSent"),
 		},
-		chatMessage{role: chatAssistant, status: "Waiting for Pi…", startedAt: time.Now()},
+		chatMessage{role: chatAssistant, status: text("assistantWaiting"), startedAt: time.Now()},
 	)
+	s.pendingPiUserEcho = prompt
+}
+
+func (s *appState) sendRunningPrompt(prompt string, mode runningSendMode) {
+	if s.runningSendPending {
+		return
+	}
+	mode = normalizeRunningSendMode(string(mode))
+	behavior := runningSendBehavior(mode)
+	client := s.pi
+	epoch := s.piEpoch
+	gen := s.sessionGen
+	requestBefore := s.activeRequest
+	runBefore := s.runID
+	runStateBefore := s.run
+	s.runningSendPending = true
+	s.runningSendPrompt = prompt
+	s.runningSendEchoSeen = false
+	s.composerDraft = ""
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		result, err := client.PromptRequest(ctx, prompt, behavior)
+		s.postUI(func() {
+			s.completeRunningSend(client, prompt, mode, epoch, gen,
+				requestBefore, runBefore, runStateBefore, result, err)
+		})
+	}()
+}
+
+func (s *appState) completeRunningSend(client *piClient, prompt string, mode runningSendMode,
+	epoch, gen uint64, requestBefore, runBefore string, runStateBefore runState,
+	result piPromptResult, err error,
+) bool {
+	if !s.runningSendPending {
+		return false
+	}
+	s.runningSendPending = false
+	echoSeen := s.runningSendEchoSeen
+	s.runningSendPrompt = ""
+	s.runningSendEchoSeen = false
+	if err != nil {
+		if strings.TrimSpace(s.composerDraft) == "" {
+			s.composerDraft = prompt
+		}
+		if epoch == s.piEpoch && s.pi == client && gen == s.sessionGen &&
+			s.runActive() && s.activeRequest == requestBefore && s.runID == runBefore {
+			s.run = runStateBefore
+		}
+		s.showNotice(textArgs("noticeRunningSendFailed", map[string]any{
+			"error": uiErrorText(err, text("errorRunningSendUnavailable")),
+		}))
+		return false
+	}
+	if epoch != s.piEpoch || s.pi != client || gen != s.sessionGen {
+		return false
+	}
+	disposition := strings.ToLower(strings.TrimSpace(result.Disposition))
+	switch disposition {
+	case "started":
+		if !echoSeen {
+			s.startAssistantPrompt(prompt)
+		}
+		s.run = runStreaming
+		s.runID = result.RequestID
+		s.activeRequest = result.RequestID
+		s.activePrompt = prompt
+	case "queued", "handled":
+	default:
+		s.composerDraft = prompt
+		s.showNotice(textArgs("noticeRunningSendFailed", map[string]any{
+			"error": text("errorRunningSendUnavailable"),
+		}))
+		return false
+	}
+	s.notice = textArgs("noticeRunningSendAccepted", map[string]any{
+		"mode": runningSendModeLabel(mode),
+	})
+	return true
+}
+
+func runningSendModeLabel(mode runningSendMode) string {
+	if normalizeRunningSendMode(string(mode)) == runningSendSteer {
+		return text("runningSendSteer")
+	}
+	return text("runningSendQueue")
+}
+
+func (s *appState) queueClear() {
+	if s.pi == nil || s.queueSteeringCount+s.queueFollowUpCount == 0 || s.queueClearPending {
+		return
+	}
+	client := s.pi
+	epoch := s.piEpoch
+	gen := s.sessionGen
+	s.queueClearPending = true
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		steering, followUp, err := client.ClearQueue(ctx)
+		s.postUI(func() {
+			s.queueClearPending = false
+			if epoch != s.piEpoch || s.pi != client || gen != s.sessionGen {
+				return
+			}
+			if err != nil {
+				s.showNotice(textArgs("noticeQueueClearFailed", map[string]any{
+					"error": uiErrorText(err, text("errorPiUnavailable")),
+				}))
+				return
+			}
+			count := clearedQueueCount(steering, followUp)
+			s.finishQueueClear()
+			s.notice = textArgs("noticeQueueCleared", map[string]any{
+				"count": count,
+			})
+		})
+	}()
+}
+
+func clearedQueueCount(steering, followUp []string) int {
+	return len(steering) + len(followUp)
+}
+
+func (s *appState) finishQueueClear() {
+	s.queueSteering = nil
+	s.queueFollowUp = nil
+	s.queueSteeringCount = 0
+	s.queueFollowUpCount = 0
 }
 
 func (s *appState) resetRuntimeDiagnostics() {
+	s.queueSteering = nil
+	s.queueFollowUp = nil
 	s.queueSteeringCount = 0
 	s.queueFollowUpCount = 0
+	s.queueClearPending = false
+	s.runningSendPending = false
+	s.runningSendPrompt = ""
+	s.runningSendEchoSeen = false
+	s.pendingPiUserEcho = ""
 	s.compacting = false
 	s.compactionReason = ""
 	s.compactionResult = ""
@@ -1278,15 +1719,17 @@ func (s *appState) stopPrompt() {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		note, err := client.Stop(ctx, abortRetry)
+		result, err := client.Stop(ctx, abortRetry)
 		s.postUI(func() {
 			if err != nil {
-				s.piError = uiErrorText(err, "Pi stop failed.")
-				s.notice = "Stop was sent, but " + s.piError
-			} else if note != "" {
-				s.notice = "Stop requested. " + note + "."
+				s.piError = uiErrorText(err, text("noticeStopFailed"))
+				s.notice = textArgs("noticeStopFailed", map[string]any{"error": s.piError})
+			} else if result.QueueCleared > 0 {
+				s.notice = textArgs("noticeStopRequestedQueue", map[string]any{"count": result.QueueCleared})
+			} else if result.RetryStopped {
+				s.notice = text("noticeStopRequestedRetry")
 			} else {
-				s.notice = "Stop requested. Queue cleared and abort sent."
+				s.notice = text("noticeStopRequested")
 			}
 		})
 	}()
@@ -1306,21 +1749,24 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		}
 		if !event.Success {
 			s.run = runFailed
-			s.piError = uiErrorFromText(event.Error, "Pi rejected the prompt.")
-			s.notice = "Pi rejected the prompt: " + s.piError
+			s.piError = uiErrorFromText(event.Error, text("errorPiPromptRejected"))
+			s.notice = textArgs("noticePromptRejected", map[string]any{"error": s.piError})
 			s.markOpenTools(toolCallFailed)
 			s.finishAssistant(s.piError, "failed")
 			return
 		}
 		if event.Disposition == "handled" {
 			s.run = runCompleted
-			s.finishAssistant("Pi handled this as an extension command.", "handled")
+			s.finishAssistant(text("noticePiHandledExtension"), "handled")
 			return
 		}
 		s.run = runStreaming
 	case piEventRunStarted:
 		s.resetFollowUpSuggestion()
 		s.run = runStreaming
+	case piEventUserMessage:
+		s.run = runStreaming
+		s.appendRunningUserMessage(event.Text)
 	case piEventText:
 		s.run = runStreaming
 		s.setAssistantText(event.Text, "Streaming")
@@ -1330,9 +1776,11 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			s.setAssistantText(event.Text, "Received")
 		}
 		if event.Error != "" {
-			s.piError = uiErrorFromText(event.Error, "Pi message failed.")
+			s.piError = uiErrorFromText(event.Error, text("errorPiMessageFailed"))
 		}
 	case piEventQueueUpdate:
+		s.queueSteering = append([]string(nil), event.QueueSteering...)
+		s.queueFollowUp = append([]string(nil), event.QueueFollowUp...)
 		s.queueSteeringCount = len(event.QueueSteering)
 		s.queueFollowUpCount = len(event.QueueFollowUp)
 	case piEventCompactStart:
@@ -1348,7 +1796,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.compactionReason = fallback(event.CompactReason, s.compactionReason)
 		s.compactionError = event.CompactError
 		if s.compactionError != "" {
-			s.compactionError = uiErrorFromText(s.compactionError, "Context compaction failed.")
+			s.compactionError = uiErrorFromText(s.compactionError, text("errorCompactionFailed"))
 		}
 		s.agentWillRetry = event.WillRetry
 		s.compactionResult = compactionResultLabel(event)
@@ -1366,7 +1814,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.retryStartedAt = time.Now()
 		s.retryError = event.RetryError
 		if s.retryError != "" {
-			s.retryError = uiErrorFromText(s.retryError, "Pi retry failed.")
+			s.retryError = uiErrorFromText(s.retryError, text("errorRetryFailed"))
 		}
 		s.piError = s.retryError
 		if s.runActive() {
@@ -1381,7 +1829,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		} else {
 			s.retryError = fallback(event.RetryError, s.retryError)
 			if s.retryError != "" {
-				s.retryError = uiErrorFromText(s.retryError, "Pi retry failed.")
+				s.retryError = uiErrorFromText(s.retryError, text("errorRetryFailed"))
 			}
 			s.piError = s.retryError
 		}
@@ -1397,10 +1845,10 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			s.schedulePiSessionsRefresh()
 		}
 	case piEventExtensionErr:
-		s.extensionError = uiErrorFromText(event.Error, "Pi extension failed.")
+		s.extensionError = uiErrorFromText(event.Error, text("errorExtensionFailed"))
 		s.extensionPath = event.ExtensionPath
 		s.extensionEvent = event.ExtensionEvent
-		s.notice = "Pi extension error: " + s.extensionError
+		s.notice = textArgs("noticePiExtensionError", map[string]any{"error": s.extensionError})
 	case piEventToolStart:
 		s.run = runStreaming
 		s.startToolCall(event)
@@ -1431,6 +1879,12 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.piSessionBusy = false
 		s.activeRequest = ""
 		s.activePrompt = ""
+		s.runningSendPending = false
+		s.runningSendPrompt = ""
+		s.runningSendEchoSeen = false
+		s.pendingPiUserEcho = ""
+		s.queueSteering = nil
+		s.queueFollowUp = nil
 		s.queueSteeringCount = 0
 		s.queueFollowUpCount = 0
 		s.compacting = false
@@ -1439,19 +1893,19 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		if event.Aborted || s.run == runStopping {
 			s.run = runStopped
 			s.markOpenTools(toolCallCancelled)
-			s.ensureAssistantFallback("Pi stopped before adding response text.")
+			s.ensureAssistantFallback(text("assistantStoppedFallback"))
 			s.setAssistantStatus("Stopped")
 		} else if s.piError != "" {
 			s.run = runFailed
 			s.markOpenTools(toolCallFailed)
-			s.ensureAssistantFallback("Pi stopped after an error. See runtime details for the error.")
+			s.ensureAssistantFallback(text("assistantErrorFallback"))
 			s.setAssistantStatus("failed")
 		} else {
 			s.run = runCompleted
-			s.ensureAssistantFallback("Pi completed without assistant text.")
+			s.ensureAssistantFallback(text("assistantEmptyFallback"))
 			s.setAssistantStatus("Complete")
 			if s.notice == "" {
-				s.notice = "Pi finished and is ready for another message."
+				s.notice = text("noticePiFinished")
 			}
 			if strings.TrimSpace(reply) != "" {
 				s.startFollowUpSuggestion(prompt, reply)
@@ -1460,8 +1914,8 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.refreshPiSessionState()
 		s.schedulePiSessionsRefresh()
 	case piEventParseError:
-		s.piError = uiErrorFromText(event.Error, "Pi protocol warning.")
-		s.notice = "Pi protocol warning: " + s.piError
+		s.piError = uiErrorFromText(event.Error, text("errorProtocolWarning"))
+		s.notice = textArgs("noticePiProtocolWarning", map[string]any{"error": s.piError})
 	case piEventProcessExit:
 		s.resetFollowUpSuggestion()
 		s.sessionGen++
@@ -1472,7 +1926,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.piCwd = ""
 		s.piConnecting = false
 		s.piConn = piDisconnected
-		s.piError = uiErrorFromText(fallback(event.StderrTail, event.Error), "Pi CLI disconnected.")
+		s.piError = uiErrorFromText(fallback(event.StderrTail, event.Error), text("errorPiDisconnected"))
 		s.piSessionFile = ""
 		s.piSessionID = ""
 		s.piModel = ""
@@ -1486,31 +1940,44 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
 			s.run = runInterrupted
 			s.markOpenTools(toolCallInterrupted)
-			s.ensureAssistantFallback("Pi exited before adding response text.")
+			s.ensureAssistantFallback(text("assistantExitedFallback"))
 			s.setAssistantStatus("Interrupted")
-			s.notice = "Pi process exited before the run completed."
+			s.notice = text("noticePiProcessExited")
 		} else if s.closed.Load() {
 			return
 		} else {
-			s.notice = "Pi CLI disconnected."
+			s.notice = text("noticePiDisconnectedEvent")
 		}
 	}
 }
 
-func (s *appState) setAssistantText(text, status string) {
+func (s *appState) setAssistantText(value, status string) {
 	message := s.currentAssistant()
+	if !message.endedAt.IsZero() {
+		s.chat = append(s.chat, chatMessage{
+			role:      chatAssistant,
+			status:    text("assistantWaiting"),
+			startedAt: time.Now(),
+		})
+		message = &s.chat[len(s.chat)-1]
+	}
+	wasWaiting := message.status == locales.AssistantWaiting()
 	message.status = status
-	if strings.TrimSpace(text) == "" {
+	if strings.TrimSpace(value) == "" {
 		return
 	}
 	if len(message.blocks) > 0 {
 		last := &message.blocks[len(message.blocks)-1]
 		if last.kind == chatBlockText {
-			last.text = text
+			if wasWaiting && strings.TrimSpace(last.text) != "" && last.text != value {
+				message.blocks = append(message.blocks, chatBlock{kind: chatBlockText, text: value})
+				return
+			}
+			last.text = value
 			return
 		}
 	}
-	message.blocks = append(message.blocks, chatBlock{kind: chatBlockText, text: text})
+	message.blocks = append(message.blocks, chatBlock{kind: chatBlockText, text: value})
 }
 
 func (s *appState) setAssistantStatus(status string) {
@@ -1560,6 +2027,31 @@ func (s *appState) currentAssistant() *chatMessage {
 	return &s.chat[len(s.chat)-1]
 }
 
+func (s *appState) appendRunningUserMessage(value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return
+	}
+	if s.pendingPiUserEcho == value {
+		s.pendingPiUserEcho = ""
+		return
+	}
+	if s.runningSendPending && s.runningSendPrompt == value {
+		s.runningSendEchoSeen = true
+	}
+	if len(s.chat) > 0 && s.chat[len(s.chat)-1].role == chatAssistant {
+		s.markAssistantEnded()
+	}
+	s.chat = append(s.chat,
+		chatMessage{
+			role:   chatUser,
+			status: text("chatStatusSent"),
+			blocks: []chatBlock{{kind: chatBlockText, text: value}},
+		},
+		chatMessage{role: chatAssistant, status: text("assistantWaiting"), startedAt: time.Now()},
+	)
+}
+
 func (s *appState) startToolCall(event piEvent) {
 	message := s.currentAssistant()
 	id := event.ToolCallID
@@ -1578,7 +2070,7 @@ func (s *appState) startToolCall(event piEvent) {
 		kind: chatBlockTool,
 		tool: toolCallView{
 			id:        id,
-			name:      fallback(event.ToolName, "tool"),
+			name:      fallback(event.ToolName, text("errorToolFallback")),
 			arguments: formatToolArguments(event.ToolArgs),
 			status:    toolCallRunning,
 			expanded:  true,
@@ -1620,7 +2112,7 @@ func (s *appState) endToolCall(event piEvent) {
 			kind: chatBlockTool,
 			tool: toolCallView{
 				id:       event.ToolCallID,
-				name:     fallback(event.ToolName, "tool"),
+				name:     fallback(event.ToolName, text("errorToolFallback")),
 				status:   toolCallCompleted,
 				expanded: false,
 			},
@@ -1696,11 +2188,11 @@ func (s *appState) currentRunTaskDetail() string {
 	if tool == nil {
 		return s.runDetail()
 	}
-	detail := tool.name + " · " + toolCallStatusLabel(tool.status)
-	if tool.durationMS > 0 {
-		detail += " in " + formatToolDuration(tool.durationMS)
-	}
-	return detail
+	return textArgs("runDetailCurrentTool", map[string]any{
+		"tool":     tool.name,
+		"status":   toolCallStatusLabel(tool.status),
+		"duration": formatToolDuration(tool.durationMS),
+	})
 }
 
 func formatToolArguments(raw json.RawMessage) string {
@@ -1757,10 +2249,10 @@ func piContentText(raw json.RawMessage) (string, bool) {
 	}
 	parts := make([]string, 0, len(payload.Content))
 	for _, blockRaw := range payload.Content {
-		var text string
-		if json.Unmarshal(blockRaw, &text) == nil {
-			if text != "" {
-				parts = append(parts, text)
+		var plain string
+		if json.Unmarshal(blockRaw, &plain) == nil {
+			if plain != "" {
+				parts = append(parts, plain)
 			}
 			continue
 		}
@@ -1778,7 +2270,7 @@ func piContentText(raw json.RawMessage) (string, bool) {
 				parts = append(parts, block.Text)
 			}
 		case "image":
-			parts = append(parts, "["+fallback(block.MimeType, "image")+"]")
+			parts = append(parts, "["+fallback(block.MimeType, text("toolImageFallback"))+"]")
 		default:
 			data, _ := json.Marshal(block)
 			if len(data) > 2 {
@@ -1789,13 +2281,13 @@ func piContentText(raw json.RawMessage) (string, bool) {
 	return strings.Join(parts, "\n\n"), len(parts) > 0
 }
 
-func truncateToolText(text string, limit int) string {
-	text = strings.Trim(text, "\r\n")
-	runes := []rune(text)
+func truncateToolText(value string, limit int) string {
+	value = strings.Trim(value, "\r\n")
+	runes := []rune(value)
 	if len(runes) <= limit {
-		return text
+		return value
 	}
-	return string(runes[:limit]) + "\n… output truncated"
+	return string(runes[:limit]) + "\n" + text("toolOutputTruncated")
 }
 
 func oneLine(text string) string {
@@ -1805,17 +2297,17 @@ func oneLine(text string) string {
 func toolCallStatusLabel(status toolCallStatus) string {
 	switch status {
 	case toolCallRunning:
-		return "Running"
+		return text("toolStatusRunning")
 	case toolCallCompleted:
-		return "Completed"
+		return text("toolStatusCompleted")
 	case toolCallFailed:
-		return "Failed"
+		return text("toolStatusFailed")
 	case toolCallCancelled:
-		return "Cancelled"
+		return text("toolStatusCancelled")
 	case toolCallInterrupted:
-		return "Interrupted"
+		return text("toolStatusInterrupted")
 	default:
-		return "Unknown"
+		return text("toolStatusUnknown")
 	}
 }
 
@@ -1838,10 +2330,10 @@ func nonEmpty(values ...string) []string {
 
 func (s *appState) piPathLabel() string {
 	if s.piPath == "" {
-		return "Not resolved"
+		return text("piPathNotResolved")
 	}
 	if strings.TrimSpace(os.Getenv("BYOP_PI_PATH")) == "" {
-		return "pi (resolved from PATH)"
+		return text("piPathFromPATH")
 	}
 	return s.piPath
 }

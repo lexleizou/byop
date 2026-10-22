@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
   "id": "example.hello-webview",
-  "name": "Hello WebView",
+  "name": "%manifestName%",
   "version": "0.1.0",
-  "description": "Contract fixture for BYOP P5 isolated WebView hosting and the page bridge.",
+  "description": "%manifestDescription%",
+  "l10n": "l10n",
   "runtime": "node",
   "entry": "plugin.mjs",
   "icon": "plugins",
@@ -15,7 +16,7 @@
     "navigation": [
       {
         "id": "hello-web",
-        "title": "Hello WebView",
+        "title": "%navigationTitle%",
         "icon": "plugins",
         "view": "hello.web"
       }
@@ -23,7 +24,7 @@
     "webviews": [
       {
         "id": "hello.web",
-        "title": "Hello WebView",
+        "title": "%webviewTitle%",
         "location": "main",
         "entry": "web/index.html"
       }

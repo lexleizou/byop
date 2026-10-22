@@ -1,11 +1,14 @@
 # BYOP Workbench Architecture
 
-Status: P8 native shell, persisted external Pi sessions, read-only session
-discovery and RPC-only session mutation, ordered timeline restoration, model
-and thinking-level selection, transient runtime diagnostics, the P5 plugin
-platform, plugin-registered automation run records, and explicit migration of
-legacy Pi Agent Desktop preferences are implemented; Chat renders through
-Onevra v0.2026.13 components.
+Status: P9c session organization, running queue/steer delivery, appearance
+preferences, panel animation and grouped panel toggles; P9b language packs;
+P8 native shell; persisted external Pi sessions; read-only session discovery
+and RPC-only session mutation; ordered timeline restoration; model and
+thinking-level selection; transient runtime diagnostics; the P5 plugin
+platform; plugin-registered automation run records; and explicit migration of
+legacy Pi Agent Desktop preferences are implemented. Chat renders through
+Onevra v0.2026.13 components. The host UI and plugin manifest display strings
+are resolved from extensible language packs at display time.
 
 ## Runtime Boundary
 
@@ -135,10 +138,11 @@ explicit root becomes a visible scan issue. A child directory without a
 manifest is ignored.
 
 The parser accepts one JSON object up to 1 MiB and rejects unknown fields,
-trailing JSON values and unsafe entry paths. The host records registered,
-invalid, incompatible, duplicate plugin ID and duplicate contribution ID
-states. Scanning never opens or executes entry files. The current host version
-is `0.7.0`; manifest schema and Plugin API version are both `1`.
+trailing JSON values and unsafe entry and localization paths. The host records
+registered, invalid, incompatible, duplicate plugin ID and duplicate
+contribution ID states. Scanning never opens or executes entry files. The
+current host version is `0.9.0`; manifest schema and Plugin API version are
+both `1`.
 
 Each plugin is an independent local package with a manifest, a runtime entry
 point and declared contribution points.
@@ -147,27 +151,29 @@ point and declared contribution points.
 {
   "schemaVersion": 1,
   "id": "example.git-workspace",
-  "name": "Git Workspace",
+  "name": "%pluginName%",
+  "description": "%pluginDescription%",
   "version": "0.1.0",
   "runtime": "node",
   "entry": "dist/plugin.js",
+  "l10n": "l10n",
   "compatibility": {
     "host": ">=0.4.0 <1.0.0",
     "pluginApi": "1"
   },
   "contributes": {
-    "navigation": [{ "id": "git", "title": "Git", "icon": "git", "view": "git.status" }],
-    "commands": [{ "id": "git.refresh", "title": "Refresh repository" }],
+    "navigation": [{ "id": "git", "title": "%navigationTitle%", "icon": "git", "view": "git.status" }],
+    "commands": [{ "id": "git.refresh", "title": "%refreshCommand%" }],
     "views": [{ "id": "git.status", "location": "main", "view": "native" }],
     "taskPanels": [{ "id": "git.tasks", "title": "Git tasks" }],
     "settings": [{
       "id": "git.settings",
-      "title": "Git",
-      "description": "Repository view preferences.",
+      "title": "%settingsTitle%",
+      "description": "%settingsDescription%",
       "fields": [
         {
           "key": "showDetails",
-          "label": "Show details",
+          "label": "%showDetails%",
           "type": "boolean",
           "default": true
         }
@@ -175,7 +181,7 @@ point and declared contribution points.
     }],
     "webviews": [{
       "id": "git.diff",
-      "title": "Git diff",
+      "title": "%diffTitle%",
       "location": "main",
       "entry": "web/diff.html"
     }]
@@ -199,6 +205,25 @@ Setting field keys are unique across the plugin. The supported field types are
 `string`, `boolean`, `number` and `select`; a plugin may declare at most 50
 setting fields. Select fields require unique, non-empty options. Missing
 defaults resolve to `""`, `false`, `0` or the first select option.
+
+## UI Language Packs
+
+The UI language pack directory and source language are declared in
+`mygo.json`. `locales/en.json` is the source ARB pack; generated accessors in
+`locales/catalog_gen.go` register every `locales/*.json` file with MyGo.
+Preferences store `system`, `en` or a catalog language tag. Unknown values
+normalize to `system`, and changing the preference calls
+`mygo.App.SetLocale` before redrawing the native UI, so no restart is needed.
+
+Plugin manifests may set `l10n` to a relative directory inside the plugin.
+Display strings wrapped as `%key%` resolve from
+`<plugin>/<l10n>/<current-language>.json`, then the catalog source language,
+then the original string. Resolution happens when display models are built,
+so a language change updates existing plugin cards and views. The directory
+must remain inside the plugin after symlink resolution. Each locale file is
+limited to 256 KiB and may contain only a flat object of string values. Files
+are cached per manifest instance; rescanning creates fresh manifests and
+therefore clears the cache.
 
 ## Plugin Lifecycle (P4.2)
 
@@ -287,6 +312,7 @@ return `-32602`; denied capabilities return `-32001` with a message beginning
 | Method | Params | Required capability or declaration |
 |---|---|---|
 | `host.getTheme` | none | none |
+| `host.getLocale` | none | none |
 | `host.getSettings` | none | none |
 | `host.showNotice` | `{text,tone?}` | none |
 | `host.updateTask` | `{id,detail,status?,tone?}` | `id` must name one of the plugin's task panels |
@@ -417,13 +443,15 @@ bridge. Closing the window also triggers BYOP shutdown. Upstream follow-up:
 request a per-page or per-scheme way to disable `mygo:window`, or a way to
 expose only selected `BindAs` services on handled custom schemes.
 
-The preload script exposes `window.byop.call`, `postMessage`, `onTheme` and
-`theme`. It maps the host palette to `--byop-*` CSS variables, keeps
-`--byop-font-body` at 14 px and updates `color-scheme`. Theme changes update
-the WebView background and emit the `byop.theme` event to each live page. Each
-completed page load also emits the current theme to that page so reloads and
-same-plugin navigation do not retain the theme captured when the WebView was
-created.
+The preload script exposes `window.byop.call`, `postMessage`, `onTheme`,
+`theme`, `locale` and `onLocale`. It maps the host palette to `--byop-*` CSS
+variables, keeps `--byop-font-body` at 14 px and updates `color-scheme`. Theme
+changes update the WebView background and emit the `byop.theme` event to each
+live page. Language changes emit the `byop.locale` event and update
+`window.byop.locale`. Each completed page load also emits the current theme
+and locale to that page so reloads and same-plugin navigation do not retain
+values captured when the WebView was created. Pages can also request the
+current tag through the capability-free `host.getLocale` call.
 
 `NewWebView`, load and render-process failures switch the view to a native
 warning card with Reload and Back to Plugins actions. Rescanning destroys
@@ -553,3 +581,5 @@ plugins. `examples/` contains contract fixtures only.
 | P6b | Model and thinking-level picker UI (implemented) |
 | P7 | Automation and Loop contributions, manual run records, failure auto-pause and pause/resume (implemented) |
 | P8 | Import old desktop preferences and migration verification (implemented) |
+| P9b | English and Simplified Chinese UI language packs, generated accessors, plugin manifest localization and WebView locale bridge (implemented) |
+| P9c | Grouped panel toggles, session organization, running queue/steer mode, contrast and motion preferences, and panel animation (implemented) |

@@ -1,0 +1,2417 @@
+{
+  "@@locale": "zh-Hans",
+  "appWindowTitle": "Build You Own Pi",
+  "@appWindowTitle": {
+    "description": "The application window title."
+  },
+  "navWorkspace": "工作区",
+  "@navWorkspace": {
+    "description": "Sidebar section label for primary navigation."
+  },
+  "navChat": "对话",
+  "@navChat": {
+    "description": "Primary navigation label for the chat page."
+  },
+  "navPlugins": "插件",
+  "@navPlugins": {
+    "description": "Primary navigation label for the plugins page."
+  },
+  "navAutomations": "自动化",
+  "@navAutomations": {
+    "description": "Primary navigation label for the automations page."
+  },
+  "navSettings": "设置",
+  "@navSettings": {
+    "description": "Primary navigation label for the settings page."
+  },
+  "navPluginsSection": "插件",
+  "@navPluginsSection": {
+    "description": "Sidebar section label for plugin navigation."
+  },
+  "navSessions": "会话",
+  "@navSessions": {
+    "description": "Sidebar section label for Pi sessions."
+  },
+  "navNewSession": "新建会话",
+  "@navNewSession": {
+    "description": "Accessible label and tooltip for creating a new Pi session."
+  },
+  "navShowAll": "显示全部",
+  "@navShowAll": {
+    "description": "Action that expands the recent sessions list."
+  },
+  "navShowRecent": "仅显示最近",
+  "@navShowRecent": {
+    "description": "Action that collapses the sessions list to recent items."
+  },
+  "titleToggleNavigation": "切换导航栏",
+  "@titleToggleNavigation": {
+    "description": "Accessible label for the navigation toggle."
+  },
+  "titleToggleTaskPanel": "切换任务面板",
+  "@titleToggleTaskPanel": {
+    "description": "Accessible label for the task panel toggle."
+  },
+  "titleReconnectPi": "重新连接外部 Pi CLI",
+  "@titleReconnectPi": {
+    "description": "Tooltip for the Pi connection status."
+  },
+  "titleDismissNotice": "关闭通知",
+  "@titleDismissNotice": {
+    "description": "Accessible label for closing the notice banner."
+  },
+  "titleCloseTaskPanel": "关闭任务面板",
+  "@titleCloseTaskPanel": {
+    "description": "Accessible label for closing the task panel."
+  },
+  "tasksTitle": "任务",
+  "@tasksTitle": {
+    "description": "Title of the right-side task panel."
+  },
+  "tasksDescription": "运行活动与后台工作",
+  "@tasksDescription": {
+    "description": "Description below the task panel title."
+  },
+  "tasksPiRpc": "Pi JSONL RPC",
+  "@tasksPiRpc": {
+    "description": "Task card title for the Pi RPC connection."
+  },
+  "tasksCurrentRun": "当前运行",
+  "@tasksCurrentRun": {
+    "description": "Task card title for the current Pi run."
+  },
+  "tasksRuntimeDiagnostics": "运行时诊断",
+  "@tasksRuntimeDiagnostics": {
+    "description": "Task card title for runtime diagnostics."
+  },
+  "tasksPluginRegistry": "插件注册表",
+  "@tasksPluginRegistry": {
+    "description": "Task card title for plugin registry status."
+  },
+  "tasksOwnership": "Pi 负责会话、凭据、模型和扩展",
+  "@tasksOwnership": {
+    "description": "Footer explaining ownership of Pi state."
+  },
+  "noticeWaitSessionOperation": "请等待当前的 Pi 会话操作完成后再更改{change}。",
+  "@noticeWaitSessionOperation": {
+    "description": "User-interface text for notice Wait Session Operation."
+  },
+  "noticeStopBeforeChange": "请先停止正在运行的 Pi，再更改{change}。",
+  "@noticeStopBeforeChange": {
+    "description": "User-interface text for notice Stop Before Change."
+  },
+  "noticePiDisconnected": "Pi CLI 尚未连接，请到设置中重新连接。",
+  "@noticePiDisconnected": {
+    "description": "User-interface text for notice Pi Disconnected."
+  },
+  "noticeSessionCreateFailed": "无法创建 Pi 会话：{error}",
+  "@noticeSessionCreateFailed": {
+    "description": "User-interface text for notice Session Create Failed."
+  },
+  "noticeSessionCreateCancelled": "Pi 已取消新建会话。",
+  "@noticeSessionCreateCancelled": {
+    "description": "User-interface text for notice Session Create Cancelled."
+  },
+  "noticeSessionCreateUnconfirmed": "新 Pi 会话已创建，但无法确认其状态：{error}",
+  "@noticeSessionCreateUnconfirmed": {
+    "description": "User-interface text for notice Session Create Unconfirmed."
+  },
+  "noticeSessionCreated": "已创建新的 Pi 会话。",
+  "@noticeSessionCreated": {
+    "description": "User-interface text for notice Session Created."
+  },
+  "noticeSessionSwitchUnavailable": "启用 BYOP_PI_EPHEMERAL 时无法切换会话。",
+  "@noticeSessionSwitchUnavailable": {
+    "description": "User-interface text for notice Session Switch Unavailable."
+  },
+  "noticeSessionSwitchFailed": "无法切换 Pi 会话：{error}",
+  "@noticeSessionSwitchFailed": {
+    "description": "User-interface text for notice Session Switch Failed."
+  },
+  "noticeSessionSwitchCancelled": "Pi 已取消会话切换。",
+  "@noticeSessionSwitchCancelled": {
+    "description": "User-interface text for notice Session Switch Cancelled."
+  },
+  "noticeSessionTranscriptRestoreFailed": "会话已切换，但无法恢复对话记录：{error}",
+  "@noticeSessionTranscriptRestoreFailed": {
+    "description": "User-interface text for notice Session Transcript Restore Failed."
+  },
+  "noticeSessionTranscriptReadFailed": "无法读取会话记录：{error}",
+  "@noticeSessionTranscriptReadFailed": {
+    "description": "User-interface text for notice Session Transcript Read Failed."
+  },
+  "noticeSessionSwitched": "已切换 Pi 会话。",
+  "@noticeSessionSwitched": {
+    "description": "User-interface text for notice Session Switched."
+  },
+  "noticeSessionStateUnconfirmed": "{notice} 无法确认 Pi 状态：{error}",
+  "@noticeSessionStateUnconfirmed": {
+    "description": "User-interface text for notice Session State Unconfirmed."
+  },
+  "noticeSessionMismatch": "{notice} Pi 报告的会话不一致。",
+  "@noticeSessionMismatch": {
+    "description": "User-interface text for notice Session Mismatch."
+  },
+  "noticeSessionPreferenceSave": "Pi 会话已更改，但无法保存相应偏好。",
+  "@noticeSessionPreferenceSave": {
+    "description": "User-interface text for notice Session Preference Save."
+  },
+  "noticeWorkspaceFailed": "Pi 工作区连接失败：{error}",
+  "@noticeWorkspaceFailed": {
+    "description": "User-interface text for notice Workspace Failed."
+  },
+  "noticePiConnectFailed": "Pi 连接失败：{error}",
+  "@noticePiConnectFailed": {
+    "description": "User-interface text for notice Pi Connect Failed."
+  },
+  "noticePiRPCFailed": "Pi RPC 握手失败：{error}",
+  "@noticePiRPCFailed": {
+    "description": "User-interface text for notice Pi R P C Failed."
+  },
+  "noticePiConnectedNoModels": "外部 Pi CLI 已连接，但模型元数据不可用。",
+  "@noticePiConnectedNoModels": {
+    "description": "User-interface text for notice Pi Connected No Models."
+  },
+  "noticePiConnected": "外部 Pi CLI 已连接。",
+  "@noticePiConnected": {
+    "description": "User-interface text for notice Pi Connected."
+  },
+  "noticePiConnecting": "正在连接外部 Pi CLI…",
+  "@noticePiConnecting": {
+    "description": "User-interface text for notice Pi Connecting."
+  },
+  "noticePiResolveFailed": "无法解析 Pi CLI。",
+  "@noticePiResolveFailed": {
+    "description": "User-interface text for notice Pi Resolve Failed."
+  },
+  "noticeCurrentChangeSession": "会话",
+  "@noticeCurrentChangeSession": {
+    "description": "User-interface text for notice Current Change Session."
+  },
+  "noticeCurrentChangeModel": "当前模型",
+  "@noticeCurrentChangeModel": {
+    "description": "User-interface text for notice Current Change Model."
+  },
+  "noticeCurrentChangeThinking": "当前思考级别",
+  "@noticeCurrentChangeThinking": {
+    "description": "User-interface text for notice Current Change Thinking."
+  },
+  "noticeModelChangeFailed": "无法更改 Pi 模型：{error}",
+  "@noticeModelChangeFailed": {
+    "description": "User-interface text for notice Model Change Failed."
+  },
+  "noticeModelLevelsRefreshFailed": "模型已更改，但无法刷新思考等级。",
+  "@noticeModelLevelsRefreshFailed": {
+    "description": "User-interface text for notice Model Levels Refresh Failed."
+  },
+  "noticeThinkingChangeFailed": "无法更改 Pi 思考等级：{error}",
+  "@noticeThinkingChangeFailed": {
+    "description": "User-interface text for notice Thinking Change Failed."
+  },
+  "noticeMessageEmpty": "请输入消息后再发送。",
+  "@noticeMessageEmpty": {
+    "description": "User-interface text for notice Message Empty."
+  },
+  "noticeSessionOperationBeforeSend": "请等待当前的 Pi 会话操作完成后再发送消息。",
+  "@noticeSessionOperationBeforeSend": {
+    "description": "User-interface text for notice Session Operation Before Send."
+  },
+  "noticeThinkingBeforeSend": "请等待当前的思考等级更新完成后再发送消息。",
+  "@noticeThinkingBeforeSend": {
+    "description": "User-interface text for notice Thinking Before Send."
+  },
+  "noticePiAlreadyWorking": "Pi 正在工作，请先停止当前运行再发送新消息。",
+  "@noticePiAlreadyWorking": {
+    "description": "User-interface text for notice Pi Already Working."
+  },
+  "noticeSendFailed": "无法向 Pi 发送：{error}",
+  "@noticeSendFailed": {
+    "description": "User-interface text for notice Send Failed."
+  },
+  "noticeStopFailed": "已请求停止，但{error}",
+  "@noticeStopFailed": {
+    "description": "User-interface text for notice Stop Failed."
+  },
+  "noticeStopRequestedDetail": "已请求停止。{detail}。",
+  "@noticeStopRequestedDetail": {
+    "description": "User-interface text for notice Stop Requested Detail."
+  },
+  "noticeStopRequested": "已请求停止。队列已清空并已发送中止。",
+  "@noticeStopRequested": {
+    "description": "User-interface text for notice Stop Requested."
+  },
+  "noticeStopRequestedQueue": "已请求停止，清空 {count, plural, =0 {0 条消息} other {# 条消息}}并发送中止。",
+  "@noticeStopRequestedQueue": {
+    "description": "Notice shown after Stop clears queued messages."
+  },
+  "noticeStopRequestedRetry": "已请求停止，已终止重试、清空队列并发送中止。",
+  "@noticeStopRequestedRetry": {
+    "description": "Notice shown after Stop also cancels an automatic retry."
+  },
+  "noticePromptRejected": "Pi 拒绝了该提示：{error}",
+  "@noticePromptRejected": {
+    "description": "User-interface text for notice Prompt Rejected."
+  },
+  "noticePiHandledExtension": "Pi 已将其作为扩展命令处理。",
+  "@noticePiHandledExtension": {
+    "description": "User-interface text for notice Pi Handled Extension."
+  },
+  "noticePiExtensionError": "Pi 扩展错误：{error}",
+  "@noticePiExtensionError": {
+    "description": "User-interface text for notice Pi Extension Error."
+  },
+  "noticePiProtocolWarning": "Pi 协议警告：{error}",
+  "@noticePiProtocolWarning": {
+    "description": "User-interface text for notice Pi Protocol Warning."
+  },
+  "noticePiProcessExited": "Pi 进程在运行完成前退出。",
+  "@noticePiProcessExited": {
+    "description": "User-interface text for notice Pi Process Exited."
+  },
+  "noticePiDisconnectedEvent": "Pi CLI 已断开连接。",
+  "@noticePiDisconnectedEvent": {
+    "description": "User-interface text for notice Pi Disconnected Event."
+  },
+  "noticePiFinished": "Pi 已完成，可以继续发送消息。",
+  "@noticePiFinished": {
+    "description": "User-interface text for notice Pi Finished."
+  },
+  "errorPiUnavailable": "Pi 当前不可用。",
+  "@errorPiUnavailable": {
+    "description": "User-interface text for error Pi Unavailable."
+  },
+  "errorPiStopFailed": "Pi 停止操作失败。",
+  "@errorPiStopFailed": {
+    "description": "User-interface text for error Pi Stop Failed."
+  },
+  "errorPiPromptRejected": "Pi 拒绝了该提示。",
+  "@errorPiPromptRejected": {
+    "description": "User-interface text for error Pi Prompt Rejected."
+  },
+  "errorPiMessageFailed": "Pi 消息处理失败。",
+  "@errorPiMessageFailed": {
+    "description": "User-interface text for error Pi Message Failed."
+  },
+  "errorCompactionFailed": "上下文压缩失败。",
+  "@errorCompactionFailed": {
+    "description": "User-interface text for error Compaction Failed."
+  },
+  "errorRetryFailed": "Pi 重试失败。",
+  "@errorRetryFailed": {
+    "description": "User-interface text for error Retry Failed."
+  },
+  "errorExtensionFailed": "Pi 扩展失败。",
+  "@errorExtensionFailed": {
+    "description": "User-interface text for error Extension Failed."
+  },
+  "errorProtocolWarning": "Pi 协议警告。",
+  "@errorProtocolWarning": {
+    "description": "User-interface text for error Protocol Warning."
+  },
+  "errorPiDisconnected": "Pi CLI 已断开连接。",
+  "@errorPiDisconnected": {
+    "description": "User-interface text for error Pi Disconnected."
+  },
+  "errorToolFallback": "工具",
+  "@errorToolFallback": {
+    "description": "User-interface text for error Tool Fallback."
+  },
+  "runDetailCurrentTool": "{tool} · {status}，用时 {duration}",
+  "@runDetailCurrentTool": {
+    "description": "User-interface text for run Detail Current Tool."
+  },
+  "toolStatusRunning": "运行中",
+  "@toolStatusRunning": {
+    "description": "User-interface text for tool Status Running."
+  },
+  "toolStatusCompleted": "已完成",
+  "@toolStatusCompleted": {
+    "description": "User-interface text for tool Status Completed."
+  },
+  "toolStatusFailed": "失败",
+  "@toolStatusFailed": {
+    "description": "User-interface text for tool Status Failed."
+  },
+  "toolStatusCancelled": "已取消",
+  "@toolStatusCancelled": {
+    "description": "User-interface text for tool Status Cancelled."
+  },
+  "toolStatusInterrupted": "已中断",
+  "@toolStatusInterrupted": {
+    "description": "User-interface text for tool Status Interrupted."
+  },
+  "toolStatusUnknown": "未知",
+  "@toolStatusUnknown": {
+    "description": "User-interface text for tool Status Unknown."
+  },
+  "toolOutputTruncated": "\n… 输出已截断",
+  "@toolOutputTruncated": {
+    "description": "User-interface text for tool Output Truncated."
+  },
+  "toolImageFallback": "图片",
+  "@toolImageFallback": {
+    "description": "User-interface text for tool Image Fallback."
+  },
+  "piPathNotResolved": "未解析",
+  "@piPathNotResolved": {
+    "description": "User-interface text for pi Path Not Resolved."
+  },
+  "piPathFromPATH": "pi（从 PATH 解析）",
+  "@piPathFromPATH": {
+    "description": "User-interface text for pi Path From P A T H."
+  },
+  "piStatusLabel": "Pi CLI · {status}",
+  "@piStatusLabel": {
+    "description": "User-interface text for pi Status Label."
+  },
+  "sessionUntitled": "未命名会话",
+  "@sessionUntitled": {
+    "description": "User-interface text for session Untitled."
+  },
+  "uiPathLocalFile": "本地文件",
+  "@uiPathLocalFile": {
+    "description": "User-interface text for ui Path Local File."
+  },
+  "assistantWaiting": "正在等待 Pi…",
+  "@assistantWaiting": {
+    "description": "User-interface text for assistant Waiting."
+  },
+  "assistantStoppedFallback": "Pi 在添加回复文字前已停止。",
+  "@assistantStoppedFallback": {
+    "description": "User-interface text for assistant Stopped Fallback."
+  },
+  "assistantErrorFallback": "Pi 出错后停止，请查看运行时详情。",
+  "@assistantErrorFallback": {
+    "description": "User-interface text for assistant Error Fallback."
+  },
+  "assistantEmptyFallback": "Pi 已完成，但没有助手文字。",
+  "@assistantEmptyFallback": {
+    "description": "User-interface text for assistant Empty Fallback."
+  },
+  "assistantExitedFallback": "Pi 在添加回复文字前已退出。",
+  "@assistantExitedFallback": {
+    "description": "User-interface text for assistant Exited Fallback."
+  },
+  "pluginsWorkbench": "工作台",
+  "@pluginsWorkbench": {
+    "description": "User-interface text for plugins Workbench."
+  },
+  "pluginsTitle": "插件",
+  "@pluginsTitle": {
+    "description": "User-interface text for plugins Title."
+  },
+  "pluginsDescription": "发现本地插件、打开类型化原生视图，或在经过能力检查的 WebView 中承载隔离 HTML。原生与 Node 运行时按需启动，并共用同一套宿主 API。",
+  "@pluginsDescription": {
+    "description": "User-interface text for plugins Description."
+  },
+  "pluginsScan": "扫描插件",
+  "@pluginsScan": {
+    "description": "User-interface text for plugins Scan."
+  },
+  "pluginsSearch": "搜索插件",
+  "@pluginsSearch": {
+    "description": "User-interface text for plugins Search."
+  },
+  "pluginsFolders": "插件目录",
+  "@pluginsFolders": {
+    "description": "User-interface text for plugins Folders."
+  },
+  "pluginsRoots": "插件目录 · {roots}",
+  "@pluginsRoots": {
+    "description": "User-interface text for plugins Roots."
+  },
+  "pluginsRegistrySummary": "已注册 {registered} 个 · {contributions} 项贡献",
+  "@pluginsRegistrySummary": {
+    "description": "User-interface text for plugins Registry Summary."
+  },
+  "pluginsDiscovered": "发现的插件",
+  "@pluginsDiscovered": {
+    "description": "User-interface text for plugins Discovered."
+  },
+  "pluginsContractPreview": "插件契约预览",
+  "@pluginsContractPreview": {
+    "description": "User-interface text for plugins Contract Preview."
+  },
+  "pluginsContractDescription": "宿主 {host} 校验 schema {schema} 和插件 API {api}。P5 按需启动原生与 Node 插件、渲染类型化原生视图，并通过严格的 CSP 在 byop-plugin 协议下承载隔离 WebView。页面调用经过一次带身份校验的桥接，进入同一套带能力检查的宿主 API。",
+  "@pluginsContractDescription": {
+    "description": "User-interface text for plugins Contract Description."
+  },
+  "pluginsContractCommands": "命令",
+  "@pluginsContractCommands": {
+    "description": "User-interface text for plugins Contract Commands."
+  },
+  "pluginsContractViews": "视图",
+  "@pluginsContractViews": {
+    "description": "User-interface text for plugins Contract Views."
+  },
+  "pluginsContractWebViews": "WebView",
+  "@pluginsContractWebViews": {
+    "description": "User-interface text for plugins Contract Web Views."
+  },
+  "pluginsContractTasks": "任务",
+  "@pluginsContractTasks": {
+    "description": "User-interface text for plugins Contract Tasks."
+  },
+  "pluginsContractSettings": "设置",
+  "@pluginsContractSettings": {
+    "description": "User-interface text for plugins Contract Settings."
+  },
+  "pluginsContractHostCalls": "宿主调用",
+  "@pluginsContractHostCalls": {
+    "description": "User-interface text for plugins Contract Host Calls."
+  },
+  "pluginsContractNodePermissions": "Node 权限",
+  "@pluginsContractNodePermissions": {
+    "description": "User-interface text for plugins Contract Node Permissions."
+  },
+  "pluginsContractSchemeCSP": "自定义协议 CSP",
+  "@pluginsContractSchemeCSP": {
+    "description": "User-interface text for plugins Contract Scheme C S P."
+  },
+  "pluginsRegistryScanIssues": "插件注册表扫描问题",
+  "@pluginsRegistryScanIssues": {
+    "description": "User-interface text for plugins Registry Scan Issues."
+  },
+  "pluginsRegistryEmpty": "注册表为空",
+  "@pluginsRegistryEmpty": {
+    "description": "User-interface text for plugins Registry Empty."
+  },
+  "pluginsManifestsNotFound": "在配置的目录中未找到 plugin.json 清单。",
+  "@pluginsManifestsNotFound": {
+    "description": "User-interface text for plugins Manifests Not Found."
+  },
+  "pluginsNoMatch": "没有已注册插件匹配“{query}”。",
+  "@pluginsNoMatch": {
+    "description": "User-interface text for plugins No Match."
+  },
+  "pluginsNoDescription": "未声明描述。",
+  "@pluginsNoDescription": {
+    "description": "User-interface text for plugins No Description."
+  },
+  "pluginsManifestRejected": "清单被拒绝",
+  "@pluginsManifestRejected": {
+    "description": "User-interface text for plugins Manifest Rejected."
+  },
+  "pluginsContributionCount": "{count} 项贡献",
+  "@pluginsContributionCount": {
+    "description": "User-interface text for plugins Contribution Count."
+  },
+  "pluginsRuntimeMeta": "运行时 {runtime} · {count} 项贡献",
+  "@pluginsRuntimeMeta": {
+    "description": "User-interface text for plugins Runtime Meta."
+  },
+  "pluginsWebViewMeta": "{title} · {entry} · 隔离 · byop-plugin 协议 · CSP",
+  "@pluginsWebViewMeta": {
+    "description": "User-interface text for plugins Web View Meta."
+  },
+  "pluginsSecondaryViews": "次级视图 · {views}",
+  "@pluginsSecondaryViews": {
+    "description": "User-interface text for plugins Secondary Views."
+  },
+  "pluginsFailedFallback": "插件运行失败。",
+  "@pluginsFailedFallback": {
+    "description": "User-interface text for plugins Failed Fallback."
+  },
+  "pluginsHostCallCount": "{count} 次宿主调用",
+  "@pluginsHostCallCount": {
+    "description": "User-interface text for plugins Host Call Count."
+  },
+  "pluginsDenied": "已拒绝：{detail}",
+  "@pluginsDenied": {
+    "description": "User-interface text for plugins Denied."
+  },
+  "pluginsDeactivate": "停用",
+  "@pluginsDeactivate": {
+    "description": "User-interface text for plugins Deactivate."
+  },
+  "pluginsOpen": "打开 {title}",
+  "@pluginsOpen": {
+    "description": "User-interface text for plugins Open."
+  },
+  "pluginsRunning": "正在运行 {title}…",
+  "@pluginsRunning": {
+    "description": "User-interface text for plugins Running."
+  },
+  "pluginsCommandFailed": "{title} 失败：{error}",
+  "@pluginsCommandFailed": {
+    "description": "User-interface text for plugins Command Failed."
+  },
+  "pluginsStoppedWithError": "{name} 停止时出错：{error}",
+  "@pluginsStoppedWithError": {
+    "description": "User-interface text for plugins Stopped With Error."
+  },
+  "pluginsDeactivated": "{name} 已停用，其进程已退出。",
+  "@pluginsDeactivated": {
+    "description": "User-interface text for plugins Deactivated."
+  },
+  "pluginsPermissions": "工作区 {workspace} · 文件 {files} · 网络 {network} · 进程 {process}",
+  "@pluginsPermissions": {
+    "description": "User-interface text for plugins Permissions."
+  },
+  "pluginsValueNone": "无",
+  "@pluginsValueNone": {
+    "description": "User-interface text for plugins Value None."
+  },
+  "pluginsValueOff": "关闭",
+  "@pluginsValueOff": {
+    "description": "User-interface text for plugins Value Off."
+  },
+  "pluginsValueOn": "开启",
+  "@pluginsValueOn": {
+    "description": "User-interface text for plugins Value On."
+  },
+  "pluginsEnforcementNode": "Node 权限模型 + 宿主检查",
+  "@pluginsEnforcementNode": {
+    "description": "User-interface text for plugins Enforcement Node."
+  },
+  "pluginsEnforcementHost": "仅宿主检查 · 进程未沙箱化",
+  "@pluginsEnforcementHost": {
+    "description": "User-interface text for plugins Enforcement Host."
+  },
+  "pluginsStatusRegistered": "已注册",
+  "@pluginsStatusRegistered": {
+    "description": "User-interface text for plugins Status Registered."
+  },
+  "pluginsStatusInvalid": "无效",
+  "@pluginsStatusInvalid": {
+    "description": "User-interface text for plugins Status Invalid."
+  },
+  "pluginsStatusIncompatible": "不兼容",
+  "@pluginsStatusIncompatible": {
+    "description": "User-interface text for plugins Status Incompatible."
+  },
+  "pluginsStatusDuplicateID": "重复 ID",
+  "@pluginsStatusDuplicateID": {
+    "description": "User-interface text for plugins Status Duplicate I D."
+  },
+  "pluginsStatusConflict": "冲突",
+  "@pluginsStatusConflict": {
+    "description": "User-interface text for plugins Status Conflict."
+  },
+  "pluginsStatusUnknown": "未知",
+  "@pluginsStatusUnknown": {
+    "description": "User-interface text for plugins Status Unknown."
+  },
+  "pluginsStatusInactive": "未加载",
+  "@pluginsStatusInactive": {
+    "description": "User-interface text for plugins Status Inactive."
+  },
+  "pluginsStatusStarting": "正在启动",
+  "@pluginsStatusStarting": {
+    "description": "User-interface text for plugins Status Starting."
+  },
+  "pluginsStatusActive": "已启用",
+  "@pluginsStatusActive": {
+    "description": "User-interface text for plugins Status Active."
+  },
+  "pluginsStatusRunning": "运行中",
+  "@pluginsStatusRunning": {
+    "description": "User-interface text for plugins Status Running."
+  },
+  "pluginsStatusStopping": "正在停止",
+  "@pluginsStatusStopping": {
+    "description": "User-interface text for plugins Status Stopping."
+  },
+  "pluginsStatusFailed": "失败",
+  "@pluginsStatusFailed": {
+    "description": "User-interface text for plugins Status Failed."
+  },
+  "taskStatusAttention": "需要处理",
+  "@taskStatusAttention": {
+    "description": "User-interface text for task Status Attention."
+  },
+  "taskStatusRegistered": "已注册",
+  "@taskStatusRegistered": {
+    "description": "User-interface text for task Status Registered."
+  },
+  "taskStatusEmpty": "空",
+  "@taskStatusEmpty": {
+    "description": "User-interface text for task Status Empty."
+  },
+  "taskStatusInfo": "信息",
+  "@taskStatusInfo": {
+    "description": "User-interface text for task Status Info."
+  },
+  "taskStatusSuccess": "成功",
+  "@taskStatusSuccess": {
+    "description": "User-interface text for task Status Success."
+  },
+  "taskStatusWarning": "警告",
+  "@taskStatusWarning": {
+    "description": "User-interface text for task Status Warning."
+  },
+  "taskStatusError": "错误",
+  "@taskStatusError": {
+    "description": "User-interface text for task Status Error."
+  },
+  "pluginsSummaryNavigation": "{count} 项导航",
+  "@pluginsSummaryNavigation": {
+    "description": "User-interface text for plugins Summary Navigation."
+  },
+  "pluginsSummaryCommand": "{count} 个命令",
+  "@pluginsSummaryCommand": {
+    "description": "User-interface text for plugins Summary Command."
+  },
+  "pluginsSummaryNativeView": "{count} 个原生视图",
+  "@pluginsSummaryNativeView": {
+    "description": "User-interface text for plugins Summary Native View."
+  },
+  "pluginsSummaryTaskPanel": "{count} 个任务面板",
+  "@pluginsSummaryTaskPanel": {
+    "description": "User-interface text for plugins Summary Task Panel."
+  },
+  "pluginsSummarySetting": "{count} 项设置",
+  "@pluginsSummarySetting": {
+    "description": "User-interface text for plugins Summary Setting."
+  },
+  "pluginsSummaryWebView": "{count} 个 WebView",
+  "@pluginsSummaryWebView": {
+    "description": "User-interface text for plugins Summary Web View."
+  },
+  "pluginsSummaryAutomation": "{count} 个自动化",
+  "@pluginsSummaryAutomation": {
+    "description": "User-interface text for plugins Summary Automation."
+  },
+  "pluginsSettingsEmptyTitle": "没有插件设置",
+  "@pluginsSettingsEmptyTitle": {
+    "description": "User-interface text for plugins Settings Empty Title."
+  },
+  "pluginsSettingsEmptyDescription": "已注册插件尚未声明类型化设置字段。",
+  "@pluginsSettingsEmptyDescription": {
+    "description": "User-interface text for plugins Settings Empty Description."
+  },
+  "pluginsSettingsDefaultDescription": "设置由 BYOP 保存在本地，并在插件启动时传入。",
+  "@pluginsSettingsDefaultDescription": {
+    "description": "User-interface text for plugins Settings Default Description."
+  },
+  "pluginsSettingsSave": "保存",
+  "@pluginsSettingsSave": {
+    "description": "User-interface text for plugins Settings Save."
+  },
+  "pluginsSettingsSaving": "正在保存…",
+  "@pluginsSettingsSaving": {
+    "description": "User-interface text for plugins Settings Saving."
+  },
+  "pluginsSettingsSaved": "已保存",
+  "@pluginsSettingsSaved": {
+    "description": "User-interface text for plugins Settings Saved."
+  },
+  "pluginsSettingsInvalidNumber": "请输入有效数字。",
+  "@pluginsSettingsInvalidNumber": {
+    "description": "User-interface text for plugins Settings Invalid Number."
+  },
+  "pluginsSettingsSaveFailed": "无法保存插件设置。",
+  "@pluginsSettingsSaveFailed": {
+    "description": "User-interface text for plugins Settings Save Failed."
+  },
+  "pluginsViewRefresh": "刷新",
+  "@pluginsViewRefresh": {
+    "description": "User-interface text for plugins View Refresh."
+  },
+  "pluginsViewDefaultDescription": "插件视图",
+  "@pluginsViewDefaultDescription": {
+    "description": "User-interface text for plugins View Default Description."
+  },
+  "pluginsViewUnavailableSection": "插件",
+  "@pluginsViewUnavailableSection": {
+    "description": "User-interface text for plugins View Unavailable Section."
+  },
+  "pluginsViewUnavailableTitle": "视图不可用",
+  "@pluginsViewUnavailableTitle": {
+    "description": "User-interface text for plugins View Unavailable Title."
+  },
+  "pluginsViewUnavailableDescription": "所选插件视图已不再注册，正在返回插件页面。",
+  "@pluginsViewUnavailableDescription": {
+    "description": "User-interface text for plugins View Unavailable Description."
+  },
+  "pluginsViewRendering": "正在渲染插件视图…",
+  "@pluginsViewRendering": {
+    "description": "User-interface text for plugins View Rendering."
+  },
+  "pluginsViewFailed": "视图渲染失败",
+  "@pluginsViewFailed": {
+    "description": "User-interface text for plugins View Failed."
+  },
+  "pluginsViewRetry": "重试",
+  "@pluginsViewRetry": {
+    "description": "User-interface text for plugins View Retry."
+  },
+  "pluginsViewEmpty": "插件返回了空视图。",
+  "@pluginsViewEmpty": {
+    "description": "User-interface text for plugins View Empty."
+  },
+  "pluginsViewUnsupportedBlock": "不支持的区块",
+  "@pluginsViewUnsupportedBlock": {
+    "description": "User-interface text for plugins View Unsupported Block."
+  },
+  "pluginsWebViewIsolated": "已隔离",
+  "@pluginsWebViewIsolated": {
+    "description": "User-interface text for plugins Web View Isolated."
+  },
+  "pluginsWebViewReload": "重新加载",
+  "@pluginsWebViewReload": {
+    "description": "User-interface text for plugins Web View Reload."
+  },
+  "pluginsWebViewBack": "返回插件",
+  "@pluginsWebViewBack": {
+    "description": "User-interface text for plugins Web View Back."
+  },
+  "pluginsWebViewSection": "隔离 WebView",
+  "@pluginsWebViewSection": {
+    "description": "User-interface text for plugins Web View Section."
+  },
+  "pluginsWebViewDescription": "{plugin} · byop-plugin 协议 · 严格 CSP",
+  "@pluginsWebViewDescription": {
+    "description": "User-interface text for plugins Web View Description."
+  },
+  "pluginsWebViewUnavailableFallback": "隔离 WebView 不可用。",
+  "@pluginsWebViewUnavailableFallback": {
+    "description": "User-interface text for plugins Web View Unavailable Fallback."
+  },
+  "pluginsWebViewUnavailable": "WebView 不可用",
+  "@pluginsWebViewUnavailable": {
+    "description": "User-interface text for plugins Web View Unavailable."
+  },
+  "pluginsWebViewCreateFailed": "无法创建插件 WebView。",
+  "@pluginsWebViewCreateFailed": {
+    "description": "User-interface text for plugins Web View Create Failed."
+  },
+  "pluginsWebViewLoadFailed": "WebView 加载失败",
+  "@pluginsWebViewLoadFailed": {
+    "description": "User-interface text for plugins Web View Load Failed."
+  },
+  "pluginsWebViewProcessExited": "Web 内容进程已退出",
+  "@pluginsWebViewProcessExited": {
+    "description": "User-interface text for plugins Web View Process Exited."
+  },
+  "pluginsWebViewProcessExitedDetail": "Web 内容进程已退出：{error}",
+  "@pluginsWebViewProcessExitedDetail": {
+    "description": "User-interface text for plugins Web View Process Exited Detail."
+  },
+  "automationsSection": "自动化",
+  "@automationsSection": {
+    "description": "User-interface text for automations Section."
+  },
+  "automationsTitle": "自动化",
+  "@automationsTitle": {
+    "description": "User-interface text for automations Title."
+  },
+  "automationsDescription": "由插件注册的自动化与循环。已声明的规则会经过校验并显示；P7 中仅手动运行。",
+  "@automationsDescription": {
+    "description": "User-interface text for automations Description."
+  },
+  "automationsRegistered": "已注册 {count}",
+  "@automationsRegistered": {
+    "description": "User-interface text for automations Registered."
+  },
+  "automationsPausedCount": "已暂停 {count}",
+  "@automationsPausedCount": {
+    "description": "User-interface text for automations Paused Count."
+  },
+  "automationsManualNote": "定时触发将在后续阶段加入；P7 中仅支持手动运行。",
+  "@automationsManualNote": {
+    "description": "User-interface text for automations Manual Note."
+  },
+  "automationsRegisteredSection": "已注册的自动化",
+  "@automationsRegisteredSection": {
+    "description": "User-interface text for automations Registered Section."
+  },
+  "automationsEmptyTitle": "没有自动化贡献",
+  "@automationsEmptyTitle": {
+    "description": "User-interface text for automations Empty Title."
+  },
+  "automationsEmptyBefore": "插件在 plugin.json 中声明 ",
+  "@automationsEmptyBefore": {
+    "description": "User-interface text for automations Empty Before."
+  },
+  "automationsEmptyField": "contributes.automations",
+  "@automationsEmptyField": {
+    "description": "User-interface text for automations Empty Field."
+  },
+  "automationsEmptyAfter": "。",
+  "@automationsEmptyAfter": {
+    "description": "User-interface text for automations Empty After."
+  },
+  "automationsFailures": "失败 {count}/{max}",
+  "@automationsFailures": {
+    "description": "User-interface text for automations Failures."
+  },
+  "automationsLastRun": "上次运行 {time} · {state}",
+  "@automationsLastRun": {
+    "description": "User-interface text for automations Last Run."
+  },
+  "automationsNoRuns": "尚未运行",
+  "@automationsNoRuns": {
+    "description": "User-interface text for automations No Runs."
+  },
+  "automationsRunNow": "立即运行",
+  "@automationsRunNow": {
+    "description": "User-interface text for automations Run Now."
+  },
+  "automationsPause": "暂停",
+  "@automationsPause": {
+    "description": "User-interface text for automations Pause."
+  },
+  "automationsResume": "恢复",
+  "@automationsResume": {
+    "description": "User-interface text for automations Resume."
+  },
+  "automationsRecentRuns": "最近运行",
+  "@automationsRecentRuns": {
+    "description": "User-interface text for automations Recent Runs."
+  },
+  "automationsKindScheduledLoop": "定时循环 · {rule}",
+  "@automationsKindScheduledLoop": {
+    "description": "User-interface text for automations Kind Scheduled Loop."
+  },
+  "automationsKindSessionLoop": "会话循环 · {rule}",
+  "@automationsKindSessionLoop": {
+    "description": "User-interface text for automations Kind Session Loop."
+  },
+  "automationsKindOnce": "一次 · {rule}",
+  "@automationsKindOnce": {
+    "description": "User-interface text for automations Kind Once."
+  },
+  "automationsKindManual": "手动",
+  "@automationsKindManual": {
+    "description": "User-interface text for automations Kind Manual."
+  },
+  "automationsRuleNone": "无规则",
+  "@automationsRuleNone": {
+    "description": "User-interface text for automations Rule None."
+  },
+  "automationsRuleEveryMinutes": "每 {count} 分钟",
+  "@automationsRuleEveryMinutes": {
+    "description": "User-interface text for automations Rule Every Minutes."
+  },
+  "automationsRuleCron": "cron {rule}",
+  "@automationsRuleCron": {
+    "description": "User-interface text for automations Rule Cron."
+  },
+  "automationsRuleAfterSettled": "会话稳定后",
+  "@automationsRuleAfterSettled": {
+    "description": "User-interface text for automations Rule After Settled."
+  },
+  "automationsStatusRunning": "运行中",
+  "@automationsStatusRunning": {
+    "description": "User-interface text for automations Status Running."
+  },
+  "automationsStatusAutoPaused": "自动暂停",
+  "@automationsStatusAutoPaused": {
+    "description": "User-interface text for automations Status Auto Paused."
+  },
+  "automationsStatusPaused": "已暂停",
+  "@automationsStatusPaused": {
+    "description": "User-interface text for automations Status Paused."
+  },
+  "automationsStatusReady": "就绪",
+  "@automationsStatusReady": {
+    "description": "User-interface text for automations Status Ready."
+  },
+  "automationsPausedConsecutiveFailures": "连续失败 5 次",
+  "@automationsPausedConsecutiveFailures": {
+    "description": "User-interface text for automations Paused Consecutive Failures."
+  },
+  "automationsPausedAppRestarted": "应用已重启",
+  "@automationsPausedAppRestarted": {
+    "description": "User-interface text for automations Paused App Restarted."
+  },
+  "automationsRunStateRunning": "运行中",
+  "@automationsRunStateRunning": {
+    "description": "User-interface text for automations Run State Running."
+  },
+  "automationsRunStateSucceeded": "成功",
+  "@automationsRunStateSucceeded": {
+    "description": "User-interface text for automations Run State Succeeded."
+  },
+  "automationsRunStateFailed": "失败",
+  "@automationsRunStateFailed": {
+    "description": "User-interface text for automations Run State Failed."
+  },
+  "automationsRunStateAborted": "已中止",
+  "@automationsRunStateAborted": {
+    "description": "User-interface text for automations Run State Aborted."
+  },
+  "automationsErrorTimeLimit": "已达到时间上限",
+  "@automationsErrorTimeLimit": {
+    "description": "User-interface text for automations Error Time Limit."
+  },
+  "automationsErrorPluginError": "插件错误",
+  "@automationsErrorPluginError": {
+    "description": "User-interface text for automations Error Plugin Error."
+  },
+  "automationsErrorStopped": "已停止",
+  "@automationsErrorStopped": {
+    "description": "User-interface text for automations Error Stopped."
+  },
+  "automationsErrorInterrupted": "已中断",
+  "@automationsErrorInterrupted": {
+    "description": "Automation error label for an interrupted run."
+  },
+  "automationsWarningRunPathUnresolved": "无法解析自动化运行路径。",
+  "@automationsWarningRunPathUnresolved": {
+    "description": "Warning when an automation run path cannot be resolved."
+  },
+  "automationTriggerManual": "手动",
+  "@automationTriggerManual": {
+    "description": "Label for a manually triggered automation run."
+  },
+  "automationTriggerScheduled": "计划",
+  "@automationTriggerScheduled": {
+    "description": "Label for a scheduled automation run."
+  },
+  "automationTriggerUnknown": "未知触发方式",
+  "@automationTriggerUnknown": {
+    "description": "Fallback label for an unknown automation trigger."
+  },
+  "automationsWarningStorageUnavailable": "无法打开自动化存储。",
+  "@automationsWarningStorageUnavailable": {
+    "description": "User-interface text for automations Warning Storage Unavailable."
+  },
+  "automationsWarningRunStorageUnavailable": "无法打开自动化运行记录存储。",
+  "@automationsWarningRunStorageUnavailable": {
+    "description": "User-interface text for automations Warning Run Storage Unavailable."
+  },
+  "automationsWarningStateUnreadable": "无法读取自动化状态，正在使用默认值。",
+  "@automationsWarningStateUnreadable": {
+    "description": "User-interface text for automations Warning State Unreadable."
+  },
+  "automationsWarningRunHistoryUnavailable": "无法加载自动化运行历史。",
+  "@automationsWarningRunHistoryUnavailable": {
+    "description": "User-interface text for automations Warning Run History Unavailable."
+  },
+  "automationsWarningRecoveryUnsaved": "无法保存自动化恢复状态。",
+  "@automationsWarningRecoveryUnsaved": {
+    "description": "User-interface text for automations Warning Recovery Unsaved."
+  },
+  "automationsWarningHistoryScanFailed": "无法扫描自动化运行历史。",
+  "@automationsWarningHistoryScanFailed": {
+    "description": "User-interface text for automations Warning History Scan Failed."
+  },
+  "automationsWarningLegacyRunIgnored": "已忽略过时的旧版自动化运行文件。",
+  "@automationsWarningLegacyRunIgnored": {
+    "description": "User-interface text for automations Warning Legacy Run Ignored."
+  },
+  "automationsWarningRunIncomplete": "无法完整读取自动化运行文件。",
+  "@automationsWarningRunIncomplete": {
+    "description": "User-interface text for automations Warning Run Incomplete."
+  },
+  "automationsWarningRunQuarantined": "自动化运行文件已损坏，已隔离。",
+  "@automationsWarningRunQuarantined": {
+    "description": "User-interface text for automations Warning Run Quarantined."
+  },
+  "automationsWarningInterruptedRecoveryFailed": "无法恢复中断的自动化运行。",
+  "@automationsWarningInterruptedRecoveryFailed": {
+    "description": "User-interface text for automations Warning Interrupted Recovery Failed."
+  },
+  "automationsWarningRollbackUnsaved": "无法保存自动化状态回滚。",
+  "@automationsWarningRollbackUnsaved": {
+    "description": "User-interface text for automations Warning Rollback Unsaved."
+  },
+  "automationsWarningOversizedRunNotTrimmed": "无法裁剪过大的自动化运行文件。",
+  "@automationsWarningOversizedRunNotTrimmed": {
+    "description": "User-interface text for automations Warning Oversized Run Not Trimmed."
+  },
+  "automationsWarningStateQuarantineFailed": "保存前无法隔离损坏的自动化状态。",
+  "@automationsWarningStateQuarantineFailed": {
+    "description": "User-interface text for automations Warning State Quarantine Failed."
+  },
+  "automationsWarningStateQuarantined": "自动化状态已损坏并被隔离，正在使用默认值。",
+  "@automationsWarningStateQuarantined": {
+    "description": "User-interface text for automations Warning State Quarantined."
+  },
+  "automationsWarningHistoryUnreadable": "无法读取自动化运行历史。",
+  "@automationsWarningHistoryUnreadable": {
+    "description": "User-interface text for automations Warning History Unreadable."
+  },
+  "automationsWarningRunIgnored": "自动化运行文件已损坏，已忽略。",
+  "@automationsWarningRunIgnored": {
+    "description": "User-interface text for automations Warning Run Ignored."
+  },
+  "automationsWarningRunUnreadable": "无法读取自动化运行文件。",
+  "@automationsWarningRunUnreadable": {
+    "description": "User-interface text for automations Warning Run Unreadable."
+  },
+  "automationsWarningHistoryQuarantineFailed": "保存前无法隔离损坏的自动化运行历史。",
+  "@automationsWarningHistoryQuarantineFailed": {
+    "description": "User-interface text for automations Warning History Quarantine Failed."
+  },
+  "automationsRunningDuration": "运行中",
+  "@automationsRunningDuration": {
+    "description": "User-interface text for automations Running Duration."
+  },
+  "automationsFailedFallback": "自动化失败。",
+  "@automationsFailedFallback": {
+    "description": "User-interface text for automations Failed Fallback."
+  },
+  "automationsNoResult": "无结果摘要",
+  "@automationsNoResult": {
+    "description": "User-interface text for automations No Result."
+  },
+  "automationsRuntimeUnavailable": "自动化运行时不可用。",
+  "@automationsRuntimeUnavailable": {
+    "description": "User-interface text for automations Runtime Unavailable."
+  },
+  "automationsResumeBeforeRun": "请先恢复自动化再运行。",
+  "@automationsResumeBeforeRun": {
+    "description": "User-interface text for automations Resume Before Run."
+  },
+  "automationsAlreadyRunning": "此自动化已在运行。",
+  "@automationsAlreadyRunning": {
+    "description": "User-interface text for automations Already Running."
+  },
+  "automationsStartFailed": "无法启动自动化：{error}",
+  "@automationsStartFailed": {
+    "description": "User-interface text for automations Start Failed."
+  },
+  "automationsRunningNotice": "正在运行 {title}…",
+  "@automationsRunningNotice": {
+    "description": "User-interface text for automations Running Notice."
+  },
+  "automationsFinishSaveFailed": "自动化已完成，但无法保存运行记录：{error}",
+  "@automationsFinishSaveFailed": {
+    "description": "User-interface text for automations Finish Save Failed."
+  },
+  "automationsCompleted": "{title} · {result}",
+  "@automationsCompleted": {
+    "description": "User-interface text for automations Completed."
+  },
+  "automationsCommandCompleted": "命令已完成",
+  "@automationsCommandCompleted": {
+    "description": "User-interface text for automations Command Completed."
+  },
+  "automationsTimedOut": "{title} 在 {count} 分钟后超时。",
+  "@automationsTimedOut": {
+    "description": "User-interface text for automations Timed Out."
+  },
+  "automationsStopped": "{title} 因插件停用而停止。",
+  "@automationsStopped": {
+    "description": "User-interface text for automations Stopped."
+  },
+  "automationsFailed": "{title} 失败：{error}",
+  "@automationsFailed": {
+    "description": "User-interface text for automations Failed."
+  },
+  "automationsAutoPausedNotice": "{title} 在连续失败 {count} 次后暂停。",
+  "@automationsAutoPausedNotice": {
+    "description": "User-interface text for automations Auto Paused Notice."
+  },
+  "automationsStateSaveFailed": "无法保存自动化状态：{error}",
+  "@automationsStateSaveFailed": {
+    "description": "User-interface text for automations State Save Failed."
+  },
+  "pluginScanStopping": "正在停止活动插件以重新扫描…",
+  "@pluginScanStopping": {
+    "description": "User-interface text for plugin Scan Stopping."
+  },
+  "pluginScanFoundIssues": "插件扫描发现 {registered} 个已注册插件、{contributions} 项贡献和 {issues} 个问题。",
+  "@pluginScanFoundIssues": {
+    "description": "User-interface text for plugin Scan Found Issues."
+  },
+  "pluginScanFoundNone": "插件扫描完成，未找到插件清单。",
+  "@pluginScanFoundNone": {
+    "description": "User-interface text for plugin Scan Found None."
+  },
+  "pluginScanFound": "插件扫描发现 {registered} 个已注册插件和 {contributions} 项贡献。",
+  "@pluginScanFound": {
+    "description": "User-interface text for plugin Scan Found."
+  },
+  "chatEmptyTitle": "想让 Pi 处理什么？",
+  "@chatEmptyTitle": {
+    "description": "Empty chat prompt."
+  },
+  "chatBackToLatest": "返回最新",
+  "@chatBackToLatest": {
+    "description": "Control that returns the conversation to the latest message."
+  },
+  "chatMessageLabel": "消息",
+  "@chatMessageLabel": {
+    "description": "Accessible label for the chat composer."
+  },
+  "chatSend": "发送",
+  "@chatSend": {
+    "description": "Chat composer send button."
+  },
+  "chatStatusSent": "已发送",
+  "@chatStatusSent": {
+    "description": "Internal status for a user message accepted by Pi; this value is not displayed as interface copy."
+  },
+  "chatStop": "停止",
+  "@chatStop": {
+    "description": "Chat composer stop button."
+  },
+  "chatAttachmentUnavailable": "尚未接入附件",
+  "@chatAttachmentUnavailable": {
+    "description": "Tooltip for the attachment action."
+  },
+  "chatAttachmentNotice": "附件仍不在当前 RPC 边界内。",
+  "@chatAttachmentNotice": {
+    "description": "Notice shown when attachment support is requested."
+  },
+  "chatFollowUpHint": "Tab 使用 · Esc 关闭",
+  "@chatFollowUpHint": {
+    "description": "Keyboard hint for the follow-up suggestion."
+  },
+  "chatStoppingPi": "正在停止 Pi",
+  "@chatStoppingPi": {
+    "description": "Composer status while stopping a Pi run."
+  },
+  "chatCompactingContext": "正在压缩上下文",
+  "@chatCompactingContext": {
+    "description": "Composer status while Pi compacts context."
+  },
+  "chatPiWorking": "Pi 正在工作",
+  "@chatPiWorking": {
+    "description": "Composer status while Pi runs."
+  },
+  "chatWorkedFor": "用时 {duration}",
+  "@chatWorkedFor": {
+    "description": "Summary of a completed assistant turn."
+  },
+  "chatWorkingFor": "正在工作 · {duration}",
+  "@chatWorkingFor": {
+    "description": "Summary of a running assistant turn."
+  },
+  "chatRanTools": "运行了 {count} 个工具",
+  "@chatRanTools": {
+    "description": "Summary for a group of tool calls."
+  },
+  "chatWaitingForTool": "等待工具输出…",
+  "@chatWaitingForTool": {
+    "description": "Tool status while output is pending."
+  },
+  "chatInterruptedWhenDisconnected": "Pi 断开时已中断",
+  "@chatInterruptedWhenDisconnected": {
+    "description": "Tool status when the Pi process disconnects."
+  },
+  "chatStopped": "已停止",
+  "@chatStopped": {
+    "description": "Stopped assistant turn status."
+  },
+  "chatInterrupted": "已中断",
+  "@chatInterrupted": {
+    "description": "Interrupted assistant turn status."
+  },
+  "chatFailed": "失败",
+  "@chatFailed": {
+    "description": "Failed assistant turn status."
+  },
+  "chatDuration": "{minutes} 分钟 {seconds} 秒",
+  "@chatDuration": {
+    "description": "Compact assistant turn duration."
+  },
+  "chatConnectionNotConnected": "Pi CLI 尚未连接，请在设置中重新连接。",
+  "@chatConnectionNotConnected": {
+    "description": "Chat composer placeholder when Pi is disconnected."
+  },
+  "chatConnectionConnecting": "正在连接 Pi CLI…",
+  "@chatConnectionConnecting": {
+    "description": "Chat composer placeholder while Pi connects."
+  },
+  "chatConnectionConnected": "向 Pi 发送消息…",
+  "@chatConnectionConnected": {
+    "description": "Chat composer placeholder when Pi is connected."
+  },
+  "chatConnectionError": "Pi 连接失败，请在设置中查看详情。",
+  "@chatConnectionError": {
+    "description": "Chat composer placeholder after a Pi connection failure."
+  },
+  "followUpSuggestedNext": "建议的后续消息",
+  "@followUpSuggestedNext": {
+    "description": "Label above a suggested follow-up message."
+  },
+  "followUpUse": "使用",
+  "@followUpUse": {
+    "description": "Button that inserts the follow-up suggestion."
+  },
+  "followUpDismiss": "关闭",
+  "@followUpDismiss": {
+    "description": "Button that dismisses the follow-up suggestion."
+  },
+  "toolRunning": "运行中",
+  "@toolRunning": {
+    "description": "Running tool status."
+  },
+  "toolCompleted": "已完成",
+  "@toolCompleted": {
+    "description": "Completed tool status."
+  },
+  "toolFailed": "失败",
+  "@toolFailed": {
+    "description": "Failed tool status."
+  },
+  "toolCancelled": "已取消",
+  "@toolCancelled": {
+    "description": "Cancelled tool status."
+  },
+  "toolInterrupted": "已中断",
+  "@toolInterrupted": {
+    "description": "Interrupted tool status."
+  },
+  "toolUnknown": "未知",
+  "@toolUnknown": {
+    "description": "Unknown tool status."
+  },
+  "outputTruncated": "输出已截断",
+  "@outputTruncated": {
+    "description": "Suffix added to truncated tool output."
+  },
+  "settingsSection": "偏好设置",
+  "@settingsSection": {
+    "description": "Page section label for settings."
+  },
+  "settingsTitle": "设置",
+  "@settingsTitle": {
+    "description": "Settings page title."
+  },
+  "settingsDescription": "原生 BYOP 工作台的主题和外部运行时设置。",
+  "@settingsDescription": {
+    "description": "Settings page description."
+  },
+  "settingsLanguageTitle": "界面语言",
+  "@settingsLanguageTitle": {
+    "description": "Language settings card title."
+  },
+  "settingsLanguageDescription": "仅更改界面文字。Pi 回复、模型名称、文件路径，以及插件没有提供翻译的文字保持不变。",
+  "@settingsLanguageDescription": {
+    "description": "Language settings card description."
+  },
+  "settingsLanguageSystem": "跟随系统",
+  "@settingsLanguageSystem": {
+    "description": "Option that follows the operating system language."
+  },
+  "settingsAppearanceTitle": "外观",
+  "@settingsAppearanceTitle": {
+    "description": "Appearance settings card title."
+  },
+  "settingsAppearanceDescription": "系统、浅色和深色模式共用 Onevra 语义色和原生文字比例。",
+  "@settingsAppearanceDescription": {
+    "description": "Appearance settings card description."
+  },
+  "settingsAppearanceSystem": "跟随系统",
+  "@settingsAppearanceSystem": {
+    "description": "System theme option."
+  },
+  "settingsAppearanceLight": "浅色",
+  "@settingsAppearanceLight": {
+    "description": "Light theme option."
+  },
+  "settingsAppearanceDark": "深色",
+  "@settingsAppearanceDark": {
+    "description": "Dark theme option."
+  },
+  "settingsFollowUpTitle": "后续建议",
+  "@settingsFollowUpTitle": {
+    "description": "Follow-up suggestion settings card title."
+  },
+  "settingsFollowUpDescription": "回复完成后，BYOP 可建议一条简短的后续消息。建议不会自动发送。",
+  "@settingsFollowUpDescription": {
+    "description": "Follow-up suggestion settings card description."
+  },
+  "settingsFollowUpGhost": "灰色文字",
+  "@settingsFollowUpGhost": {
+    "description": "Ghost follow-up display style."
+  },
+  "settingsFollowUpCard": "卡片",
+  "@settingsFollowUpCard": {
+    "description": "Card follow-up display style."
+  },
+  "settingsPiTitle": "外部 Pi CLI",
+  "@settingsPiTitle": {
+    "description": "External Pi settings card title."
+  },
+  "settingsPiDescription": "BYOP 启动单独安装的 Pi 进程，并使用其带版本的 JSONL RPC 协议。它不会以内嵌 SDK 取代 Pi。",
+  "@settingsPiDescription": {
+    "description": "External Pi settings card description."
+  },
+  "settingsConnect": "连接",
+  "@settingsConnect": {
+    "description": "Action that connects Pi."
+  },
+  "settingsReconnect": "重新连接",
+  "@settingsReconnect": {
+    "description": "Action that reconnects Pi."
+  },
+  "settingsCliPath": "CLI 路径",
+  "@settingsCliPath": {
+    "description": "Label for the Pi CLI path."
+  },
+  "settingsVersion": "版本",
+  "@settingsVersion": {
+    "description": "Label for the Pi CLI version."
+  },
+  "settingsModel": "模型",
+  "@settingsModel": {
+    "description": "Label for the current Pi model."
+  },
+  "settingsSession": "会话",
+  "@settingsSession": {
+    "description": "Label for the current Pi session."
+  },
+  "settingsRunState": "运行状态",
+  "@settingsRunState": {
+    "description": "Label for the current run state."
+  },
+  "settingsPluginSettings": "插件设置",
+  "@settingsPluginSettings": {
+    "description": "Section label for plugin settings."
+  },
+  "settingsWorkbenchTitle": "工作台偏好",
+  "@settingsWorkbenchTitle": {
+    "description": "Workbench preferences card title."
+  },
+  "settingsWorkbenchDescription": "此原生工作台的布局、外部 Pi 和插件平台状态。",
+  "@settingsWorkbenchDescription": {
+    "description": "Workbench preferences card description."
+  },
+  "settingsNativeRuntime": "原生运行时",
+  "@settingsNativeRuntime": {
+    "description": "Label for the native runtime."
+  },
+  "settingsNativeRuntimeValue": "MyGo · 固定基线",
+  "@settingsNativeRuntimeValue": {
+    "description": "Native runtime value."
+  },
+  "settingsRpcTransport": "RPC 传输",
+  "@settingsRpcTransport": {
+    "description": "Label for the Pi RPC transport."
+  },
+  "settingsRpcTransportValue": "通过标准输入输出传输的严格 JSONL",
+  "@settingsRpcTransportValue": {
+    "description": "Pi RPC transport value."
+  },
+  "settingsPiOwnership": "Pi 管理项",
+  "@settingsPiOwnership": {
+    "description": "Label for state owned by Pi."
+  },
+  "settingsPiOwnershipValue": "会话、模型、凭据、扩展",
+  "@settingsPiOwnershipValue": {
+    "description": "Pi ownership value."
+  },
+  "settingsPluginRegistry": "插件注册表",
+  "@settingsPluginRegistry": {
+    "description": "Label for plugin registry counts."
+  },
+  "settingsPluginRuntime": "插件运行时",
+  "@settingsPluginRuntime": {
+    "description": "Label for plugin runtime support."
+  },
+  "settingsPluginRuntimeValue": "原生 + Node · 原生与 WebView 界面",
+  "@settingsPluginRuntimeValue": {
+    "description": "Plugin runtime value."
+  },
+  "settingsWebViewBoundary": "WebView 边界",
+  "@settingsWebViewBoundary": {
+    "description": "Label for the WebView security boundary."
+  },
+  "settingsWebViewBoundaryValue": "byop-plugin · 严格 CSP · 锁定导航",
+  "@settingsWebViewBoundaryValue": {
+    "description": "WebView security boundary value."
+  },
+  "settingsPluginRegistryValue": "已注册 {registered} 个 · {contributions} 项贡献",
+  "@settingsPluginRegistryValue": {
+    "description": "设置页中的插件注册数和贡献数。",
+    "placeholders": {
+      "registered": {
+        "type": "int",
+        "example": "2"
+      },
+      "contributions": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "settingsAboutTitle": "关于",
+  "@settingsAboutTitle": {
+    "description": "About card title."
+  },
+  "settingsAboutDescription": "Build You Own Pi 是面向外部安装 Pi CLI 的多插件工作台外壳。",
+  "@settingsAboutDescription": {
+    "description": "About card description."
+  },
+  "settingsAboutVersion": "P9c · 2026-10-22",
+  "@settingsAboutVersion": {
+    "description": "Current BYOP phase and date."
+  },
+  "settingsNotAssigned": "未分配",
+  "@settingsNotAssigned": {
+    "description": "Session value when no Pi session is assigned."
+  },
+  "settingsEphemeral": "临时",
+  "@settingsEphemeral": {
+    "description": "Session value indicating an ephemeral session."
+  },
+  "settingsPiDefault": "Pi 默认模型",
+  "@settingsPiDefault": {
+    "description": "Model value when Pi uses its default model."
+  },
+  "settingsThinking": "思考级别 {level}",
+  "@settingsThinking": {
+    "description": "Current Pi thinking level."
+  },
+  "settingsPendingHandshake": "等待握手",
+  "@settingsPendingHandshake": {
+    "description": "Pi version value before connection completes."
+  },
+  "noticePreferenceSaveTheme": "主题已更改，但偏好设置无法保存。",
+  "@noticePreferenceSaveTheme": {
+    "description": "Notice when the theme changed but could not be persisted."
+  },
+  "noticePreferenceSaveNavigation": "导航状态已更改，但偏好设置无法保存。",
+  "@noticePreferenceSaveNavigation": {
+    "description": "Notice when navigation visibility changed but could not be persisted."
+  },
+  "noticePreferenceSaveTaskPanel": "任务栏状态已更改，但偏好设置无法保存。",
+  "@noticePreferenceSaveTaskPanel": {
+    "description": "Notice when task panel visibility changed but could not be persisted."
+  },
+  "noticePreferenceSaveLanguage": "界面语言已更改，但偏好设置无法保存；已恢复之前的语言。",
+  "@noticePreferenceSaveLanguage": {
+    "description": "Notice when the UI language changed but could not be persisted."
+  },
+  "preferencesWarningRead": "无法读取偏好设置，正在使用默认值。",
+  "@preferencesWarningRead": {
+    "description": "Warning when the preferences file cannot be read."
+  },
+  "preferencesWarningEmpty": "偏好设置为空，正在使用默认值。",
+  "@preferencesWarningEmpty": {
+    "description": "Warning when the preferences file is empty."
+  },
+  "preferencesWarningDamaged": "偏好设置文件已损坏，正在使用默认值并保留原文件。",
+  "@preferencesWarningDamaged": {
+    "description": "Warning when the preferences file cannot be decoded."
+  },
+  "relativeNow": "刚刚",
+  "@relativeNow": {
+    "description": "Relative session time under one minute."
+  },
+  "relativeMinutes": "{count} 分钟",
+  "@relativeMinutes": {
+    "description": "Compact relative session time in minutes."
+  },
+  "relativeHours": "{count} 小时",
+  "@relativeHours": {
+    "description": "Compact relative session time in hours."
+  },
+  "relativeDays": "{count}天",
+  "@relativeDays": {
+    "description": "Compact relative session time in days."
+  },
+  "headerPhase": "P9C",
+  "@headerPhase": {
+    "description": "Top-bar badge showing the current implementation phase."
+  },
+  "modelsSearch": "搜索模型",
+  "@modelsSearch": {
+    "description": "Model picker search field."
+  },
+  "modelsNone": "无可用模型",
+  "@modelsNone": {
+    "description": "Empty model picker state."
+  },
+  "thinkingOff": "关闭",
+  "@thinkingOff": {
+    "description": "Thinking level off."
+  },
+  "thinkingMinimal": "极简",
+  "@thinkingMinimal": {
+    "description": "Thinking level minimal."
+  },
+  "thinkingLow": "低",
+  "@thinkingLow": {
+    "description": "Thinking level low."
+  },
+  "thinkingMedium": "中",
+  "@thinkingMedium": {
+    "description": "Thinking level medium."
+  },
+  "thinkingHigh": "高",
+  "@thinkingHigh": {
+    "description": "Thinking level high."
+  },
+  "thinkingXHigh": "超高",
+  "@thinkingXHigh": {
+    "description": "Thinking level extra high."
+  },
+  "thinkingTitle": "思考级别",
+  "@thinkingTitle": {
+    "description": "Thinking picker label."
+  },
+  "thinkingTooltip": "思考级别 · {level}",
+  "@thinkingTooltip": {
+    "description": "Thinking picker tooltip."
+  },
+  "diagnosticRetrying": "正在重试",
+  "@diagnosticRetrying": {
+    "description": "Runtime retry status."
+  },
+  "diagnosticAutomatic": "自动",
+  "@diagnosticAutomatic": {
+    "description": "Automatic compaction reason."
+  },
+  "diagnosticUnknownExtension": "扩展",
+  "@diagnosticUnknownExtension": {
+    "description": "Unknown extension source."
+  },
+  "diagnosticClear": "运行时暂无问题",
+  "@diagnosticClear": {
+    "description": "Runtime diagnostics clear state."
+  },
+  "compactionCancelled": "上下文压缩已取消",
+  "@compactionCancelled": {
+    "description": "Compaction result when cancelled."
+  },
+  "compactionCompleted": "上下文已压缩",
+  "@compactionCompleted": {
+    "description": "Compaction result without token counts."
+  },
+  "noticePreferenceSaveFollowUp": "后续建议样式已更改，但偏好设置未能保存。",
+  "@noticePreferenceSaveFollowUp": {
+    "description": "Notice when follow-up style persistence fails."
+  },
+  "pluginsSettingsNoFields": "插件未声明任何设置字段。",
+  "@pluginsSettingsNoFields": {
+    "description": "Plugin settings with no fields."
+  },
+  "pluginsCommandFallback": "命令",
+  "@pluginsCommandFallback": {
+    "description": "Fallback label for a plugin command."
+  },
+  "pluginsUndeclaredCommand": "插件未声明此命令。",
+  "@pluginsUndeclaredCommand": {
+    "description": "Disabled plugin view command tooltip."
+  },
+  "chatSendMessage": "发送消息",
+  "@chatSendMessage": {
+    "description": "Accessible label for send action."
+  },
+  "chatSendToPi": "发送给 Pi",
+  "@chatSendToPi": {
+    "description": "Tooltip for send action."
+  },
+  "chatStopCurrentRun": "停止当前运行",
+  "@chatStopCurrentRun": {
+    "description": "Accessible label for stop action."
+  },
+  "chatStopTooltip": "停止 Pi 运行",
+  "@chatStopTooltip": {
+    "description": "Tooltip for stop action."
+  },
+  "piConnected": "Pi 已连接",
+  "@piConnected": {
+    "description": "Pi connected status."
+  },
+  "piConnecting": "Pi 正在连接",
+  "@piConnecting": {
+    "description": "Pi connecting status."
+  },
+  "piConnectionError": "Pi 连接错误",
+  "@piConnectionError": {
+    "description": "Pi connection error status."
+  },
+  "piDisconnected": "Pi 已断开",
+  "@piDisconnected": {
+    "description": "Pi disconnected status."
+  },
+  "piSecondaryRPCReady": "RPC 已就绪",
+  "@piSecondaryRPCReady": {
+    "description": "Pi secondary status when RPC is ready."
+  },
+  "piSecondaryStarting": "正在启动 Pi CLI…",
+  "@piSecondaryStarting": {
+    "description": "Pi secondary status while starting."
+  },
+  "piSecondaryConnectionFailed": "连接失败",
+  "@piSecondaryConnectionFailed": {
+    "description": "Pi secondary disconnected error."
+  },
+  "piSecondaryClickToConnect": "点击连接",
+  "@piSecondaryClickToConnect": {
+    "description": "Pi secondary disconnected prompt."
+  },
+  "piDiagnosticConnected": "Pi CLI 已连接，可以开始会话。",
+  "@piDiagnosticConnected": {
+    "description": "Empty chat diagnostic when connected."
+  },
+  "piDiagnosticConnecting": "正在连接 Pi CLI…",
+  "@piDiagnosticConnecting": {
+    "description": "Empty chat diagnostic while connecting."
+  },
+  "piDiagnosticDisconnected": "Pi CLI 尚未连接。请打开设置进行连接。",
+  "@piDiagnosticDisconnected": {
+    "description": "Empty chat diagnostic when disconnected."
+  },
+  "errorUnknown": "未知错误",
+  "@errorUnknown": {
+    "description": "Fallback error text."
+  },
+  "errorPiResolveFailed": "无法解析 Pi CLI。",
+  "@errorPiResolveFailed": {
+    "description": "Placeholder-free fallback when Pi CLI cannot be resolved."
+  },
+  "errorWorkspaceFailed": "无法打开 Pi 工作区。",
+  "@errorWorkspaceFailed": {
+    "description": "Placeholder-free fallback when the Pi workspace cannot be opened."
+  },
+  "errorPiConnectFailed": "Pi 连接失败。",
+  "@errorPiConnectFailed": {
+    "description": "Placeholder-free fallback when the Pi connection fails."
+  },
+  "errorPiRPCFailed": "Pi RPC 握手失败。",
+  "@errorPiRPCFailed": {
+    "description": "Placeholder-free fallback when the Pi RPC handshake fails."
+  },
+  "errorPluginViewRender": "无法渲染插件视图。",
+  "@errorPluginViewRender": {
+    "description": "Fallback when a native plugin view cannot be rendered."
+  },
+  "connectionConnected": "已连接",
+  "@connectionConnected": {
+    "description": "Connection state connected."
+  },
+  "connectionConnecting": "正在连接",
+  "@connectionConnecting": {
+    "description": "Connection state connecting."
+  },
+  "connectionError": "错误",
+  "@connectionError": {
+    "description": "Connection state error."
+  },
+  "connectionDisconnected": "已断开",
+  "@connectionDisconnected": {
+    "description": "Connection state disconnected."
+  },
+  "runSending": "正在发送",
+  "@runSending": {
+    "description": "Run state sending."
+  },
+  "runPiRunning": "Pi 正在运行",
+  "@runPiRunning": {
+    "description": "Run state Pi running."
+  },
+  "runStopping": "正在停止",
+  "@runStopping": {
+    "description": "Run state stopping."
+  },
+  "runComplete": "已完成",
+  "@runComplete": {
+    "description": "Run state complete."
+  },
+  "runStopped": "已停止",
+  "@runStopped": {
+    "description": "Run state stopped."
+  },
+  "runInterrupted": "已中断",
+  "@runInterrupted": {
+    "description": "Run state interrupted."
+  },
+  "runFailed": "失败",
+  "@runFailed": {
+    "description": "Run state failed."
+  },
+  "runReady": "就绪",
+  "@runReady": {
+    "description": "Run state ready."
+  },
+  "runOffline": "离线",
+  "@runOffline": {
+    "description": "Run state offline."
+  },
+  "runDetailSubmitting": "正在将当前提示发送给 Pi。",
+  "@runDetailSubmitting": {
+    "description": "Run detail submitting."
+  },
+  "runDetailStreaming": "Pi 正在流式输出。",
+  "@runDetailStreaming": {
+    "description": "Run detail streaming."
+  },
+  "runDetailStopping": "正在等待 Pi 停止。",
+  "@runDetailStopping": {
+    "description": "Run detail stopping."
+  },
+  "runDetailCompleted": "上次运行已完成。",
+  "@runDetailCompleted": {
+    "description": "Run detail completed."
+  },
+  "runDetailStopped": "上次运行已停止。",
+  "@runDetailStopped": {
+    "description": "Run detail stopped."
+  },
+  "runDetailInterrupted": "上次运行已中断。",
+  "@runDetailInterrupted": {
+    "description": "Run detail interrupted."
+  },
+  "runDetailFailed": "上次运行失败。",
+  "@runDetailFailed": {
+    "description": "Run detail failed."
+  },
+  "runDetailIdle": "可以继续发送消息。",
+  "@runDetailIdle": {
+    "description": "Run detail idle connected."
+  },
+  "runDetailOffline": "连接 Pi CLI 后即可开始运行。",
+  "@runDetailOffline": {
+    "description": "Run detail idle disconnected."
+  },
+  "statusAttention": "需要处理",
+  "@statusAttention": {
+    "description": "Task status attention."
+  },
+  "statusRegistered": "已注册",
+  "@statusRegistered": {
+    "description": "Task status registered."
+  },
+  "statusEmpty": "空",
+  "@statusEmpty": {
+    "description": "Task status empty."
+  },
+  "statusActive": "活动",
+  "@statusActive": {
+    "description": "Task status active."
+  },
+  "statusClear": "正常",
+  "@statusClear": {
+    "description": "Task status clear."
+  },
+  "legacyTitle": "从 Pi Agent Desktop 迁移",
+  "@legacyTitle": {
+    "description": "Legacy migration card title."
+  },
+  "legacyDescription": "只读扫描旧桌面应用。不会删除任何内容；Pi 会话将建立链接，不会复制。",
+  "@legacyDescription": {
+    "description": "Legacy migration card description."
+  },
+  "legacyWorkspaceMissing": "已保存的工作区不存在",
+  "@legacyWorkspaceMissing": {
+    "description": "Legacy workspace warning."
+  },
+  "legacyScan": "扫描",
+  "@legacyScan": {
+    "description": "Legacy scan action."
+  },
+  "legacyScanning": "正在扫描…",
+  "@legacyScanning": {
+    "description": "Legacy scanning action."
+  },
+  "legacyImport": "导入",
+  "@legacyImport": {
+    "description": "Legacy import action."
+  },
+  "legacyUpToDate": "已是最新",
+  "@legacyUpToDate": {
+    "description": "Legacy scan current state."
+  },
+  "legacyScanFailed": "旧版扫描失败。",
+  "@legacyScanFailed": {
+    "description": "Legacy scan failed notice."
+  },
+  "legacyImportedHistoryFailed": "旧版偏好已导入，但迁移历史未能保存。",
+  "@legacyImportedHistoryFailed": {
+    "description": "Legacy import history failure notice."
+  },
+  "legacyImportFailed": "旧版导入失败。",
+  "@legacyImportFailed": {
+    "description": "Legacy import failure notice."
+  },
+  "legacyWorkspaceSaved": "工作区已保存；请重新连接 Pi 以使用",
+  "@legacyWorkspaceSaved": {
+    "description": "Legacy workspace imported notice."
+  },
+  "legacyImported": "旧版偏好已导入。",
+  "@legacyImported": {
+    "description": "Legacy import success notice."
+  },
+  "legacyUnknown": "未知",
+  "@legacyUnknown": {
+    "description": "Unknown legacy value."
+  },
+  "legacyNoPreferences": "未找到可迁移的旧版偏好设置。",
+  "@legacyNoPreferences": {
+    "description": "Legacy empty state."
+  },
+  "legacyStatusNew": "新增",
+  "@legacyStatusNew": {
+    "description": "Legacy new status."
+  },
+  "legacyStatusSame": "相同",
+  "@legacyStatusSame": {
+    "description": "Legacy same status."
+  },
+  "legacyStatusConflict": "冲突",
+  "@legacyStatusConflict": {
+    "description": "Legacy conflict status."
+  },
+  "legacyStatusKept": "保留",
+  "@legacyStatusKept": {
+    "description": "Legacy kept status."
+  },
+  "legacyStatusLinked": "已链接",
+  "@legacyStatusLinked": {
+    "description": "Legacy linked status."
+  },
+  "legacyStatusMissing": "缺失",
+  "@legacyStatusMissing": {
+    "description": "Legacy missing status."
+  },
+  "legacyStatusInfo": "信息",
+  "@legacyStatusInfo": {
+    "description": "Legacy info status."
+  },
+  "legacyStatusIgnored": "已忽略",
+  "@legacyStatusIgnored": {
+    "description": "Legacy ignored status."
+  },
+  "legacyStatusUnknown": "未知",
+  "@legacyStatusUnknown": {
+    "description": "Legacy unknown status."
+  },
+  "legacyImportConflictingValue": "导入冲突值",
+  "@legacyImportConflictingValue": {
+    "description": "Legacy import conflict status."
+  },
+  "legacyImportConflictCopy": "作为冲突副本导入",
+  "@legacyImportConflictCopy": {
+    "description": "Legacy import conflict-copy status."
+  },
+  "legacyFound": "已找到",
+  "@legacyFound": {
+    "description": "Legacy source found."
+  },
+  "legacyUnavailable": "不可用",
+  "@legacyUnavailable": {
+    "description": "Legacy source unavailable."
+  },
+  "legacyNotFound": "未找到",
+  "@legacyNotFound": {
+    "description": "Legacy source missing."
+  },
+  "legacyLastImport": "上次导入 {time} · {counts}",
+  "@legacyLastImport": {
+    "description": "Legacy last import summary."
+  },
+  "legacyVersion": "旧版 {version}",
+  "@legacyVersion": {
+    "description": "Legacy version pill."
+  },
+  "legacyCountsSummary": "新增 {new} · 相同 {same} · 冲突 {conflict} · 保留 {kept} · 已链接 {linked} · 缺失 {missing} · 未知 {unknown} · 已忽略 {ignored} · 信息 {info}",
+  "@legacyCountsSummary": {
+    "description": "Legacy import counts."
+  },
+  "compactionCompletedTokens": "上下文已压缩 · {before} → {after} tokens",
+  "@compactionCompletedTokens": {
+    "description": "Compaction result with token count."
+  },
+  "diagnosticCompacting": "正在压缩 · {reason}",
+  "@diagnosticCompacting": {
+    "description": "Runtime diagnostic while compacting."
+  },
+  "diagnosticCompactionError": "压缩错误 · {error}",
+  "@diagnosticCompactionError": {
+    "description": "Runtime compaction error."
+  },
+  "diagnosticExtensionError": "扩展 {source} · {error}",
+  "@diagnosticExtensionError": {
+    "description": "Runtime extension error."
+  },
+  "diagnosticQueued": "已排队 · {steering} 条引导 · {followUp} 条后续",
+  "@diagnosticQueued": {
+    "description": "Runtime queued messages."
+  },
+  "diagnosticRetryFailed": "重试失败 · {error}",
+  "@diagnosticRetryFailed": {
+    "description": "Runtime retry error."
+  },
+  "piCliConnectedVersion": "Pi CLI · {version}",
+  "@piCliConnectedVersion": {
+    "description": "Pi CLI connected with version."
+  },
+  "piDiagnosticError": "Pi 连接失败：{error}",
+  "@piDiagnosticError": {
+    "description": "Chat diagnostic connection error."
+  },
+  "piSecondaryConnectedModel": "已连接 · {model}",
+  "@piSecondaryConnectedModel": {
+    "description": "Pi secondary status with model."
+  },
+  "retryStatus": "{label} · {seconds} 秒",
+  "@retryStatus": {
+    "description": "Retry countdown."
+  },
+  "tasksPluginRegistryDetail": "已注册 {registered} 个 · 活动 {active} 个 · 贡献 {contributions} 项 · 问题 {issues} 个",
+  "@tasksPluginRegistryDetail": {
+    "description": "Task panel plugin registry detail."
+  },
+  "legacySourceNoAppDirectory": "未找到应用目录",
+  "@legacySourceNoAppDirectory": {
+    "description": "Legacy app directory missing."
+  },
+  "legacySourceAppDirectoryFound": "已找到应用目录",
+  "@legacySourceAppDirectoryFound": {
+    "description": "Legacy app directory available."
+  },
+  "legacySourceNoLocalStorage": "未找到旧版 localStorage 数据库",
+  "@legacySourceNoLocalStorage": {
+    "description": "Legacy localStorage database missing."
+  },
+  "legacySourceSQLiteUnavailable": "sqlite3 不可用",
+  "@legacySourceSQLiteUnavailable": {
+    "description": "Legacy localStorage dependency unavailable."
+  },
+  "legacySourceLocalStorageUnreadable": "无法读取旧版 localStorage",
+  "@legacySourceLocalStorageUnreadable": {
+    "description": "Legacy localStorage read failed."
+  },
+  "legacySourceNoScheduledTasks": "没有旧版计划任务",
+  "@legacySourceNoScheduledTasks": {
+    "description": "No legacy scheduled tasks available."
+  },
+  "legacySummaryWindowState": "窗口状态已找到",
+  "@legacySummaryWindowState": {
+    "description": "Legacy window state summary."
+  },
+  "legacySummaryVersion": "版本 {version}",
+  "@legacySummaryVersion": {
+    "description": "Legacy version summary."
+  },
+  "legacySummaryWindow": "窗口 {width} × {height}",
+  "@legacySummaryWindow": {
+    "description": "Legacy window dimensions."
+  },
+  "legacySummaryPreferenceKeys": "{count} 个偏好键",
+  "@legacySummaryPreferenceKeys": {
+    "description": "Legacy preference key count."
+  },
+  "legacySummaryUndecodable": "{count} 个无法解码",
+  "@legacySummaryUndecodable": {
+    "description": "Undecodable preference count."
+  },
+  "legacySummaryLatestDatabase": "取最新的 {count} 个数据库",
+  "@legacySummaryLatestDatabase": {
+    "description": "Duplicate legacy database count."
+  },
+  "legacySummaryScheduledTasks": "找到 {count} 个计划任务 — P8 未导入（P7 自动化由插件管理）",
+  "@legacySummaryScheduledTasks": {
+    "description": "Legacy scheduled task count."
+  },
+  "legacySummaryUndecodableValue": "无法解码的 localStorage 值",
+  "@legacySummaryUndecodableValue": {
+    "description": "Undecodable preference entry."
+  },
+  "legacySummaryServerPort": "服务器端口由 BYOP/Pi 管理",
+  "@legacySummaryServerPort": {
+    "description": "Server-managed preference entry."
+  },
+  "legacySummaryUnknownPreference": "未知偏好键",
+  "@legacySummaryUnknownPreference": {
+    "description": "Unknown preference entry."
+  },
+  "legacySummaryThemeLocalStorageWins": "主题也存在于 localStorage；以 localStorage 为准",
+  "@legacySummaryThemeLocalStorageWins": {
+    "description": "Theme source conflict entry."
+  },
+  "legacySummaryDuplicateAppTheme": "应用目录中有重复主题；采用第一个值",
+  "@legacySummaryDuplicateAppTheme": {
+    "description": "Duplicate theme entry."
+  },
+  "legacySummaryDuplicateLocalValue": "localStorage 中有重复值；以 localStorage 为准",
+  "@legacySummaryDuplicateLocalValue": {
+    "description": "Duplicate localStorage entry."
+  },
+  "legacySummaryUnsupportedTheme": "不支持的主题值已保留为旧版数据",
+  "@legacySummaryUnsupportedTheme": {
+    "description": "Unsupported theme entry."
+  },
+  "legacySummaryWorkspaceValueUnknown": "无法识别工作区值",
+  "@legacySummaryWorkspaceValueUnknown": {
+    "description": "Unknown workspace entry."
+  },
+  "legacySummaryWorkspacePathUnknown": "无法识别工作区路径",
+  "@legacySummaryWorkspacePathUnknown": {
+    "description": "Unknown workspace path entry."
+  },
+  "legacySummaryWorkspaceMissing": "工作区文件夹不存在",
+  "@legacySummaryWorkspaceMissing": {
+    "description": "Missing workspace entry."
+  },
+  "legacySummaryWorkspaceSessionDuplicate": "工作区会话也存在于最近打开映射中",
+  "@legacySummaryWorkspaceSessionDuplicate": {
+    "description": "Duplicate workspace session entry."
+  },
+  "legacySummaryNoWorkspaceFields": "没有工作区字段",
+  "@legacySummaryNoWorkspaceFields": {
+    "description": "Workspace fields missing."
+  },
+  "legacySummaryWorkspaceSessionUnknown": "无法识别工作区会话引用",
+  "@legacySummaryWorkspaceSessionUnknown": {
+    "description": "Unknown workspace session entry."
+  },
+  "legacySummaryRightPanelKept": "右侧面板偏好已保留为旧版数据",
+  "@legacySummaryRightPanelKept": {
+    "description": "Legacy right panel entry."
+  },
+  "legacySummaryFileTabsKept": "打开的文件标签已保留为旧版数据",
+  "@legacySummaryFileTabsKept": {
+    "description": "Legacy file tabs entry."
+  },
+  "legacySummaryActiveFileTabKept": "活动文件标签已保留为旧版数据",
+  "@legacySummaryActiveFileTabKept": {
+    "description": "Legacy active file tab entry."
+  },
+  "legacySummaryWorkspaceSessionKept": "工作区会话引用已保留为旧版数据",
+  "@legacySummaryWorkspaceSessionKept": {
+    "description": "Legacy workspace session entry."
+  },
+  "legacySummaryWorkspaceFieldKept": "工作区字段已保留为旧版数据",
+  "@legacySummaryWorkspaceFieldKept": {
+    "description": "Legacy workspace field entry."
+  },
+  "legacySummaryLastSessionMapUnknown": "无法识别最近会话映射",
+  "@legacySummaryLastSessionMapUnknown": {
+    "description": "Unknown last-session entry."
+  },
+  "legacySummaryNoSavedSessions": "没有已保存会话",
+  "@legacySummaryNoSavedSessions": {
+    "description": "No saved session entry."
+  },
+  "legacySummaryDraftMapUnknown": "无法识别草稿映射",
+  "@legacySummaryDraftMapUnknown": {
+    "description": "Unknown draft map entry."
+  },
+  "legacySummaryNoDrafts": "没有草稿",
+  "@legacySummaryNoDrafts": {
+    "description": "No draft entry."
+  },
+  "legacySummaryDraftValueUnknown": "无法识别草稿值",
+  "@legacySummaryDraftValueUnknown": {
+    "description": "Unknown draft value entry."
+  },
+  "legacySummaryKeptBodySize": "已保留为旧版值（BYOP 正文保持 14px）",
+  "@legacySummaryKeptBodySize": {
+    "description": "Legacy body size entry."
+  },
+  "legacySummaryWidthKept": "宽度已保留为旧版值",
+  "@legacySummaryWidthKept": {
+    "description": "Legacy width entry."
+  },
+  "legacySummaryPreferenceKept": "偏好已保留为旧版值",
+  "@legacySummaryPreferenceKept": {
+    "description": "Legacy preference entry."
+  },
+  "legacySummaryTheme": "主题：{theme}",
+  "@legacySummaryTheme": {
+    "description": "Legacy theme entry."
+  },
+  "legacySummaryWorkspace": "工作区：{workspace}",
+  "@legacySummaryWorkspace": {
+    "description": "Legacy workspace entry."
+  },
+  "legacySummaryWorkspaceSessionWorkspaceMissing": "工作区会话 {session} · 工作区不存在",
+  "@legacySummaryWorkspaceSessionWorkspaceMissing": {
+    "description": "Legacy workspace session with missing workspace."
+  },
+  "legacySummaryWorkspaceSessionMissing": "工作区会话 {session} · 会话不存在",
+  "@legacySummaryWorkspaceSessionMissing": {
+    "description": "Legacy workspace session missing."
+  },
+  "legacySummaryWorkspaceSession": "工作区会话 {session}",
+  "@legacySummaryWorkspaceSession": {
+    "description": "Legacy workspace session summary."
+  },
+  "legacySummarySessionWorkspaceMissing": "{session} · 工作区不存在",
+  "@legacySummarySessionWorkspaceMissing": {
+    "description": "Legacy session with missing workspace."
+  },
+  "legacySummarySessionMissing": "{session} · 会话不存在",
+  "@legacySummarySessionMissing": {
+    "description": "Missing legacy session reference."
+  },
+  "legacySummaryDraftCharacters": "草稿 · {count} 个字符",
+  "@legacySummaryDraftCharacters": {
+    "description": "Legacy draft length summary."
+  },
+  "legacyTargetInfoOnly": "仅提供信息",
+  "@legacyTargetInfoOnly": {
+    "description": "Migration target label."
+  },
+  "legacyTargetNotImported": "不导入",
+  "@legacyTargetNotImported": {
+    "description": "Migration target label."
+  },
+  "legacyTargetIgnored": "已忽略",
+  "@legacyTargetIgnored": {
+    "description": "Migration target label."
+  },
+  "legacyTargetLegacy": "旧版",
+  "@legacyTargetLegacy": {
+    "description": "Migration target label."
+  },
+  "legacyTargetTheme": "主题",
+  "@legacyTargetTheme": {
+    "description": "Migration target label."
+  },
+  "legacyTargetWorkspace": "工作区",
+  "@legacyTargetWorkspace": {
+    "description": "Migration target label."
+  },
+  "legacyTargetLastSession": "最近会话",
+  "@legacyTargetLastSession": {
+    "description": "Migration target label."
+  },
+  "legacyTargetSessionLinks": "会话链接",
+  "@legacyTargetSessionLinks": {
+    "description": "Migration target label."
+  },
+  "legacyTargetDrafts": "草稿",
+  "@legacyTargetDrafts": {
+    "description": "Migration target label."
+  },
+  "legacyWarningLocalStorageRead": "无法读取旧版 localStorage。",
+  "@legacyWarningLocalStorageRead": {
+    "description": "Legacy localStorage scan warning."
+  },
+  "errorRunningSendUnavailable": "Pi 当前无法接收运行中消息。",
+  "@errorRunningSendUnavailable": {
+    "description": "Fallback error when a running message cannot be queued."
+  },
+  "navArchived": "已归档（{count}）",
+  "@navArchived": {
+    "description": "Archived sessions section heading with a count."
+  },
+  "navArchivedAction": "已归档",
+  "@navArchivedAction": {
+    "description": "Drop target label for archived sessions."
+  },
+  "navLater": "稍后处理",
+  "@navLater": {
+    "description": "Later sessions section heading."
+  },
+  "navPinned": "置顶",
+  "@navPinned": {
+    "description": "Pinned sessions section heading."
+  },
+  "navRecentSessions": "会话",
+  "@navRecentSessions": {
+    "description": "Unorganized sessions section heading."
+  },
+  "noticePreferenceSaveContrast": "对比度已更改，但无法保存偏好。",
+  "@noticePreferenceSaveContrast": {
+    "description": "Notice when saving contrast preference fails."
+  },
+  "noticePreferenceSaveMotion": "动效已更改，但无法保存偏好。",
+  "@noticePreferenceSaveMotion": {
+    "description": "Notice when saving motion preference fails."
+  },
+  "noticePreferenceSavePanelAnimation": "面板动画已更改，但无法保存偏好。",
+  "@noticePreferenceSavePanelAnimation": {
+    "description": "Notice when saving panel animation preference fails."
+  },
+  "noticePreferenceSaveRunningSend": "运行中发送方式已更改，但无法保存偏好。",
+  "@noticePreferenceSaveRunningSend": {
+    "description": "Notice when saving running-send preference fails."
+  },
+  "noticeQueueClearFailed": "无法清空 Pi 队列：{error}",
+  "@noticeQueueClearFailed": {
+    "description": "Notice when clearing the Pi queue fails."
+  },
+  "noticeQueueCleared": "已清空 {count, plural, =0 {0 条排队消息} other {# 条排队消息}}。",
+  "@noticeQueueCleared": {
+    "description": "Notice after clearing queued messages."
+  },
+  "noticeRunningSendAccepted": "已发送：{mode}。",
+  "@noticeRunningSendAccepted": {
+    "description": "Notice confirming a running message was accepted."
+  },
+  "noticeRunningSendFailed": "无法发送运行中消息：{error}",
+  "@noticeRunningSendFailed": {
+    "description": "Notice when a running message cannot be sent."
+  },
+  "noticeRunningSendUnavailable": "请等待当前 Pi 操作完成后再发送消息。",
+  "@noticeRunningSendUnavailable": {
+    "description": "Notice when running send is currently unavailable."
+  },
+  "noticeSessionOrganizationSave": "会话整理已更改，但无法保存偏好。",
+  "@noticeSessionOrganizationSave": {
+    "description": "Notice when saving session organization fails."
+  },
+  "queueClear": "清空队列",
+  "@queueClear": {
+    "description": "Action that clears queued running messages."
+  },
+  "queueClearPending": "正在清空…",
+  "@queueClearPending": {
+    "description": "Label while clearing queued messages."
+  },
+  "queueMore": "另有 {count} 条",
+  "@queueMore": {
+    "description": "Overflow count for hidden queued messages."
+  },
+  "queueTitle": "排队消息",
+  "@queueTitle": {
+    "description": "Heading for the running message queue."
+  },
+  "runningSendOppositeTooltip": "{mode} · {shortcut}",
+  "@runningSendOppositeTooltip": {
+    "description": "Tooltip explaining the opposite running-send shortcut."
+  },
+  "runningSendQueue": "排队",
+  "@runningSendQueue": {
+    "description": "Running-send mode that queues a follow-up message."
+  },
+  "runningSendSteer": "插话",
+  "@runningSendSteer": {
+    "description": "Running-send mode that steers the current task."
+  },
+  "sessionArchive": "归档",
+  "@sessionArchive": {
+    "description": "Action that archives a session."
+  },
+  "sessionArchivedNotice": "已归档“{title}”。",
+  "@sessionArchivedNotice": {
+    "description": "Notice after archiving a session."
+  },
+  "sessionLaterClear": "不设提醒",
+  "@sessionLaterClear": {
+    "description": "Later-session option with no reminder time."
+  },
+  "sessionLaterDue": "稍后提醒已到期",
+  "@sessionLaterDue": {
+    "description": "Tooltip for a due later-session reminder."
+  },
+  "sessionLaterHour": "1 小时后",
+  "@sessionLaterHour": {
+    "description": "Later-session option for one hour."
+  },
+  "sessionLaterMenu": "稍后处理",
+  "@sessionLaterMenu": {
+    "description": "Submenu for later-session options."
+  },
+  "sessionLaterMonday": "下周一 9:00",
+  "@sessionLaterMonday": {
+    "description": "Later-session option for next Monday."
+  },
+  "sessionLaterTomorrow": "明天 9:00",
+  "@sessionLaterTomorrow": {
+    "description": "Later-session option for tomorrow morning."
+  },
+  "sessionMoveToArchived": "移到已归档",
+  "@sessionMoveToArchived": {
+    "description": "Drop badge for moving to archived."
+  },
+  "sessionMoveToLater": "移到稍后处理",
+  "@sessionMoveToLater": {
+    "description": "Drop badge for moving to later."
+  },
+  "sessionMoveToPinned": "移到置顶",
+  "@sessionMoveToPinned": {
+    "description": "Drop badge for moving to pinned."
+  },
+  "sessionMoveToSessions": "移到会话",
+  "@sessionMoveToSessions": {
+    "description": "Drop badge for moving to sessions."
+  },
+  "sessionMovedLaterNotice": "已将“{title}”移到稍后处理。",
+  "@sessionMovedLaterNotice": {
+    "description": "Notice after moving a session to later."
+  },
+  "sessionPin": "置顶",
+  "@sessionPin": {
+    "description": "Action that pins a session."
+  },
+  "sessionRestore": "恢复",
+  "@sessionRestore": {
+    "description": "Action that restores a session."
+  },
+  "sessionRestored": "已恢复会话。",
+  "@sessionRestored": {
+    "description": "Notice after restoring a session."
+  },
+  "sessionUndo": "撤销",
+  "@sessionUndo": {
+    "description": "Action that undoes a session organization change."
+  },
+  "sessionUnpin": "取消置顶",
+  "@sessionUnpin": {
+    "description": "Action that unpins a session."
+  },
+  "settingsContrastDescription": "跟随系统，或选择增强对比度配色。",
+  "@settingsContrastDescription": {
+    "description": "Contrast preference description."
+  },
+  "settingsContrastHigh": "增强",
+  "@settingsContrastHigh": {
+    "description": "High contrast option."
+  },
+  "settingsContrastStandard": "标准",
+  "@settingsContrastStandard": {
+    "description": "Standard contrast option."
+  },
+  "settingsContrastSystem": "跟随系统",
+  "@settingsContrastSystem": {
+    "description": "System contrast option."
+  },
+  "settingsContrastTitle": "对比度",
+  "@settingsContrastTitle": {
+    "description": "Contrast preference title."
+  },
+  "settingsMotionDescription": "跟随系统，或启用、减少面板动效。",
+  "@settingsMotionDescription": {
+    "description": "Motion preference description."
+  },
+  "settingsMotionReduced": "减少",
+  "@settingsMotionReduced": {
+    "description": "Reduced motion option."
+  },
+  "settingsMotionStandard": "标准",
+  "@settingsMotionStandard": {
+    "description": "Standard motion option."
+  },
+  "settingsMotionSystem": "跟随系统",
+  "@settingsMotionSystem": {
+    "description": "System motion option."
+  },
+  "settingsMotionTitle": "动效",
+  "@settingsMotionTitle": {
+    "description": "Motion preference title."
+  },
+  "settingsPanelAnimation0": "0 毫秒",
+  "@settingsPanelAnimation0": {
+    "description": "No panel animation option."
+  },
+  "settingsPanelAnimation150": "150 毫秒",
+  "@settingsPanelAnimation150": {
+    "description": "Default panel animation option."
+  },
+  "settingsPanelAnimation250": "250 毫秒",
+  "@settingsPanelAnimation250": {
+    "description": "Medium panel animation option."
+  },
+  "settingsPanelAnimation400": "400 毫秒",
+  "@settingsPanelAnimation400": {
+    "description": "Long panel animation option."
+  },
+  "settingsPanelAnimationDescription": "控制侧栏、任务面板、归档、后续建议和队列的过渡。",
+  "@settingsPanelAnimationDescription": {
+    "description": "Panel animation preference description."
+  },
+  "settingsPanelAnimationTitle": "面板动画",
+  "@settingsPanelAnimationTitle": {
+    "description": "Panel animation preference title."
+  },
+  "settingsRunningSendDescription": "Pi 运行时，回车发送的消息排在本轮之后，或插入当前任务。",
+  "@settingsRunningSendDescription": {
+    "description": "Running-send preference description."
+  },
+  "settingsRunningSendTitle": "运行中发送",
+  "@settingsRunningSendTitle": {
+    "description": "Running-send preference title."
+  },
+  "titleToggleNavigationShortcut": "切换导航栏（{shortcut}）",
+  "@titleToggleNavigationShortcut": {
+    "description": "Navigation toggle tooltip with shortcut."
+  },
+  "titleToggleTaskPanelShortcut": "切换任务面板（{shortcut}）",
+  "@titleToggleTaskPanelShortcut": {
+    "description": "Task panel toggle tooltip with shortcut."
+  }
+}
