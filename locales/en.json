@@ -1170,6 +1170,34 @@
   "@chatStop": {
     "description": "Chat composer stop button."
   },
+  "hudAutoSuffix": " (auto)",
+  "@hudAutoSuffix": {
+    "description": "Suffix shown when Pi auto-compaction is enabled."
+  },
+  "hudCacheHitCumulative": "Cache hit (cumulative): {percent}%",
+  "@hudCacheHitCumulative": {
+    "description": "Tooltip detail for the HUD cumulative cache hit rate.",
+    "placeholders": {
+      "percent": {
+        "type": "String",
+        "example": "42.5"
+      }
+    }
+  },
+  "hudPiStatus": "Pi: {status}",
+  "@hudPiStatus": {
+    "description": "Compact HUD fallback while Pi is not connected.",
+    "placeholders": {
+      "status": {
+        "type": "String",
+        "example": "Disconnected"
+      }
+    }
+  },
+  "hudSubscriptionSuffix": " (sub)",
+  "@hudSubscriptionSuffix": {
+    "description": "Suffix shown when Pi usage is covered by a subscription."
+  },
   "chatAttachmentUnavailable": "Attachments are not connected yet",
   "@chatAttachmentUnavailable": {
     "description": "Tooltip for the attachment action."
@@ -2100,16 +2128,6 @@
       }
     }
   },
-  "piCliConnectedVersion": "Pi CLI · {version}",
-  "@piCliConnectedVersion": {
-    "description": "Pi CLI connected with version.",
-    "placeholders": {
-      "version": {
-        "type": "String",
-        "example": "1.3.0"
-      }
-    }
-  },
   "piSecondaryConnectedModel": "Connected · {model}",
   "@piSecondaryConnectedModel": {
     "description": "Pi secondary status with model.",
@@ -2572,6 +2590,14 @@
   "@runningSendSteer": {
     "description": "Running-send mode that steers the current task."
   },
+  "runningSendQueueDescription": "Sends after Pi finishes this turn.",
+  "@runningSendQueueDescription": {
+    "description": "Explanation of queue mode while Pi is running."
+  },
+  "runningSendSteerDescription": "Pi handles this after the current reply and tool calls finish; it does not interrupt immediately.",
+  "@runningSendSteerDescription": {
+    "description": "Explanation of steer mode while Pi is running."
+  },
   "sessionArchive": "Archive",
   "@sessionArchive": {
     "description": "Action that archives a session."
@@ -2707,14 +2733,6 @@
   "settingsPanelAnimationTitle": "Panel animation",
   "@settingsPanelAnimationTitle": {
     "description": "Panel animation preference title."
-  },
-  "settingsRunningSendDescription": "While Pi is running, Enter queues the message after this turn, or inserts it into the current task.",
-  "@settingsRunningSendDescription": {
-    "description": "Running-send preference description."
-  },
-  "settingsRunningSendTitle": "Running send",
-  "@settingsRunningSendTitle": {
-    "description": "Running-send preference title."
   },
   "titleToggleNavigationShortcut": "Toggle navigation ({shortcut})",
   "@titleToggleNavigationShortcut": {

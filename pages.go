@@ -1082,20 +1082,6 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 						)
 					})
 
-				settingsCard(c, p, text("settingsRunningSendTitle"),
-					text("settingsRunningSendDescription"), func() {
-						ui.Row(c).Gap(8).Wrap().Children(func() {
-							s.choiceButton(c, p, "running-send-queue", "list",
-								text("runningSendQueue"), s.currentRunningSendMode() == runningSendQueue, func() {
-									s.setRunningSendMode(runningSendQueue)
-								})
-							s.choiceButton(c, p, "running-send-steer", "corner-up-left",
-								text("runningSendSteer"), s.currentRunningSendMode() == runningSendSteer, func() {
-									s.setRunningSendMode(runningSendSteer)
-								})
-						})
-					})
-
 				settingsCard(c, p, locales.SettingsFollowUpTitle(),
 					locales.SettingsFollowUpDescription(), func() {
 						ui.Row(c).Gap(8).Wrap().Children(func() {

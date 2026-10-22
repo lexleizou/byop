@@ -417,12 +417,28 @@ func (s *appState) chatComposer(c *ui.Context) {
 	}
 	cardVisible := visible && style == followUpStyleCard
 	running := s.runActive() && s.run != runStopping
-	sendLabel := text("chatSend")
-	if running {
-		// GlassComposer only reserves its built-in Stop action while the draft is
-		// empty. With text present it renders the primary action as Send, so use
-		// that slot for Stop and keep queue/steer in the trailing control.
-		sendLabel = text("chatStop")
+	width, _ := c.Size()
+	compactHUD := s.chatMainWidth(width) < chat.ContentWidth
+	hudVisible := s.piHUDLabel() != ""
+	composerFooter := func(c *ui.Context) {
+		if hudVisible && !compactHUD {
+			s.piHUD(c)
+		}
+		if hudVisible && !compactHUD {
+			ui.Spacer(c).Grow(0).Width(8).Shrink(0)
+		}
+		switch {
+		case visible && style == followUpStyleGhost:
+			components.Text(c, text("chatFollowUpHint")).FontSize(fontSmall).TextColor(t.TextMuted)
+		case s.run == runStopping:
+			s.statusShimmer(c, text("chatStoppingPi"), t)
+		case s.retrying:
+			s.statusShimmer(c, s.retryStatusLabel(c), t)
+		case s.compacting:
+			s.statusShimmer(c, text("chatCompactingContext"), t)
+		case s.runActive():
+			s.statusShimmer(c, text("chatPiWorking"), t)
+		}
 	}
 	ui.Column(c).FillWidth().MinWidth(0).Children(func() {
 		s.runningQueueBar(c)
@@ -430,35 +446,27 @@ func (s *appState) chatComposer(c *ui.Context) {
 		result := chat.GlassComposer(c, &s.chatView.layout, &s.composerDraft, chat.ComposerOptions{
 			Label:        text("chatMessageLabel"),
 			Placeholder:  placeholder,
-			SendLabel:    sendLabel,
+			SendLabel:    text("chatSend"),
 			StopLabel:    text("chatStop"),
-			Running:      running,
+			Running:      false,
 			SendDisabled: !running && s.piConn != piConnected,
 			Accessory: func(c *ui.Context) {
-				s.composerChoices(c)
+				ui.Row(c).FillWidth().MinWidth(0).AlignItems(ui.Center).Gap(8).Children(func() {
+					if running {
+						s.runningSendModeControl(c)
+					}
+					s.composerChoices(c)
+				})
 			},
 			Trailing: func(c *ui.Context) {
 				if chat.IconAction(c, text("chatAttachmentUnavailable"), lu.Paperclip).Clicked() {
 					s.showNotice(text("chatAttachmentNotice"))
 				}
-				s.runningSendButton(c)
-			},
-			Footer: func(c *ui.Context) {
-				chat.Chip(c, s.piCompactLabel(), chat.ChipOptions{Icon: lu.Terminal, ReadOnly: true})
-				ui.Spacer(c)
-				switch {
-				case visible && style == followUpStyleGhost:
-					components.Text(c, text("chatFollowUpHint")).FontSize(fontSmall).TextColor(t.TextMuted)
-				case s.run == runStopping:
-					s.statusShimmer(c, text("chatStoppingPi"), t)
-				case s.retrying:
-					s.statusShimmer(c, s.retryStatusLabel(c), t)
-				case s.compacting:
-					s.statusShimmer(c, text("chatCompactingContext"), t)
-				case s.runActive():
-					s.statusShimmer(c, text("chatPiWorking"), t)
+				if running {
+					s.runningStopButton(c)
 				}
 			},
+			Footer: composerFooter,
 		})
 		result.Root.Key("chat-composer")
 		result.Input.FontSize(fontBody)
@@ -488,14 +496,32 @@ func (s *appState) chatComposer(c *ui.Context) {
 			})
 		}
 		if result.Send && running {
-			s.stopPrompt()
+			s.sendRunningPrompt(strings.TrimSpace(s.composerDraft), s.currentRunningSendMode())
 		} else if result.Send {
 			s.sendPrompt()
 		}
 		if result.Stop {
 			s.stopPrompt()
 		}
+		if hudVisible && compactHUD {
+			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(24).Padding(0, 10).
+				AlignItems(ui.Center).Children(func() {
+				s.piHUD(c)
+			})
+		}
 	})
+}
+
+func (s *appState) chatMainWidth(windowWidth float32) float32 {
+	navigationWidth := float32(navExpandedWidth + shellGap)
+	if s.navCollapsed {
+		navigationWidth = navCollapsedWidth + shellGap
+	}
+	var tasksWidth float32
+	if s.tasksOpen {
+		tasksWidth = taskPanelWidth + shellGap
+	}
+	return max(0, windowWidth-2*shellGap-navigationWidth-tasksWidth)
 }
 
 func handleRunningComposerInput(ev ui.InputEvent, composing bool, draft string,
@@ -510,27 +536,74 @@ func handleRunningComposerInput(ev ui.InputEvent, composing bool, draft string,
 	return true
 }
 
-func (s *appState) runningSendButton(c *ui.Context) {
-	if !s.runActive() || s.run == runStopping || strings.TrimSpace(s.composerDraft) == "" {
-		return
-	}
+func (s *appState) runningSendModeControl(c *ui.Context) {
+	t := c.Theme()
 	mode := s.currentRunningSendMode()
-	key := oppositeShortcutText()
-	label := runningSendModeLabel(mode)
-	button := ui.ButtonBase(c.Key("running-send-"+string(mode))).Height(26).Padding(0, 9).
-		Radius(13).Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label).
-		Tooltip(textArgs("runningSendOppositeTooltip", map[string]any{
-			"mode":     runningSendModeLabel(oppositeRunningSendMode(mode)),
-			"shortcut": key,
-		}))
+	ui.Row(c).Key("running-send-mode").Shrink(0).Height(26).Padding(2).Gap(2).
+		Radius(7).Border(1, t.Border).Background(t.Surface).Children(func() {
+		segment := func(value runningSendMode, iconName string) {
+			selected := mode == value
+			label := runningSendModeLabel(value)
+			background := ui.Color{}
+			foreground := t.TextMuted
+			if selected {
+				background = t.SurfaceHover
+				foreground = t.Text
+			}
+			button := ui.ButtonBase(c.Key("running-send-mode-"+string(value))).
+				Height(22).Padding(0, 7).Radius(5).Background(background).
+				Cursor(ui.CursorPointer).Label(label).
+				Tooltip(runningSendModeDescription(value) + " · " +
+					textArgs("runningSendOppositeTooltip", map[string]any{
+						"mode":     runningSendModeLabel(oppositeRunningSendMode(mode)),
+						"shortcut": oppositeShortcutText(),
+					}))
+			if button.Hovered() && !selected {
+				button.Background(t.SurfaceHover.Alpha(.7))
+			}
+			button.Children(func() {
+				ui.Row(c).AlignItems(ui.Center).Gap(4).Children(func() {
+					ui.Icon(c, icon(iconName)).Size(12, 12).TextColor(foreground)
+					components.Text(c, label).SingleLine().FontSize(fontSmall).FontWeight(600).TextColor(foreground)
+				})
+			})
+			if button.Clicked() {
+				s.setRunningSendMode(value)
+			}
+		}
+		segment(runningSendQueue, "list")
+		segment(runningSendSteer, "corner-up-left")
+	})
+	if mode == runningSendSteer {
+		components.Text(c, runningSendModeDescription(mode)).SingleLine().FontSize(fontCaption).
+			TextColor(t.TextMuted).Grow(1).MinWidth(0).Ellipsis("…").
+			Tooltip(runningSendModeDescription(mode))
+	} else {
+		ui.Spacer(c)
+	}
+}
+
+func runningSendModeDescription(mode runningSendMode) string {
+	if normalizeRunningSendMode(string(mode)) == runningSendSteer {
+		return text("runningSendSteerDescription")
+	}
+	return text("runningSendQueueDescription")
+}
+
+func (s *appState) runningStopButton(c *ui.Context) {
+	t := c.Theme()
+	label := text("chatStopCurrentRun")
+	button := ui.ButtonBase(c.Key("running-stop")).Size(26, 26).Radius(13).
+		Center().Background(t.Danger.Alpha(.12)).TextColor(t.Danger).
+		Cursor(ui.CursorPointer).Label(label).Tooltip(text("chatStopTooltip"))
 	if button.Hovered() {
-		button.Background(c.Theme().SurfaceHover)
+		button.Background(t.Danger.Alpha(.18))
 	}
 	button.Children(func() {
-		components.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(c.Theme().TextMuted)
+		components.Icon(c, lu.CircleStop).Size(14, 14).TextColor(t.Danger)
 	})
 	if button.Clicked() {
-		s.sendRunningPrompt(strings.TrimSpace(s.composerDraft), mode)
+		s.stopPrompt()
 	}
 }
 

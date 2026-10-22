@@ -4250,6 +4250,64 @@ func (msgs Messages) ChatStop() string {
 	return Catalog.Format(msgs.locale, "chatStop", nil)
 }
 
+// HudAutoSuffix says " (auto)"
+// in the language the app shows.
+//
+// Suffix shown when Pi auto-compaction is enabled.
+func HudAutoSuffix() string { return In(i18n.Locale()).HudAutoSuffix() }
+
+// HudAutoSuffix says " (auto)"
+// in the language of msgs.
+//
+// Suffix shown when Pi auto-compaction is enabled.
+func (msgs Messages) HudAutoSuffix() string {
+	return Catalog.Format(msgs.locale, "hudAutoSuffix", nil)
+}
+
+// HudCacheHitCumulative says "Cache hit (cumulative): {percent}%"
+// in the language the app shows.
+//
+// Tooltip detail for the HUD cumulative cache hit rate.
+func HudCacheHitCumulative(percent string) string {
+	return In(i18n.Locale()).HudCacheHitCumulative(percent)
+}
+
+// HudCacheHitCumulative says "Cache hit (cumulative): {percent}%"
+// in the language of msgs.
+//
+// Tooltip detail for the HUD cumulative cache hit rate.
+func (msgs Messages) HudCacheHitCumulative(percent string) string {
+	return Catalog.Format(msgs.locale, "hudCacheHitCumulative", map[string]any{"percent": percent})
+}
+
+// HudPiStatus says "Pi: {status}"
+// in the language the app shows.
+//
+// Compact HUD fallback while Pi is not connected.
+func HudPiStatus(status string) string { return In(i18n.Locale()).HudPiStatus(status) }
+
+// HudPiStatus says "Pi: {status}"
+// in the language of msgs.
+//
+// Compact HUD fallback while Pi is not connected.
+func (msgs Messages) HudPiStatus(status string) string {
+	return Catalog.Format(msgs.locale, "hudPiStatus", map[string]any{"status": status})
+}
+
+// HudSubscriptionSuffix says " (sub)"
+// in the language the app shows.
+//
+// Suffix shown when Pi usage is covered by a subscription.
+func HudSubscriptionSuffix() string { return In(i18n.Locale()).HudSubscriptionSuffix() }
+
+// HudSubscriptionSuffix says " (sub)"
+// in the language of msgs.
+//
+// Suffix shown when Pi usage is covered by a subscription.
+func (msgs Messages) HudSubscriptionSuffix() string {
+	return Catalog.Format(msgs.locale, "hudSubscriptionSuffix", nil)
+}
+
 // ChatAttachmentUnavailable says "Attachments are not connected yet"
 // in the language the app shows.
 //
@@ -6936,22 +6994,6 @@ func (msgs Messages) DiagnosticRetryFailed(error string) string {
 	return Catalog.Format(msgs.locale, "diagnosticRetryFailed", map[string]any{"error": error})
 }
 
-// PiCliConnectedVersion says "Pi CLI · {version}"
-// in the language the app shows.
-//
-// Pi CLI connected with version.
-func PiCliConnectedVersion(version string) string {
-	return In(i18n.Locale()).PiCliConnectedVersion(version)
-}
-
-// PiCliConnectedVersion says "Pi CLI · {version}"
-// in the language of msgs.
-//
-// Pi CLI connected with version.
-func (msgs Messages) PiCliConnectedVersion(version string) string {
-	return Catalog.Format(msgs.locale, "piCliConnectedVersion", map[string]any{"version": version})
-}
-
 // PiSecondaryConnectedModel says "Connected · {model}"
 // in the language the app shows.
 //
@@ -8216,6 +8258,34 @@ func (msgs Messages) RunningSendSteer() string {
 	return Catalog.Format(msgs.locale, "runningSendSteer", nil)
 }
 
+// RunningSendQueueDescription says "Sends after Pi finishes this turn."
+// in the language the app shows.
+//
+// Explanation of queue mode while Pi is running.
+func RunningSendQueueDescription() string { return In(i18n.Locale()).RunningSendQueueDescription() }
+
+// RunningSendQueueDescription says "Sends after Pi finishes this turn."
+// in the language of msgs.
+//
+// Explanation of queue mode while Pi is running.
+func (msgs Messages) RunningSendQueueDescription() string {
+	return Catalog.Format(msgs.locale, "runningSendQueueDescription", nil)
+}
+
+// RunningSendSteerDescription says "Pi handles this after the current reply and tool calls finish; it does not interrupt immediately."
+// in the language the app shows.
+//
+// Explanation of steer mode while Pi is running.
+func RunningSendSteerDescription() string { return In(i18n.Locale()).RunningSendSteerDescription() }
+
+// RunningSendSteerDescription says "Pi handles this after the current reply and tool calls finish; it does not interrupt immediately."
+// in the language of msgs.
+//
+// Explanation of steer mode while Pi is running.
+func (msgs Messages) RunningSendSteerDescription() string {
+	return Catalog.Format(msgs.locale, "runningSendSteerDescription", nil)
+}
+
 // SessionArchive says "Archive"
 // in the language the app shows.
 //
@@ -8696,36 +8766,6 @@ func SettingsPanelAnimationTitle() string { return In(i18n.Locale()).SettingsPan
 // Panel animation preference title.
 func (msgs Messages) SettingsPanelAnimationTitle() string {
 	return Catalog.Format(msgs.locale, "settingsPanelAnimationTitle", nil)
-}
-
-// SettingsRunningSendDescription says "While Pi is running, Enter queues the message after this turn, or inserts it into the current task."
-// in the language the app shows.
-//
-// Running-send preference description.
-func SettingsRunningSendDescription() string {
-	return In(i18n.Locale()).SettingsRunningSendDescription()
-}
-
-// SettingsRunningSendDescription says "While Pi is running, Enter queues the message after this turn, or inserts it into the current task."
-// in the language of msgs.
-//
-// Running-send preference description.
-func (msgs Messages) SettingsRunningSendDescription() string {
-	return Catalog.Format(msgs.locale, "settingsRunningSendDescription", nil)
-}
-
-// SettingsRunningSendTitle says "Running send"
-// in the language the app shows.
-//
-// Running-send preference title.
-func SettingsRunningSendTitle() string { return In(i18n.Locale()).SettingsRunningSendTitle() }
-
-// SettingsRunningSendTitle says "Running send"
-// in the language of msgs.
-//
-// Running-send preference title.
-func (msgs Messages) SettingsRunningSendTitle() string {
-	return Catalog.Format(msgs.locale, "settingsRunningSendTitle", nil)
 }
 
 // TitleToggleNavigationShortcut says "Toggle navigation ({shortcut})"

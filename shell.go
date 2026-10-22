@@ -131,8 +131,9 @@ func (s *appState) titleBarHeading(c *ui.Context, p palette) {
 					return false
 				})
 			})
-			iconButton(c, p, "session-title-rename-save", "check",
-				text("titleSaveSessionName"), false, func() {
+			iconButtonDisabled(c, p, "session-title-rename-save", "check",
+				text("titleSaveSessionName"), false,
+				s.sessionNamingCommitInFlight || s.sessionRenameInFlight, func() {
 					s.saveSessionRename()
 				})
 		})
@@ -167,7 +168,8 @@ func (s *appState) sessionTitleMenu(c *ui.Context, p palette) {
 		ui.Icon(c, icon("chevron-down")).Size(14, 14).TextColor(p.muted)
 	})
 	connected := s.piConn == piConnected
-	available := connected && !s.piSessionBusy
+	available := connected && !s.piSessionBusy &&
+		!s.sessionNamingCommitInFlight && !s.sessionRenameInFlight
 	button.Menu(func(m *ui.Menu) {
 		if m.Item(text("titleRenameSession")).Disabled(!available || s.piSessionID == "").Chosen() {
 			s.beginSessionRename()
@@ -246,15 +248,22 @@ func panelToggleButton(c *ui.Context, p palette, key, iconName, label string, se
 	}
 }
 
+// Shared shell widths. chatMainWidth uses the same values to decide HUD wrapping.
+const (
+	navExpandedWidth  = 200
+	navCollapsedWidth = 56
+	taskPanelWidth    = 320
+)
+
 func brandMark(c *ui.Context, p palette, size float32) ui.Element {
 	return ui.Icon(c, icon("byop")).Size(size, size).TextColor(p.text).
 		Label("Build You Own Pi")
 }
 
 func (s *appState) navigation(c *ui.Context, p palette) {
-	width := float32(200)
+	width := float32(navExpandedWidth)
 	if s.navCollapsed {
-		width = 56
+		width = navCollapsedWidth
 	}
 
 	nav := ui.Column(c)
@@ -978,13 +987,15 @@ func (s *appState) integrationStatus(c *ui.Context, p palette) {
 		})
 	} else {
 		box = ui.ButtonBase(c.Key("pi-connection")).Grow(1).MinWidth(0).Height(36).
-			Padding(0, 8).Radius(8).AlignItems(ui.Center).Gap(7).
+			Padding(0, 10).Radius(8).Justify(ui.Start).AlignItems(ui.Center).Gap(10).
 			Label(label).Tooltip(label).Cursor(ui.CursorPointer)
 		if box.Hovered() {
 			box.Background(p.surfaceHover)
 		}
 		box.Children(func() {
-			ui.Box(c).Size(8, 8).Radius(4).Background(s.piTone(p))
+			ui.Row(c).Size(20, 20).Shrink(0).Center().Children(func() {
+				ui.Box(c).Size(8, 8).Radius(4).Background(s.piTone(p))
+			})
 			ui.Text(c, s.connectionStateLabel()).FontSize(fontSmall).FontWeight(600).
 				TextColor(p.muted).SingleLine()
 		})
@@ -1099,12 +1110,13 @@ func (s *appState) noticeBanner(c *ui.Context, p palette) {
 func (s *appState) taskPanel(c *ui.Context, p palette) {
 	target := float32(0)
 	if s.tasksOpen {
-		target = 320 + shellGap
+		target = taskPanelWidth + shellGap
 	}
 	panel := ui.Column(c)
 	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
 	animatedWidth := panel.AnimateWith("task-panel-width", target, duration, ui.EaseOut)
 	if animatedWidth < 1 {
+		panel.Width(0).Shrink(0)
 		return
 	}
 	leftGap := min(shellGap, animatedWidth)
@@ -1228,6 +1240,16 @@ func statusPill(c *ui.Context, p palette, label string, ccolor ui.Color) {
 }
 
 func iconButton(c *ui.Context, p palette, key, iconName, label string, selected bool, click func()) {
+	iconButtonDisabled(c, p, key, iconName, label, selected, false, click)
+}
+
+func iconButtonDisabled(
+	c *ui.Context,
+	p palette,
+	key, iconName, label string,
+	selected, disabled bool,
+	click func(),
+) {
 	bg := ui.Color{}
 	fg := p.muted
 	if selected {
@@ -1235,14 +1257,14 @@ func iconButton(c *ui.Context, p palette, key, iconName, label string, selected 
 		fg = p.accent
 	}
 	btn := ui.ButtonBase(c.Key(key)).Size(34, 34).Radius(8).Background(bg).
-		Center().Cursor(ui.CursorPointer).Label(label).Tooltip(label)
-	if !selected && btn.Hovered() {
+		Center().Cursor(ui.CursorPointer).Label(label).Tooltip(label).Disabled(disabled)
+	if !selected && !disabled && btn.Hovered() {
 		btn.Background(p.surfaceHover)
 	}
 	btn.Children(func() {
 		ui.Icon(c, icon(iconName)).Size(17, 17).TextColor(fg)
 	})
-	if btn.Clicked() {
+	if !disabled && btn.Clicked() {
 		click()
 	}
 }
@@ -1348,14 +1370,6 @@ func (s *appState) piConnectionLabel() string {
 	default:
 		return text("piDisconnected")
 	}
-}
-
-func (s *appState) piCompactLabel() string {
-	label := "Pi CLI · " + s.connectionStateLabel()
-	if s.piVersion != "" && s.piConn == piConnected {
-		label = textArgs("piCliConnectedVersion", map[string]any{"version": s.piVersion})
-	}
-	return label
 }
 
 func (s *appState) piSecondaryLabel() string {

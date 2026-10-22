@@ -108,6 +108,51 @@ func TestBeginPiSessionOperationInvalidatesPendingSessionNaming(t *testing.T) {
 	}
 }
 
+func TestInvalidateSessionNamingKeepsCommitOwnershipUntilCallback(t *testing.T) {
+	state := &appState{
+		sessionNamingGen:            11,
+		sessionNamingInProgress:     true,
+		sessionNamingCommitInFlight: true,
+		sessionNamingCommitSeq:      7,
+		sessionNamingCommitOwner:    sessionNameCommitAuto,
+	}
+	state.invalidateSessionNaming()
+	if state.sessionNamingGen != 12 {
+		t.Fatalf("naming generation = %d, want 12", state.sessionNamingGen)
+	}
+	if state.sessionNamingInProgress {
+		t.Fatal("naming result incorrectly stayed in progress")
+	}
+	if !state.sessionNamingCommitInFlight ||
+		state.sessionNamingCommitSeq != 7 ||
+		state.sessionNamingCommitOwner != sessionNameCommitAuto {
+		t.Fatalf("invalidation cleared an in-flight commit: %#v", state)
+	}
+	state.finishSessionNameCommit(7, sessionNameCommitAuto)
+	if state.sessionNamingCommitInFlight || state.sessionNamingCommitOwner != sessionNameCommitNone {
+		t.Fatalf("matching commit callback did not finish ownership: %#v", state)
+	}
+}
+
+func TestStaleCommitCallbackCannotClearNewCommitState(t *testing.T) {
+	state := &appState{
+		sessionNamingGen:            13,
+		sessionNamingCommitSeq:      8,
+		sessionNamingCommitOwner:    sessionNameCommitAuto,
+		sessionNamingCommitInFlight: true,
+	}
+	state.finishSessionNameCommit(7, sessionNameCommitAuto)
+	if !state.sessionNamingCommitInFlight ||
+		state.sessionNamingCommitSeq != 8 ||
+		state.sessionNamingCommitOwner != sessionNameCommitAuto {
+		t.Fatalf("stale callback cleared the current commit: %#v", state)
+	}
+	state.finishSessionNameCommit(8, sessionNameCommitAuto)
+	if state.sessionNamingCommitInFlight || state.sessionNamingCommitOwner != sessionNameCommitNone {
+		t.Fatalf("current callback did not finish commit ownership: %#v", state)
+	}
+}
+
 func TestPendingSessionNamingDoesNotWriteAfterSessionSwitch(t *testing.T) {
 	client := &piClient{}
 	state := &appState{
@@ -143,6 +188,73 @@ func TestPendingSessionNamingDoesNotWriteAfterSessionSwitch(t *testing.T) {
 	}
 	if rpc.setNameCalls != 0 || rpc.lastWrittenName != "" {
 		t.Fatalf("stale naming request wrote %q %d time(s)", rpc.lastWrittenName, rpc.setNameCalls)
+	}
+}
+
+func TestSessionNamingEntryPointsReturnWhilePiSessionBusy(t *testing.T) {
+	state := &appState{
+		pi:                   &piClient{},
+		piConn:               piConnected,
+		piSessionID:          "session",
+		piSessionBusy:        true,
+		sessionRenameEditing: true,
+		sessionRenameDraft:   "Manual name",
+		sessionNamingGen:     19,
+		chat:                 []chatMessage{{role: chatUser, blocks: []chatBlock{{kind: chatBlockText, text: "prompt"}}}},
+	}
+	state.startContextSessionNaming()
+	if state.sessionNamingGen != 19 || state.sessionNamingInProgress {
+		t.Fatalf("context naming started while Pi session was busy: %#v", state)
+	}
+	if state.saveSessionRename() {
+		t.Fatal("manual rename was saved while Pi session was busy")
+	}
+	if !state.sessionRenameEditing {
+		t.Fatal("busy-session rename was cancelled despite being rejected")
+	}
+	state.startSessionNaming([]namingTurn{{Role: "User", Text: "prompt"}}, true)
+	if state.sessionNamingGen != 19 || state.sessionNamingInProgress {
+		t.Fatalf("auto naming started while Pi session was busy: %#v", state)
+	}
+}
+
+func TestSessionNameCommitUIEntryRejectsBusyBeforeStartingWorker(t *testing.T) {
+	state := &appState{
+		piSessionBusy:               true,
+		sessionNamingCommitSeq:      12,
+		sessionNamingCommitOwner:    sessionNameCommitAuto,
+		sessionNamingCommitInFlight: true,
+		sessionNamingInProgress:     true,
+	}
+	started := state.startSessionNameCommit(nil, 3, 7, sessionNameCommitAuto, 12,
+		"Name", "session.jsonl", "session", false, false)
+	if started {
+		t.Fatal("session-name worker started while the Pi session was busy")
+	}
+	if state.sessionNamingCommitInFlight || state.sessionNamingInProgress ||
+		state.sessionNamingCommitOwner != sessionNameCommitNone {
+		t.Fatalf("busy UI entry did not finish commit ownership: %#v", state)
+	}
+}
+
+func TestManualSessionRenameDisabledDuringAutoNameCommit(t *testing.T) {
+	state := &appState{
+		pi:                          &piClient{},
+		piConn:                      piConnected,
+		piSessionID:                 "session",
+		sessionNamingCommitInFlight: true,
+	}
+	state.beginSessionRename()
+	if state.sessionRenameEditing {
+		t.Fatal("manual rename opened while an automatic name commit was in flight")
+	}
+	state.sessionRenameEditing = true
+	state.sessionRenameDraft = "Manual name"
+	if state.saveSessionRename() {
+		t.Fatal("manual rename saved while an automatic name commit was in flight")
+	}
+	if !state.sessionRenameEditing || state.sessionRenameDraft != "Manual name" {
+		t.Fatal("rejected manual rename did not retain its draft")
 	}
 }
 

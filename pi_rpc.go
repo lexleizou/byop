@@ -24,39 +24,41 @@ var errPiProcessExited = errors.New("Pi RPC process exited")
 type piEventKind string
 
 const (
-	piEventResponse     piEventKind = "response"
-	piEventRunStarted   piEventKind = "run_started"
-	piEventUserMessage  piEventKind = "user_message"
-	piEventText         piEventKind = "text"
-	piEventMessage      piEventKind = "message"
-	piEventToolStart    piEventKind = "tool_start"
-	piEventToolUpdate   piEventKind = "tool_update"
-	piEventToolEnd      piEventKind = "tool_end"
-	piEventSettled      piEventKind = "settled"
-	piEventQueueUpdate  piEventKind = "queue_update"
-	piEventCompactStart piEventKind = "compaction_start"
-	piEventCompactEnd   piEventKind = "compaction_end"
-	piEventRetryStart   piEventKind = "auto_retry_start"
-	piEventRetryEnd     piEventKind = "auto_retry_end"
-	piEventAgentEnd     piEventKind = "agent_end"
-	piEventExtensionErr piEventKind = "extension_error"
-	piEventProcessExit  piEventKind = "process_exit"
-	piEventParseError   piEventKind = "parse_error"
+	piEventResponse        piEventKind = "response"
+	piEventRunStarted      piEventKind = "run_started"
+	piEventUserMessage     piEventKind = "user_message"
+	piEventText            piEventKind = "text"
+	piEventMessage         piEventKind = "message"
+	piEventToolStart       piEventKind = "tool_start"
+	piEventToolUpdate      piEventKind = "tool_update"
+	piEventToolEnd         piEventKind = "tool_end"
+	piEventSettled         piEventKind = "settled"
+	piEventQueueUpdate     piEventKind = "queue_update"
+	piEventCompactStart    piEventKind = "compaction_start"
+	piEventCompactEnd      piEventKind = "compaction_end"
+	piEventRetryStart      piEventKind = "auto_retry_start"
+	piEventRetryEnd        piEventKind = "auto_retry_end"
+	piEventAgentEnd        piEventKind = "agent_end"
+	piEventExtensionErr    piEventKind = "extension_error"
+	piEventExtensionStatus piEventKind = "extension_status"
+	piEventExtensionNotify piEventKind = "extension_notify"
+	piEventProcessExit     piEventKind = "process_exit"
+	piEventParseError      piEventKind = "parse_error"
 )
 
 type piSessionState struct {
-	SessionID           string `json:"sessionId"`
-	SessionName         string `json:"sessionName"`
-	IsStreaming         bool   `json:"isStreaming"`
-	IsCompacting        bool   `json:"isCompacting"`
-	PendingMessageCount int    `json:"pendingMessageCount"`
-	MessageCount        int    `json:"messageCount"`
-	ThinkingLevel       string `json:"thinkingLevel"`
-	SteeringMode        string `json:"steeringMode"`
-	FollowUpMode        string `json:"followUpMode"`
-	AutoCompaction      bool   `json:"autoCompactionEnabled"`
-	SessionFile         string `json:"sessionFile"`
-	Model               struct {
+	SessionID             string `json:"sessionId"`
+	SessionName           string `json:"sessionName"`
+	IsStreaming           bool   `json:"isStreaming"`
+	IsCompacting          bool   `json:"isCompacting"`
+	PendingMessageCount   int    `json:"pendingMessageCount"`
+	MessageCount          int    `json:"messageCount"`
+	ThinkingLevel         string `json:"thinkingLevel"`
+	SteeringMode          string `json:"steeringMode"`
+	FollowUpMode          string `json:"followUpMode"`
+	AutoCompactionEnabled bool   `json:"autoCompactionEnabled"`
+	SessionFile           string `json:"sessionFile"`
+	Model                 struct {
 		Provider      string   `json:"provider"`
 		ID            string   `json:"id"`
 		Name          string   `json:"name"`
@@ -64,6 +66,33 @@ type piSessionState struct {
 		ContextWindow int      `json:"contextWindow"`
 		Input         []string `json:"input"`
 	} `json:"model"`
+}
+
+type piSessionTokens struct {
+	Input      int64 `json:"input"`
+	Output     int64 `json:"output"`
+	CacheRead  int64 `json:"cacheRead"`
+	CacheWrite int64 `json:"cacheWrite"`
+	Total      int64 `json:"total"`
+}
+
+type piContextUsage struct {
+	Tokens        *int64   `json:"tokens"`
+	ContextWindow int      `json:"contextWindow"`
+	Percent       *float64 `json:"percent"`
+}
+
+type piSessionStats struct {
+	SessionFile       string          `json:"sessionFile"`
+	SessionID         string          `json:"sessionId"`
+	UserMessages      int             `json:"userMessages"`
+	AssistantMessages int             `json:"assistantMessages"`
+	ToolCalls         int             `json:"toolCalls"`
+	ToolResults       int             `json:"toolResults"`
+	TotalMessages     int             `json:"totalMessages"`
+	Tokens            piSessionTokens `json:"tokens"`
+	Cost              float64         `json:"cost"`
+	ContextUsage      *piContextUsage `json:"contextUsage"`
 }
 
 type piModel struct {
@@ -131,6 +160,9 @@ type piEvent struct {
 	RetrySucceeded bool
 	ExtensionPath  string
 	ExtensionEvent string
+	StatusKey      string
+	StatusText     *string
+	NotifyType     string
 }
 
 type piStopResult struct {
@@ -292,6 +324,18 @@ func (p *piClient) GetState(ctx context.Context) (*piSessionState, error) {
 		return nil, fmt.Errorf("parse Pi state: %w", err)
 	}
 	return &state, nil
+}
+
+func (p *piClient) GetSessionStats(ctx context.Context) (*piSessionStats, error) {
+	data, err := p.request(ctx, map[string]any{"type": "get_session_stats"})
+	if err != nil {
+		return nil, err
+	}
+	var stats piSessionStats
+	if err := json.Unmarshal(data, &stats); err != nil {
+		return nil, fmt.Errorf("parse Pi session stats: %w", err)
+	}
+	return &stats, nil
 }
 
 func (p *piClient) SetSessionName(ctx context.Context, name string) error {
@@ -795,7 +839,66 @@ func (p *piClient) handleRecord(line []byte) {
 			ExtensionEvent: event.Event,
 			Error:          fallback(event.Error, "Pi extension error"),
 		})
+	case "extension_ui_request":
+		p.handleExtensionUIRequest(line)
 	}
+}
+
+func (p *piClient) handleExtensionUIRequest(line []byte) {
+	var request struct {
+		ID         string  `json:"id"`
+		Method     string  `json:"method"`
+		StatusKey  string  `json:"statusKey"`
+		StatusText *string `json:"statusText"`
+		Message    string  `json:"message"`
+		NotifyType string  `json:"notifyType"`
+	}
+	if err := json.Unmarshal(line, &request); err != nil {
+		p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi extension UI request: " + err.Error()})
+		return
+	}
+	switch request.Method {
+	case "setStatus":
+		statusText := request.StatusText
+		if statusText != nil {
+			clean := sanitizePiStatusText(*statusText)
+			if clean == "" {
+				statusText = nil
+			} else {
+				statusText = &clean
+			}
+		}
+		p.emit(piEvent{
+			Kind:       piEventExtensionStatus,
+			StatusKey:  strings.TrimSpace(request.StatusKey),
+			StatusText: statusText,
+		})
+	case "notify":
+		p.emit(piEvent{
+			Kind:       piEventExtensionNotify,
+			NotifyType: strings.ToLower(strings.TrimSpace(request.NotifyType)),
+			Text:       strings.TrimSpace(request.Message),
+		})
+	case "select", "confirm", "input", "editor":
+		if strings.TrimSpace(request.ID) == "" {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Pi extension UI request has an empty ID"})
+			return
+		}
+		_, _ = p.send(extensionUICancelledResponse(request.ID))
+	}
+}
+
+func extensionUICancelledResponse(id string) map[string]any {
+	return map[string]any{
+		"type":      "extension_ui_response",
+		"id":        id,
+		"cancelled": true,
+	}
+}
+
+func sanitizePiStatusText(value string) string {
+	value = strings.NewReplacer("\r", " ", "\n", " ", "\t", " ").Replace(value)
+	return strings.Join(strings.Fields(value), " ")
 }
 
 func (p *piClient) handleResponse(record piRPCResponse) {

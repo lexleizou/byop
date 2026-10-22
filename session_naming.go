@@ -30,6 +30,14 @@ type sessionNameRPC interface {
 	SetSessionName(context.Context, string) error
 }
 
+type sessionNameCommitOwner string
+
+const (
+	sessionNameCommitNone   sessionNameCommitOwner = ""
+	sessionNameCommitAuto   sessionNameCommitOwner = "auto"
+	sessionNameCommitManual sessionNameCommitOwner = "manual"
+)
+
 func localTemporarySessionTitle(value string) string {
 	value = singleLineText(value)
 	runes := []rune(value)
@@ -216,8 +224,6 @@ func (s *appState) invalidateSessionNaming() {
 		s.sessionNamingCancel = nil
 	}
 	s.sessionNamingInProgress = false
-	s.sessionNamingCommitInFlight = false
-	s.sessionRenameInFlight = false
 }
 
 func (s *appState) maybeStartAutoSessionNaming(prompt, reply string) {
@@ -243,7 +249,7 @@ func (s *appState) maybeStartAutoSessionNaming(prompt, reply string) {
 }
 
 func (s *appState) startContextSessionNaming() {
-	if s.piSessionBusy {
+	if s.piSessionBusy || s.sessionNamingCommitInFlight || s.sessionRenameInFlight {
 		return
 	}
 	turns := namingTurnsFromChat(s.chat, namingContextLimit)
@@ -256,7 +262,8 @@ func (s *appState) startContextSessionNaming() {
 }
 
 func (s *appState) startSessionNaming(turns []namingTurn, overwrite bool) {
-	if s.piSessionBusy || s.pi == nil || s.piConn != piConnected || len(turns) == 0 {
+	if s.piSessionBusy || s.sessionNamingCommitInFlight || s.sessionRenameInFlight ||
+		s.pi == nil || s.piConn != piConnected || len(turns) == 0 {
 		return
 	}
 	client := s.pi
@@ -296,14 +303,16 @@ func (s *appState) startSessionNaming(turns []namingTurn, overwrite bool) {
 				s.sessionNamingInProgress = false
 				return
 			}
-			s.sessionNamingCommitInFlight = true
-			go s.commitSessionName(client, epoch, gen, name, sessionPath, sessionID, overwrite, false)
+			token := s.beginSessionNameCommit(sessionNameCommitAuto, gen)
+			s.startSessionNameCommit(client, epoch, gen, sessionNameCommitAuto, token,
+				name, sessionPath, sessionID, overwrite, false)
 		})
 	}()
 }
 
 func (s *appState) beginSessionRename() {
-	if s.piSessionBusy || s.piSessionID == "" || s.piConn != piConnected {
+	if s.piSessionBusy || s.sessionNamingCommitInFlight || s.sessionRenameInFlight ||
+		s.piSessionID == "" || s.piConn != piConnected {
 		return
 	}
 	s.invalidateSessionNaming()
@@ -317,7 +326,7 @@ func (s *appState) cancelSessionRename() {
 }
 
 func (s *appState) saveSessionRename() bool {
-	if s.piSessionBusy {
+	if s.piSessionBusy || s.sessionNamingCommitInFlight || s.sessionRenameInFlight {
 		return false
 	}
 	name := normalizedSessionName(s.sessionRenameDraft)
@@ -333,9 +342,36 @@ func (s *appState) saveSessionRename() bool {
 	gen := s.sessionNamingGen
 	s.sessionRenameEditing = false
 	s.sessionRenameDraft = ""
-	s.sessionRenameInFlight = true
-	go s.commitSessionName(client, epoch, gen, name, s.piSessionFile, s.piSessionID, true, true)
+	token := s.beginSessionNameCommit(sessionNameCommitManual, gen)
+	s.startSessionNameCommit(client, epoch, gen, sessionNameCommitManual, token,
+		name, s.piSessionFile, s.piSessionID, true, true)
 	return true
+}
+
+func (s *appState) beginSessionNameCommit(owner sessionNameCommitOwner, gen uint64) uint64 {
+	s.sessionNamingCommitSeq++
+	token := s.sessionNamingCommitSeq
+	s.sessionNamingCommitOwner = owner
+	s.sessionNamingCommitInFlight = owner == sessionNameCommitAuto
+	s.sessionRenameInFlight = owner == sessionNameCommitManual
+	if gen == s.sessionNamingGen {
+		s.sessionNamingInProgress = owner == sessionNameCommitAuto
+	}
+	return token
+}
+
+func (s *appState) finishSessionNameCommit(token uint64, owner sessionNameCommitOwner) {
+	if token == 0 || token != s.sessionNamingCommitSeq || owner != s.sessionNamingCommitOwner {
+		return
+	}
+	switch owner {
+	case sessionNameCommitAuto:
+		s.sessionNamingCommitInFlight = false
+		s.sessionNamingInProgress = false
+	case sessionNameCommitManual:
+		s.sessionRenameInFlight = false
+	}
+	s.sessionNamingCommitOwner = sessionNameCommitNone
 }
 
 func (s *appState) sessionNamingResultCurrent(
@@ -391,9 +427,31 @@ func writeSessionName(
 	return state, stateErr, err
 }
 
-func (s *appState) commitSessionName(
+func (s *appState) startSessionNameCommit(
 	client *piClient,
 	epoch, gen uint64,
+	owner sessionNameCommitOwner,
+	token uint64,
+	name, expectedPath, expectedID string,
+	allowOverwrite, showFailure bool,
+) bool {
+	if token == 0 || token != s.sessionNamingCommitSeq || owner != s.sessionNamingCommitOwner {
+		return false
+	}
+	if s.piSessionBusy {
+		s.finishSessionNameCommit(token, owner)
+		return false
+	}
+	go s.runSessionNameCommit(client, epoch, gen, owner, token,
+		name, expectedPath, expectedID, allowOverwrite, showFailure)
+	return true
+}
+
+func (s *appState) runSessionNameCommit(
+	client *piClient,
+	epoch, gen uint64,
+	owner sessionNameCommitOwner,
+	token uint64,
 	name, expectedPath, expectedID string,
 	allowOverwrite, showFailure bool,
 ) {
@@ -401,13 +459,12 @@ func (s *appState) commitSessionName(
 		client, name, expectedPath, expectedID, allowOverwrite,
 	)
 	s.postUI(func() {
+		s.finishSessionNameCommit(token, owner)
 		if gen != s.sessionNamingGen || epoch != s.piEpoch || s.pi != client ||
 			!sessionNameTargetMatches(expectedPath, expectedID, s.piSessionFile, s.piSessionID) {
 			return
 		}
 		s.sessionNamingInProgress = false
-		s.sessionNamingCommitInFlight = false
-		s.sessionRenameInFlight = false
 		if err != nil {
 			if showFailure {
 				s.showNotice(textArgs("noticeSessionRenameFailed", map[string]any{

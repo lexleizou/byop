@@ -1165,6 +1165,34 @@
   "@chatStop": {
     "description": "Chat composer stop button."
   },
+  "hudAutoSuffix": "（自动）",
+  "@hudAutoSuffix": {
+    "description": "Suffix shown when Pi auto-compaction is enabled."
+  },
+  "hudCacheHitCumulative": "缓存命中（累计）：{percent}%",
+  "@hudCacheHitCumulative": {
+    "description": "Tooltip detail for the HUD cumulative cache hit rate.",
+    "placeholders": {
+      "percent": {
+        "type": "String",
+        "example": "42.5"
+      }
+    }
+  },
+  "hudPiStatus": "Pi：{status}",
+  "@hudPiStatus": {
+    "description": "Compact HUD fallback while Pi is not connected.",
+    "placeholders": {
+      "status": {
+        "type": "String",
+        "example": "Disconnected"
+      }
+    }
+  },
+  "hudSubscriptionSuffix": "（订阅）",
+  "@hudSubscriptionSuffix": {
+    "description": "Suffix shown when Pi usage is covered by a subscription."
+  },
   "chatAttachmentUnavailable": "尚未接入附件",
   "@chatAttachmentUnavailable": {
     "description": "Tooltip for the attachment action."
@@ -1935,10 +1963,6 @@
   "@diagnosticRetryFailed": {
     "description": "Runtime retry error."
   },
-  "piCliConnectedVersion": "Pi CLI · {version}",
-  "@piCliConnectedVersion": {
-    "description": "Pi CLI connected with version."
-  },
   "piSecondaryConnectedModel": "已连接 · {model}",
   "@piSecondaryConnectedModel": {
     "description": "Pi secondary status with model."
@@ -2279,6 +2303,14 @@
   "@runningSendSteer": {
     "description": "Running-send mode that steers the current task."
   },
+  "runningSendQueueDescription": "本轮结束后发送。",
+  "@runningSendQueueDescription": {
+    "description": "Explanation of queue mode while Pi is running."
+  },
+  "runningSendSteerDescription": "Pi 会在当前回复及其工具调用结束后处理该消息，不会立即打断。",
+  "@runningSendSteerDescription": {
+    "description": "Explanation of steer mode while Pi is running."
+  },
   "sessionArchive": "归档",
   "@sessionArchive": {
     "description": "Action that archives a session."
@@ -2414,14 +2446,6 @@
   "settingsPanelAnimationTitle": "面板动画",
   "@settingsPanelAnimationTitle": {
     "description": "Panel animation preference title."
-  },
-  "settingsRunningSendDescription": "Pi 运行时，回车发送的消息排在本轮之后，或插入当前任务。",
-  "@settingsRunningSendDescription": {
-    "description": "Running-send preference description."
-  },
-  "settingsRunningSendTitle": "运行中发送",
-  "@settingsRunningSendTitle": {
-    "description": "Running-send preference title."
   },
   "titleToggleNavigationShortcut": "切换导航栏（{shortcut}）",
   "@titleToggleNavigationShortcut": {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/oneo-me/onevra/source/components/chat"
 )
 
 func TestP10aNavigationFooterVisibleWithManySessions(t *testing.T) {
@@ -120,10 +121,75 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 				assertInsideViewport(t, tt, scenario.mark(state), size.height)
 				assertInsideViewport(t, tt, text("chatMessageLabel"), size.height)
 				assertInsideViewport(t, tt, text("chatAttachmentUnavailable"), size.height)
-				assertInsideViewport(t, tt, state.piCompactLabel(), size.height)
+				assertInsideViewport(t, tt, state.piHUDLabel(), size.height)
+				assertInsideViewport(t, tt, text("chatSend"), size.height)
+				assertComposerFooterInsideViewport(t, tt, state.piHUDLabel(), size.height)
+				if scenario.name == "running queue" {
+					assertInsideViewport(t, tt, text("runningSendQueue"), size.height)
+					assertInsideViewport(t, tt, text("runningSendSteer"), size.height)
+					assertInsideViewport(t, tt, text("chatStopCurrentRun"), size.height)
+				} else {
+					assertNotRendered(t, tt, text("chatStopCurrentRun"))
+				}
 			})
 		}
 	}
+}
+
+func TestP10cBodyAndTaskPanelLayoutInvariants(t *testing.T) {
+	if fontBody != 14 {
+		t.Fatalf("body font = %vpx, want 14px", fontBody)
+	}
+	restoreAppearance := stableTestAppearance(t)
+	defer restoreAppearance()
+
+	state := layoutTestState(t)
+	state.tasksOpen = true
+	tt := ui.NewTester(state.view, 1100, 560)
+	assertInsideViewport(t, tt, text("tasksTitle"), 560)
+	assertInsideViewport(t, tt, text("tasksOwnership"), 560)
+}
+
+func TestP10cHUDSwitchesUsingChatMainAreaWidth(t *testing.T) {
+	restoreAppearance := stableTestAppearance(t)
+	defer restoreAppearance()
+
+	state := layoutTestState(t)
+	state.tasksOpen = true
+	if got := state.chatMainWidth(1100); got >= chat.ContentWidth {
+		t.Fatalf("test chat main width = %vpx, want < %vpx", got, chat.ContentWidth)
+	}
+
+	tt := ui.NewTester(state.view, 1100, 560)
+	rect, ok := tt.Find("pi-hud-row")
+	if !ok {
+		t.Fatal("compact HUD row was not rendered with a narrow chat main area")
+	}
+	if rect.H <= 0 || rect.Y < 0 || rect.Y+rect.H > 560 {
+		t.Fatalf("compact HUD row is outside the 1100x560 viewport: %#v", rect)
+	}
+	if got := state.chatMainWidth(1100); got >= 720 {
+		t.Fatalf("chat main width = %vpx, want the compact-HUD path below 720px", got)
+	}
+}
+
+func TestP10cRunningSendModeControlUpdatesPreference(t *testing.T) {
+	restoreAppearance := stableTestAppearance(t)
+	defer restoreAppearance()
+
+	state := layoutTestState(t)
+	state.run = runStreaming
+	state.preferences.RunningSendMode = string(runningSendQueue)
+	tt := ui.NewTester(state.view, 1180, 760)
+
+	if err := tt.Click(text("runningSendSteer")); err != nil {
+		t.Fatal(err)
+	}
+	if got := state.currentRunningSendMode(); got != runningSendSteer {
+		t.Fatalf("running-send mode = %q, want %q", got, runningSendSteer)
+	}
+	assertInsideViewport(t, tt, text("chatSend"), 760)
+	assertInsideViewport(t, tt, text("chatStopCurrentRun"), 760)
 }
 
 func TestP10bTitleMenuReceivesClicks(t *testing.T) {
@@ -160,6 +226,7 @@ func layoutTestState(t *testing.T) *appState {
 		piSessionFile:      cwd + "/current.jsonl",
 		piSessionID:        "current",
 		preferences:        byopPreferences{FollowUpStyle: string(followUpStyleCard), Motion: string(motionReduced)},
+		hud:                hudState{cwd: cwd},
 		run:                runCompleted,
 		composerDraft:      "",
 		followUpSuggestion: "",
@@ -210,5 +277,33 @@ func assertInsideViewport(t *testing.T, tt *ui.Tester, label string, height int)
 	}
 	if rect.Y < 0 || rect.Y+rect.H > float32(height) {
 		t.Fatalf("layout label %q is outside the %dpx viewport: %#v", label, height, rect)
+	}
+}
+
+func assertComposerFooterInsideViewport(t *testing.T, tt *ui.Tester, label string, height int) {
+	t.Helper()
+	_, ok := tt.Find(text("chatMessageLabel"))
+	if !ok {
+		t.Fatalf("composer was not rendered")
+	}
+	rect, ok := tt.Find(label)
+	if !ok {
+		t.Fatalf("layout label %q was not rendered", label)
+	}
+	if rect.H <= 0 {
+		t.Fatalf("layout label %q has no visible height: %#v", label, rect)
+	}
+	if rect.Y < 0 || rect.Y+rect.H > float32(height) {
+		t.Fatalf("composer footer %q bottom is outside the %dpx viewport: %#v", label, height, rect)
+	}
+	if height == 560 && rect.Y+rect.H >= float32(height) {
+		t.Fatalf("composer footer %q is not fully above the %dpx viewport: %#v", label, height, rect)
+	}
+}
+
+func assertNotRendered(t *testing.T, tt *ui.Tester, label string) {
+	t.Helper()
+	if rect, ok := tt.Find(label); ok {
+		t.Fatalf("layout label %q should not be rendered: %#v", label, rect)
 	}
 }

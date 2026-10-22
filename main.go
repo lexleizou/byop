@@ -289,6 +289,8 @@ type appState struct {
 	sessionRenameInFlight        bool
 	sessionNamingInProgress      bool
 	sessionNamingCommitInFlight  bool
+	sessionNamingCommitSeq       uint64
+	sessionNamingCommitOwner     sessionNameCommitOwner
 	sessionNamingGen             uint64
 	sessionNamingCancel          context.CancelFunc
 	autoNamingAttemptedBySession map[string]bool
@@ -316,6 +318,7 @@ type appState struct {
 	extensionPath       string
 	extensionEvent      string
 	agentWillRetry      bool
+	hud                 hudState
 
 	piSessionsOrgWorkspace string
 	piSessionsGroups       sessionGroups
@@ -913,6 +916,7 @@ func (s *appState) applyPiSessionState(state *piSessionState) {
 	s.piModelID = state.Model.ID
 	s.piModelName = state.Model.Name
 	s.piModel = strings.TrimSpace(strings.Join(nonEmpty(state.Model.Provider, state.Model.Name), " / "))
+	s.applyPiHUDState(state)
 	if state.SessionID != "" {
 		s.recordLastSession(state.SessionID)
 	}
@@ -1073,6 +1077,7 @@ func (s *appState) newPiSession() {
 	if !ok {
 		return
 	}
+	s.resetPiHUDData()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
@@ -1083,6 +1088,7 @@ func (s *appState) newPiSession() {
 					s.showNotice(textArgs("noticeSessionCreateFailed", map[string]any{
 						"error": uiErrorText(err, text("errorUnknown")),
 					}))
+					s.refreshPiHUD()
 				}
 			})
 			return
@@ -1091,6 +1097,7 @@ func (s *appState) newPiSession() {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
 					s.showNotice(text("noticeSessionCreateCancelled"))
+					s.refreshPiHUD()
 				}
 			})
 			return
@@ -1104,6 +1111,7 @@ func (s *appState) newPiSession() {
 					s.showNotice(textArgs("noticeSessionCreateUnconfirmed", map[string]any{
 						"error": uiErrorText(stateErr, text("errorUnknown")),
 					}))
+					s.refreshPiHUD()
 				}
 			})
 			return
@@ -1124,6 +1132,7 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 	if !ok {
 		return
 	}
+	s.resetPiHUDData()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -1134,6 +1143,7 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 					s.showNotice(textArgs("noticeSessionSwitchFailed", map[string]any{
 						"error": uiErrorText(err, text("errorUnknown")),
 					}))
+					s.refreshPiHUD()
 				}
 			})
 			return
@@ -1142,6 +1152,7 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 			s.postUI(func() {
 				if s.finishPiSessionOperation(client, epoch, gen) {
 					s.showNotice(text("noticeSessionSwitchCancelled"))
+					s.refreshPiHUD()
 				}
 			})
 			return
@@ -1162,6 +1173,7 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 					s.showNotice(textArgs("noticeSessionTranscriptRestoreFailed", map[string]any{
 						"error": uiErrorText(err, text("errorUnknown")),
 					}))
+					s.refreshPiHUD()
 				}
 			})
 			return
@@ -1173,6 +1185,7 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 					s.showNotice(textArgs("noticeSessionTranscriptReadFailed", map[string]any{
 						"error": uiErrorText(err, text("errorUnknown")),
 					}))
+					s.refreshPiHUD()
 				}
 			})
 			return
@@ -1221,6 +1234,7 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 				s.notice = textArgs("noticeSessionMismatch", map[string]any{"notice": notice})
 			}
 			s.page = pageChat
+			s.refreshPiHUD()
 			s.refreshPiSessions()
 			s.clearDueLaterSession(s.activePiSession(), time.Now())
 			s.refreshActiveSessionOrganization(time.Now())
@@ -1318,6 +1332,10 @@ func (s *appState) selectModel(provider, id string) {
 				s.showNotice(text("noticeModelLevelsRefreshFailed"))
 				return
 			}
+			if stateErr != nil && model.ContextWindow > 0 {
+				s.hud.contextWindowFallback = model.ContextWindow
+			}
+			s.refreshPiHUD()
 		})
 	}()
 }
@@ -1368,6 +1386,7 @@ func (s *appState) selectThinkingLevel(level string) bool {
 			} else {
 				s.commitThinkingPending()
 			}
+			s.refreshPiHUD()
 		})
 	}()
 	return true
@@ -1399,6 +1418,7 @@ func (s *appState) connectPi() {
 	}
 	s.clearPiConnectingNotice()
 	s.invalidateSessionNaming()
+	s.clearPiHUD()
 	s.piError = ""
 	s.piErrorCode = ""
 	s.piEpoch++
@@ -1489,6 +1509,7 @@ func (s *appState) connectPi() {
 			s.piConn = piConnected
 			s.piVersion = version
 			s.applyPiSessionState(state)
+			s.beginPiHUD(client.cwd, state)
 			if modelsErr == nil {
 				s.piModels = models
 			}
@@ -1531,6 +1552,7 @@ func (s *appState) reconnectPi() {
 		s.setAssistantStatus("Interrupted")
 	}
 	s.resetRuntimeDiagnostics()
+	s.clearPiHUD()
 	if s.pi != nil {
 		old := s.pi
 		s.pi = nil
@@ -1662,6 +1684,27 @@ func (s *appState) startAssistantPrompt(prompt string) {
 }
 
 func (s *appState) sendRunningPrompt(prompt string, mode runningSendMode) {
+	prompt = strings.TrimSpace(prompt)
+	if prompt == "" {
+		s.showNotice(text("noticeMessageEmpty"))
+		return
+	}
+	if s.pi == nil || s.piConn != piConnected {
+		s.showNotice(text("noticePiDisconnected"))
+		return
+	}
+	if s.piSessionBusy {
+		s.showNotice(text("noticeSessionOperationBeforeSend"))
+		return
+	}
+	if s.thinkingCommitInFlight {
+		s.showNotice(text("noticeThinkingBeforeSend"))
+		return
+	}
+	if s.compacting || (s.run != runSubmitting && s.run != runStreaming) {
+		s.showNotice(text("noticeRunningSendUnavailable"))
+		return
+	}
 	if s.runningSendPending {
 		return
 	}
@@ -1912,6 +1955,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		if s.runActive() {
 			s.run = runStreaming
 		}
+		s.refreshPiHUD()
 	case piEventRetryStart:
 		s.retrying = true
 		s.retryAttempt = event.RetryAttempt
@@ -1955,6 +1999,25 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.extensionPath = event.ExtensionPath
 		s.extensionEvent = event.ExtensionEvent
 		s.notice = textArgs("noticePiExtensionError", map[string]any{"error": s.extensionError})
+	case piEventExtensionStatus:
+		key := strings.TrimSpace(event.StatusKey)
+		if key == "" {
+			return
+		}
+		if s.hud.extStatus == nil {
+			s.hud.extStatus = make(map[string]string)
+		}
+		if event.StatusText == nil {
+			delete(s.hud.extStatus, key)
+		} else if status := sanitizePiStatusText(*event.StatusText); status != "" {
+			s.hud.extStatus[key] = status
+		} else {
+			delete(s.hud.extStatus, key)
+		}
+	case piEventExtensionNotify:
+		if message := strings.TrimSpace(event.Text); message != "" {
+			s.showNotice(message)
+		}
 	case piEventToolStart:
 		s.run = runStreaming
 		s.startToolCall(event)
@@ -2016,6 +2079,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			s.maybeStartAutoSessionNaming(prompt, reply)
 		}
 		s.refreshPiSessionState()
+		s.refreshPiHUD()
 		s.schedulePiSessionsRefresh()
 	case piEventParseError:
 		s.piError = uiErrorFromText(event.Error, text("errorProtocolWarning"))
@@ -2029,6 +2093,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.cancelThinkingPending()
 		s.clearPiConnectingNotice()
 		s.pi = nil
+		s.clearPiHUD()
 		s.piCwd = ""
 		s.piConnecting = false
 		s.piConn = piDisconnected

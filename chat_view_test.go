@@ -220,6 +220,63 @@ func TestP9cRunningSendCompletionPreservesActiveRequest(t *testing.T) {
 	}
 }
 
+func TestP10cRejectedRunningSendLeavesDraftIntact(t *testing.T) {
+	tests := []struct {
+		name  string
+		state *appState
+	}{
+		{
+			name: "disconnected client",
+			state: &appState{
+				run:           runStreaming,
+				composerDraft: "keep this draft",
+			},
+		},
+		{
+			name: "session operation in progress",
+			state: &appState{
+				pi:            &piClient{},
+				piConn:        piConnected,
+				piSessionBusy: true,
+				run:           runStreaming,
+				composerDraft: "keep this draft",
+				activeRequest: "active",
+			},
+		},
+		{
+			name: "compacting",
+			state: &appState{
+				pi:            &piClient{},
+				piConn:        piConnected,
+				run:           runStreaming,
+				compacting:    true,
+				composerDraft: "keep this draft",
+				activeRequest: "active",
+			},
+		},
+		{
+			name: "not running",
+			state: &appState{
+				pi:            &piClient{},
+				piConn:        piConnected,
+				run:           runIdle,
+				composerDraft: "keep this draft",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.state.sendRunningPrompt(test.state.composerDraft, runningSendQueue)
+			if test.state.composerDraft != "keep this draft" {
+				t.Fatalf("draft = %q, want rejected draft preserved", test.state.composerDraft)
+			}
+			if test.state.runningSendPending {
+				t.Fatal("rejected running send entered pending state")
+			}
+		})
+	}
+}
+
 func TestP9cRunningSendFailureRestoresDraft(t *testing.T) {
 	client := &piClient{}
 	state := &appState{

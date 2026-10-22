@@ -69,6 +69,28 @@ func TestPiRPCIntegrationMinimalLoop(t *testing.T) {
 	t.Logf("completion: accepted=%t streamed=%t settled=%t", accepted, streamedText != "", settled)
 }
 
+func TestPiRPCIntegrationSessionStats(t *testing.T) {
+	client := startIntegrationPi(t)
+	defer closeIntegrationPi(t, client)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	state, err := client.GetState(ctx)
+	if err != nil {
+		t.Fatalf("get_state: %v", err)
+	}
+	stats, err := client.GetSessionStats(ctx)
+	if err != nil {
+		t.Fatalf("get_session_stats: %v", err)
+	}
+	if stats.SessionID == "" || stats.SessionID != state.SessionID {
+		t.Fatalf("session stats ID = %q, get_state ID = %q", stats.SessionID, state.SessionID)
+	}
+	t.Logf("session stats: messages=%d input=%d output=%d context_window=%d",
+		stats.TotalMessages, stats.Tokens.Input, stats.Tokens.Output,
+		piContextWindow(stats, state.Model.ContextWindow))
+}
+
 func TestPiRPCIntegrationStop(t *testing.T) {
 	client := startIntegrationPi(t)
 	defer closeIntegrationPi(t, client)
