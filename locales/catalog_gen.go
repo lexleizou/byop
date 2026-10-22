@@ -8100,6 +8100,20 @@ func (msgs Messages) QueueClearPending() string {
 	return Catalog.Format(msgs.locale, "queueClearPending", nil)
 }
 
+// QueueFollowUpLabel says "Queued"
+// in the language the app shows.
+//
+// Label for queued follow-up messages in the running queue strip.
+func QueueFollowUpLabel() string { return In(i18n.Locale()).QueueFollowUpLabel() }
+
+// QueueFollowUpLabel says "Queued"
+// in the language of msgs.
+//
+// Label for queued follow-up messages in the running queue strip.
+func (msgs Messages) QueueFollowUpLabel() string {
+	return Catalog.Format(msgs.locale, "queueFollowUpLabel", nil)
+}
+
 // QueueMore says "{count, plural, one {# more message} other {# more messages}}"
 // in the language the app shows.
 //
@@ -8112,6 +8126,20 @@ func QueueMore(count int) string { return In(i18n.Locale()).QueueMore(count) }
 // Overflow count for hidden queued messages.
 func (msgs Messages) QueueMore(count int) string {
 	return Catalog.Format(msgs.locale, "queueMore", map[string]any{"count": count})
+}
+
+// QueueSteerLabel says "Steer"
+// in the language the app shows.
+//
+// Label for steering messages in the running queue strip.
+func QueueSteerLabel() string { return In(i18n.Locale()).QueueSteerLabel() }
+
+// QueueSteerLabel says "Steer"
+// in the language of msgs.
+//
+// Label for steering messages in the running queue strip.
+func (msgs Messages) QueueSteerLabel() string {
+	return Catalog.Format(msgs.locale, "queueSteerLabel", nil)
 }
 
 // QueueTitle says "Queued messages"

@@ -33,13 +33,28 @@ Date: 2026-10-22
 - Claude Opus 5.5 review: three rounds; final verdict PASS with no remaining
   P0–P2 findings.
 
+## Final-Build Walkthrough (P9w)
+
+Date: 2026-10-22. macOS, external Pi CLI 1.4.0, final post-review build.
+
+| Area | Result | Screenshot |
+|---|---|---|
+| Simplified Chinese Chat and Settings, light | Sidebar groups, settings options, units (毫秒), composer suggestion hint and model/thinking pickers are localized | `p9-chat-zh.png`, `p9-settings-zh.png` |
+| English Chat and Settings, light | Live switch without restart; sidebar group headers render uppercase in English only | `p9-chat-en.png`, `p9-settings-en.png` |
+| Dark theme, both languages | Chat, Settings and the Plugins page stay readable; selected options keep the accent border | `p9-chat-dark-zh.png`, `p9-chat-dark-en.png`, `p9-settings-dark-zh.png`, `p9-settings-dark-en.png`, `p9-plugins-dark-en.png` |
+| Plugins and WebView after a language switch | Plugin cards and the isolated WebView redraw in English | `p9-webview-en.png` |
+
+Walkthrough fixes, developed by DeepSeek V4.1 Flash and reviewed by Claude
+Opus 5.5 with no remaining P0–P2 findings:
+
+1. Queue labels use dedicated keys (Steer / Queued, 插话 / 排队).
+2. English sidebar section headers are uppercased visually; Chinese headers
+   and accessibility labels are unchanged.
+
 ## Unverified
 
-- English and Simplified Chinese screenshots at every supported window size.
-- A repeat window walkthrough on the final post-review build (the screen was
-  locked after the final fixes), and the Plugins page / existing WebView redraw
-  after a language switch.
-- Dark theme in both languages.
+- Screenshots at narrow window sizes.
+- Linux and Windows.
 - Live switching to a third language pack.
 
 ## Known Limits

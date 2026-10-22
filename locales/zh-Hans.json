@@ -2242,9 +2242,17 @@
   "@queueClearPending": {
     "description": "Label while clearing queued messages."
   },
+  "queueFollowUpLabel": "排队",
+  "@queueFollowUpLabel": {
+    "description": "Label for queued follow-up messages in the running queue strip."
+  },
   "queueMore": "另有 {count} 条",
   "@queueMore": {
     "description": "Overflow count for hidden queued messages."
+  },
+  "queueSteerLabel": "插话",
+  "@queueSteerLabel": {
+    "description": "Label for steering messages in the running queue strip."
   },
   "queueTitle": "排队消息",
   "@queueTitle": {

@@ -2541,9 +2541,17 @@
   "@queueClearPending": {
     "description": "Label while clearing queued messages."
   },
+  "queueFollowUpLabel": "Queued",
+  "@queueFollowUpLabel": {
+    "description": "Label for queued follow-up messages in the running queue strip."
+  },
   "queueMore": "{count, plural, one {# more message} other {# more messages}}",
   "@queueMore": {
     "description": "Overflow count for hidden queued messages."
+  },
+  "queueSteerLabel": "Steer",
+  "@queueSteerLabel": {
+    "description": "Label for steering messages in the running queue strip."
   },
   "queueTitle": "Queued messages",
   "@queueTitle": {

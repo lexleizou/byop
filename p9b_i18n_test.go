@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"byop/locales"
+
 	"github.com/egoist/mygo/i18n"
 )
 
@@ -121,6 +123,16 @@ func difference(t *testing.T, name string, english, translated []string) {
 		}
 	}
 	t.Fatalf("%s key mismatch: missing=%v extra=%v", name, missing, extra)
+}
+
+func TestP9bQueueLabelsResolve(t *testing.T) {
+	for _, key := range []string{"queueSteerLabel", "queueFollowUpLabel"} {
+		for _, locale := range []string{"en", "zh-Hans"} {
+			if got := locales.Catalog.Format(locale, key, nil); got == key {
+				t.Errorf("locale %s key %s resolved to raw key", locale, key)
+			}
+		}
+	}
 }
 
 func TestP9bUILanguagePreferenceNormalization(t *testing.T) {

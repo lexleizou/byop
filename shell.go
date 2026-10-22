@@ -272,6 +272,33 @@ type sessionDragPayload struct {
 	Key string `json:"key"`
 }
 
+func (s *appState) sessionDragDone(key string, result transfer.Result) {
+	if s.draggingSessionKey != key {
+		return
+	}
+	if result.Canceled || result.Err != nil || result.Operation == transfer.None {
+		s.clearSessionDrag(key)
+		return
+	}
+	// MyGo consumes a drop in the frame after Done. Keep drag-only targets
+	// rendered for that frame so DropData can still find them.
+	s.draggingSessionClear = true
+	if s.window != nil {
+		s.window.Invalidate()
+	}
+}
+
+func (s *appState) clearSessionDrag(key string) {
+	if key != "" && s.draggingSessionKey != key {
+		return
+	}
+	s.draggingSessionKey = ""
+	s.draggingSessionClear = false
+	if s.window != nil {
+		s.window.Invalidate()
+	}
+}
+
 func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
 	cwd, err := s.sessionWorkspaceCwd()
 	if err == nil {
@@ -282,29 +309,97 @@ func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
 	}
 	groups := s.piSessionsGroups
 	ui.Column(c).Gap(2).FillWidth().Children(func() {
-		ui.Row(c).Height(30).FillWidth().Padding(0, 10).AlignItems(ui.Center).Children(func() {
+		defer func() {
+			if !s.draggingSessionClear {
+				return
+			}
+			key := s.draggingSessionKey
+			s.draggingSessionClear = false
+			s.postUI(func() { s.clearSessionDrag(key) })
+		}()
+		sessionsHeader := ui.Row(c).Height(30).FillWidth().Padding(0, 10).AlignItems(ui.Center)
+		sessionsHeader.Children(func() {
 			ui.Text(c, text("navSessions")).FontSize(fontCaption).FontWeight(700).TextColor(p.muted).Grow(1)
 			iconButton(c, p, "sessions-new", "plus", text("navNewSession"), false, func() {
 				s.newPiSession()
 			})
 		})
+		_, localOver := ui.DragOver[sessionDragPayload](sessionsHeader)
+		_, nativeOver := ui.DataDragOver(sessionsHeader, sessionDropOptions())
+		if localOver || nativeOver {
+			sessionsHeader.Border(1, p.accent)
+		}
+		if drop, ok := ui.Drop[sessionDragPayload](sessionsHeader); ok {
+			s.applySessionDrop(drop, "", "")
+		}
+		if drop, ok := ui.DropData(sessionsHeader, sessionDropOptions()); ok {
+			if payload, valid := decodeSessionDrop(drop); valid {
+				s.applySessionDrop(payload, "", "")
+			}
+		}
 		if len(s.piSessions) == 0 {
 			return
 		}
 		ui.Scroll(c).FillWidth().Gap(3).MaxHeight(18 * 44).Children(func() {
 			dragging := s.draggingSessionKey != ""
-			if len(groups.pinned) > 0 || dragging {
+			draggedFromArchived := false
+			if dragging {
+				for _, summary := range groups.archived {
+					if sessionOrgKey(summary) == s.draggingSessionKey {
+						draggedFromArchived = true
+						break
+					}
+				}
+			}
+			renderDragOnlyGroups := func() {
+				if len(groups.pinned) == 0 {
+					s.sessionSection(c, p, "pinned", text("navPinned"), groups.pinned,
+						sessionStatePinned, false, true)
+				}
+				if len(groups.sessions) == 0 {
+					s.sessionSection(c, p, "sessions", text("navRecentSessions"), groups.sessions,
+						"", true, true)
+				}
+				if len(groups.later) == 0 {
+					s.sessionSection(c, p, "later", text("navLater"), groups.later,
+						sessionStateLater, false, true)
+				}
+			}
+			if len(groups.pinned) > 0 {
 				s.sessionSection(c, p, "pinned", text("navPinned"), groups.pinned,
 					sessionStatePinned, false, true)
 			}
-			s.sessionSection(c, p, "sessions", text("navRecentSessions"), groups.sessions,
-				"", true, true)
-			if len(groups.later) > 0 || dragging {
+			if len(groups.sessions) > 0 {
+				s.sessionSection(c, p, "sessions", text("navRecentSessions"), groups.sessions,
+					"", true, true)
+			} else if !dragging {
+				// Keep the normal empty-group footprint without inserting the
+				// taller drag placeholder above rows that are already visible.
+				s.sessionDropArea(c, p, "sessions-drop-sessions", "", text("navRecentSessions"),
+					false, func() {})
+			} else {
+				ui.Box(c).Height(8).FillWidth()
+			}
+			if len(groups.later) > 0 {
 				s.sessionSection(c, p, "later", text("navLater"), groups.later,
 					sessionStateLater, false, true)
 			}
+			if !dragging {
+				if len(groups.archived) > 0 {
+					s.archivedSessionSection(c, p, groups)
+				}
+				return
+			}
+			// Keep drag-only groups below visible source rows and above the
+			// archived section unless the source itself is archived.
+			if !draggedFromArchived {
+				renderDragOnlyGroups()
+			}
 			if len(groups.archived) > 0 || dragging {
 				s.archivedSessionSection(c, p, groups)
+			}
+			if draggedFromArchived {
+				renderDragOnlyGroups()
 			}
 		})
 	})
@@ -373,7 +468,7 @@ func (s *appState) sessionSectionHeader(c *ui.Context, p palette, key, label, st
 	}
 	header.Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(6).Children(func() {
-			ui.Text(c, label).FontSize(fontCaption).FontWeight(700).TextColor(p.muted).Grow(1)
+			ui.Text(c, strings.ToUpper(label)).FontSize(fontCaption).FontWeight(700).TextColor(p.muted).Grow(1)
 			if collapsible {
 				iconName := "chevron-down"
 				if key == "archived" && !s.archivedExpanded {
@@ -412,7 +507,8 @@ func (s *appState) sessionDropArea(c *ui.Context, p palette, key, state, label s
 		area.Border(1, p.accent).Padding(3).Background(p.surface)
 	}
 	area.Children(func() {
-		if over && len(s.piSessions) > 0 && empty {
+		showPlaceholder := over || (state == "" && s.draggingSessionKey != "")
+		if showPlaceholder && len(s.piSessions) > 0 && empty {
 			s.sessionDropPlaceholder(c, p, label)
 		}
 		children()
@@ -483,11 +579,30 @@ func (s *appState) sessionSummaryByKey(key string) (piSessionSummary, bool) {
 	return piSessionSummary{}, false
 }
 
+func (s *appState) displayedSessionState(summary piSessionSummary, entry sessionOrgEntry, organized bool) string {
+	if !organized || s.piSessionsGroups.due[sessionOrgKey(summary)] {
+		return ""
+	}
+	return entry.State
+}
+
 func (s *appState) applySessionDrop(payload sessionDragPayload, state string, beforeKey string) {
 	summary, ok := s.sessionSummaryByKey(payload.Key)
 	if !ok {
 		return
 	}
+	entry, organized := s.sessionOrganizationState(summary)
+	currentState := s.displayedSessionState(summary, entry, organized)
+	if state == sessionStatePinned {
+		if beforeKey == payload.Key || (beforeKey == "" && currentState == sessionStatePinned) {
+			s.clearSessionDrag("")
+			return
+		}
+	} else if currentState == state {
+		s.clearSessionDrag("")
+		return
+	}
+	s.clearSessionDrag("")
 	entries := s.sessionOrganizationEntries()
 	snapshot := cloneSessionOrgEntries(entries)
 	now := time.Now()
@@ -531,6 +646,7 @@ func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSumm
 	title := untitledSessionLabel(summary.Title)
 	key := sessionOrgKey(summary)
 	entry, organized := s.sessionOrganizationState(summary)
+	displayedState := s.displayedSessionState(summary, entry, organized)
 	bg := ui.Color{}
 	foreground := p.muted
 	if active {
@@ -547,13 +663,8 @@ func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSumm
 		return transfer.New(transfer.NewItem(transfer.Bytes(sessionDragFormat, data)))
 	}, transfer.DragOptions{
 		Operations: transfer.Copy,
-		Done: func(transfer.Result) {
-			if s.draggingSessionKey == key {
-				s.draggingSessionKey = ""
-				if s.window != nil {
-					s.window.Invalidate()
-				}
-			}
+		Done: func(result transfer.Result) {
+			s.sessionDragDone(key, result)
 		},
 	})
 	if btn.Hovered() && !active {
@@ -601,20 +712,12 @@ func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSumm
 	})
 	if _, over := ui.DragOver[sessionDragPayload](btn); over {
 		btn.Border(1, p.accent).Background(p.surfaceHover)
-		targetState := ""
-		if organized {
-			targetState = entry.State
-		}
 		ui.Row(c).Justify(ui.End).Children(func() {
-			s.sessionDropBadge(c, p, targetState)
+			s.sessionDropBadge(c, p, displayedState)
 		})
 	}
 	if drop, ok := ui.Drop[sessionDragPayload](btn); ok {
-		targetState := ""
-		if organized {
-			targetState = entry.State
-		}
-		s.applySessionDrop(drop, targetState, key)
+		s.applySessionDrop(drop, displayedState, key)
 	}
 	btn.ContextMenu(func(m *ui.Menu) {
 		pinned := organized && entry.State == sessionStatePinned

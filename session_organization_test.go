@@ -1,9 +1,76 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/egoist/mygo/transfer"
 )
+
+func TestP9wSessionDragDoneKeepsDropTargetForNextFrame(t *testing.T) {
+	state := &appState{draggingSessionKey: "/tmp/session"}
+	state.sessionDragDone("/tmp/session", transfer.Result{Operation: transfer.Copy})
+	if state.draggingSessionKey == "" || !state.draggingSessionClear {
+		t.Fatalf("successful drag cleared before the drop frame: key=%q clear=%v",
+			state.draggingSessionKey, state.draggingSessionClear)
+	}
+
+	state.sessionDragDone("/tmp/session", transfer.Result{Canceled: true})
+	if state.draggingSessionKey != "" || state.draggingSessionClear {
+		t.Fatalf("cancelled drag left temporary targets visible: key=%q clear=%v",
+			state.draggingSessionKey, state.draggingSessionClear)
+	}
+}
+
+func TestP9wSessionDropUsesDisplayedState(t *testing.T) {
+	now := time.Now()
+	laterA := piSessionSummary{Path: "/tmp/later-a", ID: "later-a", Updated: now}
+	laterB := piSessionSummary{Path: "/tmp/later-b", ID: "later-b", Updated: now.Add(-time.Minute)}
+	expired := piSessionSummary{Path: "/tmp/expired", ID: "expired", Updated: now.Add(-2 * time.Minute)}
+	laterUntil := now.Add(time.Hour).Format(time.RFC3339)
+	entries := map[string]sessionOrgEntry{
+		laterA.Path: {State: sessionStateLater, LaterUntil: laterUntil},
+		laterB.Path: {State: sessionStateLater, LaterUntil: now.Add(2 * time.Hour).Format(time.RFC3339)},
+		expired.Path: {
+			State:      sessionStateLater,
+			LaterUntil: now.Add(-time.Minute).Format(time.RFC3339),
+		},
+	}
+	cwd := t.TempDir()
+	configDir := t.TempDir()
+	state := &appState{
+		piCwd:            cwd,
+		piSessions:       []piSessionSummary{laterA, laterB, expired},
+		preferencesStore: newByopPreferencesStore(configDir),
+		preferences: byopPreferences{
+			SessionOrganization: map[string]map[string]sessionOrgEntry{
+				canonicalPiPath(cwd): entries,
+			},
+		},
+	}
+	state.refreshSessionOrganization(now)
+
+	state.applySessionDrop(sessionDragPayload{Key: laterA.Path}, sessionStateLater, laterB.Path)
+	if got := entries[laterA.Path].LaterUntil; got != laterUntil {
+		t.Fatalf("row-on-row drop reset LaterUntil: %q", got)
+	}
+	if state.sessionUndo != nil || state.notice != "" {
+		t.Fatalf("row-on-row drop changed undo/notice: undo=%#v notice=%q", state.sessionUndo, state.notice)
+	}
+	if _, err := os.Stat(filepath.Join(configDir, "preferences.json")); !os.IsNotExist(err) {
+		t.Fatalf("row-on-row drop wrote preferences: %v", err)
+	}
+
+	if !state.piSessionsGroups.due[expired.Path] {
+		t.Fatal("expired Later session was not displayed in Sessions")
+	}
+	state.applySessionDrop(sessionDragPayload{Key: expired.Path}, sessionStateLater, "")
+	if entry := entries[expired.Path]; entry.State != sessionStateLater || entry.LaterUntil != "" {
+		t.Fatalf("expired Later drop did not return it to Later: %#v", entry)
+	}
+}
 
 func TestP9cPartitionSessionsAndExpiredLater(t *testing.T) {
 	now := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)

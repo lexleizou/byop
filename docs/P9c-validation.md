@@ -35,18 +35,46 @@ Date: 2026-10-22
 - Claude Opus 5.5 review: three rounds; final verdict PASS with no remaining
   P0–P2 findings.
 
+## Final-Build Walkthrough (P9w)
+
+Date: 2026-10-22. macOS, external Pi CLI 1.4.0, final post-review build.
+
+| Flow | Result | Screenshot |
+|---|---|---|
+| Send while running (Queue default) | Queue strip shows the item; it runs after the current turn | `p9-queue-zh.png`, `p9-queue-en.png` |
+| Steer from the queue strip | Notice "Sent Steer."; Clear queue available | `p9-queue-en.png` |
+| Drag Sessions → Later, Later → empty Pinned, Pinned → empty Later | Moves with an Undo notice | `p9-drag-later-en.png`, `p9-sidebar-groups-en.png` |
+| Drag Pinned → Sessions header | Returns the session to Sessions | `p9-drag-sessions-header-en.png` |
+| Drop in the same group | No change saved, no Undo notice | — |
+| Contrast, Motion, Panel animation settings | Shown in both languages and both themes | `p9-settings-*.png` |
+
+Walkthrough fixes, developed by DeepSeek V4.1 Flash and reviewed by Claude
+Opus 5.5 (final re-review PASS, no P0–P2 findings):
+
+1. Drag-and-drop clears its state after the drop is handled, and the Sessions
+   header is a drop target.
+2. Empty Pinned/Later drop targets appear while dragging from any row, before
+   Archived unless the source is Archived; only one Sessions target is shown.
+3. Same-group drops are no-ops, based on the displayed group.
+4. An expired Later session is treated as a Sessions row for drag and drop.
+
 ## Unverified
 
-- Window walkthrough of the final post-review build: the screen was locked
-  after the final fixes, so Stop/queue button placement, Enter while running,
-  and the queue strip were verified by tests and review only.
-- A manual live-window walkthrough of empty-section drops, hover actions,
-  context menus, the eight-second undo notice and the expired Later dot.
-- Visual comparison of the panel toggle group and panel animation durations at
-  supported window sizes in English and Simplified Chinese.
-- Live queue/steer delivery against Pi 1.4.0 while a real tool is running.
-- Rendered contrast measurements in both light and dark modes and in an active
-  plugin WebView.
+- Narrow window sizes, Linux and Windows.
+- Esc cancel during a drag, and dragging into Archived.
+- The expired Later reminder dot in a live window.
+- Following the system contrast and reduced-motion settings live, and
+  measured contrast ratios in an active plugin WebView.
+- Queue/steer while a real tool call is running.
+
+## Known Limits (Walkthrough)
+
+- With "Show all" on and a long list, empty Pinned/Later drop targets can be
+  outside the scroll area because the list does not autoscroll during a drag.
+- Sidebar group ordering during a drag is covered by review and one test, not
+  by exhaustive tests.
+- Undo stays available for eight seconds.
+- 「插话」 is kept for Steer instead of 「引导」.
 
 ## Known Limits
 

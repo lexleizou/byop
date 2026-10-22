@@ -272,6 +272,7 @@ type appState struct {
 	piSessionsGroups       sessionGroups
 	archivedExpanded       bool
 	draggingSessionKey     string
+	draggingSessionClear   bool
 	sessionUndo            *sessionUndoState
 	sessionLaterTimer      *time.Timer
 }
