@@ -26,6 +26,12 @@ var navItems = []navItem{
 	{pageAutomations, "navAutomations", "automations"},
 }
 
+const (
+	shellGap            float32 = 8
+	shellRadius         float32 = 12
+	shellTitleBarHeight float32 = 52
+)
+
 func (s *appState) view(c *ui.Context) {
 	dark := currentAppearanceDark()
 	high := s.highContrastActive(currentAppearanceHighContrast())
@@ -40,7 +46,7 @@ func (s *appState) view(c *ui.Context) {
 		s.setTasksOpen(!s.tasksOpen)
 	})
 
-	ui.Column(c).Fill().Background(p.background).Children(func() {
+	ui.Column(c).Fill().Padding(shellGap).Gap(shellGap).Background(p.background).Children(func() {
 		s.titleBar(c, p)
 		ui.Row(c).Grow(1).FillWidth().MinHeight(0).AlignItems(ui.Stretch).Children(func() {
 			s.navigation(c, p)
@@ -52,34 +58,149 @@ func (s *appState) view(c *ui.Context) {
 
 func (s *appState) titleBar(c *ui.Context, p palette) {
 	bar := c.TitleBar()
-	height := max(bar.Height, float32(52))
+	height := shellTitleBarHeight
+	if runtime.GOOS != "darwin" {
+		height = max(bar.Height, shellTitleBarHeight)
+	}
 	start := max(bar.Left+12, float32(78))
+	end := max(bar.Right+12, float32(14))
 	if s.navCollapsed && bar.Left < 60 {
 		start = max(start, 72)
 	}
 
-	ui.Row(c).Height(height).FillWidth().Padding(0, 14, 0, start).
-		AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(p.border).
-		Background(p.background).DragWindow().Children(func() {
-		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-			brandMark(c, p, 30)
-			ui.Column(c).Gap(0).Children(func() {
-				ui.Text(c, appShort).FontSize(fontUILarge).FontWeight(650).TextColor(p.text)
-				ui.Text(c, "Build You Own Pi").FontSize(fontCaption).TextColor(p.muted)
+	card := shellCard(ui.Row(c), p).Height(height).FillWidth()
+	card.Children(func() {
+		ui.Row(c).FillHeight().FillWidth().Radius(shellRadius-1).Clip().
+			Padding(0, end).AlignItems(ui.Center).Children(func() {
+			ui.Box(c).Width(start).FillHeight().Shrink(0).DragWindow()
+			ui.Row(c).Gap(10).AlignItems(ui.Center).Shrink(0).Children(func() {
+				brandMark(c, p, 30)
+				ui.Column(c).Gap(0).Children(func() {
+					ui.Text(c, appShort).FontSize(fontUILarge).FontWeight(650).TextColor(p.text)
+					ui.Text(c, appTitle).FontSize(fontCaption).TextColor(p.muted)
+				})
 			})
+
+			ui.Spacer(c).Grow(1).DragWindow()
+			s.titleBarHeading(c, p)
+			ui.Spacer(c).Grow(1).DragWindow()
+
+			panelToggleGroup(c, p, func() {
+				s.setNavCollapsed(!s.navCollapsed)
+			}, func() {
+				s.setTasksOpen(!s.tasksOpen)
+			}, s.navCollapsed, s.tasksOpen)
 		})
-
-		ui.Spacer(c)
-
-		statusPill(c, p, text("headerPhase"), p.accent)
-		ui.Spacer(c)
-
-		panelToggleGroup(c, p, func() {
-			s.setNavCollapsed(!s.navCollapsed)
-		}, func() {
-			s.setTasksOpen(!s.tasksOpen)
-		}, s.navCollapsed, s.tasksOpen)
 	})
+}
+
+func shellCard(card ui.Element, p palette) ui.Element {
+	return card.Border(1, p.border).Radius(shellRadius).Background(p.surface).
+		Shadow(0, 1, 3, 0, p.shadowCard)
+}
+
+func (s *appState) titleBarHeading(c *ui.Context, p palette) {
+	width, _ := c.Size()
+	maxWidth := max(float32(180), width*0.5)
+	if s.page != pageChat {
+		ui.Text(c, s.headerPageTitle()).MaxWidth(maxWidth).FontSize(fontBody).
+			FontWeight(600).TextColor(p.text).SingleLine().Tooltip(s.headerPageTitle())
+		return
+	}
+	if s.sessionRenameEditing {
+		renameRow := ui.Row(c).Height(34).MaxWidth(maxWidth).MinWidth(180).Gap(5).
+			AlignItems(ui.Center)
+		renameRow.Children(func() {
+			ui.Row(c).Height(32).Grow(1).MinWidth(0).Padding(0, 8).Radius(8).
+				Border(1, p.focus).Background(p.background).AlignItems(ui.Center).Children(func() {
+				input := ui.TextInputBase(c.Key("session-title-rename"), &s.sessionRenameDraft).
+					Grow(1).Placeholder(text("titleNewChat")).FontSize(fontBody).
+					TextColor(p.text).Background(ui.Color{}).Border(0, ui.Color{}).
+					Padding(0).Label(text("titleRenameSession")).AutoFocus()
+				input.OnTextKey(func(k ui.TextKey) bool {
+					switch k.Key {
+					case ui.KeyEnter:
+						if s.saveSessionRename() {
+							k.SetText("")
+							return true
+						}
+					case ui.KeyEscape:
+						s.cancelSessionRename()
+						return true
+					}
+					return false
+				})
+			})
+			iconButton(c, p, "session-title-rename-save", "check",
+				text("titleSaveSessionName"), false, func() {
+					s.saveSessionRename()
+				})
+		})
+		if renameRow.PressedOutside() {
+			s.cancelSessionRename()
+		}
+		return
+	}
+
+	titleColor := p.text
+	if s.sessionNamingInProgress || s.sessionRenameInFlight {
+		titleColor = p.muted
+	}
+	title := s.sessionDisplayTitle()
+	ui.Row(c).MaxWidth(maxWidth).MinWidth(0).Gap(3).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, title).Grow(1).MinWidth(0).FontSize(fontBody).FontWeight(600).
+			TextColor(titleColor).SingleLine().Tooltip(title)
+		if s.piSessionID != "" || s.piSessionFile != "" {
+			s.sessionTitleMenu(c, p)
+		}
+	})
+}
+
+func (s *appState) sessionTitleMenu(c *ui.Context, p palette) {
+	label := text("titleSessionMenu")
+	button := ui.ButtonBase(c.Key("session-title-menu")).Size(28, 28).Radius(7).
+		Center().Background(ui.Color{}).Label(label).Tooltip(label).Cursor(ui.CursorPointer)
+	if button.Hovered() {
+		button.Background(p.surfaceHover)
+	}
+	button.Children(func() {
+		ui.Icon(c, icon("chevron-down")).Size(14, 14).TextColor(p.muted)
+	})
+	connected := s.piConn == piConnected
+	available := connected && !s.piSessionBusy
+	button.Menu(func(m *ui.Menu) {
+		if m.Item(text("titleRenameSession")).Disabled(!available || s.piSessionID == "").Chosen() {
+			s.beginSessionRename()
+		}
+		if m.Item(text("titleRenameSessionFromContext")).
+			Disabled(!available || len(s.chat) == 0).Chosen() {
+			s.startContextSessionNaming()
+		}
+	})
+}
+
+func (s *appState) headerPageTitle() string {
+	switch s.page {
+	case pageChat:
+		return s.sessionDisplayTitle()
+	case pagePlugins:
+		return text("navPlugins")
+	case pageAutomations:
+		return text("navAutomations")
+	case pageSettings:
+		return text("navSettings")
+	case pagePluginView:
+		entry, ok := s.registeredPluginEntry(s.pluginViewPluginID)
+		if ok {
+			if view, found := pluginViewByID(entry.Manifest, s.pluginViewID); found {
+				model := s.pluginViewModels[pluginViewCacheKey(entry.ID, view.ID)]
+				return pluginLocalizedText(entry.Manifest, pluginViewTitle(view, model))
+			}
+		}
+		return text("navPlugins")
+	default:
+		return text("navChat")
+	}
 }
 
 func panelToggleGroup(c *ui.Context, p palette, toggleNavigation, toggleTasks func(), navigationCollapsed, tasksOpen bool) {
@@ -138,37 +259,40 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 
 	nav := ui.Column(c)
 	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
-	animatedWidth := nav.AnimateWith("navigation-width", width, duration, ui.EaseOut)
-	nav.Width(animatedWidth).FillHeight().Shrink(0).Padding(12, 8).
-		BorderWidth(0, 1, 0, 0).BorderColor(p.border).Background(p.background).
-		Children(func() {
-			if !s.navCollapsed {
-				ui.Text(c, text("navWorkspace")).FontSize(fontCaption).FontWeight(650).TextColor(p.muted).
-					Padding(2, 10, 8, 10)
-			}
-			ui.Column(c).Grow(1).MinHeight(0).Gap(3).Children(func() {
-				for _, item := range navItems {
-					s.navButton(c, p, item)
-					if item.id == pageChat && !s.navCollapsed && s.chatCapablePage() {
-						s.sessionsNavigation(c, p)
-					}
+	animatedWidth := nav.AnimateWith("navigation-width", width+shellGap, duration, ui.EaseOut)
+	nav.Width(animatedWidth).FillHeight().Shrink(0).Padding(0, shellGap, 0, 0).Children(func() {
+		shellCard(ui.Column(c).FillHeight().FillWidth().MinWidth(0), p).Children(func() {
+			ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius-1).Clip().
+				Padding(12, 8).Children(func() {
+				if !s.navCollapsed {
+					ui.Text(c, text("navWorkspace")).FontSize(fontCaption).FontWeight(650).TextColor(p.muted).
+						Padding(2, 10, 8, 10)
 				}
-				if s.navCollapsed && s.chatCapablePage() {
-					s.collapsedNewSessionButton(c, p)
-				}
-				pluginItems := s.pluginNavigationItems()
-				if len(pluginItems) > 0 {
-					if !s.navCollapsed {
-						ui.Text(c, text("navPluginsSection")).FontSize(fontCaption).FontWeight(700).
-							TextColor(p.muted).Padding(8, 10, 4, 10)
+				ui.Column(c).Grow(1).MinHeight(0).Gap(3).Children(func() {
+					for _, item := range navItems {
+						s.navButton(c, p, item)
+						if item.id == pageChat && !s.navCollapsed && s.chatCapablePage() {
+							s.sessionsNavigation(c, p)
+						}
 					}
-					for _, item := range pluginItems {
-						s.pluginNavButton(c, p, item)
+					if s.navCollapsed && s.chatCapablePage() {
+						s.collapsedNewSessionButton(c, p)
 					}
-				}
+					pluginItems := s.pluginNavigationItems()
+					if len(pluginItems) > 0 {
+						if !s.navCollapsed {
+							ui.Text(c, text("navPluginsSection")).FontSize(fontCaption).FontWeight(700).
+								TextColor(p.muted).Padding(8, 10, 4, 10)
+						}
+						for _, item := range pluginItems {
+							s.pluginNavButton(c, p, item)
+						}
+					}
+				})
+				s.navigationFooter(c, p)
 			})
-			s.navigationFooter(c, p)
 		})
+	})
 }
 
 func (s *appState) navigationFooter(c *ui.Context, p palette) {
@@ -654,6 +778,9 @@ func (s *appState) chatCapablePage() bool {
 func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSummary) {
 	active := s.isActivePiSession(summary)
 	title := untitledSessionLabel(summary.Title)
+	if active {
+		title = s.sessionDisplayTitle()
+	}
 	key := sessionOrgKey(summary)
 	entry, organized := s.sessionOrganizationState(summary)
 	displayedState := s.displayedSessionState(summary, entry, organized)
@@ -929,23 +1056,26 @@ func (s *appState) settingsGearButton(c *ui.Context, p palette) {
 }
 
 func (s *appState) main(c *ui.Context, p palette) {
-	ui.Column(c).Grow(1).MinWidth(0).MinHeight(0).FillHeight().
-		Clip().Background(p.background).Children(func() {
-		if s.notice != "" {
-			s.noticeBanner(c, p)
-		}
-		switch s.page {
-		case pagePlugins:
-			s.pluginsPage(c, p)
-		case pageAutomations:
-			s.automationsPage(c, p)
-		case pageSettings:
-			s.settingsPage(c, p)
-		case pagePluginView:
-			s.pluginViewPage(c, p)
-		default:
-			s.chatPage(c, p)
-		}
+	card := shellCard(ui.Column(c), p).Grow(1).MinWidth(0).MinHeight(0).FillHeight()
+	card.Children(func() {
+		ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius - 1).Clip().
+			Children(func() {
+				if s.notice != "" {
+					s.noticeBanner(c, p)
+				}
+				switch s.page {
+				case pagePlugins:
+					s.pluginsPage(c, p)
+				case pageAutomations:
+					s.automationsPage(c, p)
+				case pageSettings:
+					s.settingsPage(c, p)
+				case pagePluginView:
+					s.pluginViewPage(c, p)
+				default:
+					s.chatPage(c, p)
+				}
+			})
 	})
 }
 
@@ -969,44 +1099,53 @@ func (s *appState) noticeBanner(c *ui.Context, p palette) {
 func (s *appState) taskPanel(c *ui.Context, p palette) {
 	target := float32(0)
 	if s.tasksOpen {
-		target = 320
+		target = 320 + shellGap
 	}
 	panel := ui.Column(c)
 	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
 	animatedWidth := panel.AnimateWith("task-panel-width", target, duration, ui.EaseOut)
-	panel.Width(animatedWidth).MinWidth(0).FillHeight().Shrink(0).Clip().
-		BorderWidth(0, 0, 0, 1).BorderColor(p.border).Background(p.surface).
+	if animatedWidth < 1 {
+		return
+	}
+	leftGap := min(shellGap, animatedWidth)
+	panel.Width(animatedWidth).MinWidth(0).FillHeight().Shrink(0).Padding(0, 0, 0, leftGap).
 		Children(func() {
-			ui.Row(c).Height(52).FillWidth().Padding(0, 14).AlignItems(ui.Center).
-				BorderWidth(0, 0, 1, 0).BorderColor(p.border).Children(func() {
-				ui.Column(c).Gap(1).Grow(1).Children(func() {
-					ui.Text(c, text("tasksTitle")).FontSize(fontBodyLarge).FontWeight(650).TextColor(p.text)
-					ui.Text(c, text("tasksDescription")).FontSize(fontCaption).TextColor(p.muted)
-				})
-				iconButton(c, p, "tasks-close", "x", text("titleCloseTaskPanel"), false, func() {
-					s.setTasksOpen(false)
-				})
-			})
+			card := shellCard(ui.Column(c), p).FillWidth().FillHeight().MinWidth(0)
+			card.Children(func() {
+				ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius - 1).Clip().
+					Children(func() {
+						ui.Row(c).Height(52).FillWidth().Padding(0, 14).AlignItems(ui.Center).
+							BorderWidth(0, 0, 1, 0).BorderColor(p.border).Children(func() {
+							ui.Column(c).Gap(1).Grow(1).Children(func() {
+								ui.Text(c, text("tasksTitle")).FontSize(fontBodyLarge).FontWeight(650).TextColor(p.text)
+								ui.Text(c, text("tasksDescription")).FontSize(fontCaption).TextColor(p.muted)
+							})
+							iconButton(c, p, "tasks-close", "x", text("titleCloseTaskPanel"), false, func() {
+								s.setTasksOpen(false)
+							})
+						})
 
-			ui.Scroll(c).Grow(1).Padding(12).Children(func() {
-				ui.Column(c).Gap(9).Children(func() {
-					s.taskCard(c, p, text("tasksPiRpc"), s.piSecondaryLabel(), s.connectionStateLabel(), s.piTone(p))
-					s.taskCard(c, p, text("tasksCurrentRun"), s.currentRunTaskDetail(), s.runLabel(), s.runTone(p))
-					s.taskCard(c, p, text("tasksRuntimeDiagnostics"), s.runtimeDiagnosticDetail(), s.runtimeDiagnosticLabel(), s.runtimeDiagnosticTone(p))
-					s.taskCard(c, p, text("tasksPluginRegistry"), s.pluginRegistryTaskDetail(), s.pluginRegistryTaskLabel(), s.pluginRegistryTaskTone(p))
-					for _, key := range s.pluginTaskKeys() {
-						update := s.pluginTasks[key]
-						status := fallback(update.Status, strings.ToUpper(update.Tone))
-						s.taskCard(c, p, update.Title, update.Detail, status,
-							pluginBlockTone(p, update.Tone))
-					}
-				})
-			})
+						ui.Scroll(c).Grow(1).Padding(12).Children(func() {
+							ui.Column(c).Gap(9).Children(func() {
+								s.taskCard(c, p, text("tasksPiRpc"), s.piSecondaryLabel(), s.connectionStateLabel(), s.piTone(p))
+								s.taskCard(c, p, text("tasksCurrentRun"), s.currentRunTaskDetail(), s.runLabel(), s.runTone(p))
+								s.taskCard(c, p, text("tasksRuntimeDiagnostics"), s.runtimeDiagnosticDetail(), s.runtimeDiagnosticLabel(), s.runtimeDiagnosticTone(p))
+								s.taskCard(c, p, text("tasksPluginRegistry"), s.pluginRegistryTaskDetail(), s.pluginRegistryTaskLabel(), s.pluginRegistryTaskTone(p))
+								for _, key := range s.pluginTaskKeys() {
+									update := s.pluginTasks[key]
+									status := fallback(update.Status, strings.ToUpper(update.Tone))
+									s.taskCard(c, p, update.Title, update.Detail, status,
+										pluginBlockTone(p, update.Tone))
+								}
+							})
+						})
 
-			ui.Row(c).Padding(12, 14).Gap(8).AlignItems(ui.Center).
-				BorderWidth(1, 0, 0, 0).BorderColor(p.border).Children(func() {
-				ui.Icon(c, icon("info")).Size(14, 14).TextColor(p.muted)
-				ui.Text(c, text("tasksOwnership")).FontSize(fontCaption).TextColor(p.muted)
+						ui.Row(c).Padding(12, 14).Gap(8).AlignItems(ui.Center).
+							BorderWidth(1, 0, 0, 0).BorderColor(p.border).Children(func() {
+							ui.Icon(c, icon("info")).Size(14, 14).TextColor(p.muted)
+							ui.Text(c, text("tasksOwnership")).FontSize(fontCaption).TextColor(p.muted)
+						})
+					})
 			})
 		})
 }

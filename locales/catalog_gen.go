@@ -244,6 +244,78 @@ func (msgs Messages) TitleCloseTaskPanel() string {
 	return Catalog.Format(msgs.locale, "titleCloseTaskPanel", nil)
 }
 
+// TitleNewChat says "New chat"
+// in the language the app shows.
+//
+// Fallback session title when no Pi or local temporary name is available.
+func TitleNewChat() string { return In(i18n.Locale()).TitleNewChat() }
+
+// TitleNewChat says "New chat"
+// in the language of msgs.
+//
+// Fallback session title when no Pi or local temporary name is available.
+func (msgs Messages) TitleNewChat() string {
+	return Catalog.Format(msgs.locale, "titleNewChat", nil)
+}
+
+// TitleSessionMenu says "Session actions"
+// in the language the app shows.
+//
+// Accessible label and tooltip for the current session actions menu.
+func TitleSessionMenu() string { return In(i18n.Locale()).TitleSessionMenu() }
+
+// TitleSessionMenu says "Session actions"
+// in the language of msgs.
+//
+// Accessible label and tooltip for the current session actions menu.
+func (msgs Messages) TitleSessionMenu() string {
+	return Catalog.Format(msgs.locale, "titleSessionMenu", nil)
+}
+
+// TitleRenameSession says "Rename"
+// in the language the app shows.
+//
+// Action and accessible label for manually renaming the current session.
+func TitleRenameSession() string { return In(i18n.Locale()).TitleRenameSession() }
+
+// TitleRenameSession says "Rename"
+// in the language of msgs.
+//
+// Action and accessible label for manually renaming the current session.
+func (msgs Messages) TitleRenameSession() string {
+	return Catalog.Format(msgs.locale, "titleRenameSession", nil)
+}
+
+// TitleRenameSessionFromContext says "Rename from context"
+// in the language the app shows.
+//
+// Action that asks Pi to rename the current session from recent
+// conversation context.
+func TitleRenameSessionFromContext() string { return In(i18n.Locale()).TitleRenameSessionFromContext() }
+
+// TitleRenameSessionFromContext says "Rename from context"
+// in the language of msgs.
+//
+// Action that asks Pi to rename the current session from recent
+// conversation context.
+func (msgs Messages) TitleRenameSessionFromContext() string {
+	return Catalog.Format(msgs.locale, "titleRenameSessionFromContext", nil)
+}
+
+// TitleSaveSessionName says "Save name"
+// in the language the app shows.
+//
+// Accessible label for confirming a manually edited session name.
+func TitleSaveSessionName() string { return In(i18n.Locale()).TitleSaveSessionName() }
+
+// TitleSaveSessionName says "Save name"
+// in the language of msgs.
+//
+// Accessible label for confirming a manually edited session name.
+func (msgs Messages) TitleSaveSessionName() string {
+	return Catalog.Format(msgs.locale, "titleSaveSessionName", nil)
+}
+
 // TasksTitle says "Tasks"
 // in the language the app shows.
 //
@@ -584,6 +656,22 @@ func NoticeSessionPreferenceSave() string { return In(i18n.Locale()).NoticeSessi
 // User-interface text for notice Session Preference Save.
 func (msgs Messages) NoticeSessionPreferenceSave() string {
 	return Catalog.Format(msgs.locale, "noticeSessionPreferenceSave", nil)
+}
+
+// NoticeSessionRenameFailed says "Could not rename the Pi session: {error}"
+// in the language the app shows.
+//
+// Notice shown when manually saving a Pi session name fails.
+func NoticeSessionRenameFailed(error string) string {
+	return In(i18n.Locale()).NoticeSessionRenameFailed(error)
+}
+
+// NoticeSessionRenameFailed says "Could not rename the Pi session: {error}"
+// in the language of msgs.
+//
+// Notice shown when manually saving a Pi session name fails.
+func (msgs Messages) NoticeSessionRenameFailed(error string) string {
+	return Catalog.Format(msgs.locale, "noticeSessionRenameFailed", map[string]any{"error": error})
 }
 
 // NoticePiConnectedNoModels says "External Pi CLI connected; model metadata was unavailable."
@@ -5148,18 +5236,20 @@ func (msgs Messages) SettingsAboutDescription() string {
 	return Catalog.Format(msgs.locale, "settingsAboutDescription", nil)
 }
 
-// SettingsAboutVersion says "P9c · 2026-10-22"
+// SettingsAboutVersion says "Version {version} · Build {build}"
 // in the language the app shows.
 //
-// Current BYOP phase and date.
-func SettingsAboutVersion() string { return In(i18n.Locale()).SettingsAboutVersion() }
+// Application version and build shown in the About section.
+func SettingsAboutVersion(version string, build string) string {
+	return In(i18n.Locale()).SettingsAboutVersion(version, build)
+}
 
-// SettingsAboutVersion says "P9c · 2026-10-22"
+// SettingsAboutVersion says "Version {version} · Build {build}"
 // in the language of msgs.
 //
-// Current BYOP phase and date.
-func (msgs Messages) SettingsAboutVersion() string {
-	return Catalog.Format(msgs.locale, "settingsAboutVersion", nil)
+// Application version and build shown in the About section.
+func (msgs Messages) SettingsAboutVersion(version string, build string) string {
+	return Catalog.Format(msgs.locale, "settingsAboutVersion", map[string]any{"version": version, "build": build})
 }
 
 // SettingsNotAssigned says "Not assigned"
@@ -5386,20 +5476,6 @@ func RelativeDays(count int) string { return In(i18n.Locale()).RelativeDays(coun
 // Compact relative session time in days.
 func (msgs Messages) RelativeDays(count int) string {
 	return Catalog.Format(msgs.locale, "relativeDays", map[string]any{"count": count})
-}
-
-// HeaderPhase says "P9C"
-// in the language the app shows.
-//
-// Top-bar badge showing the current implementation phase.
-func HeaderPhase() string { return In(i18n.Locale()).HeaderPhase() }
-
-// HeaderPhase says "P9C"
-// in the language of msgs.
-//
-// Top-bar badge showing the current implementation phase.
-func (msgs Messages) HeaderPhase() string {
-	return Catalog.Format(msgs.locale, "headerPhase", nil)
 }
 
 // ModelsSearch says "Search models"

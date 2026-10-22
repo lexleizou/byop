@@ -197,122 +197,123 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 		pillTone = pluginRuntimeTone(p, runtime.State)
 	}
 	ui.Column(c).Width(260).MinWidth(220).AlignItems(ui.Start).Gap(10).Padding(14).Radius(11).
-		Border(1, p.border).Background(p.surface).Children(func() {
-		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
-			ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
-				ui.Icon(c, iconOr(iconName, "plugins")).Size(17, 17).TextColor(tone)
+		Border(1, p.border).Background(p.surface).Shadow(0, 1, 3, 0, p.shadowCard).
+		Children(func() {
+			ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
+				ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
+					ui.Icon(c, iconOr(iconName, "plugins")).Size(17, 17).TextColor(tone)
+				})
+				ui.Spacer(c)
+				statusPill(c, p, pillLabel, pillTone)
 			})
-			ui.Spacer(c)
-			statusPill(c, p, pillLabel, pillTone)
-		})
-		ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
-		ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
-		ui.Text(c, entry.ID).Font("monospace").FontSize(fontCaption).TextColor(p.muted)
-		ui.Text(c, surface).FontSize(fontCaption).TextColor(tone)
-		meta := textArgs("pluginsContributionCount", map[string]any{
-			"count": entry.ContributionCount,
-		})
-		if entry.Version != "" {
-			meta = "v" + entry.Version + " · " + meta
-		}
-		if entry.Manifest != nil {
-			meta = textArgs("pluginsRuntimeMeta", map[string]any{
-				"runtime": entry.Manifest.Runtime,
-				"count":   entry.ContributionCount,
+			ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
+			ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
+			ui.Text(c, entry.ID).Font("monospace").FontSize(fontCaption).TextColor(p.muted)
+			ui.Text(c, surface).FontSize(fontCaption).TextColor(tone)
+			meta := textArgs("pluginsContributionCount", map[string]any{
+				"count": entry.ContributionCount,
 			})
 			if entry.Version != "" {
 				meta = "v" + entry.Version + " · " + meta
 			}
-		}
-		ui.Text(c, meta).FontSize(fontCaption).TextColor(p.muted)
-		if entry.Manifest != nil {
-			ui.Text(c, pluginPermissionsLine(entry.Manifest)).FontSize(fontCaption).
-				LineHeight(1.35).TextColor(p.muted)
-			ui.Text(c, pluginEnforcementLine(entry.Manifest.Runtime)).FontSize(fontCaption).
-				LineHeight(1.35).TextColor(p.muted)
-			for _, webView := range entry.Manifest.Contributes.WebViews {
-				ui.Text(c, textArgs("pluginsWebViewMeta", map[string]any{
-					"title": fallback(webView.Title, webView.ID),
-					"entry": webView.Entry,
-				})).
-					FontSize(fontCaption).LineHeight(1.35).TextColor(p.muted)
-			}
-			var secondaryViews []string
-			for _, view := range entry.Manifest.Contributes.Views {
-				if view.Location == "secondary" {
-					secondaryViews = append(secondaryViews, fallback(view.Title, view.ID))
-				}
-			}
-			if len(secondaryViews) > 0 {
-				ui.Text(c, textArgs("pluginsSecondaryViews", map[string]any{
-					"views": strings.Join(secondaryViews, ", "),
-				})).
-					FontSize(fontCaption).LineHeight(1.35).TextColor(p.muted)
-			}
-		}
-		if entry.Error != "" {
-			ui.Text(c, summarizeLine(uiErrorFromText(entry.Error, text("pluginsFailedFallback")), 240)).FontSize(fontCaption).
-				LineHeight(1.4).TextColor(p.danger)
-		}
-		if entry.Status != pluginRegistered || entry.Manifest == nil {
-			return
-		}
-		if runtime.LastResult != "" && runtime.LastError == "" {
-			ui.Text(c, runtime.LastCommand+" → "+runtime.LastResult).FontSize(fontCaption).
-				LineHeight(1.4).TextColor(p.success)
-		}
-		if runtime.LastError != "" {
-			ui.Text(c, summarizeLine(uiErrorFromText(runtime.LastError, text("pluginsFailedFallback")), 240)).FontSize(fontCaption).
-				LineHeight(1.4).TextColor(p.danger)
-		}
-		if runtime.HostCalls > 0 {
-			ui.Text(c, textArgs("pluginsHostCallCount", map[string]any{
-				"count": runtime.HostCalls,
-			})).FontSize(fontCaption).
-				TextColor(p.muted)
-		}
-		if runtime.DeniedCalls > 0 {
-			ui.Text(c, textArgs("pluginsDenied", map[string]any{
-				"detail": summarizeLine(runtime.LastDenied, 180),
-			})).
-				FontSize(fontCaption).LineHeight(1.35).TextColor(p.danger)
-		}
-		busy := runtime.State == pluginStateStarting || runtime.State == pluginStateRunning ||
-			runtime.State == pluginStateStopping
-		ui.Row(c).Wrap().GapX(6).GapY(6).Children(func() {
-			for _, command := range entry.Manifest.Contributes.Commands {
-				command := command
-				pluginCommandButton(c, p, "plugin-cmd-"+entry.ID+"-"+command.ID, command, busy, func() {
-					s.runPluginCommand(entry, command)
+			if entry.Manifest != nil {
+				meta = textArgs("pluginsRuntimeMeta", map[string]any{
+					"runtime": entry.Manifest.Runtime,
+					"count":   entry.ContributionCount,
 				})
-			}
-			if runtime.State == pluginStateActive {
-				secondaryAction(c, p, "plugin-stop-"+entry.ID, text("pluginsDeactivate"), func() {
-					s.deactivatePlugin(entry)
-				})
-			}
-			for _, view := range entry.Manifest.Contributes.Views {
-				view := view
-				if view.Location != "main" {
-					continue
+				if entry.Version != "" {
+					meta = "v" + entry.Version + " · " + meta
 				}
-				secondaryAction(c, p, "plugin-open-view-"+entry.ID+"-"+view.ID,
-					textArgs("pluginsOpen", map[string]any{"title": fallback(view.Title, view.ID)}), func() {
-						s.openPluginView(entry, view)
-					})
 			}
-			for _, webView := range entry.Manifest.Contributes.WebViews {
-				webView := webView
-				if webView.Location != "main" {
-					continue
+			ui.Text(c, meta).FontSize(fontCaption).TextColor(p.muted)
+			if entry.Manifest != nil {
+				ui.Text(c, pluginPermissionsLine(entry.Manifest)).FontSize(fontCaption).
+					LineHeight(1.35).TextColor(p.muted)
+				ui.Text(c, pluginEnforcementLine(entry.Manifest.Runtime)).FontSize(fontCaption).
+					LineHeight(1.35).TextColor(p.muted)
+				for _, webView := range entry.Manifest.Contributes.WebViews {
+					ui.Text(c, textArgs("pluginsWebViewMeta", map[string]any{
+						"title": fallback(webView.Title, webView.ID),
+						"entry": webView.Entry,
+					})).
+						FontSize(fontCaption).LineHeight(1.35).TextColor(p.muted)
 				}
-				secondaryAction(c, p, "plugin-open-webview-"+entry.ID+"-"+webView.ID,
-					textArgs("pluginsOpen", map[string]any{"title": fallback(webView.Title, webView.ID)}), func() {
-						s.openPluginWebView(entry, webView)
-					})
+				var secondaryViews []string
+				for _, view := range entry.Manifest.Contributes.Views {
+					if view.Location == "secondary" {
+						secondaryViews = append(secondaryViews, fallback(view.Title, view.ID))
+					}
+				}
+				if len(secondaryViews) > 0 {
+					ui.Text(c, textArgs("pluginsSecondaryViews", map[string]any{
+						"views": strings.Join(secondaryViews, ", "),
+					})).
+						FontSize(fontCaption).LineHeight(1.35).TextColor(p.muted)
+				}
 			}
+			if entry.Error != "" {
+				ui.Text(c, summarizeLine(uiErrorFromText(entry.Error, text("pluginsFailedFallback")), 240)).FontSize(fontCaption).
+					LineHeight(1.4).TextColor(p.danger)
+			}
+			if entry.Status != pluginRegistered || entry.Manifest == nil {
+				return
+			}
+			if runtime.LastResult != "" && runtime.LastError == "" {
+				ui.Text(c, runtime.LastCommand+" → "+runtime.LastResult).FontSize(fontCaption).
+					LineHeight(1.4).TextColor(p.success)
+			}
+			if runtime.LastError != "" {
+				ui.Text(c, summarizeLine(uiErrorFromText(runtime.LastError, text("pluginsFailedFallback")), 240)).FontSize(fontCaption).
+					LineHeight(1.4).TextColor(p.danger)
+			}
+			if runtime.HostCalls > 0 {
+				ui.Text(c, textArgs("pluginsHostCallCount", map[string]any{
+					"count": runtime.HostCalls,
+				})).FontSize(fontCaption).
+					TextColor(p.muted)
+			}
+			if runtime.DeniedCalls > 0 {
+				ui.Text(c, textArgs("pluginsDenied", map[string]any{
+					"detail": summarizeLine(runtime.LastDenied, 180),
+				})).
+					FontSize(fontCaption).LineHeight(1.35).TextColor(p.danger)
+			}
+			busy := runtime.State == pluginStateStarting || runtime.State == pluginStateRunning ||
+				runtime.State == pluginStateStopping
+			ui.Row(c).Wrap().GapX(6).GapY(6).Children(func() {
+				for _, command := range entry.Manifest.Contributes.Commands {
+					command := command
+					pluginCommandButton(c, p, "plugin-cmd-"+entry.ID+"-"+command.ID, command, busy, func() {
+						s.runPluginCommand(entry, command)
+					})
+				}
+				if runtime.State == pluginStateActive {
+					secondaryAction(c, p, "plugin-stop-"+entry.ID, text("pluginsDeactivate"), func() {
+						s.deactivatePlugin(entry)
+					})
+				}
+				for _, view := range entry.Manifest.Contributes.Views {
+					view := view
+					if view.Location != "main" {
+						continue
+					}
+					secondaryAction(c, p, "plugin-open-view-"+entry.ID+"-"+view.ID,
+						textArgs("pluginsOpen", map[string]any{"title": fallback(view.Title, view.ID)}), func() {
+							s.openPluginView(entry, view)
+						})
+				}
+				for _, webView := range entry.Manifest.Contributes.WebViews {
+					webView := webView
+					if webView.Location != "main" {
+						continue
+					}
+					secondaryAction(c, p, "plugin-open-webview-"+entry.ID+"-"+webView.ID,
+						textArgs("pluginsOpen", map[string]any{"title": fallback(webView.Title, webView.ID)}), func() {
+							s.openPluginWebView(entry, webView)
+						})
+				}
+			})
 		})
-	})
 }
 
 func pluginPermissionsLine(manifest *pluginManifest) string {
@@ -1164,7 +1165,10 @@ func (s *appState) settingsPage(c *ui.Context, p palette) {
 							brandMark(c, p, 38)
 							ui.Column(c).Gap(1).Children(func() {
 								ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-								ui.Text(c, locales.SettingsAboutVersion()).FontSize(fontCaption).
+								ui.Text(c, textArgs("settingsAboutVersion", map[string]any{
+									"version": appVersion,
+									"build":   appBuildVersion(),
+								})).FontSize(fontCaption).
 									TextColor(p.muted)
 							})
 						})

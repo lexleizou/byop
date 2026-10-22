@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -23,9 +24,30 @@ import (
 )
 
 const (
-	appTitle = "Build You Own Pi"
-	appShort = "BYOP"
+	appTitle   = "Build You Own Pi"
+	appShort   = "BYOP"
+	appVersion = "0.10.0"
 )
+
+func appBuildVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "dev"
+	}
+	for _, setting := range info.Settings {
+		if setting.Key != "vcs.revision" {
+			continue
+		}
+		revision := strings.TrimSpace(setting.Value)
+		if len(revision) > 7 {
+			revision = revision[:7]
+		}
+		if revision != "" {
+			return revision
+		}
+	}
+	return "dev"
+}
 
 var setMygoThemeSource = mygo.Theme.SetSource
 
@@ -47,12 +69,16 @@ func main() {
 		state.syncPluginWebViewTheme(currentAppearanceDark(), state.highContrastActive(currentAppearanceHighContrast()))
 		state.syncPluginWebViewLocale()
 		win := mygo.NewWindow(mygo.WindowOptions{
-			Title:           locales.AppWindowTitle(),
-			Width:           1180,
-			Height:          760,
-			MinWidth:        760,
-			MinHeight:       560,
-			TitleBarStyle:   mygo.TitleBarHiddenInset,
+			Title:         locales.AppWindowTitle(),
+			Width:         1180,
+			Height:        760,
+			MinWidth:      760,
+			MinHeight:     560,
+			TitleBarStyle: mygo.TitleBarHiddenInset,
+			TrafficLightPosition: &mygo.Point{
+				X: 18,
+				Y: int(shellGap) + (int(shellTitleBarHeight)-14)/2,
+			},
 			BackgroundColor: "light-dark(#fcfbf9, #211f1c)",
 			StateKey:        "byop-p2-pi-rpc",
 			Content:         ui.View(state.view),
@@ -228,6 +254,8 @@ type appState struct {
 	piThinkingLevels        []string
 	piModels                []piModel
 	piSessionFile           string
+	piSessionName           string
+	localSessionTitle       string
 	piSessions              []piSessionSummary
 	piSessionsExpanded      bool
 	piSessionsRefresh       atomic.Uint64
@@ -255,6 +283,15 @@ type appState struct {
 	followUpSuggestion      string
 	followUpAdoptionPending bool
 	followUpAdoptionFocus   bool
+
+	sessionRenameEditing         bool
+	sessionRenameDraft           string
+	sessionRenameInFlight        bool
+	sessionNamingInProgress      bool
+	sessionNamingCommitInFlight  bool
+	sessionNamingGen             uint64
+	sessionNamingCancel          context.CancelFunc
+	autoNamingAttemptedBySession map[string]bool
 
 	queueSteeringCount  int
 	queueFollowUpCount  int
@@ -854,12 +891,23 @@ func (s *appState) applyPiSessionState(state *piSessionState) {
 	if state == nil {
 		return
 	}
+	oldPath := s.piSessionFile
+	oldID := s.piSessionID
 	s.piSessionID = state.SessionID
 	if state.SessionFile == "" {
 		s.piSessionFile = ""
 	} else {
 		s.piSessionFile = canonicalPiPath(state.SessionFile)
 	}
+	if oldID != "" && state.SessionID != "" &&
+		!samePiSession(oldPath, oldID, s.piSessionFile, state.SessionID) {
+		s.invalidateSessionNaming()
+		s.piSessionName = ""
+		s.localSessionTitle = firstUserSessionTitle(s.chat)
+		s.sessionRenameEditing = false
+		s.sessionRenameDraft = ""
+	}
+	s.piSessionName = strings.TrimSpace(state.SessionName)
 	s.piThinkingLevel = state.ThinkingLevel
 	s.piModelProvider = state.Model.Provider
 	s.piModelID = state.Model.ID
@@ -950,6 +998,10 @@ func (s *appState) sessionMutationAllowed() bool {
 }
 
 func (s *appState) piMutationAllowed(change string) bool {
+	if s.sessionNamingCommitInFlight || s.sessionRenameInFlight {
+		s.showNotice(textArgs("noticeWaitSessionOperation", map[string]any{"change": change}))
+		return false
+	}
 	if s.piSessionBusy || s.thinkingCommitInFlight {
 		s.showNotice(textArgs("noticeWaitSessionOperation", map[string]any{"change": change}))
 		return false
@@ -969,6 +1021,7 @@ func (s *appState) beginPiSessionOperation(change string) (*piClient, uint64, ui
 	if !s.piMutationAllowed(change) {
 		return nil, 0, 0, false
 	}
+	s.invalidateSessionNaming()
 	client := s.pi
 	epoch := s.piEpoch
 	s.sessionGen++
@@ -1140,6 +1193,9 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			s.cancelThinkingPending()
 			s.chatView = chatPresentation{}
 			s.chat = chat
+			s.localSessionTitle = firstUserSessionTitle(chat)
+			s.sessionRenameEditing = false
+			s.sessionRenameDraft = ""
 			s.run = runIdle
 			s.activeRequest = ""
 			s.activePrompt = ""
@@ -1342,6 +1398,7 @@ func (s *appState) connectPi() {
 		return
 	}
 	s.clearPiConnectingNotice()
+	s.invalidateSessionNaming()
 	s.piError = ""
 	s.piErrorCode = ""
 	s.piEpoch++
@@ -1453,6 +1510,7 @@ func (s *appState) connectPi() {
 
 func (s *appState) reconnectPi() {
 	s.resetFollowUpSuggestion()
+	s.invalidateSessionNaming()
 	s.sessionGen++
 	s.piSessionBusy = false
 	s.cancelThinkingCommit()
@@ -1484,6 +1542,8 @@ func (s *appState) reconnectPi() {
 	s.piCwd = ""
 	s.piSessionFile = ""
 	s.piSessionID = ""
+	s.piSessionName = ""
+	s.localSessionTitle = ""
 	s.piSessions = nil
 	s.piSessionsExpanded = false
 	s.run = runIdle
@@ -1501,6 +1561,7 @@ func (s *appState) reconnectPi() {
 func (s *appState) shutdownPi() {
 	s.closed.Store(true)
 	s.resetFollowUpSuggestion()
+	s.invalidateSessionNaming()
 	if s.sessionLaterTimer != nil {
 		s.sessionLaterTimer.Stop()
 		s.sessionLaterTimer = nil
@@ -1573,6 +1634,9 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 	s.resetRuntimeDiagnostics()
 	s.composerDraft = ""
 	s.clearPiConnectingNotice()
+	if s.piSessionName == "" && s.localSessionTitle == "" {
+		s.localSessionTitle = localTemporarySessionTitle(prompt)
+	}
 	s.piError = ""
 	s.run = runSubmitting
 	s.runID = requestID
@@ -1949,6 +2013,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			if strings.TrimSpace(reply) != "" {
 				s.startFollowUpSuggestion(prompt, reply)
 			}
+			s.maybeStartAutoSessionNaming(prompt, reply)
 		}
 		s.refreshPiSessionState()
 		s.schedulePiSessionsRefresh()
@@ -1957,6 +2022,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.notice = textArgs("noticePiProtocolWarning", map[string]any{"error": s.piError})
 	case piEventProcessExit:
 		s.resetFollowUpSuggestion()
+		s.invalidateSessionNaming()
 		s.sessionGen++
 		s.piSessionBusy = false
 		s.cancelThinkingCommit()
@@ -1970,6 +2036,8 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.piError = uiErrorFromText(fallback(event.StderrTail, event.Error), text("errorPiDisconnected"))
 		s.piSessionFile = ""
 		s.piSessionID = ""
+		s.piSessionName = ""
+		s.localSessionTitle = ""
 		s.piModel = ""
 		s.piModelProvider = ""
 		s.piModelID = ""

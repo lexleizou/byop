@@ -60,6 +60,26 @@
   "@titleCloseTaskPanel": {
     "description": "Accessible label for closing the task panel."
   },
+  "titleNewChat": "New chat",
+  "@titleNewChat": {
+    "description": "Fallback session title when no Pi or local temporary name is available."
+  },
+  "titleSessionMenu": "Session actions",
+  "@titleSessionMenu": {
+    "description": "Accessible label and tooltip for the current session actions menu."
+  },
+  "titleRenameSession": "Rename",
+  "@titleRenameSession": {
+    "description": "Action and accessible label for manually renaming the current session."
+  },
+  "titleRenameSessionFromContext": "Rename from context",
+  "@titleRenameSessionFromContext": {
+    "description": "Action that asks Pi to rename the current session from recent conversation context."
+  },
+  "titleSaveSessionName": "Save name",
+  "@titleSaveSessionName": {
+    "description": "Accessible label for confirming a manually edited session name."
+  },
   "tasksTitle": "Tasks",
   "@tasksTitle": {
     "description": "Title of the right-side task panel."
@@ -151,6 +171,10 @@
   "noticeSessionPreferenceSave": "Pi session changed, but its preference could not be saved.",
   "@noticeSessionPreferenceSave": {
     "description": "User-interface text for notice Session Preference Save."
+  },
+  "noticeSessionRenameFailed": "Could not rename the Pi session: {error}",
+  "@noticeSessionRenameFailed": {
+    "description": "Notice shown when manually saving a Pi session name fails."
   },
   "noticePiConnectedNoModels": "External Pi CLI connected; model metadata was unavailable.",
   "@noticePiConnectedNoModels": {
@@ -1464,9 +1488,9 @@
   "@settingsAboutDescription": {
     "description": "About card description."
   },
-  "settingsAboutVersion": "P9c · 2026-10-22",
+  "settingsAboutVersion": "Version {version} · Build {build}",
   "@settingsAboutVersion": {
-    "description": "Current BYOP phase and date."
+    "description": "Application version and build shown in the About section."
   },
   "settingsNotAssigned": "Not assigned",
   "@settingsNotAssigned": {
@@ -1555,10 +1579,6 @@
         "example": "3"
       }
     }
-  },
-  "headerPhase": "P9C",
-  "@headerPhase": {
-    "description": "Top-bar badge showing the current implementation phase."
   },
   "modelsSearch": "Search models",
   "@modelsSearch": {

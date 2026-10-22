@@ -71,6 +71,7 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 	}{
 		{width: 1100, height: 560},
 		{width: 1180, height: 760},
+		{width: 1440, height: 900},
 	} {
 		for _, scenario := range []struct {
 			name  string
@@ -103,6 +104,13 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 				},
 				mark: func(state *appState) string { return state.piConnectionErrorText() },
 			},
+			{
+				name: "task panel open",
+				setup: func(state *appState) {
+					state.tasksOpen = true
+				},
+				mark: func(*appState) string { return text("tasksTitle") },
+			},
 		} {
 			t.Run(fmt.Sprintf("%s/%dx%d", scenario.name, size.width, size.height), func(t *testing.T) {
 				state := layoutTestState(t)
@@ -115,6 +123,28 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 				assertInsideViewport(t, tt, state.piCompactLabel(), size.height)
 			})
 		}
+	}
+}
+
+func TestP10bTitleMenuReceivesClicks(t *testing.T) {
+	restoreAppearance := stableTestAppearance(t)
+	defer restoreAppearance()
+
+	state := layoutTestState(t)
+	tt := ui.NewTester(func(c *ui.Context) {
+		theme, palette := nativeThemeWithContrast(false, false)
+		c.SetTheme(theme)
+		state.titleBar(c, palette)
+	}, 1100, 80)
+
+	if err := tt.Click(text("titleSessionMenu")); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.ChooseMenuItem(text("titleRenameSession")); err != nil {
+		t.Fatal(err)
+	}
+	if !state.sessionRenameEditing {
+		t.Fatal("choosing Rename did not enter inline rename mode")
 	}
 }
 

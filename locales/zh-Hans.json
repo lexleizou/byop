@@ -60,6 +60,26 @@
   "@titleCloseTaskPanel": {
     "description": "Accessible label for closing the task panel."
   },
+  "titleNewChat": "新对话",
+  "@titleNewChat": {
+    "description": "Fallback session title when no Pi or local temporary name is available."
+  },
+  "titleSessionMenu": "会话操作",
+  "@titleSessionMenu": {
+    "description": "Accessible label and tooltip for the current session actions menu."
+  },
+  "titleRenameSession": "重命名",
+  "@titleRenameSession": {
+    "description": "Action and accessible label for manually renaming the current session."
+  },
+  "titleRenameSessionFromContext": "根据上下文重新命名",
+  "@titleRenameSessionFromContext": {
+    "description": "Action that asks Pi to rename the current session from recent conversation context."
+  },
+  "titleSaveSessionName": "保存名称",
+  "@titleSaveSessionName": {
+    "description": "Accessible label for confirming a manually edited session name."
+  },
   "tasksTitle": "任务",
   "@tasksTitle": {
     "description": "Title of the right-side task panel."
@@ -151,6 +171,10 @@
   "noticeSessionPreferenceSave": "Pi 会话已更改，但无法保存相应偏好。",
   "@noticeSessionPreferenceSave": {
     "description": "User-interface text for notice Session Preference Save."
+  },
+  "noticeSessionRenameFailed": "无法重命名 Pi 会话：{error}",
+  "@noticeSessionRenameFailed": {
+    "description": "Notice shown when manually saving a Pi session name fails."
   },
   "noticePiConnectedNoModels": "外部 Pi CLI 已连接，但模型元数据不可用。",
   "@noticePiConnectedNoModels": {
@@ -1431,9 +1455,9 @@
   "@settingsAboutDescription": {
     "description": "About card description."
   },
-  "settingsAboutVersion": "P9c · 2026-10-22",
+  "settingsAboutVersion": "版本 {version} · 构建 {build}",
   "@settingsAboutVersion": {
-    "description": "Current BYOP phase and date."
+    "description": "Application version and build shown in the About section."
   },
   "settingsNotAssigned": "未分配",
   "@settingsNotAssigned": {
@@ -1498,10 +1522,6 @@
   "relativeDays": "{count}天",
   "@relativeDays": {
     "description": "Compact relative session time in days."
-  },
-  "headerPhase": "P9C",
-  "@headerPhase": {
-    "description": "Top-bar badge showing the current implementation phase."
   },
   "modelsSearch": "搜索模型",
   "@modelsSearch": {

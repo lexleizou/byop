@@ -26,6 +26,7 @@ const (
 type piSessionSummary struct {
 	Path         string
 	ID           string
+	Name         string
 	Title        string
 	Cwd          string
 	Created      time.Time
@@ -270,7 +271,8 @@ func scanPiSession(path string, info os.FileInfo) (piSessionSummary, error) {
 						}
 					case "session_info":
 						if name := strings.TrimSpace(entry.Name); name != "" {
-							summary.Title = piSessionTitle(name)
+							summary.Name = piSessionTitle(name)
+							summary.Title = summary.Name
 						}
 					}
 				}

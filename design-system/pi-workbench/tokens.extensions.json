@@ -4,8 +4,8 @@
     "name": "BYOP Extensions",
     "product": "Build You Own Pi",
     "productAbbreviation": "BYOP",
-    "version": "0.2.3",
-    "updated": "2026-10-20",
+    "version": "0.2.4",
+    "updated": "2026-10-22",
     "base": "../onevra/tokens.json",
     "baseVersion": "1.0.0",
     "status": "design source; P3.2a native Go consumes a subset and renders Chat through Onevra v0.2026.13 components",
@@ -107,6 +107,22 @@
       }
     },
     "dimension": {
+      "shellGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Space around the workbench canvas and between the title bar, navigation, main area, and task panel cards."
+      },
+      "shellRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Outer radius for the title bar, navigation, main area, and task panel cards."
+      },
       "navRailWidth": {
         "$type": "dimension",
         "$value": {
@@ -382,6 +398,140 @@
         "$type": "dimension",
         "$value": "{workbench.typography.bodySize}",
         "$description": "BYOP product override. Navigation uses the 14px body size on every platform."
+      }
+    },
+    "shadow": {
+      "container": {
+        "$type": "shadow",
+        "$value": {
+          "light": {
+            "color": "#332B2214",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 1,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 3,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          },
+          "dark": {
+            "color": "#00000038",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 1,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 3,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          }
+        },
+        "$description": "Outer workbench card shadow; matches palette.shadow in theme.go."
+      },
+      "card": {
+        "$type": "shadow",
+        "$value": {
+          "light": {
+            "color": "#332B2210",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 1,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 2,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          },
+          "dark": {
+            "color": "#00000048",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 1,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 2,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          }
+        },
+        "$description": "Content card shadow token; reserved for content cards and plugin cards."
+      },
+      "overlay": {
+        "$type": "shadow",
+        "$value": {
+          "light": {
+            "color": "#332B2220",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 8,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 24,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          },
+          "dark": {
+            "color": "#00000070",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 8,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 24,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          }
+        },
+        "$description": "Native overlay shadow token; MyGo menu and popover shadows remain platform-managed."
       }
     },
     "layout": {

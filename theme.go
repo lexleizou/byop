@@ -41,6 +41,8 @@ type palette struct {
 	focus          ui.Color
 	scrollbar      ui.Color
 	shadow         ui.Color
+	shadowCard     ui.Color
+	shadowOverlay  ui.Color
 }
 
 func themePalette(dark bool) palette {
@@ -68,6 +70,8 @@ func themePaletteWithContrast(dark bool, high bool) palette {
 			focus:          ui.RGBA(237, 152, 110, 204),
 			scrollbar:      ui.RGBA(238, 234, 226, 89),
 			shadow:         ui.RGBA(0, 0, 0, 56),
+			shadowCard:     ui.RGBA(0, 0, 0, 72),
+			shadowOverlay:  ui.RGBA(0, 0, 0, 112),
 		}
 		if high {
 			p.background = ui.Hex("#141311")
@@ -101,6 +105,8 @@ func themePaletteWithContrast(dark bool, high bool) palette {
 		focus:          ui.RGBA(185, 71, 22, 140),
 		scrollbar:      ui.RGBA(51, 51, 47, 77),
 		shadow:         ui.RGBA(51, 43, 34, 20),
+		shadowCard:     ui.RGBA(51, 43, 34, 16),
+		shadowOverlay:  ui.RGBA(51, 43, 34, 32),
 	}
 	if high {
 		p.background = ui.Hex("#ffffff")

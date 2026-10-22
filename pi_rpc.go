@@ -294,6 +294,14 @@ func (p *piClient) GetState(ctx context.Context) (*piSessionState, error) {
 	return &state, nil
 }
 
+func (p *piClient) SetSessionName(ctx context.Context, name string) error {
+	_, err := p.request(ctx, map[string]any{
+		"type": "set_session_name",
+		"name": name,
+	})
+	return err
+}
+
 func (p *piClient) NewSession(ctx context.Context) (bool, error) {
 	data, err := p.request(ctx, map[string]any{"type": "new_session"})
 	if err != nil {
