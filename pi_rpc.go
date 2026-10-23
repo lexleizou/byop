@@ -163,6 +163,8 @@ type piEvent struct {
 	StatusKey      string
 	StatusText     *string
 	NotifyType     string
+	GenerationTime time.Duration
+	OutputTokens   int64
 }
 
 type piStopResult struct {
@@ -204,9 +206,11 @@ type piClient struct {
 	waitDone chan struct{}
 	waitErr  error
 
-	streamMu    sync.Mutex
-	streamParts map[int]string
-	streamOrder []int
+	streamMu            sync.Mutex
+	streamParts         map[int]string
+	streamOrder         []int
+	generationStartedAt time.Time
+	generationEndedAt   time.Time
 }
 
 func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
@@ -770,6 +774,7 @@ func (p *piClient) handleRecord(line []byte) {
 		p.handleResponse(record)
 	case "agent_start":
 		p.resetStream()
+		p.resetGenerationTiming()
 		p.emit(piEvent{Kind: piEventRunStarted})
 	case "message_update":
 		p.handleMessageUpdate(line)
@@ -1049,9 +1054,13 @@ func (p *piClient) handleMessageUpdate(line []byte) {
 	}
 	update := event.AssistantMessageEvent
 	switch update.Type {
+	case "thinking_delta":
+		p.startGenerationTiming()
+		return
 	case "text_start":
 		p.setStreamPart(update.ContentIndex, "")
 	case "text_delta":
+		p.startGenerationTiming()
 		p.appendStreamPart(update.ContentIndex, update.Delta)
 	case "text_end":
 		p.setStreamPart(update.ContentIndex, update.Content)
@@ -1068,6 +1077,9 @@ func (p *piClient) handleMessageEnd(line []byte) {
 			Content      json.RawMessage `json:"content"`
 			StopReason   string          `json:"stopReason"`
 			ErrorMessage string          `json:"errorMessage"`
+			Usage        struct {
+				Output int64 `json:"output"`
+			} `json:"usage"`
 		} `json:"message"`
 	}
 	if err := json.Unmarshal(line, &event); err != nil {
@@ -1086,14 +1098,19 @@ func (p *piClient) handleMessageEnd(line []byte) {
 		return
 	}
 	if text == "" && event.Message.ErrorMessage == "" {
+		p.resetGenerationTiming()
 		p.resetStream()
 		return
 	}
+	generationTime := p.endGenerationTiming()
 	p.emit(piEvent{
-		Kind:  piEventMessage,
-		Text:  text,
-		Error: event.Message.ErrorMessage,
+		Kind:           piEventMessage,
+		Text:           text,
+		Error:          event.Message.ErrorMessage,
+		GenerationTime: generationTime,
+		OutputTokens:   event.Message.Usage.Output,
 	})
+	p.resetGenerationTiming()
 	p.resetStream()
 }
 
@@ -1138,6 +1155,33 @@ func (p *piClient) resetStream() {
 	p.streamParts = make(map[int]string)
 	p.streamOrder = nil
 	p.streamMu.Unlock()
+}
+
+func (p *piClient) resetGenerationTiming() {
+	p.streamMu.Lock()
+	p.generationStartedAt = time.Time{}
+	p.generationEndedAt = time.Time{}
+	p.streamMu.Unlock()
+}
+
+func (p *piClient) startGenerationTiming() {
+	p.streamMu.Lock()
+	if p.generationStartedAt.IsZero() {
+		p.generationStartedAt = time.Now()
+	}
+	p.streamMu.Unlock()
+}
+
+func (p *piClient) endGenerationTiming() time.Duration {
+	p.streamMu.Lock()
+	defer p.streamMu.Unlock()
+	if p.generationStartedAt.IsZero() {
+		return 0
+	}
+	if p.generationEndedAt.IsZero() {
+		p.generationEndedAt = time.Now()
+	}
+	return p.generationEndedAt.Sub(p.generationStartedAt)
 }
 
 func (p *piClient) setStreamPart(index int, text string) {

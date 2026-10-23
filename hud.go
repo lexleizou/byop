@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -22,6 +23,9 @@ type hudState struct {
 	extStatus             map[string]string
 	generation            uint64
 	branchGeneration      uint64
+	avgOutputTokens       int64
+	avgGenerationSeconds  float64
+	statsRequest          uint64
 }
 
 func (s *appState) beginPiHUD(cwd string, state *piSessionState) {
@@ -32,6 +36,8 @@ func (s *appState) beginPiHUD(cwd string, state *piSessionState) {
 	s.hud.stats = nil
 	s.hud.extStatus = make(map[string]string)
 	s.hud.usingSubscription = false
+	s.hud.avgOutputTokens = 0
+	s.hud.avgGenerationSeconds = 0
 	s.applyPiHUDState(state)
 	s.refreshPiHUDBranch()
 	s.refreshPiHUD()
@@ -41,6 +47,8 @@ func (s *appState) resetPiHUDData() {
 	s.hud.generation++
 	s.hud.stats = nil
 	s.hud.extStatus = make(map[string]string)
+	s.hud.avgOutputTokens = 0
+	s.hud.avgGenerationSeconds = 0
 }
 
 func (s *appState) clearPiHUD() {
@@ -53,6 +61,8 @@ func (s *appState) clearPiHUD() {
 	s.hud.contextWindowFallback = 0
 	s.hud.usingSubscription = false
 	s.hud.extStatus = nil
+	s.hud.avgOutputTokens = 0
+	s.hud.avgGenerationSeconds = 0
 }
 
 func (s *appState) applyPiHUDState(state *piSessionState) {
@@ -115,17 +125,22 @@ func (s *appState) refreshPiHUD() {
 	client := s.pi
 	epoch := s.piEpoch
 	generation := s.hud.generation
+	s.hud.statsRequest++
+	request := s.hud.statsRequest
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		stats, err := client.GetSessionStats(ctx)
-		s.postUI(func() { s.applyPiHUDStats(generation, epoch, client, stats, err) })
+		s.postUI(func() { s.applyPiHUDStats(generation, epoch, request, client, stats, err) })
 	}()
 }
 
-func (s *appState) applyPiHUDStats(generation, epoch uint64, client *piClient, stats *piSessionStats, err error) {
+func (s *appState) applyPiHUDStats(generation, epoch, request uint64, client *piClient,
+	stats *piSessionStats, err error,
+) {
 	if generation != s.hud.generation ||
 		epoch != s.piEpoch ||
+		request != s.hud.statsRequest ||
 		client != s.pi {
 		return
 	}
@@ -133,6 +148,21 @@ func (s *appState) applyPiHUDStats(generation, epoch uint64, client *piClient, s
 		return
 	}
 	s.hud.stats = stats
+}
+
+func (s *appState) recordPiHUDSample(outputTokens int64, seconds float64) {
+	if outputTokens <= 0 || seconds <= 0 {
+		return
+	}
+	s.hud.avgOutputTokens += outputTokens
+	s.hud.avgGenerationSeconds += seconds
+}
+
+func (s *appState) piHUDAverageTokensPerSecond() (float64, bool) {
+	if s.hud.avgOutputTokens <= 0 || s.hud.avgGenerationSeconds <= 0 {
+		return 0, false
+	}
+	return float64(s.hud.avgOutputTokens) / s.hud.avgGenerationSeconds, true
 }
 
 func formatPiTokens(count int64) string {
@@ -214,7 +244,7 @@ func (s *appState) piHUDLabel() string {
 	}
 	parts := make([]string, 0, 8)
 	if branch := strings.TrimSpace(s.hud.branch); branch != "" {
-		parts = append(parts, "("+branch+")")
+		parts = append(parts, branch)
 	}
 	if stats := s.hud.stats; stats != nil {
 		tokens := make([]string, 0, 4)
@@ -224,17 +254,8 @@ func (s *appState) piHUDLabel() string {
 		if value := stats.Tokens.Output; value > 0 {
 			tokens = append(tokens, "↓"+formatPiTokens(value))
 		}
-		if value := stats.Tokens.CacheRead; value > 0 {
-			tokens = append(tokens, "R"+formatPiTokens(value))
-		}
-		if value := stats.Tokens.CacheWrite; value > 0 {
-			tokens = append(tokens, "W"+formatPiTokens(value))
-		}
 		if len(tokens) > 0 {
 			parts = append(parts, strings.Join(tokens, " "))
-		}
-		if rate, ok := piCacheHitRate(stats); ok {
-			parts = append(parts, fmt.Sprintf("CH%.1f%%", rate))
 		}
 		if stats.Cost > 0 || s.hud.usingSubscription {
 			cost := fmt.Sprintf("$%.3f", stats.Cost)
@@ -243,6 +264,12 @@ func (s *appState) piHUDLabel() string {
 			}
 			parts = append(parts, cost)
 		}
+		if rate, ok := piCacheHitRate(stats); ok {
+			parts = append(parts, textArgs("hudCache", map[string]any{"percent": int64(math.Round(rate))}))
+		}
+	}
+	if rate, ok := s.piHUDAverageTokensPerSecond(); ok {
+		parts = append(parts, textArgs("hudAverageSpeed", map[string]any{"speed": int64(math.Round(rate))}))
 	}
 	if context := s.piHUDContextLabel(); context != "" {
 		parts = append(parts, context)
@@ -260,25 +287,18 @@ func (s *appState) piHUDLabel() string {
 			statuses = append(statuses, truncateHUDStatus(s.hud.extStatus[key], 40))
 		}
 		if len(statuses) > 0 {
-			parts = append(parts, strings.Join(statuses, " · "))
+			parts = append(parts, strings.Join(statuses, "  "))
 		}
 	}
-	return strings.Join(parts, " · ")
+	return strings.Join(parts, "  ")
 }
 
 func (s *appState) piHUDContextLabel() string {
 	percent, hasPercent := piContextPercent(s.hud.stats)
-	contextWindow := piContextWindow(s.hud.stats, s.hud.contextWindowFallback)
-	if !hasPercent && contextWindow <= 0 {
+	if !hasPercent {
 		return ""
 	}
-	context := "?"
-	if hasPercent {
-		context = fmt.Sprintf("%.1f%%", percent)
-	}
-	if contextWindow > 0 {
-		context += "/" + formatPiTokens(int64(contextWindow))
-	}
+	context := textArgs("hudContext", map[string]any{"percent": fmt.Sprintf("%.1f", percent)})
 	if s.hud.autoCompact {
 		context += text("hudAutoSuffix")
 	}
@@ -312,6 +332,17 @@ func (s *appState) piHUDTooltip() string {
 	if rate, ok := piCacheHitRate(s.hud.stats); ok {
 		label += "\n" + textArgs("hudCacheHitCumulative", map[string]any{
 			"percent": fmt.Sprintf("%.1f", rate),
+		})
+	}
+	if s.hud.stats != nil && (s.hud.stats.Tokens.CacheRead > 0 || s.hud.stats.Tokens.CacheWrite > 0) {
+		label += "\n" + textArgs("hudCacheTokens", map[string]any{
+			"read":  formatPiTokens(s.hud.stats.Tokens.CacheRead),
+			"write": formatPiTokens(s.hud.stats.Tokens.CacheWrite),
+		})
+	}
+	if speed, ok := s.piHUDAverageTokensPerSecond(); ok {
+		label += "\n" + textArgs("hudAverageSpeedTooltip", map[string]any{
+			"speed": fmt.Sprintf("%.1f", speed),
 		})
 	}
 	return label

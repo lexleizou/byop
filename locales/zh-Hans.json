@@ -208,9 +208,14 @@
   "@noticeModelChangeFailed": {
     "description": "User-interface text for notice Model Change Failed."
   },
-  "noticeModelLevelsRefreshFailed": "模型已更改，但无法刷新思考等级。",
+  "noticeModelLevelsRefreshFailed": "模型已更改，但无法刷新思考档位：{error}",
   "@noticeModelLevelsRefreshFailed": {
-    "description": "User-interface text for notice Model Levels Refresh Failed."
+    "description": "User-interface text for notice Model Levels Refresh Failed.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "noticeThinkingChangeFailed": "无法更改 Pi 思考等级：{error}",
   "@noticeThinkingChangeFailed": {
@@ -2234,5 +2239,115 @@
   "titleToggleTaskPanelShortcut": "切换任务面板（{shortcut}）",
   "@titleToggleTaskPanelShortcut": {
     "description": "Task panel toggle tooltip with shortcut."
+  },
+  "retry": "重试",
+  "@retry": {
+    "description": "Retry action for a failed operation."
+  },
+  "retryReadback": "重新读取",
+  "@retryReadback": {
+    "description": "Retry action that reads the current Pi state again."
+  },
+  "noticeModelStateConfirmed": "已确认模型状态。",
+  "@noticeModelStateConfirmed": {
+    "description": "Notice shown after a successful Pi model-state read-back."
+  },
+  "noticeSessionChanged": "重试前 Pi 会话已更改。",
+  "@noticeSessionChanged": {
+    "description": "Notice shown when a stale retry targets a different Pi session."
+  },
+  "noticeSessionBusyRetry": "请等待当前的 Pi 会话操作完成后再重试。",
+  "@noticeSessionBusyRetry": {
+    "description": "Notice shown when a model-control retry cannot start because the session is busy."
+  },
+  "noticeModelStateBeforeSend": "请先重新读取并确认模型状态，再发送消息。",
+  "@noticeModelStateBeforeSend": {
+    "description": "Notice shown when a message is blocked until an uncertain model state is confirmed."
+  },
+  "noticeModelMismatch": "Pi 报告的模型不一致。",
+  "@noticeModelMismatch": {
+    "description": "Notice shown when a model-state read-back reports a different model."
+  },
+  "contextSearch": "搜索上下文容量",
+  "@contextSearch": {
+    "description": "Context picker search field."
+  },
+  "contextNone": "无可用上下文容量",
+  "@contextNone": {
+    "description": "Empty context picker state."
+  },
+  "noticeThinkingDefaulted": "思考档位已改为模型默认值。",
+  "@noticeThinkingDefaulted": {
+    "description": "Short notice shown when the remembered thinking level is unavailable for a newly selected model."
+  },
+  "noticeModelLevelsRefreshed": "已刷新思考档位。",
+  "@noticeModelLevelsRefreshed": {
+    "description": "Notice shown after a successful retry of thinking-level discovery."
+  },
+  "noticeModelStateUnconfirmed": "无法确认当前模型状态：{error}",
+  "@noticeModelStateUnconfirmed": {
+    "description": "Notice shown when Pi cannot be read back after a model or thinking change.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeModelThinkingRestoreFailed": "模型已更改，但无法恢复会话记忆的思考档位：{error}",
+  "@noticeModelThinkingRestoreFailed": {
+    "description": "Notice shown when restoring a per-session thinking level fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hudCache": "缓存 {percent}%",
+  "@hudCache": {
+    "description": "HUD label for cache hit rate.",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "hudContext": "上下文 {percent}%",
+  "@hudContext": {
+    "description": "HUD label for current context usage.",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "hudAverageSpeed": "平均 {speed} tok/s",
+  "@hudAverageSpeed": {
+    "description": "HUD label for client-estimated average output speed.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "hudAverageSpeedTooltip": "平均输出速度（客户端估算）：{speed} tok/s",
+  "@hudAverageSpeedTooltip": {
+    "description": "Tooltip explaining the HUD average output speed estimate.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "hudCacheTokens": "缓存读取：{read}；写入：{write}",
+  "@hudCacheTokens": {
+    "description": "HUD tooltip detail for cache token counts.",
+    "placeholders": {
+      "read": {
+        "type": "String"
+      },
+      "write": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -788,20 +788,20 @@ func (msgs Messages) NoticeModelChangeFailed(error string) string {
 	return Catalog.Format(msgs.locale, "noticeModelChangeFailed", map[string]any{"error": error})
 }
 
-// NoticeModelLevelsRefreshFailed says "Model changed, but thinking levels could not be refreshed."
+// NoticeModelLevelsRefreshFailed says "Model changed, but thinking levels could not be refreshed: {error}"
 // in the language the app shows.
 //
 // User-interface text for notice Model Levels Refresh Failed.
-func NoticeModelLevelsRefreshFailed() string {
-	return In(i18n.Locale()).NoticeModelLevelsRefreshFailed()
+func NoticeModelLevelsRefreshFailed(error string) string {
+	return In(i18n.Locale()).NoticeModelLevelsRefreshFailed(error)
 }
 
-// NoticeModelLevelsRefreshFailed says "Model changed, but thinking levels could not be refreshed."
+// NoticeModelLevelsRefreshFailed says "Model changed, but thinking levels could not be refreshed: {error}"
 // in the language of msgs.
 //
 // User-interface text for notice Model Levels Refresh Failed.
-func (msgs Messages) NoticeModelLevelsRefreshFailed() string {
-	return Catalog.Format(msgs.locale, "noticeModelLevelsRefreshFailed", nil)
+func (msgs Messages) NoticeModelLevelsRefreshFailed(error string) string {
+	return Catalog.Format(msgs.locale, "noticeModelLevelsRefreshFailed", map[string]any{"error": error})
 }
 
 // NoticeThinkingChangeFailed says "Could not change Pi thinking level: {error}"
@@ -7970,4 +7970,272 @@ func TitleToggleTaskPanelShortcut(shortcut string) string {
 // Task panel toggle tooltip with shortcut.
 func (msgs Messages) TitleToggleTaskPanelShortcut(shortcut string) string {
 	return Catalog.Format(msgs.locale, "titleToggleTaskPanelShortcut", map[string]any{"shortcut": shortcut})
+}
+
+// Retry says "Retry"
+// in the language the app shows.
+//
+// Retry action for a failed operation.
+func Retry() string { return In(i18n.Locale()).Retry() }
+
+// Retry says "Retry"
+// in the language of msgs.
+//
+// Retry action for a failed operation.
+func (msgs Messages) Retry() string {
+	return Catalog.Format(msgs.locale, "retry", nil)
+}
+
+// RetryReadback says "Retry read-back"
+// in the language the app shows.
+//
+// Retry action that reads the current Pi state again.
+func RetryReadback() string { return In(i18n.Locale()).RetryReadback() }
+
+// RetryReadback says "Retry read-back"
+// in the language of msgs.
+//
+// Retry action that reads the current Pi state again.
+func (msgs Messages) RetryReadback() string {
+	return Catalog.Format(msgs.locale, "retryReadback", nil)
+}
+
+// NoticeModelStateConfirmed says "Model state confirmed."
+// in the language the app shows.
+//
+// Notice shown after a successful Pi model-state read-back.
+func NoticeModelStateConfirmed() string { return In(i18n.Locale()).NoticeModelStateConfirmed() }
+
+// NoticeModelStateConfirmed says "Model state confirmed."
+// in the language of msgs.
+//
+// Notice shown after a successful Pi model-state read-back.
+func (msgs Messages) NoticeModelStateConfirmed() string {
+	return Catalog.Format(msgs.locale, "noticeModelStateConfirmed", nil)
+}
+
+// NoticeSessionChanged says "The Pi session changed before the retry could run."
+// in the language the app shows.
+//
+// Notice shown when a stale retry targets a different Pi session.
+func NoticeSessionChanged() string { return In(i18n.Locale()).NoticeSessionChanged() }
+
+// NoticeSessionChanged says "The Pi session changed before the retry could run."
+// in the language of msgs.
+//
+// Notice shown when a stale retry targets a different Pi session.
+func (msgs Messages) NoticeSessionChanged() string {
+	return Catalog.Format(msgs.locale, "noticeSessionChanged", nil)
+}
+
+// NoticeSessionBusyRetry says "Wait for the current Pi session operation before retrying."
+// in the language the app shows.
+//
+// Notice shown when a model-control retry cannot start because the session
+// is busy.
+func NoticeSessionBusyRetry() string { return In(i18n.Locale()).NoticeSessionBusyRetry() }
+
+// NoticeSessionBusyRetry says "Wait for the current Pi session operation before retrying."
+// in the language of msgs.
+//
+// Notice shown when a model-control retry cannot start because the session
+// is busy.
+func (msgs Messages) NoticeSessionBusyRetry() string {
+	return Catalog.Format(msgs.locale, "noticeSessionBusyRetry", nil)
+}
+
+// NoticeModelStateBeforeSend says "Confirm the model state with read-back before sending a message."
+// in the language the app shows.
+//
+// Notice shown when a message is blocked until an uncertain model state is
+// confirmed.
+func NoticeModelStateBeforeSend() string { return In(i18n.Locale()).NoticeModelStateBeforeSend() }
+
+// NoticeModelStateBeforeSend says "Confirm the model state with read-back before sending a message."
+// in the language of msgs.
+//
+// Notice shown when a message is blocked until an uncertain model state is
+// confirmed.
+func (msgs Messages) NoticeModelStateBeforeSend() string {
+	return Catalog.Format(msgs.locale, "noticeModelStateBeforeSend", nil)
+}
+
+// NoticeModelMismatch says "Pi reported a different model."
+// in the language the app shows.
+//
+// Notice shown when a model-state read-back reports a different model.
+func NoticeModelMismatch() string { return In(i18n.Locale()).NoticeModelMismatch() }
+
+// NoticeModelMismatch says "Pi reported a different model."
+// in the language of msgs.
+//
+// Notice shown when a model-state read-back reports a different model.
+func (msgs Messages) NoticeModelMismatch() string {
+	return Catalog.Format(msgs.locale, "noticeModelMismatch", nil)
+}
+
+// ContextSearch says "Search context sizes"
+// in the language the app shows.
+//
+// Context picker search field.
+func ContextSearch() string { return In(i18n.Locale()).ContextSearch() }
+
+// ContextSearch says "Search context sizes"
+// in the language of msgs.
+//
+// Context picker search field.
+func (msgs Messages) ContextSearch() string {
+	return Catalog.Format(msgs.locale, "contextSearch", nil)
+}
+
+// ContextNone says "No context sizes"
+// in the language the app shows.
+//
+// Empty context picker state.
+func ContextNone() string { return In(i18n.Locale()).ContextNone() }
+
+// ContextNone says "No context sizes"
+// in the language of msgs.
+//
+// Empty context picker state.
+func (msgs Messages) ContextNone() string {
+	return Catalog.Format(msgs.locale, "contextNone", nil)
+}
+
+// NoticeThinkingDefaulted says "Thinking level changed to the model default."
+// in the language the app shows.
+//
+// Short notice shown when the remembered thinking level is unavailable for
+// a newly selected model.
+func NoticeThinkingDefaulted() string { return In(i18n.Locale()).NoticeThinkingDefaulted() }
+
+// NoticeThinkingDefaulted says "Thinking level changed to the model default."
+// in the language of msgs.
+//
+// Short notice shown when the remembered thinking level is unavailable for
+// a newly selected model.
+func (msgs Messages) NoticeThinkingDefaulted() string {
+	return Catalog.Format(msgs.locale, "noticeThinkingDefaulted", nil)
+}
+
+// NoticeModelLevelsRefreshed says "Thinking levels refreshed."
+// in the language the app shows.
+//
+// Notice shown after a successful retry of thinking-level discovery.
+func NoticeModelLevelsRefreshed() string { return In(i18n.Locale()).NoticeModelLevelsRefreshed() }
+
+// NoticeModelLevelsRefreshed says "Thinking levels refreshed."
+// in the language of msgs.
+//
+// Notice shown after a successful retry of thinking-level discovery.
+func (msgs Messages) NoticeModelLevelsRefreshed() string {
+	return Catalog.Format(msgs.locale, "noticeModelLevelsRefreshed", nil)
+}
+
+// NoticeModelStateUnconfirmed says "Could not confirm the current model state: {error}"
+// in the language the app shows.
+//
+// Notice shown when Pi cannot be read back after a model or thinking
+// change.
+func NoticeModelStateUnconfirmed(error string) string {
+	return In(i18n.Locale()).NoticeModelStateUnconfirmed(error)
+}
+
+// NoticeModelStateUnconfirmed says "Could not confirm the current model state: {error}"
+// in the language of msgs.
+//
+// Notice shown when Pi cannot be read back after a model or thinking
+// change.
+func (msgs Messages) NoticeModelStateUnconfirmed(error string) string {
+	return Catalog.Format(msgs.locale, "noticeModelStateUnconfirmed", map[string]any{"error": error})
+}
+
+// NoticeModelThinkingRestoreFailed says "Model changed, but the remembered thinking level could not be restored: {error}"
+// in the language the app shows.
+//
+// Notice shown when restoring a per-session thinking level fails.
+func NoticeModelThinkingRestoreFailed(error string) string {
+	return In(i18n.Locale()).NoticeModelThinkingRestoreFailed(error)
+}
+
+// NoticeModelThinkingRestoreFailed says "Model changed, but the remembered thinking level could not be restored: {error}"
+// in the language of msgs.
+//
+// Notice shown when restoring a per-session thinking level fails.
+func (msgs Messages) NoticeModelThinkingRestoreFailed(error string) string {
+	return Catalog.Format(msgs.locale, "noticeModelThinkingRestoreFailed", map[string]any{"error": error})
+}
+
+// HudCache says "Cache {percent}%"
+// in the language the app shows.
+//
+// HUD label for cache hit rate.
+func HudCache(percent string) string { return In(i18n.Locale()).HudCache(percent) }
+
+// HudCache says "Cache {percent}%"
+// in the language of msgs.
+//
+// HUD label for cache hit rate.
+func (msgs Messages) HudCache(percent string) string {
+	return Catalog.Format(msgs.locale, "hudCache", map[string]any{"percent": percent})
+}
+
+// HudContext says "Context {percent}%"
+// in the language the app shows.
+//
+// HUD label for current context usage.
+func HudContext(percent string) string { return In(i18n.Locale()).HudContext(percent) }
+
+// HudContext says "Context {percent}%"
+// in the language of msgs.
+//
+// HUD label for current context usage.
+func (msgs Messages) HudContext(percent string) string {
+	return Catalog.Format(msgs.locale, "hudContext", map[string]any{"percent": percent})
+}
+
+// HudAverageSpeed says "Avg {speed} tok/s"
+// in the language the app shows.
+//
+// HUD label for client-estimated average output speed.
+func HudAverageSpeed(speed string) string { return In(i18n.Locale()).HudAverageSpeed(speed) }
+
+// HudAverageSpeed says "Avg {speed} tok/s"
+// in the language of msgs.
+//
+// HUD label for client-estimated average output speed.
+func (msgs Messages) HudAverageSpeed(speed string) string {
+	return Catalog.Format(msgs.locale, "hudAverageSpeed", map[string]any{"speed": speed})
+}
+
+// HudAverageSpeedTooltip says "Average output speed (client estimate): {speed} tok/s"
+// in the language the app shows.
+//
+// Tooltip explaining the HUD average output speed estimate.
+func HudAverageSpeedTooltip(speed string) string {
+	return In(i18n.Locale()).HudAverageSpeedTooltip(speed)
+}
+
+// HudAverageSpeedTooltip says "Average output speed (client estimate): {speed} tok/s"
+// in the language of msgs.
+//
+// Tooltip explaining the HUD average output speed estimate.
+func (msgs Messages) HudAverageSpeedTooltip(speed string) string {
+	return Catalog.Format(msgs.locale, "hudAverageSpeedTooltip", map[string]any{"speed": speed})
+}
+
+// HudCacheTokens says "Cache tokens read: {read}; written: {write}"
+// in the language the app shows.
+//
+// HUD tooltip detail for cache token counts.
+func HudCacheTokens(read string, write string) string {
+	return In(i18n.Locale()).HudCacheTokens(read, write)
+}
+
+// HudCacheTokens says "Cache tokens read: {read}; written: {write}"
+// in the language of msgs.
+//
+// HUD tooltip detail for cache token counts.
+func (msgs Messages) HudCacheTokens(read string, write string) string {
+	return Catalog.Format(msgs.locale, "hudCacheTokens", map[string]any{"read": read, "write": write})
 }

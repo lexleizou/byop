@@ -16,14 +16,15 @@ import (
 // chatPresentation retains Onevra presentation state across frames. Pi owns
 // the conversation data; these values only remember scroll and disclosure.
 type chatPresentation struct {
-	conversation chat.ConversationState
-	layout       chat.FloatingConversationState
-	modelPicker  chat.PickerState
-	effortPicker chat.EffortState
-	markdown     markdown.Options
-	turns        map[int]*chat.TurnState
-	groups       map[string]*chat.GroupState
-	activities   map[string]*activityPresentation
+	conversation  chat.ConversationState
+	layout        chat.FloatingConversationState
+	modelPicker   chat.PickerState
+	contextPicker chat.PickerState
+	effortPicker  chat.EffortState
+	markdown      markdown.Options
+	turns         map[int]*chat.TurnState
+	groups        map[string]*chat.GroupState
+	activities    map[string]*activityPresentation
 
 	thinkingPending     string
 	thinkingCommitTimer *time.Timer
@@ -450,9 +451,9 @@ func (s *appState) chatComposer(c *ui.Context) {
 			SendLabel:    text("chatSend"),
 			StopLabel:    text("chatStop"),
 			Running:      false,
-			SendDisabled: !running && s.piConn != piConnected,
+			SendDisabled: !running && (s.piConn != piConnected || s.piSessionBusy || s.modelStateUnconfirmed),
 			Accessory: func(c *ui.Context) {
-				ui.Row(c).FillWidth().MinWidth(0).AlignItems(ui.Center).Gap(8).Children(func() {
+				ui.Row(c).FillWidth().MinWidth(0).Wrap().AlignItems(ui.Center).Gap(8).Children(func() {
 					if running {
 						s.runningSendModeControl(c)
 					}
@@ -793,42 +794,23 @@ func (s *appState) statusShimmer(c *ui.Context, label string, t *ui.Theme) {
 }
 
 func (s *appState) composerChoices(c *ui.Context) {
-	readOnly := s.runActive() || s.compacting || s.piSessionBusy
+	readOnly := s.runActive() || s.compacting || s.piSessionBusy || s.modelStateUnconfirmed
 	if (s.runActive() || s.compacting) && !s.piSessionBusy {
 		s.cancelThinkingPending()
 	}
 
-	modelLabel := piModelDisplayName(s.piModelName, s.piModel)
-	if len(s.piModels) == 0 {
-		s.chatView.modelPicker.Open = false
-		if s.piModel != "" {
-			chat.Chip(c, modelLabel, chat.ChipOptions{Icon: lu.Sparkles, ReadOnly: true})
-		}
-	} else if readOnly {
-		s.chatView.modelPicker.Open = false
-		chat.Chip(c, modelLabel, chat.ChipOptions{Icon: lu.Sparkles, ReadOnly: true})
-	} else {
-		options, choices := buildPiModelChoices(s.piModels)
-		result := chat.Picker(c.Key("model-picker"), &s.chatView.modelPicker, chat.PickerOptions{
-			Label:       modelLabel,
-			Icon:        lu.Sparkles,
-			Options:     options,
-			Selected:    piModelChoiceID(s.piModelProvider, s.piModelID),
-			Searchable:  5,
-			SearchLabel: text("modelsSearch"),
-			EmptyText:   text("modelsNone"),
-			Width:       300,
-		})
-		if result.Chosen != "" {
-			choice, ok := choices[result.Chosen]
-			if ok && (choice.model.Provider != s.piModelProvider || choice.model.ID != s.piModelID) {
-				s.selectModel(choice.model.Provider, choice.model.ID)
-			}
-		}
-	}
+	families := piModelFamilies(s.piModels)
+	activeFamily, activeFamilyOK := findPiModelFamilyInFamilies(
+		families, s.piModelProvider, s.piModelID, s.piModelName,
+	)
+	contextWindow := piActiveContextWindow(
+		activeFamily, activeFamilyOK, s.piModelID, s.hud.contextWindowFallback,
+	)
+	s.composerModelControl(c, readOnly, families, activeFamily, activeFamilyOK, contextWindow)
+	s.composerContextControl(c, readOnly, activeFamily, activeFamilyOK, contextWindow)
 
 	levels := buildPiThinkingOptions(s.piThinkingLevels)
-	if !reasoningLevelsVisible(s.piThinkingLevels) || len(levels) == 0 {
+	if !s.piThinkingLevelsKnown || !reasoningLevelsVisible(s.piThinkingLevels) || len(levels) == 0 {
 		s.chatView.effortPicker.Open = false
 		s.cancelThinkingPending()
 		return
@@ -865,6 +847,237 @@ func (s *appState) composerChoices(c *ui.Context) {
 	}
 	if wasOpen && !s.chatView.effortPicker.Open {
 		s.commitThinkingPending()
+	}
+}
+
+func (s *appState) composerModelControl(c *ui.Context, readOnly bool, families []piModelFamily,
+	activeFamily piModelFamily, activeFamilyOK bool, contextWindow int,
+) {
+	modelLabel := piModelDisplayName(s.piModelName, s.piModel)
+	brand := modelBrand(s.piModelProvider, s.piModelID, s.piModelName)
+	leading := modelBrandLeading(brand)
+	if len(s.piModels) == 0 || readOnly {
+		s.chatView.modelPicker.Open = false
+		if s.piModel != "" || s.modelStateUnconfirmed {
+			s.composerModelChip(c, modelLabel, s.piModelProvider, contextWindow, leading, readOnly,
+				activeFamily, activeFamilyOK)
+		}
+		return
+	}
+	remembered := s.rememberedModelTuplesForSession()
+	options, choices := buildPiModelChoicesForFamilies(families, piModelChoiceState{
+		ActiveProvider: s.piModelProvider,
+		ActiveID:       s.piModelID,
+		Remembered:     remembered,
+	})
+	chosen := s.customModelPicker(c, options, choices, activeFamily, activeFamilyOK, contextWindow)
+	if chosen != "" {
+		choice, ok := choices[chosen]
+		if ok && (choice.selected.Provider != s.piModelProvider || choice.selected.ID != s.piModelID) {
+			s.selectModel(choice.selected.Provider, choice.selected.ID)
+		}
+	}
+}
+
+func (s *appState) rememberedModelTuplesForSession() map[string]modelTuple {
+	if s.modelTuples == nil {
+		return nil
+	}
+	return s.modelTuples[s.piSessionKey()]
+}
+
+func (s *appState) composerModelChip(c *ui.Context, label, provider string, contextWindow int,
+	leading func(c *ui.Context, size float32), readOnly bool, activeFamily piModelFamily,
+	activeFamilyOK bool,
+) {
+	t := c.Theme()
+	retryReadback := readOnly && s.modelStateUnconfirmed
+	var chip ui.Element
+	if retryReadback {
+		chip = ui.ButtonBase(c.Key("model-chip")).Label(label).Tooltip(text("retryReadback")).
+			Height(26).MinWidth(0).Padding(0, 7).Radius(6).AlignItems(ui.Center).Gap(6).
+			Background(ui.Color{}).Cursor(ui.CursorPointer)
+		if chip.Hovered() || chip.Focused() {
+			chip.Background(t.SurfaceHover)
+		}
+	} else if readOnly {
+		chip = ui.Row(c).Key("model-chip").Label(label).Height(26).MinWidth(0).Padding(0, 7).
+			Radius(6).AlignItems(ui.Center).Gap(6).Cursor(ui.CursorNotAllowed)
+	} else {
+		chip = ui.ButtonBase(c.Key("model-chip")).Label(label).Height(26).MinWidth(0).Padding(0, 7).
+			Radius(6).AlignItems(ui.Center).Gap(6).Background(ui.Color{}).
+			Cursor(ui.CursorPointer)
+		if chip.Hovered() || chip.Focused() {
+			chip.Background(t.SurfaceHover)
+		}
+	}
+	chip.Children(func() {
+		leading(c, 16)
+		components.Text(c, label).Shrink(0).SingleLine().FontSize(fontBody).TextColor(t.Text)
+		if strings.TrimSpace(provider) != "" {
+			components.Text(c, provider).Shrink(0).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
+		}
+		if !activeFamilyOK || len(piContextVariants(activeFamily)) == 0 {
+			if capacity := formatContextWindow(contextWindow); capacity != "" {
+				components.Text(c, capacity).Shrink(0).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
+			}
+		}
+		if !readOnly {
+			components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).TextColor(t.TextMuted.Alpha(.7))
+		}
+	})
+	if retryReadback && chip.Clicked() {
+		if client := s.pi; client != nil {
+			s.retryModelStateReadback(client, s.piEpoch, s.piSessionKey())
+		}
+	} else if !readOnly && chip.Clicked() {
+		s.chatView.modelPicker.Open = !s.chatView.modelPicker.Open
+		s.chatView.modelPicker.Query = ""
+	}
+}
+
+func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
+	choices map[string]piModelChoice, activeFamily piModelFamily, activeFamilyOK bool,
+	contextWindow int,
+) string {
+	t := c.Theme()
+	label := piModelDisplayName(s.piModelName, s.piModel)
+	leading := modelBrandLeading(modelBrand(s.piModelProvider, s.piModelID, s.piModelName))
+	chip := ui.ButtonBase(c.Key("model-picker")).Label(label).Height(26).MinWidth(0).Padding(0, 7).
+		Radius(6).AlignItems(ui.Center).Gap(6).Background(ui.Color{}).Cursor(ui.CursorPointer)
+	if s.chatView.modelPicker.Open {
+		chip.Background(t.SurfaceHover)
+	} else if chip.Hovered() || chip.Focused() {
+		chip.Background(t.SurfaceHover)
+	}
+	chip.Children(func() {
+		leading(c, 16)
+		components.Text(c, label).Shrink(0).SingleLine().FontSize(fontBody).TextColor(t.Text)
+		if strings.TrimSpace(s.piModelProvider) != "" {
+			components.Text(c, s.piModelProvider).Shrink(0).SingleLine().
+				FontSize(fontSmall).TextColor(t.TextMuted)
+		}
+		if !activeFamilyOK || len(piContextVariants(activeFamily)) == 0 {
+			if capacity := formatContextWindow(contextWindow); capacity != "" {
+				components.Text(c, capacity).Shrink(0).SingleLine().
+					FontSize(fontSmall).TextColor(t.TextMuted)
+			}
+		}
+		components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).
+			TextColor(t.TextMuted.Alpha(.7))
+	})
+	if chip.Clicked() {
+		s.chatView.modelPicker.Open = !s.chatView.modelPicker.Open
+		s.chatView.modelPicker.Query = ""
+	}
+	chosen := ""
+	components.Popover(c, chip, &s.chatView.modelPicker.Open, func(panel ui.Element) {
+		panel.Label(label).Width(300).Padding(0).Gap(0).Children(func() {
+			ui.Row(c).FillWidth().Padding(8, 8, 0, 8).Children(func() {
+				components.TextBox(c, &s.chatView.modelPicker.Query, components.TextBoxOptions{
+					LeadingIcon: lu.Search(),
+				}).FillWidth().AutoFocus().Label(text("modelsSearch")).Placeholder(text("modelsSearch"))
+			})
+			query := strings.TrimSpace(s.chatView.modelPicker.Query)
+			visible := make([]chat.Option, 0, len(options))
+			for _, option := range options {
+				choice, ok := choices[option.ID]
+				if ok && piModelChoiceMatches(choice, query) {
+					visible = append(visible, option)
+				}
+			}
+			if len(visible) == 0 {
+				components.Text(c, text("modelsNone")).FontSize(fontSmall).
+					TextColor(t.TextMuted).Padding(12)
+				return
+			}
+			components.ScrollView(c, components.ScrollViewOptions{}).FillWidth().
+				MaxHeight(348).Padding(4).Gap(1).Children(func() {
+				group := ""
+				for i, option := range visible {
+					if option.Group != "" && (i == 0 || option.Group != group) {
+						components.Text(c, option.Group).FontSize(fontSmall).FontWeight(500).
+							TextColor(t.TextMuted).Padding(8, 8, 3, 8)
+					}
+					group = option.Group
+					selected := activeFamilyOK &&
+						option.ID == piModelChoiceID(activeFamily.Provider, activeFamily.Key)
+					if s.customModelPickerRow(c, option, selected) {
+						chosen = option.ID
+						s.chatView.modelPicker.Open = false
+					}
+				}
+			})
+		})
+	})
+	return chosen
+}
+
+func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option, selected bool) bool {
+	t := c.Theme()
+	row := ui.ButtonBase(c).Key("model-choice-"+option.ID).Label(option.Label).Selected(selected).
+		FillWidth().MinWidth(0).Padding(6, 8).Radius(6).Justify(ui.Start).
+		AlignItems(ui.Center).Gap(8).Background(ui.Color{}).TextColor(t.Text)
+	if row.Hovered() || row.Focused() {
+		row.Background(t.SurfaceHover)
+	}
+	row.Children(func() {
+		if option.Leading != nil {
+			option.Leading(c, 16)
+		}
+		ui.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
+			components.Text(c, option.Label).MinWidth(0).SingleLine().Ellipsis("…").
+				FontSize(fontBody)
+			components.Text(c, option.Description).MinWidth(0).Wrap().
+				FontSize(fontSmall).TextColor(t.TextMuted)
+		})
+		if selected {
+			components.Icon(c, lu.Check).Size(12, 12).TextColor(t.Accent)
+		}
+	})
+	return row.Clicked()
+}
+
+func piActiveContextWindow(family piModelFamily, ok bool, modelID string, fallback int) int {
+	if ok {
+		for _, variant := range family.Variants {
+			if variant.ID == modelID && variant.ContextWindow > 0 {
+				return variant.ContextWindow
+			}
+		}
+	}
+	return fallback
+}
+
+func (s *appState) composerContextControl(c *ui.Context, readOnly bool, family piModelFamily,
+	found bool, contextWindow int,
+) {
+	if !found {
+		s.chatView.contextPicker.Open = false
+		return
+	}
+	variants := piContextVariants(family)
+	if len(variants) == 0 {
+		s.chatView.contextPicker.Open = false
+		return
+	}
+	options := buildPiContextOptions(variants)
+	if readOnly {
+		s.chatView.contextPicker.Open = false
+		chat.Chip(c, formatContextWindow(contextWindow), chat.ChipOptions{ReadOnly: true})
+		return
+	}
+	result := chat.Picker(c.Key("context-picker"), &s.chatView.contextPicker, chat.PickerOptions{
+		Label:       formatContextWindow(contextWindow),
+		Options:     options,
+		Selected:    s.piModelID,
+		Searchable:  100,
+		SearchLabel: text("contextSearch"),
+		EmptyText:   text("contextNone"),
+		Width:       260,
+	})
+	if result.Chosen != "" && result.Chosen != s.piModelID {
+		s.selectModel(family.Provider, result.Chosen)
 	}
 }
 

@@ -17,6 +17,15 @@ var byopLogoData []byte
 //go:embed assets/byop-logo-1024.png
 var byopLogoPNG []byte
 
+//go:embed assets/brands/deepseek.svg
+var deepseekBrandSVG []byte
+
+//go:embed assets/brands/claude.svg
+var claudeBrandSVG []byte
+
+//go:embed assets/brands/qwen.svg
+var qwenBrandSVG []byte
+
 var iconSet map[string]*ui.SVG
 
 func init() {
@@ -26,6 +35,9 @@ func init() {
 	}
 	iconSet["pi"] = ui.MustParseSVG(piSVGData)
 	iconSet["byop"] = ui.MustParseSVG(byopLogoData)
+	iconSet["brand-deepseek"] = ui.MustParseSVG(deepseekBrandSVG)
+	iconSet["brand-claude"] = ui.MustParseSVG(claudeBrandSVG)
+	iconSet["brand-qwen"] = ui.MustParseSVG(qwenBrandSVG)
 }
 
 func icon(name string) *ui.SVG {

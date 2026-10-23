@@ -254,9 +254,12 @@ type appState struct {
 	piModelName             string
 	piThinkingLevel         string
 	piThinkingLevels        []string
+	piThinkingLevelsKnown   bool
 	piModels                []piModel
 	piSessionFile           string
 	piSessionName           string
+	modelTuples             map[string]map[string]modelTuple
+	modelStateUnconfirmed   bool
 	localSessionTitle       string
 	piSessions              []piSessionSummary
 	piSessionsExpanded      bool
@@ -902,8 +905,10 @@ func (s *appState) applyPiSessionState(state *piSessionState) {
 	if state == nil {
 		return
 	}
-	oldPath := s.piSessionFile
+	s.modelStateUnconfirmed = false
+	oldFile := s.piSessionFile
 	oldID := s.piSessionID
+	oldKey := s.piSessionKey()
 	s.piSessionID = state.SessionID
 	if state.SessionFile == "" {
 		s.piSessionFile = ""
@@ -911,7 +916,7 @@ func (s *appState) applyPiSessionState(state *piSessionState) {
 		s.piSessionFile = canonicalPiPath(state.SessionFile)
 	}
 	if oldID != "" && state.SessionID != "" &&
-		!samePiSession(oldPath, oldID, s.piSessionFile, state.SessionID) {
+		!samePiSession(oldFile, oldID, s.piSessionFile, state.SessionID) {
 		s.invalidateSessionNaming()
 		s.piSessionName = ""
 		s.localSessionTitle = firstUserSessionTitle(s.chat)
@@ -925,9 +930,104 @@ func (s *appState) applyPiSessionState(state *piSessionState) {
 	s.piModelName = state.Model.Name
 	s.piModel = strings.TrimSpace(strings.Join(nonEmpty(state.Model.Provider, state.Model.Name), " / "))
 	s.applyPiHUDState(state)
+	s.migrateModelTuples(oldKey, s.piSessionKey())
 	if state.SessionID != "" {
 		s.recordLastSession(state.SessionID)
 	}
+}
+
+func (s *appState) migrateModelTuples(oldKey, newKey string) {
+	oldKey = strings.TrimSpace(oldKey)
+	newKey = strings.TrimSpace(newKey)
+	if oldKey == "" || newKey == "" || oldKey == newKey || s.modelTuples == nil {
+		return
+	}
+	oldTuples := s.modelTuples[oldKey]
+	if len(oldTuples) == 0 {
+		return
+	}
+	if s.modelTuples[newKey] == nil {
+		s.modelTuples[newKey] = make(map[string]modelTuple, len(oldTuples))
+	}
+	for familyID, tuple := range oldTuples {
+		if _, exists := s.modelTuples[newKey][familyID]; !exists {
+			s.modelTuples[newKey][familyID] = tuple
+		}
+	}
+	delete(s.modelTuples, oldKey)
+}
+
+func (s *appState) applyConfirmedModelState(state *piSessionState, levels []string, levelsKnown bool) {
+	s.applyConfirmedModelStateWithRecord(state, levels, levelsKnown, true)
+}
+
+func (s *appState) applyConfirmedModelStateWithoutRecord(
+	state *piSessionState, levels []string, levelsKnown bool,
+) {
+	s.applyConfirmedModelStateWithRecord(state, levels, levelsKnown, false)
+}
+
+func (s *appState) applyConfirmedModelStateWithRecord(
+	state *piSessionState, levels []string, levelsKnown, record bool,
+) {
+	if state == nil {
+		return
+	}
+	s.applyPiSessionState(state)
+	if levelsKnown {
+		s.piThinkingLevels = append([]string(nil), levels...)
+		s.piThinkingLevelsKnown = true
+	} else {
+		s.piThinkingLevels = nil
+		s.piThinkingLevelsKnown = false
+	}
+	if record {
+		s.recordModelTuple()
+	}
+}
+
+func (s *appState) applyConfirmedThinkingState(state *piSessionState, levels []string,
+	levelsKnown, preserveSession bool,
+) bool {
+	return s.applyConfirmedThinkingStateWithRecord(state, levels, levelsKnown, preserveSession, true)
+}
+
+func (s *appState) applyConfirmedThinkingStateWithoutRecord(
+	state *piSessionState, levels []string, levelsKnown, preserveSession bool,
+) bool {
+	return s.applyConfirmedThinkingStateWithRecord(state, levels, levelsKnown, preserveSession, false)
+}
+
+func (s *appState) applyConfirmedThinkingStateWithRecord(
+	state *piSessionState, levels []string, levelsKnown, preserveSession, record bool,
+) bool {
+	if state == nil {
+		return false
+	}
+	s.modelStateUnconfirmed = false
+	oldPath := s.piSessionFile
+	oldID := s.piSessionID
+	s.piModelProvider = state.Model.Provider
+	s.piModelID = state.Model.ID
+	s.piModelName = state.Model.Name
+	s.piModel = strings.TrimSpace(strings.Join(nonEmpty(state.Model.Provider, state.Model.Name), " / "))
+	s.applyPiHUDState(state)
+	if preserveSession {
+		s.piSessionFile = oldPath
+		s.piSessionID = oldID
+	}
+	s.piThinkingLevel = state.ThinkingLevel
+	if levelsKnown {
+		s.piThinkingLevels = append([]string(nil), levels...)
+		s.piThinkingLevelsKnown = true
+	} else {
+		s.piThinkingLevels = nil
+		s.piThinkingLevelsKnown = false
+	}
+	if record {
+		s.recordModelTuple()
+	}
+	return true
 }
 
 func (s *appState) refreshPiSessionState() {
@@ -951,6 +1051,7 @@ func (s *appState) refreshPiSessionState() {
 				return
 			}
 			s.applyPiSessionState(state)
+			s.recordModelTuple()
 		})
 	}()
 }
@@ -1221,25 +1322,46 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			s.activeRequest = ""
 			s.activePrompt = ""
 			s.resetFollowUpSuggestion()
-			if stateErr == nil {
-				s.applyPiSessionState(state)
-			}
 			if modelsErr == nil {
 				s.piModels = models
 			}
-			if levelsErr == nil {
-				s.piThinkingLevels = levels
+			if stateErr == nil {
+				s.applyConfirmedModelState(state, levels, levelsErr == nil)
+			} else {
+				s.piModelProvider = ""
+				s.piModelID = ""
+				s.piModelName = ""
+				s.piModel = ""
+				s.piSessionFile = ""
+				s.piSessionID = ""
+				s.piThinkingLevel = ""
+				s.piThinkingLevels = nil
+				s.piThinkingLevelsKnown = false
 			}
 			s.piError = ""
-			s.notice = notice
+			s.showNotice(notice)
+			sessionKey := s.piSessionKey()
 			if stateErr != nil {
-				s.notice = textArgs("noticeSessionStateUnconfirmed", map[string]any{
-					"notice": notice,
-					"error":  uiErrorText(stateErr, text("errorUnknown")),
-				})
+				s.markModelStateUnconfirmed(
+					client, epoch, sessionKey, stateErr,
+					textArgs("noticeSessionStateUnconfirmed", map[string]any{
+						"notice": notice,
+						"error":  uiErrorText(stateErr, text("errorUnknown")),
+					}),
+				)
+			} else if levelsErr != nil {
+				s.showNoticeAction(
+					textArgs("noticeModelLevelsRefreshFailed", map[string]any{
+						"error": uiErrorText(levelsErr, text("errorUnknown")),
+					}),
+					text("retry"),
+					func() {
+						s.retryPiThinkingLevels(client, epoch, sessionKey)
+					},
+				)
 			} else if (strings.TrimSpace(expectedPath) != "" || strings.TrimSpace(expectedID) != "") &&
 				!samePiSession(canonicalPiPathIfPresent(expectedPath), expectedID, s.piSessionFile, state.SessionID) {
-				s.notice = textArgs("noticeSessionMismatch", map[string]any{"notice": notice})
+				s.showNotice(textArgs("noticeSessionMismatch", map[string]any{"notice": notice}))
 			}
 			s.page = pageChat
 			s.refreshPiHUD()
@@ -1297,26 +1419,434 @@ func canonicalPiPathIfPresent(value string) string {
 	return canonicalPiPath(value)
 }
 
+func (s *appState) piSessionKey() string {
+	if key := strings.TrimSpace(s.piSessionFile); key != "" {
+		return key
+	}
+	return strings.TrimSpace(s.piSessionID)
+}
+
+func (s *appState) rememberedModelTuple(provider, familyKey string) (modelTuple, bool) {
+	if s.modelTuples == nil {
+		return modelTuple{}, false
+	}
+	sessionKey := s.piSessionKey()
+	if sessionKey == "" {
+		return modelTuple{}, false
+	}
+	tuple, ok := s.modelTuples[sessionKey][piModelChoiceID(provider, familyKey)]
+	return tuple, ok
+}
+
+func (s *appState) recordModelTuple() {
+	family, ok := findPiModelFamily(s.piModels, s.piModelProvider, s.piModelID, s.piModelName)
+	if !ok {
+		family, ok = findPiModelFamily(s.piModels, s.piModelProvider, s.piModelID, "")
+	}
+	if !ok {
+		return
+	}
+	sessionKey := s.piSessionKey()
+	if sessionKey == "" {
+		return
+	}
+	if s.modelTuples == nil {
+		s.modelTuples = make(map[string]map[string]modelTuple)
+	}
+	if s.modelTuples[sessionKey] == nil {
+		s.modelTuples[sessionKey] = make(map[string]modelTuple)
+	}
+	s.modelTuples[sessionKey][piModelChoiceID(family.Provider, family.Key)] = modelTuple{
+		VariantID: s.piModelID,
+		Thinking:  s.piThinkingLevel,
+		Fast:      false,
+	}
+}
+
+func (s *appState) recordModelTupleFor(families []piModelFamily, sessionKey, provider, id, name,
+	thinking string,
+) {
+	sessionKey = strings.TrimSpace(sessionKey)
+	if sessionKey == "" {
+		return
+	}
+	family, ok := findPiModelFamilyInFamilies(families, provider, id, name)
+	if !ok {
+		family, ok = findPiModelFamilyInFamilies(families, provider, id, "")
+	}
+	if !ok {
+		return
+	}
+	if s.modelTuples == nil {
+		s.modelTuples = make(map[string]map[string]modelTuple)
+	}
+	if s.modelTuples[sessionKey] == nil {
+		s.modelTuples[sessionKey] = make(map[string]modelTuple)
+	}
+	familyID := piModelChoiceID(family.Provider, family.Key)
+	previous, hasPrevious := s.modelTuples[sessionKey][familyID]
+	if strings.TrimSpace(thinking) == "" && hasPrevious {
+		thinking = previous.Thinking
+	}
+	s.modelTuples[sessionKey][familyID] = modelTuple{
+		VariantID: id,
+		Thinking:  thinking,
+		Fast:      false,
+	}
+}
+
+func (s *appState) resetModelTuples() {
+	s.modelTuples = nil
+}
+
+type modelSelectionSnapshot struct {
+	families      []piModelFamily
+	remembered    modelTuple
+	hasRemembered bool
+	sessionKey    string
+	provider      string
+	id            string
+	name          string
+	draft         string
+}
+
+func clonePiModels(models []piModel) []piModel {
+	cloned := make([]piModel, len(models))
+	for i, model := range models {
+		cloned[i] = model
+		cloned[i].Input = append([]string(nil), model.Input...)
+	}
+	return cloned
+}
+
+func clonePiModelFamilies(families []piModelFamily) []piModelFamily {
+	cloned := make([]piModelFamily, len(families))
+	for i, family := range families {
+		cloned[i] = family
+		cloned[i].Variants = clonePiModels(family.Variants)
+	}
+	return cloned
+}
+
+func (s *appState) modelSelectionSnapshot(provider, id string) modelSelectionSnapshot {
+	snapshot := modelSelectionSnapshot{
+		families:   clonePiModelFamilies(piModelFamilies(s.piModels)),
+		sessionKey: s.piSessionKey(),
+		provider:   provider,
+		id:         id,
+		draft:      s.composerDraft,
+	}
+	family, found := findPiModelFamilyInFamilies(snapshot.families, provider, id, "")
+	if found {
+		snapshot.remembered, snapshot.hasRemembered =
+			s.rememberedModelTuple(provider, family.Key)
+		for _, variant := range family.Variants {
+			if variant.ID == id {
+				snapshot.name = variant.Name
+				break
+			}
+		}
+	}
+	return snapshot
+}
+
 func (s *appState) selectModel(provider, id string) {
+	if provider == s.piModelProvider && id == s.piModelID {
+		return
+	}
+	if !s.piMutationAllowed(text("noticeCurrentChangeModel")) {
+		return
+	}
+	snapshot := s.modelSelectionSnapshot(provider, id)
 	s.cancelThinkingPending()
 	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeModel"))
 	if !ok {
 		return
 	}
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-		model, err := client.SetModel(ctx, provider, id)
-		if err != nil {
-			s.postUI(func() {
-				if s.finishPiSessionOperation(client, epoch, gen) {
-					s.showNotice(textArgs("noticeModelChangeFailed", map[string]any{
-						"error": uiErrorText(err, text("errorUnknown")),
-					}))
+	s.composerDraft = snapshot.draft
+	go s.applyModelSelection(client, epoch, gen, snapshot)
+}
+
+func (s *appState) applyModelSelection(client *piClient, epoch, gen uint64,
+	snapshot modelSelectionSnapshot,
+) {
+	provider, id := snapshot.provider, snapshot.id
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	model, err := client.SetModel(ctx, provider, id)
+	cancel()
+	if err != nil {
+		s.postUI(func() {
+			if s.finishPiSessionOperation(client, epoch, gen) {
+				if isPiCommandUnknownResult(err) {
+					s.markModelStateUnconfirmed(client, epoch, snapshot.sessionKey, err)
+					return
 				}
+				s.showNoticeAction(
+					textArgs("noticeModelChangeFailed", map[string]any{
+						"error": uiErrorText(err, text("errorUnknown")),
+					}),
+					text("retry"),
+					func() {
+						if s.pi == client && s.piEpoch == epoch && s.piSessionKey() == snapshot.sessionKey {
+							s.selectModel(provider, id)
+						}
+					},
+				)
+			}
+		})
+		return
+	}
+	levelsCtx, levelsCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
+	levelsCancel()
+	stateCtx, stateCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	state, stateErr := client.GetState(stateCtx)
+	stateCancel()
+	if stateErr != nil {
+		stateCtx, stateCancel = context.WithTimeout(context.Background(), 5*time.Second)
+		state, stateErr = client.GetState(stateCtx)
+		stateCancel()
+	}
+	if stateErr != nil {
+		s.postUI(func() {
+			if !s.finishPiSessionOperation(client, epoch, gen) {
+				return
+			}
+			s.markModelStateUnconfirmed(client, epoch, snapshot.sessionKey, stateErr)
+			s.refreshPiHUD()
+		})
+		return
+	}
+	if levelsErr != nil {
+		s.postUI(func() {
+			if !s.finishPiSessionOperation(client, epoch, gen) {
+				return
+			}
+			if snapshot.hasRemembered {
+				s.applyConfirmedModelStateWithoutRecord(state, nil, false)
+			} else {
+				s.applyConfirmedModelState(state, nil, false)
+			}
+			sessionKey := s.piSessionKey()
+			if snapshot.hasRemembered {
+				s.recordModelTupleFor(snapshot.families, sessionKey, model.Provider, model.ID,
+					model.Name, snapshot.remembered.Thinking)
+			}
+			s.showNoticeAction(
+				textArgs("noticeModelLevelsRefreshFailed", map[string]any{
+					"error": uiErrorText(levelsErr, text("errorUnknown")),
+				}),
+				text("retry"),
+				func() {
+					s.retryPiThinkingLevels(client, epoch, sessionKey)
+				},
+			)
+			s.refreshPiHUD()
+		})
+		return
+	}
+	_, found := findPiModelFamilyInFamilies(snapshot.families, model.Provider, model.ID, model.Name)
+	restoreThinking, rememberedDefaulted := piThinkingRestore(
+		state.ThinkingLevel, snapshot.remembered, snapshot.hasRemembered, levels,
+	)
+	if restoreThinking != "" {
+		thinkingCtx, thinkingCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		thinkingErr := client.SetThinkingLevel(thinkingCtx, restoreThinking)
+		thinkingCancel()
+		if thinkingErr == nil {
+			stateCtx, stateCancel = context.WithTimeout(context.Background(), 5*time.Second)
+			state, stateErr = client.GetState(stateCtx)
+			stateCancel()
+		}
+		if thinkingErr != nil {
+			s.postUI(func() {
+				if !s.finishPiSessionOperation(client, epoch, gen) {
+					return
+				}
+				if snapshot.hasRemembered {
+					s.applyConfirmedModelStateWithoutRecord(state, levels, true)
+				} else {
+					s.applyConfirmedModelState(state, levels, true)
+				}
+				sessionKey := s.piSessionKey()
+				if snapshot.hasRemembered {
+					s.recordModelTupleFor(snapshot.families, sessionKey, model.Provider, model.ID,
+						model.Name, snapshot.remembered.Thinking)
+				}
+				s.showNoticeAction(
+					textArgs("noticeModelThinkingRestoreFailed", map[string]any{
+						"error": uiErrorText(thinkingErr, text("errorUnknown")),
+					}),
+					text("retry"),
+					func() {
+						s.retryThinkingRestore(client, epoch, sessionKey, snapshot.families,
+							provider, id, restoreThinking)
+					},
+				)
+				s.refreshPiHUD()
 			})
 			return
 		}
+		if stateErr != nil {
+			stateCtx, stateCancel = context.WithTimeout(context.Background(), 5*time.Second)
+			state, stateErr = client.GetState(stateCtx)
+			stateCancel()
+		}
+		if stateErr != nil {
+			s.postUI(func() {
+				if !s.finishPiSessionOperation(client, epoch, gen) {
+					return
+				}
+				s.markModelStateUnconfirmed(client, epoch, snapshot.sessionKey, stateErr)
+				s.refreshPiHUD()
+			})
+			return
+		}
+	}
+	s.postUI(func() {
+		if !s.finishPiSessionOperation(client, epoch, gen) {
+			return
+		}
+		if rememberedDefaulted {
+			s.applyConfirmedModelStateWithoutRecord(state, levels, true)
+		} else {
+			s.applyConfirmedModelState(state, levels, true)
+		}
+		sessionKey := s.piSessionKey()
+		if found {
+			s.recordModelTupleFor(snapshot.families, sessionKey, model.Provider, model.ID,
+				model.Name, state.ThinkingLevel)
+		}
+		if rememberedDefaulted {
+			s.recordModelTupleFor(snapshot.families, sessionKey, model.Provider, model.ID,
+				model.Name, snapshot.remembered.Thinking)
+		}
+		if rememberedDefaulted {
+			s.showNotice(text("noticeThinkingDefaulted"))
+		}
+		s.refreshPiHUD()
+	})
+}
+
+func isPiCommandUnknownResult(err error) bool {
+	return errors.Is(err, context.DeadlineExceeded)
+}
+
+func (s *appState) markModelStateUnconfirmed(client *piClient, epoch uint64,
+	sessionKey string, cause error, noticeText ...string,
+) {
+	if s.pi != client || s.piEpoch != epoch || s.piSessionKey() != sessionKey {
+		return
+	}
+	s.modelStateUnconfirmed = true
+	s.cancelThinkingPending()
+	notice := textArgs("noticeModelStateUnconfirmed", map[string]any{
+		"error": uiErrorText(cause, text("errorUnknown")),
+	})
+	if len(noticeText) > 0 && strings.TrimSpace(noticeText[0]) != "" {
+		notice = noticeText[0]
+	}
+	s.showNoticeAction(
+		notice,
+		text("retryReadback"),
+		func() {
+			if s.pi == client && s.piEpoch == epoch && s.piSessionKey() == sessionKey {
+				s.retryModelStateReadback(client, epoch, sessionKey)
+			}
+		},
+	)
+}
+
+func (s *appState) retryModelStateReadback(client *piClient, epoch uint64, sessionKey string) {
+	if s.pi != client || s.piEpoch != epoch || s.piSessionKey() != sessionKey {
+		s.showNotice(text("noticeSessionChanged"))
+		return
+	}
+	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeModel"))
+	if !ok {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		state, err := client.GetState(ctx)
+		cancel()
+		s.postUI(func() {
+			if !s.finishPiSessionOperation(client, epoch, gen) {
+				return
+			}
+			if s.pi != client || s.piEpoch != epoch || s.piSessionKey() != sessionKey {
+				s.showNotice(text("noticeSessionChanged"))
+				return
+			}
+			if err != nil {
+				s.showNoticeAction(
+					textArgs("noticeModelStateUnconfirmed", map[string]any{
+						"error": uiErrorText(err, text("errorUnknown")),
+					}),
+					text("retryReadback"),
+					func() { s.retryModelStateReadback(client, epoch, sessionKey) },
+				)
+				return
+			}
+			s.applyConfirmedModelState(state, nil, false)
+			s.showNotice(text("noticeModelStateConfirmed"))
+			s.refreshPiHUD()
+		})
+	}()
+}
+
+func (s *appState) retrySessionStateReadback(client *piClient, epoch uint64, sessionKey string) {
+	if s.pi != client || s.piEpoch != epoch || s.piSessionKey() != sessionKey {
+		s.showNotice(text("noticeSessionChanged"))
+		return
+	}
+	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeModel"))
+	if !ok {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		state, err := client.GetState(ctx)
+		cancel()
+		s.postUI(func() {
+			if !s.finishPiSessionOperation(client, epoch, gen) {
+				return
+			}
+			if s.pi != client || s.piEpoch != epoch || s.piSessionKey() != sessionKey {
+				s.showNotice(text("noticeSessionChanged"))
+				return
+			}
+			if err != nil {
+				s.showNoticeAction(
+					textArgs("noticeModelStateUnconfirmed", map[string]any{
+						"error": uiErrorText(err, text("errorUnknown")),
+					}),
+					text("retryReadback"),
+					func() { s.retrySessionStateReadback(client, epoch, sessionKey) },
+				)
+				return
+			}
+			s.applyConfirmedModelState(state, nil, false)
+			s.showNotice(text("noticeModelStateConfirmed"))
+			s.refreshPiHUD()
+		})
+	}()
+}
+
+func (s *appState) retryPiThinkingLevels(client *piClient, epoch uint64, sessionKey string) {
+	if s.pi != client || s.piEpoch != epoch || s.piSessionKey() != sessionKey {
+		s.showNotice(text("noticeSessionChanged"))
+		return
+	}
+	if s.piSessionBusy || s.thinkingCommitInFlight || s.runActive() || s.compacting {
+		s.showNotice(text("noticeSessionBusyRetry"))
+		return
+	}
+	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeThinking"))
+	if !ok {
+		return
+	}
+	go func() {
 		levelsCtx, levelsCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
 		levelsCancel()
@@ -1327,28 +1857,111 @@ func (s *appState) selectModel(provider, id string) {
 			if !s.finishPiSessionOperation(client, epoch, gen) {
 				return
 			}
-			s.piModelProvider = model.Provider
-			s.piModelID = model.ID
-			s.piModelName = model.Name
-			s.piModel = strings.TrimSpace(strings.Join(nonEmpty(model.Provider, model.Name), " / "))
-			if levelsErr == nil {
-				s.piThinkingLevels = levels
-			}
-			if stateErr == nil {
-				s.applyPiSessionState(state)
-			} else if levelsErr != nil {
-				s.showNotice(text("noticeModelLevelsRefreshFailed"))
+			if s.piSessionKey() != sessionKey {
+				s.showNotice(text("noticeSessionChanged"))
 				return
 			}
-			if stateErr != nil && model.ContextWindow > 0 {
-				s.hud.contextWindowFallback = model.ContextWindow
+			if stateErr != nil {
+				s.markModelStateUnconfirmed(client, epoch, sessionKey, stateErr)
+				return
 			}
-			s.refreshPiHUD()
+			if levelsErr != nil {
+				s.applyConfirmedModelStateWithoutRecord(state, nil, false)
+				s.showNoticeAction(
+					textArgs("noticeModelLevelsRefreshFailed", map[string]any{
+						"error": uiErrorText(levelsErr, text("errorUnknown")),
+					}),
+					text("retry"),
+					func() {
+						s.retryPiThinkingLevels(client, epoch, sessionKey)
+					},
+				)
+				return
+			}
+			s.applyConfirmedThinkingState(state, levels, true, true)
+			s.showNotice(text("noticeModelLevelsRefreshed"))
+		})
+	}()
+}
+
+func (s *appState) retryThinkingRestore(client *piClient, epoch uint64, sessionKey string,
+	families []piModelFamily, provider, id, level string,
+) {
+	if s.pi != client || s.piEpoch != epoch || s.piSessionKey() != sessionKey {
+		s.showNotice(text("noticeSessionChanged"))
+		return
+	}
+	if s.piSessionBusy || s.thinkingCommitInFlight || s.runActive() || s.compacting {
+		s.showNotice(text("noticeSessionBusyRetry"))
+		return
+	}
+	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeModel"))
+	if !ok {
+		return
+	}
+	go func() {
+		levelsCtx, levelsCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
+		levelsCancel()
+		stateCtx, stateCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		state, stateErr := client.GetState(stateCtx)
+		stateCancel()
+		s.postUI(func() {
+			if !s.finishPiSessionOperation(client, epoch, gen) {
+				return
+			}
+			if s.piSessionKey() != sessionKey {
+				s.showNotice(text("noticeSessionChanged"))
+				return
+			}
+			if stateErr != nil {
+				s.markModelStateUnconfirmed(client, epoch, sessionKey, stateErr)
+				return
+			}
+			if levelsErr != nil {
+				s.applyConfirmedModelStateWithoutRecord(state, nil, false)
+				s.showNoticeAction(
+					textArgs("noticeModelLevelsRefreshFailed", map[string]any{
+						"error": uiErrorText(levelsErr, text("errorUnknown")),
+					}),
+					text("retry"),
+					func() {
+						s.retryThinkingRestore(client, epoch, sessionKey, families,
+							provider, id, level)
+					},
+				)
+				return
+			}
+			if state.Model.Provider != provider || state.Model.ID != id {
+				s.markModelStateUnconfirmed(client, epoch, sessionKey,
+					errors.New(text("noticeModelMismatch")))
+				return
+			}
+			levelAvailable := thinkingLevelAvailable(levels, level)
+			needsThinkingRestore := levelAvailable && state.ThinkingLevel != level
+			if !levelAvailable || needsThinkingRestore {
+				s.applyConfirmedThinkingStateWithoutRecord(state, levels, true, false)
+			} else {
+				s.applyConfirmedThinkingState(state, levels, true, false)
+			}
+			if !levelAvailable {
+				s.recordModelTupleFor(families, s.piSessionKey(), provider, id, state.Model.Name, level)
+				s.showNotice(text("noticeThinkingDefaulted"))
+				return
+			}
+			if needsThinkingRestore {
+				s.selectThinkingLevel(level)
+				return
+			}
+			s.showNotice(text("noticeModelLevelsRefreshed"))
 		})
 	}()
 }
 
 func (s *appState) selectThinkingLevel(level string) bool {
+	client := s.pi
+	epoch := s.piEpoch
+	sessionKey := s.piSessionKey()
 	client, epoch, gen, ok := s.beginThinkingCommit(level)
 	if !ok {
 		s.revertThinkingPending(level)
@@ -1357,14 +1970,22 @@ func (s *appState) selectThinkingLevel(level string) bool {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		err := client.SetThinkingLevel(ctx, level)
-		if err != nil {
+		setErr := client.SetThinkingLevel(ctx, level)
+		if setErr != nil && !isPiCommandUnknownResult(setErr) {
 			s.postUI(func() {
 				if s.finishThinkingCommit(client, epoch, gen) {
 					s.dropThinkingPending()
-					s.showNotice(textArgs("noticeThinkingChangeFailed", map[string]any{
-						"error": uiErrorText(err, text("errorUnknown")),
-					}))
+					s.showNoticeAction(
+						textArgs("noticeThinkingChangeFailed", map[string]any{
+							"error": uiErrorText(setErr, text("errorUnknown")),
+						}),
+						text("retry"),
+						func() {
+							if s.pi == client && s.piEpoch == epoch && s.piSessionKey() == sessionKey {
+								s.selectThinkingLevel(level)
+							}
+						},
+					)
 				}
 			})
 			return
@@ -1376,16 +1997,13 @@ func (s *appState) selectThinkingLevel(level string) bool {
 		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
 		levelsCancel()
 		s.postUI(func() {
-			if !s.finishThinkingCommit(client, epoch, gen) {
+			if !s.finishThinkingCommit(client, epoch, gen) ||
+				s.piSessionKey() != sessionKey {
 				return
 			}
-			s.piThinkingLevel = level
-			if stateErr == nil {
-				s.applyPiSessionState(state)
-			}
-			if levelsErr == nil {
-				s.piThinkingLevels = levels
-			}
+			confirmed := stateErr == nil && s.applyConfirmedThinkingState(
+				state, levels, levelsErr == nil, true,
+			)
 			if s.chatView.thinkingPending == level {
 				s.chatView.thinkingPending = ""
 			}
@@ -1393,6 +2011,19 @@ func (s *appState) selectThinkingLevel(level string) bool {
 				s.scheduleThinkingPendingCommit()
 			} else {
 				s.commitThinkingPending()
+			}
+			if !confirmed {
+				s.markModelStateUnconfirmed(client, epoch, sessionKey, stateErr)
+			} else if levelsErr != nil {
+				s.showNoticeAction(
+					textArgs("noticeModelLevelsRefreshFailed", map[string]any{
+						"error": uiErrorText(levelsErr, text("errorUnknown")),
+					}),
+					text("retry"),
+					func() {
+						s.retryPiThinkingLevels(client, epoch, sessionKey)
+					},
+				)
 			}
 			s.refreshPiHUD()
 		})
@@ -1430,6 +2061,8 @@ func (s *appState) connectPi() {
 	s.piError = ""
 	s.piErrorCode = ""
 	s.piErrorDetailsOpen = false
+	s.resetModelTuples()
+	s.modelStateUnconfirmed = false
 	s.piEpoch++
 	s.sessionGen++
 	epoch := s.piEpoch
@@ -1438,7 +2071,7 @@ func (s *appState) connectPi() {
 	s.piCwd = ""
 	s.piPath = ""
 	s.piError = ""
-	s.notice = text("noticePiConnecting")
+	s.showNotice(text("noticePiConnecting"))
 	s.refreshPiSessions()
 
 	savedWorkspace := s.preferences.Workspace
@@ -1577,15 +2210,17 @@ func (s *appState) connectPi() {
 			}
 			if levelsErr == nil {
 				s.piThinkingLevels = levels
+				s.piThinkingLevelsKnown = true
 			}
+			s.recordModelTuple()
 			s.piError = ""
 			s.piErrorCode = ""
 			s.piErrorDetailsOpen = false
 			s.resetRuntimeDiagnostics()
 			if modelsErr != nil || levelsErr != nil {
-				s.notice = text("noticePiConnectedNoModels")
+				s.showNotice(text("noticePiConnectedNoModels"))
 			} else {
-				s.notice = text("noticePiConnected")
+				s.showNotice(text("noticePiConnected"))
 			}
 			s.refreshPiSessions()
 		})
@@ -1634,6 +2269,7 @@ func (s *appState) reconnectPi() {
 	s.piSessionFile = ""
 	s.piSessionID = ""
 	s.piSessionName = ""
+	s.resetPiHUDData()
 	s.localSessionTitle = ""
 	s.piSessions = nil
 	s.piSessionsExpanded = false
@@ -1645,7 +2281,9 @@ func (s *appState) reconnectPi() {
 	s.piModelName = ""
 	s.piThinkingLevel = ""
 	s.piThinkingLevels = nil
+	s.piThinkingLevelsKnown = false
 	s.piModels = nil
+	s.modelStateUnconfirmed = false
 	s.connectPi()
 }
 
@@ -1701,6 +2339,10 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 	}
 	if s.thinkingCommitInFlight {
 		s.showNotice(text("noticeThinkingBeforeSend"))
+		return
+	}
+	if s.modelStateUnconfirmed {
+		s.showNotice(text("noticeModelStateBeforeSend"))
 		return
 	}
 	if s.run == runStopping || s.compacting {
@@ -1773,6 +2415,10 @@ func (s *appState) sendRunningPrompt(prompt string, mode runningSendMode) {
 	}
 	if s.thinkingCommitInFlight {
 		s.showNotice(text("noticeThinkingBeforeSend"))
+		return
+	}
+	if s.modelStateUnconfirmed {
+		s.showNotice(text("noticeModelStateBeforeSend"))
 		return
 	}
 	if s.compacting || (s.run != runSubmitting && s.run != runStreaming) {
@@ -1995,6 +2641,9 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.setAssistantText(event.Text, "Streaming")
 	case piEventMessage:
 		s.run = runStreaming
+		if event.OutputTokens > 0 && event.GenerationTime > 0 {
+			s.recordPiHUDSample(event.OutputTokens, event.GenerationTime.Seconds())
+		}
 		if event.Text != "" {
 			s.setAssistantText(event.Text, "Received")
 		}
@@ -2184,7 +2833,9 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.piModelName = ""
 		s.piThinkingLevel = ""
 		s.piThinkingLevels = nil
+		s.piThinkingLevelsKnown = false
 		s.piModels = nil
+		s.resetModelTuples()
 		s.resetRuntimeDiagnostics()
 		if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
 			s.run = runInterrupted

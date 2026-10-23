@@ -208,9 +208,14 @@
   "@noticeModelChangeFailed": {
     "description": "User-interface text for notice Model Change Failed."
   },
-  "noticeModelLevelsRefreshFailed": "Model changed, but thinking levels could not be refreshed.",
+  "noticeModelLevelsRefreshFailed": "Model changed, but thinking levels could not be refreshed: {error}",
   "@noticeModelLevelsRefreshFailed": {
-    "description": "User-interface text for notice Model Levels Refresh Failed."
+    "description": "User-interface text for notice Model Levels Refresh Failed.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "noticeThinkingChangeFailed": "Could not change Pi thinking level: {error}",
   "@noticeThinkingChangeFailed": {
@@ -2379,5 +2384,115 @@
   "titleToggleTaskPanelShortcut": "Toggle task panel ({shortcut})",
   "@titleToggleTaskPanelShortcut": {
     "description": "Task panel toggle tooltip with shortcut."
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry action for a failed operation."
+  },
+  "retryReadback": "Retry read-back",
+  "@retryReadback": {
+    "description": "Retry action that reads the current Pi state again."
+  },
+  "noticeModelStateConfirmed": "Model state confirmed.",
+  "@noticeModelStateConfirmed": {
+    "description": "Notice shown after a successful Pi model-state read-back."
+  },
+  "noticeSessionChanged": "The Pi session changed before the retry could run.",
+  "@noticeSessionChanged": {
+    "description": "Notice shown when a stale retry targets a different Pi session."
+  },
+  "noticeSessionBusyRetry": "Wait for the current Pi session operation before retrying.",
+  "@noticeSessionBusyRetry": {
+    "description": "Notice shown when a model-control retry cannot start because the session is busy."
+  },
+  "noticeModelStateBeforeSend": "Confirm the model state with read-back before sending a message.",
+  "@noticeModelStateBeforeSend": {
+    "description": "Notice shown when a message is blocked until an uncertain model state is confirmed."
+  },
+  "noticeModelMismatch": "Pi reported a different model.",
+  "@noticeModelMismatch": {
+    "description": "Notice shown when a model-state read-back reports a different model."
+  },
+  "contextSearch": "Search context sizes",
+  "@contextSearch": {
+    "description": "Context picker search field."
+  },
+  "contextNone": "No context sizes",
+  "@contextNone": {
+    "description": "Empty context picker state."
+  },
+  "noticeThinkingDefaulted": "Thinking level changed to the model default.",
+  "@noticeThinkingDefaulted": {
+    "description": "Short notice shown when the remembered thinking level is unavailable for a newly selected model."
+  },
+  "noticeModelLevelsRefreshed": "Thinking levels refreshed.",
+  "@noticeModelLevelsRefreshed": {
+    "description": "Notice shown after a successful retry of thinking-level discovery."
+  },
+  "noticeModelStateUnconfirmed": "Could not confirm the current model state: {error}",
+  "@noticeModelStateUnconfirmed": {
+    "description": "Notice shown when Pi cannot be read back after a model or thinking change.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeModelThinkingRestoreFailed": "Model changed, but the remembered thinking level could not be restored: {error}",
+  "@noticeModelThinkingRestoreFailed": {
+    "description": "Notice shown when restoring a per-session thinking level fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hudCache": "Cache {percent}%",
+  "@hudCache": {
+    "description": "HUD label for cache hit rate.",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "hudContext": "Context {percent}%",
+  "@hudContext": {
+    "description": "HUD label for current context usage.",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "hudAverageSpeed": "Avg {speed} tok/s",
+  "@hudAverageSpeed": {
+    "description": "HUD label for client-estimated average output speed.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "hudAverageSpeedTooltip": "Average output speed (client estimate): {speed} tok/s",
+  "@hudAverageSpeedTooltip": {
+    "description": "Tooltip explaining the HUD average output speed estimate.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "hudCacheTokens": "Cache tokens read: {read}; written: {write}",
+  "@hudCacheTokens": {
+    "description": "HUD tooltip detail for cache token counts.",
+    "placeholders": {
+      "read": {
+        "type": "String"
+      },
+      "write": {
+        "type": "String"
+      }
+    }
   }
 }

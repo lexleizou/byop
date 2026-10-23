@@ -588,7 +588,7 @@ func TestThinkingDragBackWhileCommitInFlightKeepsPending(t *testing.T) {
 	}
 }
 
-func TestPiModelChoicesPreserveSlashIDsAndFormatContext(t *testing.T) {
+func TestPiModelChoicesKeepSameContextAliasesAndPreserveSlashIDs(t *testing.T) {
 	models := []piModel{
 		{Provider: "openai", ID: "team/model-a", Name: "Model A", ContextWindow: 200_000},
 		{Provider: "openai", ID: "team/model-a-2", Name: "Model A", ContextWindow: 200_000},
@@ -596,32 +596,35 @@ func TestPiModelChoicesPreserveSlashIDsAndFormatContext(t *testing.T) {
 		{Provider: "small", ID: "model-c", ContextWindow: 0},
 	}
 	options, choices := buildPiModelChoices(models)
-	if got, want := options[0].ID, "openai/team/model-a"; got != want {
+	if got, want := options[0].ID, "openai/Model A/team/model-a"; got != want {
 		t.Fatalf("model option ID = %q, want %q", got, want)
 	}
-	if got, want := options[0].Detail, "200K"; got != want {
-		t.Fatalf("200K detail = %q, want %q", got, want)
+	if got, want := options[0].Detail, ""; got != want {
+		t.Fatalf("model row detail = %q, want empty", got)
 	}
 	if got, want := options[0].Description, "team/model-a"; got != want {
-		t.Fatalf("duplicate model description = %q, want %q", got, want)
+		t.Fatalf("selected model description = %q, want %q", got, want)
+	}
+	if got, want := options[1].ID, "openai/Model A/team/model-a-2"; got != want {
+		t.Fatalf("second alias ID = %q, want %q", got, want)
 	}
 	if got, want := options[1].Description, "team/model-a-2"; got != want {
-		t.Fatalf("second duplicate model description = %q, want %q", got, want)
+		t.Fatalf("second alias description = %q, want %q", got, want)
 	}
-	if options[2].Description != "" {
-		t.Fatalf("unique model description = %q, want empty", options[2].Description)
+	if got, want := options[2].ID, "local/model-b"; got != want {
+		t.Fatalf("local model ID = %q, want %q", got, want)
+	}
+	if got, want := options[2].Description, "model-b"; got != want {
+		t.Fatalf("local model description = %q, want %q", got, want)
 	}
 	if got, want := options[2].Label, "model-b"; got != want {
 		t.Fatalf("fallback model label = %q, want %q", got, want)
 	}
-	if got, want := options[2].Detail, "1M"; got != want {
-		t.Fatalf("1M detail = %q, want %q", got, want)
+	if len(options) != 4 {
+		t.Fatalf("model rows = %d, want 4 rows", len(options))
 	}
-	if options[3].Detail != "" {
-		t.Fatalf("zero context detail = %q, want empty", options[3].Detail)
-	}
-	choice, ok := choices["openai/team/model-a"]
-	if !ok || choice.model.Provider != "openai" || choice.model.ID != "team/model-a" {
+	choice, ok := choices["openai/Model A/team/model-a"]
+	if !ok || choice.selected.Provider != "openai" || choice.selected.ID != "team/model-a" {
 		t.Fatalf("slash model lookup = %#v, %v", choice, ok)
 	}
 	if got, want := piModelDisplayName("", "provider / fallback"), "provider / fallback"; got != want {

@@ -53,7 +53,7 @@ func TestP10cHUDLabelOmitsCwdAndKeepsBranch(t *testing.T) {
 		},
 	}
 	got := state.piHUDLabel()
-	want := "(main) · ↑1.2k ↓300 R400 W100 · CH23.5% · $0.012 · 50.0%/128k"
+	want := "main  ↑1.2k ↓300  $0.012  Cache 24%  Context 50.0%"
 	if got != want {
 		t.Fatalf("HUD label = %q, want %q", got, want)
 	}
@@ -95,14 +95,14 @@ func TestP10cHUDAccumulatorsAndSeverity(t *testing.T) {
 	}
 }
 
-func TestP10cHUDLabelUnknownFallback(t *testing.T) {
+func TestP10cHUDLabelOmitsUnknownContext(t *testing.T) {
 	state := &appState{piConn: piConnected}
 	if got := state.piHUDLabel(); got != "" {
 		t.Fatalf("empty HUD = %q, want no label", got)
 	}
 	state.hud.contextWindowFallback = 128000
-	if got := state.piHUDLabel(); got != "?/128k" {
-		t.Fatalf("fallback HUD = %q, want ?/128k", got)
+	if got := state.piHUDLabel(); got != "" {
+		t.Fatalf("unknown-context HUD = %q, want no label", got)
 	}
 }
 
@@ -145,7 +145,7 @@ func TestP10cHUDStateAndStatusEvents(t *testing.T) {
 		},
 	}
 	state.applyPiHUDState(&piSessionState{AutoCompactionEnabled: true})
-	if got := state.piHUDLabel(); got != "?/200k (auto) · first · last" {
+	if got := state.piHUDLabel(); got != "first  last" {
 		t.Fatalf("HUD label = %q", got)
 	}
 }
@@ -158,21 +158,22 @@ func TestP10cApplyHUDStatsRejectsStaleGenerationAndEpoch(t *testing.T) {
 		hud:     hudState{generation: 11},
 	}
 	staleGeneration := &piSessionStats{SessionID: "old-generation"}
-	state.applyPiHUDStats(10, 7, client, staleGeneration, nil)
+	state.hud.statsRequest = 1
+	state.applyPiHUDStats(10, 7, 1, client, staleGeneration, nil)
 	if state.hud.stats != nil {
 		t.Fatal("stale generation replaced HUD stats")
 	}
 	staleEpoch := &piSessionStats{SessionID: "old-epoch"}
-	state.applyPiHUDStats(11, 6, client, staleEpoch, nil)
+	state.applyPiHUDStats(11, 6, 1, client, staleEpoch, nil)
 	if state.hud.stats != nil {
 		t.Fatal("stale epoch replaced HUD stats")
 	}
 	current := &piSessionStats{SessionID: "current"}
-	state.applyPiHUDStats(11, 7, client, current, nil)
+	state.applyPiHUDStats(11, 7, 1, client, current, nil)
 	if state.hud.stats != current {
 		t.Fatalf("current stats = %#v", state.hud.stats)
 	}
-	state.applyPiHUDStats(11, 7, client, nil, errors.New("temporary stats failure"))
+	state.applyPiHUDStats(11, 7, 1, client, nil, errors.New("temporary stats failure"))
 	if state.hud.stats != current {
 		t.Fatal("temporary stats failure replaced the last successful stats")
 	}
