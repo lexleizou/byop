@@ -91,3 +91,10 @@
 - 平均 tok/s 是 BYOP 客户端估算，生成计时从首个 assistant 文本增量开始；它不等同于供应商的服务端纯解码速度，也没有可靠起点时不恢复历史速度。
 - 会话 tuple 仅保存在当前 BYOP 进程内，重启后由 Pi 当前会话状态重新建立。
 
+
+## 打包与安装
+
+- `mygo.json` 与 `appVersion` 升级为 0.11.0。
+- `mygo build -skip-notarize` 生成 `dist/darwin-arm64/BYOP.app`（14.0 MB）和 `BYOP 0.11.0 arm64.dmg`（4.4 MB），未公证。
+- 旧版 0.10.0 移入废纸篓，新版复制到 `/Applications/BYOP.app`；`CFBundleShortVersionString` 为 0.11.0，`codesign -v` 通过。
+- 启动后进程 `/Applications/BYOP.app/Contents/MacOS/BYOP` 正常运行；屏幕锁定，未做真实窗口截图。
