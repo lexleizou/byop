@@ -233,7 +233,7 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 	}
 	cmd := exec.Command(path, args...)
 	cmd.Dir = cwd
-	cmd.Env = cleanPiEnv(os.Environ())
+	cmd.Env = piProcessEnv(path, os.Environ())
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -287,7 +287,11 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 	return client, nil
 }
 
-func resolvePiPath() (string, error) {
+func resolvePiPath(ctx context.Context) (string, error) {
+	return resolvePiPathWithLoginPath(ctx, cachedPiLoginShellPATH)
+}
+
+func resolvePiPathWithLoginPath(ctx context.Context, loginPath func(context.Context) string) (string, error) {
 	if configured := strings.TrimSpace(os.Getenv("BYOP_PI_PATH")); configured != "" {
 		if info, err := os.Stat(configured); err != nil {
 			return "", fmt.Errorf("BYOP_PI_PATH: %w", err)
@@ -298,14 +302,117 @@ func resolvePiPath() (string, error) {
 	}
 	path, err := exec.LookPath("pi")
 	if err != nil {
+		if fallback := findExecutableInDirectories("pi", piCommonInstallDirectories()); fallback != "" {
+			return fallback, nil
+		}
+		if fallback := findExecutableInDirectories("pi", filepath.SplitList(loginPath(ctx))); fallback != "" {
+			return fallback, nil
+		}
 		return "", fmt.Errorf("Pi CLI was not found. Install Pi separately or set BYOP_PI_PATH: %w", exec.ErrNotFound)
 	}
 	return path, nil
 }
 
+var piCommonInstallDirectories = func() []string {
+	dirs := []string{"/opt/homebrew/bin", "/usr/local/bin"}
+	if home, err := os.UserHomeDir(); err == nil {
+		dirs = append(dirs,
+			filepath.Join(home, ".local", "bin"),
+			filepath.Join(home, ".npm-global", "bin"),
+		)
+	}
+	return dirs
+}
+
+var piLoginShellPATH = func() string {
+	return probeLoginShellPATH()
+}
+
+func cachedPiLoginShellPATH(ctx context.Context) string {
+	state := piLoginShellPATHSync
+	state.mu.Lock()
+	if state.ready {
+		value := state.value
+		state.mu.Unlock()
+		return value
+	}
+	done := state.inFlight
+	if done == nil {
+		done = make(chan struct{})
+		state.inFlight = done
+		go func() {
+			value := piLoginShellPATH()
+			state.mu.Lock()
+			if value != "" {
+				state.ready = true
+				state.value = value
+			}
+			state.inFlight = nil
+			close(done)
+			state.mu.Unlock()
+		}()
+	}
+	state.mu.Unlock()
+
+	select {
+	case <-done:
+		state.mu.Lock()
+		defer state.mu.Unlock()
+		if state.ready {
+			return state.value
+		}
+		return ""
+	case <-ctx.Done():
+		return ""
+	}
+}
+
+type loginShellPATHState struct {
+	mu       sync.Mutex
+	ready    bool
+	value    string
+	inFlight chan struct{}
+}
+
+var piLoginShellPATHSync = &loginShellPATHState{}
+
+func probeLoginShellPATH() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	const marker = "__BYOP_PATH__"
+	cmd := exec.CommandContext(ctx, "/bin/zsh", "-lc", `printf '__BYOP_PATH__%s\n' "$PATH"`)
+	cmd.Env = append(cleanPiEnv(os.Environ()), "TERM=dumb")
+	cmd.Stdin = strings.NewReader("")
+	cmd.WaitDelay = 500 * time.Millisecond
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		if path, ok := strings.CutPrefix(strings.TrimSpace(line), marker); ok {
+			return path
+		}
+	}
+	return ""
+}
+
+func findExecutableInDirectories(name string, dirs []string) string {
+	for _, dir := range dirs {
+		if strings.TrimSpace(dir) == "" {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		info, err := os.Stat(path)
+		if err == nil && !info.IsDir() && info.Mode().Perm()&0o111 != 0 {
+			return path
+		}
+	}
+	return ""
+}
+
 func piCLIVersion(ctx context.Context, path string) string {
 	cmd := exec.CommandContext(ctx, path, "--version")
-	cmd.Env = cleanPiEnv(os.Environ())
+	cmd.Env = piProcessEnv(path, os.Environ())
 	out, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -1105,6 +1212,44 @@ func cleanPiEnv(env []string) []string {
 		clean = append(clean, entry)
 	}
 	return append(clean, "NO_COLOR=1")
+}
+
+func piProcessEnv(path string, env []string) []string {
+	return piProcessEnvWithLoginPath(path, env, piCommonInstallDirectories, cachedPiLoginShellPATH)
+}
+
+func piProcessEnvWithLoginPath(
+	path string,
+	env []string,
+	commonDirs func() []string,
+	loginPath func(context.Context) string,
+) []string {
+	clean := cleanPiEnv(env)
+	dirs := []string{filepath.Dir(path)}
+	for _, entry := range env {
+		if value, ok := strings.CutPrefix(entry, "PATH="); ok {
+			dirs = append(dirs, filepath.SplitList(value)...)
+			break
+		}
+	}
+	dirs = append(dirs, filepath.SplitList(loginPath(context.Background()))...)
+	dirs = append(dirs, commonDirs()...)
+	seen := make(map[string]bool, len(dirs))
+	pathDirs := make([]string, 0, len(dirs))
+	for _, dir := range dirs {
+		if strings.TrimSpace(dir) == "" || seen[dir] {
+			continue
+		}
+		seen[dir] = true
+		pathDirs = append(pathDirs, dir)
+	}
+	result := make([]string, 0, len(clean)+1)
+	for _, entry := range clean {
+		if !strings.HasPrefix(entry, "PATH=") {
+			result = append(result, entry)
+		}
+	}
+	return append(result, "PATH="+strings.Join(pathDirs, string(os.PathListSeparator)))
 }
 
 func stripANSI(s string) string {

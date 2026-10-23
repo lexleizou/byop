@@ -1,5 +1,7 @@
 /byop
 /byop-prototype
+/build/
+/dist/
 *.log
 .DS_Store
 .idea/

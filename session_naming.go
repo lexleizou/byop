@@ -201,7 +201,7 @@ func runSessionNamingCLI(ctx context.Context, path, cwd, model string, turns []n
 	args = append(args, prompt)
 	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Dir = cwd
-	cmd.Env = cleanPiEnv(os.Environ())
+	cmd.Env = piProcessEnv(path, os.Environ())
 	cmd.WaitDelay = 2 * time.Second
 	out, err := cmd.Output()
 	if err != nil {

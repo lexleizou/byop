@@ -150,6 +150,8 @@ go run .
 BYOP_PI_PATH=/absolute/path/to/pi go run .
 ```
 
+macOS 上查找登录 shell PATH 使用非交互的 `/bin/zsh -lc`，不会读取 `.zshrc`。若 Pi 仅由 `.zshrc` 中的 nvm 配置提供，请设置 `BYOP_PI_PATH`，或把 Pi 安装到 `/opt/homebrew/bin`、`/usr/local/bin`、`~/.local/bin`、`~/.npm-global/bin` 等常见目录。
+
 只启动原生外壳、不连接 Pi：
 
 ```sh
@@ -226,6 +228,23 @@ BYOP_THEME=dark BYOP_PAGE=plugins BYOP_TASKS=1 go run .
 `BYOP_THEME` 支持 `system`、`light`、`dark`；`BYOP_TASKS=1` 默认展开任务栏；`BYOP_NAV=collapsed` 默认收起导航；`BYOP_WORKSPACE=/absolute/path` 覆盖已保存工作区；`BYOP_PAGE` 支持 `chat`、`plugins`、`automations`、`settings`；`BYOP_DEMO_TOOLS=1` 载入不连接 Pi 的隔离演示时间线。
 
 迁移扫描源可由以下环境变量指向测试副本：`BYOP_LEGACY_APP_DIR`、`BYOP_LEGACY_LOCALSTORAGE`、`BYOP_LEGACY_PI_AGENT_DIR`。迁移前不会自动运行；扫描不会删除或改写旧数据。
+
+## Build & install
+
+在 macOS Apple Silicon 上构建未公证的 BYOP 应用：
+
+```sh
+go run github.com/egoist/mygo/cmd/mygo build -skip-notarize
+```
+
+MyGo v0.5.5 的产物位于 `dist/darwin-arm64/BYOP.app`。安装到系统应用程序目录：
+
+```sh
+ditto dist/darwin-arm64/BYOP.app /Applications/BYOP.app
+open /Applications/BYOP.app
+```
+
+替换已有版本前，必须先退出 `BYOP.app`，并把旧 `/Applications/BYOP.app` 移到“废纸篓”，再执行 `ditto` 安装。若 `/Applications` 不可写，可将目标改为 `~/Applications/BYOP.app`。本地构建没有公证，复制到其他 Mac 后可能被 Gatekeeper 拦截。
 
 ## 验证
 

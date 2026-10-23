@@ -12,6 +12,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func TestToolCallProjectionLifecycle(t *testing.T) {
@@ -178,12 +179,146 @@ func TestClearPiConnectingNoticeLeavesOtherNotices(t *testing.T) {
 
 func TestResolvePiPathDirectoryIsNotExecutable(t *testing.T) {
 	t.Setenv("BYOP_PI_PATH", t.TempDir())
-	_, err := resolvePiPath()
+	_, err := resolvePiPath(context.Background())
 	if err == nil {
 		t.Fatal("resolvePiPath accepted a directory")
 	}
 	if got := classifyPiConnectionError(err); got != piErrorCodeNotExecutable {
 		t.Fatalf("directory classification = %q, want %q: %v", got, piErrorCodeNotExecutable, err)
+	}
+}
+
+func TestResolvePiPathUsesCommonInstallDirectories(t *testing.T) {
+	// Tests in this group swap package variables and must not run in parallel.
+	t.Setenv("BYOP_PI_PATH", "")
+	t.Setenv("PATH", t.TempDir())
+	binDir := t.TempDir()
+	piPath := filepath.Join(binDir, "pi")
+	if err := os.WriteFile(piPath, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	originalDirs := piCommonInstallDirectories
+	piCommonInstallDirectories = func() []string { return []string{binDir} }
+	t.Cleanup(func() {
+		piCommonInstallDirectories = originalDirs
+	})
+
+	got, err := resolvePiPathWithLoginPath(context.Background(), func(context.Context) string { return "" })
+	if err != nil {
+		t.Fatalf("resolvePiPath() error = %v", err)
+	}
+	if got != piPath {
+		t.Fatalf("resolvePiPath() = %q, want %q", got, piPath)
+	}
+}
+
+func TestPiProcessEnvAddsPiRuntimeDirectory(t *testing.T) {
+	// Tests in this group swap package variables and must not run in parallel.
+	piDir := t.TempDir()
+	piPath := filepath.Join(piDir, "pi")
+	env := piProcessEnvWithLoginPath(piPath, []string{"HOME=/tmp/home", "PATH=/usr/bin:/bin"},
+		func() []string { return nil }, func(context.Context) string { return "/usr/bin:/bin" })
+	var got string
+	for _, entry := range env {
+		if value, ok := strings.CutPrefix(entry, "PATH="); ok {
+			got = value
+			break
+		}
+	}
+	if !strings.HasPrefix(got, piDir+string(os.PathListSeparator)) {
+		t.Fatalf("Pi runtime directory missing from child PATH: %q", got)
+	}
+}
+
+func TestPiProcessEnvPathOrderAndDedup(t *testing.T) {
+	piDir := t.TempDir()
+	piPath := filepath.Join(piDir, "pi")
+	env := piProcessEnvWithLoginPath(piPath,
+		[]string{"HOME=/tmp/home", "PATH=/inherited/a:/shared:/inherited/b"},
+		func() []string { return []string{"/shared", "/common", "/login"} },
+		func(context.Context) string { return "/inherited/b:/login:/login/duplicate" })
+
+	var got string
+	for _, entry := range env {
+		if value, ok := strings.CutPrefix(entry, "PATH="); ok {
+			got = value
+			break
+		}
+	}
+	want := strings.Join([]string{
+		piDir,
+		"/inherited/a",
+		"/shared",
+		"/inherited/b",
+		"/login",
+		"/login/duplicate",
+		"/common",
+	}, string(os.PathListSeparator))
+	if got != want {
+		t.Fatalf("PATH = %q, want %q", got, want)
+	}
+}
+
+func TestCachedLoginShellPATHRunsOnce(t *testing.T) {
+	// Tests in this group swap package variables and must not run in parallel.
+	originalLoginPath := piLoginShellPATH
+	originalSync := piLoginShellPATHSync
+	calls := 0
+	piLoginShellPATH = func() string {
+		calls++
+		return "/login/one:/login/two"
+	}
+	piLoginShellPATHSync = &loginShellPATHState{}
+	t.Cleanup(func() {
+		piLoginShellPATH = originalLoginPath
+		piLoginShellPATHSync = originalSync
+	})
+
+	first := cachedPiLoginShellPATH(context.Background())
+	second := cachedPiLoginShellPATH(context.Background())
+	if first != "/login/one:/login/two" || second != first {
+		t.Fatalf("cached PATH = %q, %q", first, second)
+	}
+	if calls != 1 {
+		t.Fatalf("login shell probe called %d times, want 1", calls)
+	}
+}
+
+func TestCancelledLoginShellProbeDoesNotPoisonCache(t *testing.T) {
+	// Tests in this group swap package variables and must not run in parallel.
+	originalLoginPath := piLoginShellPATH
+	originalSync := piLoginShellPATHSync
+	release := make(chan struct{})
+	calls := 0
+	piLoginShellPATH = func() string {
+		calls++
+		<-release
+		return "/login/recovered"
+	}
+	piLoginShellPATHSync = &loginShellPATHState{}
+	t.Cleanup(func() {
+		piLoginShellPATH = originalLoginPath
+		piLoginShellPATHSync = originalSync
+	})
+
+	firstCtx, firstCancel := context.WithCancel(context.Background())
+	firstCancel()
+	if got := cachedPiLoginShellPATH(firstCtx); got != "" {
+		t.Fatalf("cancelled call returned %q", got)
+	}
+
+	secondCtx, secondCancel := context.WithTimeout(context.Background(), time.Second)
+	defer secondCancel()
+	secondDone := make(chan string, 1)
+	go func() {
+		secondDone <- cachedPiLoginShellPATH(secondCtx)
+	}()
+	close(release)
+	if got := <-secondDone; got != "/login/recovered" {
+		t.Fatalf("second call returned %q, want recovered PATH", got)
+	}
+	if calls != 1 {
+		t.Fatalf("login shell probe called %d times, want 1 shared probe", calls)
 	}
 }
 

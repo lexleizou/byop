@@ -330,7 +330,6 @@ func TestFollowUpPreferenceNormalization(t *testing.T) {
 }
 
 func TestInjectableFollowUpRunnerAndSettledTrigger(t *testing.T) {
-	t.Setenv("BYOP_PI_PATH", "/bin/echo")
 	state := followUpTestState()
 	const stalePrompt = "stale active prompt"
 	state.activePrompt = stalePrompt
@@ -338,9 +337,11 @@ func TestInjectableFollowUpRunnerAndSettledTrigger(t *testing.T) {
 		{role: chatUser, blocks: []chatBlock{{kind: chatBlockText, text: "Why did the test fail?"}}},
 		{role: chatAssistant, blocks: []chatBlock{{kind: chatBlockText, text: "The assertion expected 2."}}},
 	}
+	var gotPath string
 	var gotArgs []string
 	var gotStdin string
 	state.followUpRunner = func(ctx context.Context, path, cwd string, args []string, stdin string) (string, error) {
+		gotPath = path
 		gotArgs = append([]string(nil), args...)
 		gotStdin = stdin
 		return "Suggestion: Show the assertion diff.", nil
@@ -350,6 +351,9 @@ func TestInjectableFollowUpRunnerAndSettledTrigger(t *testing.T) {
 
 	if state.followUpSuggestion != "Show the assertion diff." {
 		t.Fatalf("suggestion = %q", state.followUpSuggestion)
+	}
+	if gotPath != "/bin/echo" {
+		t.Fatalf("runner path = %q, want the connected Pi executable", gotPath)
 	}
 	if !slices.Contains(gotArgs, "--model") || !slices.Contains(gotArgs, "provider/model") {
 		t.Fatalf("runner args missing current model: %#v", gotArgs)
@@ -405,6 +409,7 @@ func TestFollowUpRunnerErrorIsDiscarded(t *testing.T) {
 func followUpTestState() *appState {
 	return &appState{
 		piConn:          piConnected,
+		piPath:          "/bin/echo",
 		piCwd:           "/tmp",
 		piModelProvider: "provider",
 		piModelID:       "model",

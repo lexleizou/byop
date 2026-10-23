@@ -273,6 +273,8 @@ type appState struct {
 	piErrorDetailsOpen      bool
 	piStatusPopoverOpen     bool
 	piConnecting            bool
+	piConnectCancel         context.CancelFunc
+	piConnectGeneration     uint64
 	piEpoch                 uint64
 	run                     runState
 	runID                   string
@@ -1431,32 +1433,59 @@ func (s *appState) connectPi() {
 	s.piEpoch++
 	s.sessionGen++
 	epoch := s.piEpoch
-	path, err := resolvePiPath()
-	if err != nil {
-		s.piConn = piConnectionErr
-		s.piErrorCode = classifyPiConnectionError(err)
-		s.piError = uiErrorText(err, text("errorPiResolveFailed"))
-		s.piErrorDetailsOpen = false
-		return
-	}
-
 	s.piConnecting = true
 	s.piConn = piConnecting
 	s.piCwd = ""
-	s.piPath = path
+	s.piPath = ""
 	s.piError = ""
 	s.notice = text("noticePiConnecting")
 	s.refreshPiSessions()
 
 	savedWorkspace := s.preferences.Workspace
+	connectCtx, connectCancel := context.WithCancel(context.Background())
+	s.piConnectCancel = connectCancel
+	s.piConnectGeneration++
+	connectGeneration := s.piConnectGeneration
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer connectCancel()
+		defer func() {
+			s.postUI(func() {
+				if connectGeneration != s.piConnectGeneration {
+					return
+				}
+				s.piConnectCancel = nil
+			})
+		}()
+		path, err := resolvePiPath(connectCtx)
+		if err != nil {
+			s.postUI(func() {
+				if epoch != s.piEpoch || connectGeneration != s.piConnectGeneration ||
+					connectCtx.Err() != nil {
+					return
+				}
+				s.piConnecting = false
+				s.piConn = piConnectionErr
+				s.piErrorCode = classifyPiConnectionError(err)
+				s.piError = uiErrorText(err, text("errorPiResolveFailed"))
+				s.piErrorDetailsOpen = false
+				s.clearPiConnectingNotice()
+			})
+			return
+		}
+		if connectCtx.Err() != nil {
+			return
+		}
+		ctx, cancel := context.WithTimeout(connectCtx, 5*time.Second)
 		version := piCLIVersion(ctx, path)
 		cancel()
+		if connectCtx.Err() != nil {
+			return
+		}
 		cwd, err := piWorkspaceCwd(savedWorkspace)
 		if err != nil {
 			s.postUI(func() {
-				if epoch != s.piEpoch {
+				if epoch != s.piEpoch || connectGeneration != s.piConnectGeneration ||
+					connectCtx.Err() != nil {
 					return
 				}
 				s.piConnecting = false
@@ -1468,12 +1497,16 @@ func (s *appState) connectPi() {
 			})
 			return
 		}
+		if connectCtx.Err() != nil {
+			return
+		}
 		client, err := startPiClient(path, cwd, func(event piEvent) {
 			s.postUI(func() { s.handlePiEvent(event, epoch) })
 		})
 		if err != nil {
 			s.postUI(func() {
-				if epoch != s.piEpoch {
+				if epoch != s.piEpoch || connectGeneration != s.piConnectGeneration ||
+					connectCtx.Err() != nil {
 					return
 				}
 				s.piConnecting = false
@@ -1485,13 +1518,18 @@ func (s *appState) connectPi() {
 			})
 			return
 		}
-		handshakeCtx, handshakeCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if connectCtx.Err() != nil {
+			client.Close()
+			return
+		}
+		handshakeCtx, handshakeCancel := context.WithTimeout(connectCtx, 5*time.Second)
 		state, err := client.GetState(handshakeCtx)
 		handshakeCancel()
 		if err != nil {
 			client.Close()
 			s.postUI(func() {
-				if epoch != s.piEpoch {
+				if epoch != s.piEpoch || connectGeneration != s.piConnectGeneration ||
+					connectCtx.Err() != nil {
 					return
 				}
 				s.piConnecting = false
@@ -1503,18 +1541,31 @@ func (s *appState) connectPi() {
 			})
 			return
 		}
-		modelsCtx, modelsCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if connectCtx.Err() != nil {
+			client.Close()
+			return
+		}
+		modelsCtx, modelsCancel := context.WithTimeout(connectCtx, 10*time.Second)
 		models, modelsErr := client.GetAvailableModels(modelsCtx)
 		modelsCancel()
-		levelsCtx, levelsCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if connectCtx.Err() != nil {
+			client.Close()
+			return
+		}
+		levelsCtx, levelsCancel := context.WithTimeout(connectCtx, 5*time.Second)
 		levels, levelsErr := client.GetAvailableThinkingLevels(levelsCtx)
 		levelsCancel()
+		if connectCtx.Err() != nil {
+			client.Close()
+			return
+		}
 		s.postUI(func() {
-			if epoch != s.piEpoch {
+			if epoch != s.piEpoch || connectGeneration != s.piConnectGeneration {
 				client.Close()
 				return
 			}
 			s.pi = client
+			s.piPath = path
 			s.piCwd = client.cwd
 			s.piConnecting = false
 			s.piConn = piConnected
@@ -1559,6 +1610,11 @@ func (s *appState) reconnectPi() {
 	s.piSessionsRefresh.Add(1)
 	s.piSessionsOrgWorkspace = ""
 	s.piSessionsGroups = sessionGroups{}
+	s.piConnectGeneration++
+	if s.piConnectCancel != nil {
+		s.piConnectCancel()
+		s.piConnectCancel = nil
+	}
 	if s.run == runSubmitting || s.run == runStreaming || s.run == runStopping {
 		s.markOpenTools(toolCallInterrupted)
 		s.setAssistantStatus("Interrupted")
@@ -1595,6 +1651,11 @@ func (s *appState) reconnectPi() {
 
 func (s *appState) shutdownPi() {
 	s.closed.Store(true)
+	s.piConnectGeneration++
+	if s.piConnectCancel != nil {
+		s.piConnectCancel()
+		s.piConnectCancel = nil
+	}
 	s.resetFollowUpSuggestion()
 	s.invalidateSessionNaming()
 	if s.sessionLaterTimer != nil {

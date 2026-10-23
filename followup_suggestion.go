@@ -161,7 +161,7 @@ func trimSuggestionLabel(line string) string {
 func defaultFollowUpRunner(ctx context.Context, path, cwd string, args []string, stdin string) (string, error) {
 	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Dir = cwd
-	cmd.Env = cleanPiEnv(os.Environ())
+	cmd.Env = piProcessEnv(path, os.Environ())
 	cmd.Stdin = strings.NewReader(stdin)
 	cmd.WaitDelay = 2 * time.Second
 	output, err := cmd.Output()
@@ -247,8 +247,11 @@ func (s *appState) startFollowUpSuggestion(prompt, reply string) {
 	if prompt == "" || reply == "" {
 		return
 	}
-	path, err := resolvePiPath()
-	if err != nil {
+	path := strings.TrimSpace(s.piPath)
+	if path == "" && s.pi != nil {
+		path = strings.TrimSpace(s.pi.path)
+	}
+	if path == "" {
 		return
 	}
 	cwd, err := s.sessionWorkspaceCwd()
