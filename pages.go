@@ -14,9 +14,18 @@ import (
 	"byop/locales"
 )
 
+const (
+	pluginCardDefaultHeight      float32 = 236
+	pluginCardMinWidth           float32 = 320
+	pluginCardMaxWidth           float32 = 360
+	pluginCardsSingleColumnWidth float32 = pluginCardMaxWidth*2 + 12 + 56
+)
+
 func (s *appState) pluginsPage(c *ui.Context, p palette) {
 	registry := s.pluginRegistrySnapshot()
 	entries := s.filteredPluginEntries()
+	windowWidth, _ := c.Size()
+	narrowCards := s.chatMainWidth(windowWidth) < pluginCardsSingleColumnWidth
 	ui.Scroll(c).Fill().Children(func() {
 		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
 			ui.Column(c).Grow(1).MaxWidth(880).Gap(22).Children(func() {
@@ -59,8 +68,8 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 					s.emptyPluginRegistry(c, p)
 				} else {
 					ui.Row(c).Wrap().AlignItems(ui.Start).GapX(12).GapY(12).Children(func() {
-						for _, entry := range entries {
-							s.pluginCard(c, p, entry)
+						for index, entry := range entries {
+							s.pluginCard(c, p, entry, index, narrowCards)
 						}
 					})
 				}
@@ -88,6 +97,22 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 			})
 		})
 	})
+}
+
+func pluginEntryKey(entry pluginRegistryEntry, index int) string {
+	if sourceDirectory := strings.TrimSpace(entry.SourceDirectory); sourceDirectory != "" {
+		return sourceDirectory
+	}
+	return fmt.Sprintf("%s-%d", entry.ID, index)
+}
+
+func (s *appState) pluginEntryExists(entryKey string) bool {
+	for index, entry := range s.pluginRegistrySnapshot().Entries {
+		if pluginEntryKey(entry, index) == entryKey {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *appState) filteredPluginEntries() []pluginRegistryEntry {
@@ -177,14 +202,110 @@ func (s *appState) emptyPluginRegistry(c *ui.Context, p palette) {
 	})
 }
 
-func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntry) {
+type pluginCardActionKind string
+
+const (
+	pluginCardActionNone    pluginCardActionKind = ""
+	pluginCardActionView    pluginCardActionKind = "view"
+	pluginCardActionWebView pluginCardActionKind = "webview"
+	pluginCardActionCommand pluginCardActionKind = "command"
+)
+
+type pluginCardAction struct {
+	Kind  pluginCardActionKind
+	ID    string
+	Title string
+}
+
+func pluginCardPrimaryAction(entry pluginRegistryEntry) pluginCardAction {
+	if entry.Status != pluginRegistered || entry.Manifest == nil {
+		return pluginCardAction{}
+	}
+	manifest := entry.Manifest
+	for _, view := range manifest.Contributes.Views {
+		if view.Location == "main" {
+			return pluginCardAction{
+				Kind:  pluginCardActionView,
+				ID:    view.ID,
+				Title: fallback(view.Title, view.ID),
+			}
+		}
+	}
+	for _, webView := range manifest.Contributes.WebViews {
+		if webView.Location == "main" {
+			return pluginCardAction{
+				Kind:  pluginCardActionWebView,
+				ID:    webView.ID,
+				Title: fallback(webView.Title, webView.ID),
+			}
+		}
+	}
+	if len(manifest.Contributes.Commands) > 0 {
+		command := manifest.Contributes.Commands[0]
+		return pluginCardAction{
+			Kind:  pluginCardActionCommand,
+			ID:    command.ID,
+			Title: fallback(command.Title, command.ID),
+		}
+	}
+	return pluginCardAction{}
+}
+
+func (s *appState) pluginCardStatusSummary(
+	p palette,
+	entry pluginRegistryEntry,
+	runtime pluginRuntimeStatus,
+) (string, ui.Color) {
+	if entry.Error != "" {
+		return summarizeLine(uiErrorFromText(entry.Error, text("pluginsFailedFallback")), 240),
+			p.danger
+	}
+	if runtime.LastError != "" {
+		return summarizeLine(uiErrorFromText(runtime.LastError, text("pluginsFailedFallback")), 240),
+			p.danger
+	}
+	if runtime.LastResult != "" {
+		return pluginRuntimeResultSummary(entry, runtime), p.success
+	}
+	if entry.Manifest != nil {
+		return textArgs("pluginsVersionRuntime", map[string]any{
+			"version": fallback(entry.Version, entry.Manifest.Version),
+			"runtime": entry.Manifest.Runtime,
+		}), p.muted
+	}
+	return text("pluginsManifestRejected"), p.danger
+}
+
+func pluginRuntimeResultSummary(entry pluginRegistryEntry, runtime pluginRuntimeStatus) string {
+	command := runtime.LastCommand
+	if entry.Manifest != nil {
+		if contribution, ok := pluginCommandByID(entry.Manifest, command); ok {
+			command = fallback(contribution.Title, contribution.ID)
+		}
+	}
+	if command == "" {
+		command = text("pluginsCommandFallback")
+	}
+	return textArgs("pluginsLastResult", map[string]any{
+		"command": command,
+		"result":  runtime.LastResult,
+	})
+}
+
+func (s *appState) pluginCard(
+	c *ui.Context,
+	p palette,
+	entry pluginRegistryEntry,
+	index int,
+	narrow bool,
+) {
 	tone := s.pluginStatusTone(p, entry.Status)
 	title := fallback(entry.Name, entry.ID)
 	description := fallback(entry.Description, text("pluginsNoDescription"))
-	surface := text("pluginsManifestRejected")
+	contribution := text("pluginsManifestRejected")
 	iconName := "plugins"
 	if entry.Manifest != nil {
-		surface = pluginContributionSummary(entry.Manifest)
+		contribution = pluginContributionSummary(entry.Manifest)
 		if entry.Manifest.Icon != "" {
 			iconName = entry.Manifest.Icon
 		}
@@ -196,124 +317,318 @@ func (s *appState) pluginCard(c *ui.Context, p palette, entry pluginRegistryEntr
 		pillLabel = pluginRuntimeLabel(runtime.State)
 		pillTone = pluginRuntimeTone(p, runtime.State)
 	}
-	ui.Column(c).Width(260).MinWidth(220).AlignItems(ui.Start).Gap(10).Padding(14).Radius(11).
-		Border(1, p.border).Background(p.surface).Shadow(0, 1, 3, 0, p.shadowCard).
-		Children(func() {
-			ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
-				ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
-					ui.Icon(c, iconOr(iconName, "plugins")).Size(17, 17).TextColor(tone)
-				})
-				ui.Spacer(c)
-				statusPill(c, p, pillLabel, pillTone)
+	statusSummary, statusTone := s.pluginCardStatusSummary(p, entry, runtime)
+	busy := runtime.State == pluginStateStarting || runtime.State == pluginStateRunning ||
+		runtime.State == pluginStateStopping
+	action := pluginCardPrimaryAction(entry)
+	entryKey := pluginEntryKey(entry, index)
+
+	card := ui.Column(c).Key("plugin-card-"+entryKey).
+		Label(textArgs("pluginsCardLabel", map[string]any{"name": title})).
+		Height(pluginCardDefaultHeight).MinHeight(pluginCardDefaultHeight).
+		MaxHeight(pluginCardDefaultHeight).AlignItems(ui.Start).Gap(6).Padding(16).
+		Radius(12).Border(1, p.border).Background(p.surface).
+		Shadow(0, 1, 3, 0, p.shadowCard).Clip()
+	if narrow {
+		card.FillWidth()
+	} else {
+		card.Width(pluginCardMaxWidth).MinWidth(pluginCardMinWidth).MaxWidth(pluginCardMaxWidth)
+	}
+	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
+	if duration > 0 {
+		card.Transition(ui.ElementTransition{Duration: duration, Colors: true})
+	}
+	if card.Hovered() {
+		card.Background(p.surfaceHover).Border(1, p.muted).
+			Shadow(0, 4, 12, 0, p.shadowOverlay)
+	}
+	var detailsButton ui.Element
+	card.Children(func() {
+		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
+			ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
+				ui.Icon(c, iconOr(iconName, "plugins")).Size(17, 17).TextColor(tone)
 			})
-			ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
-			ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
-			ui.Text(c, entry.ID).Font("monospace").FontSize(fontCaption).TextColor(p.muted)
-			ui.Text(c, surface).FontSize(fontCaption).TextColor(tone)
-			meta := textArgs("pluginsContributionCount", map[string]any{
-				"count": entry.ContributionCount,
-			})
-			if entry.Version != "" {
-				meta = "v" + entry.Version + " · " + meta
-			}
-			if entry.Manifest != nil {
-				meta = textArgs("pluginsRuntimeMeta", map[string]any{
-					"runtime": entry.Manifest.Runtime,
-					"count":   entry.ContributionCount,
-				})
-				if entry.Version != "" {
-					meta = "v" + entry.Version + " · " + meta
-				}
-			}
-			ui.Text(c, meta).FontSize(fontCaption).TextColor(p.muted)
-			if entry.Manifest != nil {
-				ui.Text(c, pluginPermissionsLine(entry.Manifest)).FontSize(fontCaption).
-					LineHeight(1.35).TextColor(p.muted)
-				ui.Text(c, pluginEnforcementLine(entry.Manifest.Runtime)).FontSize(fontCaption).
-					LineHeight(1.35).TextColor(p.muted)
-				for _, webView := range entry.Manifest.Contributes.WebViews {
-					ui.Text(c, textArgs("pluginsWebViewMeta", map[string]any{
-						"title": fallback(webView.Title, webView.ID),
-						"entry": webView.Entry,
-					})).
-						FontSize(fontCaption).LineHeight(1.35).TextColor(p.muted)
-				}
-				var secondaryViews []string
-				for _, view := range entry.Manifest.Contributes.Views {
-					if view.Location == "secondary" {
-						secondaryViews = append(secondaryViews, fallback(view.Title, view.ID))
-					}
-				}
-				if len(secondaryViews) > 0 {
-					ui.Text(c, textArgs("pluginsSecondaryViews", map[string]any{
-						"views": strings.Join(secondaryViews, ", "),
-					})).
-						FontSize(fontCaption).LineHeight(1.35).TextColor(p.muted)
-				}
-			}
-			if entry.Error != "" {
-				ui.Text(c, summarizeLine(uiErrorFromText(entry.Error, text("pluginsFailedFallback")), 240)).FontSize(fontCaption).
-					LineHeight(1.4).TextColor(p.danger)
-			}
-			if entry.Status != pluginRegistered || entry.Manifest == nil {
-				return
-			}
-			if runtime.LastResult != "" && runtime.LastError == "" {
-				ui.Text(c, runtime.LastCommand+" → "+runtime.LastResult).FontSize(fontCaption).
-					LineHeight(1.4).TextColor(p.success)
-			}
-			if runtime.LastError != "" {
-				ui.Text(c, summarizeLine(uiErrorFromText(runtime.LastError, text("pluginsFailedFallback")), 240)).FontSize(fontCaption).
-					LineHeight(1.4).TextColor(p.danger)
-			}
-			if runtime.HostCalls > 0 {
-				ui.Text(c, textArgs("pluginsHostCallCount", map[string]any{
-					"count": runtime.HostCalls,
-				})).FontSize(fontCaption).
-					TextColor(p.muted)
-			}
-			if runtime.DeniedCalls > 0 {
-				ui.Text(c, textArgs("pluginsDenied", map[string]any{
-					"detail": summarizeLine(runtime.LastDenied, 180),
-				})).
-					FontSize(fontCaption).LineHeight(1.35).TextColor(p.danger)
-			}
-			busy := runtime.State == pluginStateStarting || runtime.State == pluginStateRunning ||
-				runtime.State == pluginStateStopping
-			ui.Row(c).Wrap().GapX(6).GapY(6).Children(func() {
-				for _, command := range entry.Manifest.Contributes.Commands {
-					command := command
-					pluginCommandButton(c, p, "plugin-cmd-"+entry.ID+"-"+command.ID, command, busy, func() {
-						s.runPluginCommand(entry, command)
-					})
-				}
-				if runtime.State == pluginStateActive {
-					secondaryAction(c, p, "plugin-stop-"+entry.ID, text("pluginsDeactivate"), func() {
-						s.deactivatePlugin(entry)
-					})
-				}
-				for _, view := range entry.Manifest.Contributes.Views {
-					view := view
-					if view.Location != "main" {
-						continue
-					}
-					secondaryAction(c, p, "plugin-open-view-"+entry.ID+"-"+view.ID,
-						textArgs("pluginsOpen", map[string]any{"title": fallback(view.Title, view.ID)}), func() {
+			ui.Spacer(c)
+			statusPill(c, p, pillLabel, pillTone)
+		})
+		ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text).
+			SingleLine().Ellipsis("…")
+		ui.Text(c, description).FontSize(fontSmall).LineHeight(1.4).TextColor(p.muted).
+			MaxLines(2).Ellipsis("…")
+		ui.Text(c, contribution).FontSize(fontCaption).TextColor(p.muted).
+			SingleLine().Ellipsis("…")
+		ui.Text(c, statusSummary).FontSize(fontCaption).TextColor(statusTone).
+			SingleLine().Ellipsis("…")
+		ui.Spacer(c)
+		ui.Row(c).FillWidth().Shrink(0).Gap(8).AlignItems(ui.Center).Children(func() {
+			switch action.Kind {
+			case pluginCardActionView:
+				view, ok := pluginViewByID(entry.Manifest, action.ID)
+				if ok {
+					s.pluginCardPrimaryButton(c, p, "plugin-open-primary-"+entryKey,
+						textArgs("pluginsOpen", map[string]any{"title": action.Title}), "chevron-right",
+						false, func() {
 							s.openPluginView(entry, view)
 						})
 				}
-				for _, webView := range entry.Manifest.Contributes.WebViews {
-					webView := webView
-					if webView.Location != "main" {
-						continue
-					}
-					secondaryAction(c, p, "plugin-open-webview-"+entry.ID+"-"+webView.ID,
-						textArgs("pluginsOpen", map[string]any{"title": fallback(webView.Title, webView.ID)}), func() {
+			case pluginCardActionWebView:
+				webView, ok := pluginWebViewContributionByID(entry.Manifest, action.ID)
+				if ok {
+					s.pluginCardPrimaryButton(c, p, "plugin-open-primary-"+entryKey,
+						textArgs("pluginsOpen", map[string]any{"title": action.Title}), "chevron-right",
+						false, func() {
 							s.openPluginWebView(entry, webView)
 						})
 				}
+			case pluginCardActionCommand:
+				command, ok := pluginCommandByID(entry.Manifest, action.ID)
+				if ok {
+					s.pluginCardPrimaryButton(c, p, "plugin-run-primary-"+entryKey,
+						fallback(command.Title, command.ID), "play", busy, func() {
+							s.runPluginCommand(entry, command)
+						})
+				}
+			}
+			ui.Spacer(c)
+			detailsButton = ui.ButtonBase(c.Key("plugin-details-"+entryKey)).
+				Padding(6, 9).Radius(7).Background(ui.Color{}).
+				Cursor(ui.CursorPointer).Label(textArgs("pluginsDetailsFor", map[string]any{
+				"name": title,
+			})).Shrink(0)
+			if detailsButton.Hovered() {
+				detailsButton.Background(p.surfaceHover)
+			}
+			detailsButton.Children(func() {
+				ui.Text(c, text("pluginsDetails")).FontSize(fontSmall).FontWeight(600).
+					TextColor(p.text)
+			})
+			if detailsButton.Clicked() {
+				s.pluginDetailsOpenID = entryKey
+			}
+		})
+	})
+	if s.pluginDetailsOpenID == entryKey && detailsButton.Valid() {
+		open := true
+		panel := ui.PopoverBase(c, detailsButton, &open, func(panel ui.Element) {
+			s.pluginDetailsPanel(c, p, panel, entry, entryKey, runtime, busy)
+		})
+		if panel.Dismissed() || !open {
+			s.pluginDetailsOpenID = ""
+		}
+	}
+}
+
+func (s *appState) pluginCardPrimaryButton(
+	c *ui.Context,
+	p palette,
+	key, label, iconName string,
+	disabled bool,
+	click func(),
+) {
+	btn := ui.ButtonBase(c.Key(key)).Padding(7, 11).Radius(8).Background(p.accent).
+		Cursor(ui.CursorPointer).Label(label).Disabled(disabled).
+		Shrink(1).MinWidth(0).MaxWidth(pluginCardMaxWidth)
+	if btn.Hovered() && !disabled {
+		btn.Background(p.accentHover)
+	}
+	btn.Children(func() {
+		ui.Row(c).FillWidth().MinWidth(0).Gap(5).AlignItems(ui.Center).Children(func() {
+			ui.Icon(c, icon(iconName)).Size(13, 13).Shrink(0).TextColor(p.accentText)
+			ui.Text(c, label).FontSize(fontSmall).FontWeight(650).TextColor(p.accentText).
+				Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
+		})
+	})
+	if !disabled && btn.Clicked() {
+		click()
+	}
+}
+
+func (s *appState) pluginDetailsPanel(
+	c *ui.Context,
+	p palette,
+	panel ui.Element,
+	entry pluginRegistryEntry,
+	entryKey string,
+	runtime pluginRuntimeStatus,
+	busy bool,
+) {
+	registered := entry.Status == pluginRegistered && entry.Manifest != nil
+	_, windowHeight := c.Size()
+	maxHeight := windowHeight - 80
+	if maxHeight > 520 {
+		maxHeight = 520
+	}
+	if maxHeight < 240 {
+		maxHeight = 240
+	}
+	panel.Width(420).MinWidth(360).MaxWidth(420).MaxHeight(maxHeight).
+		Padding(16).Radius(12).Border(1, p.muted).Background(p.surface).
+		Shadow(0, 8, 24, 0, p.shadowOverlay).Children(func() {
+		ui.Scroll(c).Fill().Children(func() {
+			ui.Column(c).FillWidth().Gap(12).Children(func() {
+				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(10).Children(func() {
+					ui.Column(c).Grow(1).Gap(2).Children(func() {
+						ui.Text(c, fallback(entry.Name, entry.ID)).FontSize(fontBody).
+							FontWeight(650).TextColor(p.text).SingleLine().Ellipsis("…")
+						ui.Text(c, text("pluginsDetailsTitle")).FontSize(fontCaption).
+							TextColor(p.muted)
+					})
+					statusLabel := pluginStatusLabel(entry.Status)
+					statusTone := s.pluginStatusTone(p, entry.Status)
+					if entry.Status == pluginRegistered && runtime.State != pluginStateInactive {
+						statusLabel = pluginRuntimeLabel(runtime.State)
+						statusTone = pluginRuntimeTone(p, runtime.State)
+					}
+					statusPill(c, p, statusLabel, statusTone)
+				})
+
+				ui.Column(c).FillWidth().Gap(7).Children(func() {
+					pluginDetailRow(c, p, text("pluginsDetailsIdentity"), entry.ID, true)
+					pluginDetailRow(c, p, text("pluginsDetailsVersion"),
+						fallback(entry.Version, text("pluginsValueNone")), false)
+					if entry.Manifest != nil {
+						pluginDetailRow(c, p, text("pluginsDetailsPermissions"),
+							pluginPermissionsLine(entry.Manifest), false)
+					} else {
+						pluginDetailRow(c, p, text("pluginsDetailsPermissions"),
+							text("pluginsValueNone"), false)
+					}
+					if registered {
+						pluginDetailRow(c, p, text("pluginsDetailsRuntime"),
+							fallback(entry.Manifest.Runtime, text("pluginsValueNone")), true)
+						pluginDetailRow(c, p, text("pluginsDetailsHostChecks"),
+							pluginEnforcementLine(entry.Manifest.Runtime), false)
+					}
+				})
+
+				if registered && len(entry.Manifest.Contributes.Commands) > 0 {
+					pluginDetailsSection(c, p, text("pluginsDetailsCommands"))
+					ui.Row(c).Wrap().GapX(6).GapY(6).Children(func() {
+						for _, command := range entry.Manifest.Contributes.Commands {
+							command := command
+							pluginCommandButton(c, p, "plugin-details-cmd-"+entryKey+"-"+command.ID,
+								command, busy, func() {
+									s.runPluginCommand(entry, command)
+								})
+						}
+					})
+				}
+
+				if registered && runtime.State == pluginStateActive {
+					secondaryAction(c, p, "plugin-details-stop-"+entryKey,
+						text("pluginsDeactivate"), func() {
+							s.deactivatePlugin(entry)
+						})
+				}
+
+				if registered {
+					var mainViews, secondaryViews []pluginViewContribution
+					for _, view := range entry.Manifest.Contributes.Views {
+						if view.Location == "main" {
+							mainViews = append(mainViews, view)
+						} else {
+							secondaryViews = append(secondaryViews, view)
+						}
+					}
+					if len(mainViews) > 0 {
+						pluginDetailsSection(c, p, text("pluginsDetailsViews"))
+						ui.Row(c).Wrap().GapX(6).GapY(6).Children(func() {
+							for _, view := range mainViews {
+								view := view
+								secondaryAction(c, p, "plugin-details-view-"+entryKey+"-"+view.ID,
+									textArgs("pluginsOpen", map[string]any{
+										"title": fallback(view.Title, view.ID),
+									}), func() {
+										s.openPluginView(entry, view)
+									})
+							}
+						})
+					}
+					if len(secondaryViews) > 0 {
+						var titles []string
+						for _, view := range secondaryViews {
+							titles = append(titles, fallback(view.Title, view.ID))
+						}
+						pluginDetailBlock(c, p, text("pluginsDetailsSecondaryViews"),
+							strings.Join(titles, ", "), false)
+					}
+					if len(entry.Manifest.Contributes.WebViews) > 0 {
+						pluginDetailsSection(c, p, text("pluginsDetailsWebViews"))
+						ui.Column(c).FillWidth().Gap(8).Children(func() {
+							for _, webView := range entry.Manifest.Contributes.WebViews {
+								webView := webView
+								ui.Column(c).FillWidth().Gap(4).Padding(10).Radius(8).
+									Background(p.background).Children(func() {
+									ui.Text(c, fallback(webView.Title, webView.ID)).
+										FontSize(fontSmall).FontWeight(600).TextColor(p.text)
+									ui.Text(c, textArgs("pluginsWebViewMeta", map[string]any{
+										"entry": webView.Entry,
+									})).FontSize(fontCaption).LineHeight(1.4).TextColor(p.muted)
+									if webView.Location == "main" {
+										secondaryAction(c, p,
+											"plugin-details-webview-"+entryKey+"-"+webView.ID,
+											textArgs("pluginsOpen", map[string]any{
+												"title": fallback(webView.Title, webView.ID),
+											}), func() {
+												s.openPluginWebView(entry, webView)
+											})
+									}
+								})
+							}
+						})
+					}
+				}
+
+				if entry.Error != "" {
+					pluginDetailBlock(c, p, text("pluginsDetailsRegistrationError"),
+						uiErrorText(errors.New(entry.Error), text("pluginsFailedFallback")), false)
+				}
+				if registered {
+					pluginDetailsSection(c, p, text("pluginsDetailsDiagnostics"))
+					pluginDetailBlock(c, p, text("pluginsDetailsHostCalls"),
+						textArgs("pluginsHostCallCount", map[string]any{"count": runtime.HostCalls}), true)
+					if runtime.DeniedCalls > 0 {
+						pluginDetailBlock(c, p, text("pluginsDetailsDeniedCalls"),
+							textArgs("pluginsDenied", map[string]any{"detail": runtime.LastDenied}), false)
+					}
+					if runtime.LastResult != "" {
+						pluginDetailBlock(c, p, text("pluginsDetailsRecentResult"),
+							pluginRuntimeResultSummary(entry, runtime), false)
+					}
+					if runtime.LastError != "" {
+						pluginDetailBlock(c, p, text("pluginsDetailsRecentError"),
+							uiErrorText(errors.New(runtime.LastError), text("pluginsFailedFallback")), false)
+					}
+				}
 			})
 		})
+	})
+}
+
+func pluginDetailsSection(c *ui.Context, p palette, label string) {
+	ui.Text(c, label).FontSize(fontCaption).FontWeight(700).TextColor(p.muted)
+}
+
+func pluginDetailRow(c *ui.Context, p palette, label, value string, mono bool) {
+	ui.Row(c).FillWidth().Gap(10).AlignItems(ui.Start).Children(func() {
+		ui.Text(c, label).Width(96).Shrink(0).FontSize(fontCaption).TextColor(p.muted)
+		text := ui.Text(c, value).FontSize(fontCaption).TextColor(p.text).Grow(1)
+		if mono {
+			text.Font("monospace").Selectable()
+		}
+	})
+}
+
+func pluginDetailBlock(c *ui.Context, p palette, label, value string, success bool) {
+	ui.Column(c).FillWidth().Gap(3).Padding(9).Radius(8).
+		Background(p.background).Children(func() {
+		ui.Text(c, label).FontSize(fontCaption).FontWeight(650).TextColor(p.muted)
+		tone := p.text
+		if success {
+			tone = p.success
+		}
+		ui.Text(c, value).Selectable().FontSize(fontSmall).LineHeight(1.4).TextColor(tone)
+	})
 }
 
 func pluginPermissionsLine(manifest *pluginManifest) string {
@@ -343,7 +658,7 @@ func pluginCommandButton(c *ui.Context, p palette, key string, command pluginCom
 	label := fallback(command.Title, command.ID)
 	btn := ui.ButtonBase(c.Key(key)).Padding(6, 10).Radius(7).Border(1, p.border).
 		Background(p.background).Cursor(ui.CursorPointer).Label(label).
-		Tooltip(fallback(command.Description, command.ID))
+		Tooltip(fallback(command.Description, command.ID)).Disabled(busy)
 	if btn.Hovered() && !busy {
 		btn.Background(p.surfaceHover)
 	}

@@ -226,7 +226,7 @@ func layoutTestState(t *testing.T) *appState {
 		piSessionFile:      cwd + "/current.jsonl",
 		piSessionID:        "current",
 		preferences:        byopPreferences{FollowUpStyle: string(followUpStyleCard), Motion: string(motionReduced)},
-		hud:                hudState{cwd: cwd},
+		hud:                hudState{cwd: cwd, branch: "main"},
 		run:                runCompleted,
 		composerDraft:      "",
 		followUpSuggestion: "",

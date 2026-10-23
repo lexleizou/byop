@@ -4,8 +4,8 @@
     "name": "BYOP Extensions",
     "product": "Build You Own Pi",
     "productAbbreviation": "BYOP",
-    "version": "0.2.4",
-    "updated": "2026-10-22",
+    "version": "0.2.5",
+    "updated": "2026-10-23",
     "base": "../onevra/tokens.json",
     "baseVersion": "1.0.0",
     "status": "design source; P3.2a native Go consumes a subset and renders Chat through Onevra v0.2026.13 components",
@@ -1619,6 +1619,32 @@
           "unit": "px"
         },
         "$description": "Onevra ece5cd9 source/shells/sidebar shell_width_test."
+      }
+    },
+    "pluginCard": {
+      "defaultHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 236,
+          "unit": "px"
+        },
+        "$description": "Fixed plugin card height. Descriptions and summaries truncate within this height."
+      },
+      "minWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 320,
+          "unit": "px"
+        },
+        "$description": "Minimum plugin card width in the multi-column grid."
+      },
+      "maxWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 360,
+          "unit": "px"
+        },
+        "$description": "Maximum plugin card width in the multi-column grid; single-column cards may fill the available width."
       }
     },
     "indicator": {

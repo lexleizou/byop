@@ -522,17 +522,9 @@
   "@pluginsContributionCount": {
     "description": "User-interface text for plugins Contribution Count."
   },
-  "pluginsRuntimeMeta": "runtime {runtime} · {count, plural, one {# contribution} other {# contributions}}",
-  "@pluginsRuntimeMeta": {
-    "description": "User-interface text for plugins Runtime Meta."
-  },
-  "pluginsWebViewMeta": "{title} · {entry} · Isolated · byop-plugin scheme · CSP",
+  "pluginsWebViewMeta": "{entry} · Isolated · byop-plugin scheme · CSP",
   "@pluginsWebViewMeta": {
     "description": "User-interface text for plugins Web View Meta."
-  },
-  "pluginsSecondaryViews": "Secondary views · {views}",
-  "@pluginsSecondaryViews": {
-    "description": "User-interface text for plugins Secondary Views."
   },
   "pluginsFailedFallback": "Plugin failed.",
   "@pluginsFailedFallback": {
@@ -553,6 +545,90 @@
   "pluginsOpen": "Open {title}",
   "@pluginsOpen": {
     "description": "User-interface text for plugins Open."
+  },
+  "pluginsDetails": "Details",
+  "@pluginsDetails": {
+    "description": "Visible label for the button that opens a plugin's details overlay."
+  },
+  "pluginsDetailsFor": "Details for {name}",
+  "@pluginsDetailsFor": {
+    "description": "Accessible label for the details button of a named plugin."
+  },
+  "pluginsDetailsTitle": "Plugin details",
+  "@pluginsDetailsTitle": {
+    "description": "Subtitle shown in the plugin details overlay."
+  },
+  "pluginsDetailsIdentity": "Plugin ID",
+  "@pluginsDetailsIdentity": {
+    "description": "Label for the plugin identifier in the details overlay."
+  },
+  "pluginsDetailsVersion": "Version",
+  "@pluginsDetailsVersion": {
+    "description": "Label for the plugin version in the details overlay."
+  },
+  "pluginsDetailsRuntime": "Runtime",
+  "@pluginsDetailsRuntime": {
+    "description": "Label for the plugin runtime in the details overlay."
+  },
+  "pluginsDetailsHostChecks": "Host checks",
+  "@pluginsDetailsHostChecks": {
+    "description": "Label for the plugin enforcement model in the details overlay."
+  },
+  "pluginsDetailsPermissions": "Permissions",
+  "@pluginsDetailsPermissions": {
+    "description": "Label for the complete plugin permission summary in the details overlay."
+  },
+  "pluginsDetailsCommands": "Commands",
+  "@pluginsDetailsCommands": {
+    "description": "Section label for plugin commands in the details overlay."
+  },
+  "pluginsDetailsViews": "Main views",
+  "@pluginsDetailsViews": {
+    "description": "Section label for primary native views in the details overlay."
+  },
+  "pluginsDetailsWebViews": "WebViews",
+  "@pluginsDetailsWebViews": {
+    "description": "Section label for WebView contributions in the details overlay."
+  },
+  "pluginsDetailsSecondaryViews": "Secondary views",
+  "@pluginsDetailsSecondaryViews": {
+    "description": "Label for secondary native view contributions in the details overlay."
+  },
+  "pluginsDetailsDiagnostics": "Runtime details",
+  "@pluginsDetailsDiagnostics": {
+    "description": "Section label for runtime diagnostics in the details overlay."
+  },
+  "pluginsDetailsHostCalls": "Host calls",
+  "@pluginsDetailsHostCalls": {
+    "description": "Label for the host call count in the details overlay."
+  },
+  "pluginsDetailsDeniedCalls": "Denied call",
+  "@pluginsDetailsDeniedCalls": {
+    "description": "Label for the most recent denied plugin host call."
+  },
+  "pluginsDetailsRegistrationError": "Registration error",
+  "@pluginsDetailsRegistrationError": {
+    "description": "Label for the full plugin registration error."
+  },
+  "pluginsDetailsRecentResult": "Recent result",
+  "@pluginsDetailsRecentResult": {
+    "description": "Label for the most recent successful plugin command result."
+  },
+  "pluginsDetailsRecentError": "Recent error",
+  "@pluginsDetailsRecentError": {
+    "description": "Label for the most recent plugin command error."
+  },
+  "pluginsCardLabel": "Plugin {name}",
+  "@pluginsCardLabel": {
+    "description": "Accessible label for a plugin summary card."
+  },
+  "pluginsVersionRuntime": "v{version} · {runtime}",
+  "@pluginsVersionRuntime": {
+    "description": "Compact plugin version and runtime summary for a card."
+  },
+  "pluginsLastResult": "{command} → {result}",
+  "@pluginsLastResult": {
+    "description": "Compact summary of the latest successful plugin command."
   },
   "pluginsRunning": "Running {title}…",
   "@pluginsRunning": {

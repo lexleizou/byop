@@ -517,17 +517,9 @@
   "@pluginsContributionCount": {
     "description": "User-interface text for plugins Contribution Count."
   },
-  "pluginsRuntimeMeta": "运行时 {runtime} · {count} 项贡献",
-  "@pluginsRuntimeMeta": {
-    "description": "User-interface text for plugins Runtime Meta."
-  },
-  "pluginsWebViewMeta": "{title} · {entry} · 隔离 · byop-plugin 协议 · CSP",
+  "pluginsWebViewMeta": "{entry} · 隔离 · byop-plugin 协议 · CSP",
   "@pluginsWebViewMeta": {
     "description": "User-interface text for plugins Web View Meta."
-  },
-  "pluginsSecondaryViews": "次级视图 · {views}",
-  "@pluginsSecondaryViews": {
-    "description": "User-interface text for plugins Secondary Views."
   },
   "pluginsFailedFallback": "插件运行失败。",
   "@pluginsFailedFallback": {
@@ -548,6 +540,90 @@
   "pluginsOpen": "打开 {title}",
   "@pluginsOpen": {
     "description": "User-interface text for plugins Open."
+  },
+  "pluginsDetails": "详情",
+  "@pluginsDetails": {
+    "description": "Visible label for the button that opens a plugin's details overlay."
+  },
+  "pluginsDetailsFor": "{name} 的详情",
+  "@pluginsDetailsFor": {
+    "description": "Accessible label for the details button of a named plugin."
+  },
+  "pluginsDetailsTitle": "插件详情",
+  "@pluginsDetailsTitle": {
+    "description": "Subtitle shown in the plugin details overlay."
+  },
+  "pluginsDetailsIdentity": "插件 ID",
+  "@pluginsDetailsIdentity": {
+    "description": "Label for the plugin identifier in the details overlay."
+  },
+  "pluginsDetailsVersion": "版本",
+  "@pluginsDetailsVersion": {
+    "description": "Label for the plugin version in the details overlay."
+  },
+  "pluginsDetailsRuntime": "运行时",
+  "@pluginsDetailsRuntime": {
+    "description": "Label for the plugin runtime in the details overlay."
+  },
+  "pluginsDetailsHostChecks": "宿主检查",
+  "@pluginsDetailsHostChecks": {
+    "description": "Label for the plugin enforcement model in the details overlay."
+  },
+  "pluginsDetailsPermissions": "权限",
+  "@pluginsDetailsPermissions": {
+    "description": "Label for the complete plugin permission summary in the details overlay."
+  },
+  "pluginsDetailsCommands": "命令",
+  "@pluginsDetailsCommands": {
+    "description": "Section label for plugin commands in the details overlay."
+  },
+  "pluginsDetailsViews": "主视图",
+  "@pluginsDetailsViews": {
+    "description": "Section label for primary native views in the details overlay."
+  },
+  "pluginsDetailsWebViews": "WebView",
+  "@pluginsDetailsWebViews": {
+    "description": "Section label for WebView contributions in the details overlay."
+  },
+  "pluginsDetailsSecondaryViews": "次级视图",
+  "@pluginsDetailsSecondaryViews": {
+    "description": "Label for secondary native view contributions in the details overlay."
+  },
+  "pluginsDetailsDiagnostics": "运行时详情",
+  "@pluginsDetailsDiagnostics": {
+    "description": "Section label for runtime diagnostics in the details overlay."
+  },
+  "pluginsDetailsHostCalls": "宿主调用",
+  "@pluginsDetailsHostCalls": {
+    "description": "Label for the host call count in the details overlay."
+  },
+  "pluginsDetailsDeniedCalls": "已拒绝调用",
+  "@pluginsDetailsDeniedCalls": {
+    "description": "Label for the most recent denied plugin host call."
+  },
+  "pluginsDetailsRegistrationError": "注册错误",
+  "@pluginsDetailsRegistrationError": {
+    "description": "Label for the full plugin registration error."
+  },
+  "pluginsDetailsRecentResult": "最近结果",
+  "@pluginsDetailsRecentResult": {
+    "description": "Label for the most recent successful plugin command result."
+  },
+  "pluginsDetailsRecentError": "最近错误",
+  "@pluginsDetailsRecentError": {
+    "description": "Label for the most recent plugin command error."
+  },
+  "pluginsCardLabel": "插件 {name}",
+  "@pluginsCardLabel": {
+    "description": "Accessible label for a plugin summary card."
+  },
+  "pluginsVersionRuntime": "v{version} · {runtime}",
+  "@pluginsVersionRuntime": {
+    "description": "Compact plugin version and runtime summary for a card."
+  },
+  "pluginsLastResult": "{command} → {result}",
+  "@pluginsLastResult": {
+    "description": "Compact summary of the latest successful plugin command."
   },
   "pluginsRunning": "正在运行 {title}…",
   "@pluginsRunning": {

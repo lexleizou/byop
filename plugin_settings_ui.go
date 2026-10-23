@@ -21,19 +21,20 @@ type pluginSettingForm struct {
 }
 
 func (s *appState) syncPluginSettingForms() {
-	index := make(map[string]struct{})
-	for _, entry := range s.pluginRegistrySnapshot().Entries {
+	activeKeys := make(map[string]struct{})
+	for index, entry := range s.pluginRegistrySnapshot().Entries {
 		entry = pluginLocalizedEntry(entry)
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
 			continue
 		}
+		entryKey := pluginEntryKey(entry, index)
 		settings, err := s.plugins.settingsFor(entry)
 		if err != nil {
 			continue
 		}
 		for _, contribution := range entry.Manifest.Contributes.Settings {
-			key := entry.ID + "\x00" + contribution.ID
-			index[key] = struct{}{}
+			key := entryKey + "\x00" + contribution.ID
+			activeKeys[key] = struct{}{}
 			form, exists := s.pluginSettingForms[key]
 			if !exists {
 				form = &pluginSettingForm{
@@ -71,7 +72,7 @@ func (s *appState) syncPluginSettingForms() {
 		}
 	}
 	for key := range s.pluginSettingForms {
-		if _, ok := index[key]; !ok {
+		if _, ok := activeKeys[key]; !ok {
 			delete(s.pluginSettingForms, key)
 		}
 	}
@@ -79,14 +80,15 @@ func (s *appState) syncPluginSettingForms() {
 
 func (s *appState) pluginSettingsSection(c *ui.Context, p palette) {
 	hasSettings := false
-	for _, entry := range s.pluginRegistrySnapshot().Entries {
+	for index, entry := range s.pluginRegistrySnapshot().Entries {
 		entry = pluginLocalizedEntry(entry)
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
 			continue
 		}
+		entryKey := pluginEntryKey(entry, index)
 		for _, contribution := range entry.Manifest.Contributes.Settings {
 			hasSettings = true
-			s.pluginSettingCard(c, p, entry, contribution)
+			s.pluginSettingCard(c, p, entry, entryKey, contribution)
 		}
 	}
 	if hasSettings {
@@ -105,9 +107,10 @@ func (s *appState) pluginSettingCard(
 	c *ui.Context,
 	p palette,
 	entry pluginRegistryEntry,
+	entryKey string,
 	contribution pluginSettingContribution,
 ) {
-	key := entry.ID + "\x00" + contribution.ID
+	key := entryKey + "\x00" + contribution.ID
 	form := s.pluginSettingForms[key]
 	if form == nil {
 		return
@@ -125,7 +128,7 @@ func (s *appState) pluginSettingCard(
 				FontSize(fontSmall).TextColor(p.muted)
 		}
 		for _, field := range contribution.Fields {
-			s.pluginSettingField(c, p, entry, form, field)
+			s.pluginSettingField(c, p, entry, entryKey, form, field)
 		}
 		ui.Row(c).AlignItems(ui.Center).Gap(8).Children(func() {
 			label := text("pluginsSettingsSave")
@@ -133,7 +136,7 @@ func (s *appState) pluginSettingCard(
 				label = text("pluginsSettingsSaving")
 			}
 			secondaryAction(c, p,
-				"plugin-settings-save-"+entry.ID+"-"+contribution.ID,
+				"plugin-settings-save-"+entryKey+"-"+contribution.ID,
 				label,
 				func() {
 					if !form.saving {
@@ -156,6 +159,7 @@ func (s *appState) pluginSettingField(
 	c *ui.Context,
 	p palette,
 	entry pluginRegistryEntry,
+	entryKey string,
 	form *pluginSettingForm,
 	field pluginSettingField,
 ) {
@@ -169,7 +173,7 @@ func (s *appState) pluginSettingField(
 			input := form.inputs[field.Key]
 			ui.Row(c).Height(36).Padding(0, 10).Radius(8).Border(1, p.border).
 				Background(p.background).AlignItems(ui.Center).Children(func() {
-				ui.TextInputBase(c.Key("plugin-setting-"+entry.ID+"-"+field.Key), input).
+				ui.TextInputBase(c.Key("plugin-setting-"+entryKey+"-"+field.Key), input).
 					Grow(1).Placeholder(field.Placeholder).FontSize(fontBody).
 					TextColor(p.text).Background(ui.Color{}).Border(0, ui.Color{}).
 					Padding(0).Label(field.Label)

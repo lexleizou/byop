@@ -1876,52 +1876,18 @@ func (msgs Messages) PluginsContributionCount(count int) string {
 	return Catalog.Format(msgs.locale, "pluginsContributionCount", map[string]any{"count": count})
 }
 
-// PluginsRuntimeMeta says "runtime {runtime} · {count, plural, one {# contribution} other {# contributions}}"
-// in the language the app shows.
-//
-// User-interface text for plugins Runtime Meta.
-func PluginsRuntimeMeta(runtime string, count int) string {
-	return In(i18n.Locale()).PluginsRuntimeMeta(runtime, count)
-}
-
-// PluginsRuntimeMeta says "runtime {runtime} · {count, plural, one {# contribution} other {# contributions}}"
-// in the language of msgs.
-//
-// User-interface text for plugins Runtime Meta.
-func (msgs Messages) PluginsRuntimeMeta(runtime string, count int) string {
-	return Catalog.Format(msgs.locale, "pluginsRuntimeMeta", map[string]any{"runtime": runtime, "count": count})
-}
-
-// PluginsWebViewMeta says "{title} · {entry} · Isolated · byop-plugin scheme · CSP"
+// PluginsWebViewMeta says "{entry} · Isolated · byop-plugin scheme · CSP"
 // in the language the app shows.
 //
 // User-interface text for plugins Web View Meta.
-func PluginsWebViewMeta(title string, entry string) string {
-	return In(i18n.Locale()).PluginsWebViewMeta(title, entry)
-}
+func PluginsWebViewMeta(entry string) string { return In(i18n.Locale()).PluginsWebViewMeta(entry) }
 
-// PluginsWebViewMeta says "{title} · {entry} · Isolated · byop-plugin scheme · CSP"
+// PluginsWebViewMeta says "{entry} · Isolated · byop-plugin scheme · CSP"
 // in the language of msgs.
 //
 // User-interface text for plugins Web View Meta.
-func (msgs Messages) PluginsWebViewMeta(title string, entry string) string {
-	return Catalog.Format(msgs.locale, "pluginsWebViewMeta", map[string]any{"title": title, "entry": entry})
-}
-
-// PluginsSecondaryViews says "Secondary views · {views}"
-// in the language the app shows.
-//
-// User-interface text for plugins Secondary Views.
-func PluginsSecondaryViews(views string) string {
-	return In(i18n.Locale()).PluginsSecondaryViews(views)
-}
-
-// PluginsSecondaryViews says "Secondary views · {views}"
-// in the language of msgs.
-//
-// User-interface text for plugins Secondary Views.
-func (msgs Messages) PluginsSecondaryViews(views string) string {
-	return Catalog.Format(msgs.locale, "pluginsSecondaryViews", map[string]any{"views": views})
+func (msgs Messages) PluginsWebViewMeta(entry string) string {
+	return Catalog.Format(msgs.locale, "pluginsWebViewMeta", map[string]any{"entry": entry})
 }
 
 // PluginsFailedFallback says "Plugin failed."
@@ -1992,6 +1958,306 @@ func PluginsOpen(title string) string { return In(i18n.Locale()).PluginsOpen(tit
 // User-interface text for plugins Open.
 func (msgs Messages) PluginsOpen(title string) string {
 	return Catalog.Format(msgs.locale, "pluginsOpen", map[string]any{"title": title})
+}
+
+// PluginsDetails says "Details"
+// in the language the app shows.
+//
+// Visible label for the button that opens a plugin's details overlay.
+func PluginsDetails() string { return In(i18n.Locale()).PluginsDetails() }
+
+// PluginsDetails says "Details"
+// in the language of msgs.
+//
+// Visible label for the button that opens a plugin's details overlay.
+func (msgs Messages) PluginsDetails() string {
+	return Catalog.Format(msgs.locale, "pluginsDetails", nil)
+}
+
+// PluginsDetailsFor says "Details for {name}"
+// in the language the app shows.
+//
+// Accessible label for the details button of a named plugin.
+func PluginsDetailsFor(name string) string { return In(i18n.Locale()).PluginsDetailsFor(name) }
+
+// PluginsDetailsFor says "Details for {name}"
+// in the language of msgs.
+//
+// Accessible label for the details button of a named plugin.
+func (msgs Messages) PluginsDetailsFor(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsFor", map[string]any{"name": name})
+}
+
+// PluginsDetailsTitle says "Plugin details"
+// in the language the app shows.
+//
+// Subtitle shown in the plugin details overlay.
+func PluginsDetailsTitle() string { return In(i18n.Locale()).PluginsDetailsTitle() }
+
+// PluginsDetailsTitle says "Plugin details"
+// in the language of msgs.
+//
+// Subtitle shown in the plugin details overlay.
+func (msgs Messages) PluginsDetailsTitle() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsTitle", nil)
+}
+
+// PluginsDetailsIdentity says "Plugin ID"
+// in the language the app shows.
+//
+// Label for the plugin identifier in the details overlay.
+func PluginsDetailsIdentity() string { return In(i18n.Locale()).PluginsDetailsIdentity() }
+
+// PluginsDetailsIdentity says "Plugin ID"
+// in the language of msgs.
+//
+// Label for the plugin identifier in the details overlay.
+func (msgs Messages) PluginsDetailsIdentity() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsIdentity", nil)
+}
+
+// PluginsDetailsVersion says "Version"
+// in the language the app shows.
+//
+// Label for the plugin version in the details overlay.
+func PluginsDetailsVersion() string { return In(i18n.Locale()).PluginsDetailsVersion() }
+
+// PluginsDetailsVersion says "Version"
+// in the language of msgs.
+//
+// Label for the plugin version in the details overlay.
+func (msgs Messages) PluginsDetailsVersion() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsVersion", nil)
+}
+
+// PluginsDetailsRuntime says "Runtime"
+// in the language the app shows.
+//
+// Label for the plugin runtime in the details overlay.
+func PluginsDetailsRuntime() string { return In(i18n.Locale()).PluginsDetailsRuntime() }
+
+// PluginsDetailsRuntime says "Runtime"
+// in the language of msgs.
+//
+// Label for the plugin runtime in the details overlay.
+func (msgs Messages) PluginsDetailsRuntime() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsRuntime", nil)
+}
+
+// PluginsDetailsHostChecks says "Host checks"
+// in the language the app shows.
+//
+// Label for the plugin enforcement model in the details overlay.
+func PluginsDetailsHostChecks() string { return In(i18n.Locale()).PluginsDetailsHostChecks() }
+
+// PluginsDetailsHostChecks says "Host checks"
+// in the language of msgs.
+//
+// Label for the plugin enforcement model in the details overlay.
+func (msgs Messages) PluginsDetailsHostChecks() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsHostChecks", nil)
+}
+
+// PluginsDetailsPermissions says "Permissions"
+// in the language the app shows.
+//
+// Label for the complete plugin permission summary in the details overlay.
+func PluginsDetailsPermissions() string { return In(i18n.Locale()).PluginsDetailsPermissions() }
+
+// PluginsDetailsPermissions says "Permissions"
+// in the language of msgs.
+//
+// Label for the complete plugin permission summary in the details overlay.
+func (msgs Messages) PluginsDetailsPermissions() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsPermissions", nil)
+}
+
+// PluginsDetailsCommands says "Commands"
+// in the language the app shows.
+//
+// Section label for plugin commands in the details overlay.
+func PluginsDetailsCommands() string { return In(i18n.Locale()).PluginsDetailsCommands() }
+
+// PluginsDetailsCommands says "Commands"
+// in the language of msgs.
+//
+// Section label for plugin commands in the details overlay.
+func (msgs Messages) PluginsDetailsCommands() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsCommands", nil)
+}
+
+// PluginsDetailsViews says "Main views"
+// in the language the app shows.
+//
+// Section label for primary native views in the details overlay.
+func PluginsDetailsViews() string { return In(i18n.Locale()).PluginsDetailsViews() }
+
+// PluginsDetailsViews says "Main views"
+// in the language of msgs.
+//
+// Section label for primary native views in the details overlay.
+func (msgs Messages) PluginsDetailsViews() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsViews", nil)
+}
+
+// PluginsDetailsWebViews says "WebViews"
+// in the language the app shows.
+//
+// Section label for WebView contributions in the details overlay.
+func PluginsDetailsWebViews() string { return In(i18n.Locale()).PluginsDetailsWebViews() }
+
+// PluginsDetailsWebViews says "WebViews"
+// in the language of msgs.
+//
+// Section label for WebView contributions in the details overlay.
+func (msgs Messages) PluginsDetailsWebViews() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsWebViews", nil)
+}
+
+// PluginsDetailsSecondaryViews says "Secondary views"
+// in the language the app shows.
+//
+// Label for secondary native view contributions in the details overlay.
+func PluginsDetailsSecondaryViews() string { return In(i18n.Locale()).PluginsDetailsSecondaryViews() }
+
+// PluginsDetailsSecondaryViews says "Secondary views"
+// in the language of msgs.
+//
+// Label for secondary native view contributions in the details overlay.
+func (msgs Messages) PluginsDetailsSecondaryViews() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsSecondaryViews", nil)
+}
+
+// PluginsDetailsDiagnostics says "Runtime details"
+// in the language the app shows.
+//
+// Section label for runtime diagnostics in the details overlay.
+func PluginsDetailsDiagnostics() string { return In(i18n.Locale()).PluginsDetailsDiagnostics() }
+
+// PluginsDetailsDiagnostics says "Runtime details"
+// in the language of msgs.
+//
+// Section label for runtime diagnostics in the details overlay.
+func (msgs Messages) PluginsDetailsDiagnostics() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsDiagnostics", nil)
+}
+
+// PluginsDetailsHostCalls says "Host calls"
+// in the language the app shows.
+//
+// Label for the host call count in the details overlay.
+func PluginsDetailsHostCalls() string { return In(i18n.Locale()).PluginsDetailsHostCalls() }
+
+// PluginsDetailsHostCalls says "Host calls"
+// in the language of msgs.
+//
+// Label for the host call count in the details overlay.
+func (msgs Messages) PluginsDetailsHostCalls() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsHostCalls", nil)
+}
+
+// PluginsDetailsDeniedCalls says "Denied call"
+// in the language the app shows.
+//
+// Label for the most recent denied plugin host call.
+func PluginsDetailsDeniedCalls() string { return In(i18n.Locale()).PluginsDetailsDeniedCalls() }
+
+// PluginsDetailsDeniedCalls says "Denied call"
+// in the language of msgs.
+//
+// Label for the most recent denied plugin host call.
+func (msgs Messages) PluginsDetailsDeniedCalls() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsDeniedCalls", nil)
+}
+
+// PluginsDetailsRegistrationError says "Registration error"
+// in the language the app shows.
+//
+// Label for the full plugin registration error.
+func PluginsDetailsRegistrationError() string {
+	return In(i18n.Locale()).PluginsDetailsRegistrationError()
+}
+
+// PluginsDetailsRegistrationError says "Registration error"
+// in the language of msgs.
+//
+// Label for the full plugin registration error.
+func (msgs Messages) PluginsDetailsRegistrationError() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsRegistrationError", nil)
+}
+
+// PluginsDetailsRecentResult says "Recent result"
+// in the language the app shows.
+//
+// Label for the most recent successful plugin command result.
+func PluginsDetailsRecentResult() string { return In(i18n.Locale()).PluginsDetailsRecentResult() }
+
+// PluginsDetailsRecentResult says "Recent result"
+// in the language of msgs.
+//
+// Label for the most recent successful plugin command result.
+func (msgs Messages) PluginsDetailsRecentResult() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsRecentResult", nil)
+}
+
+// PluginsDetailsRecentError says "Recent error"
+// in the language the app shows.
+//
+// Label for the most recent plugin command error.
+func PluginsDetailsRecentError() string { return In(i18n.Locale()).PluginsDetailsRecentError() }
+
+// PluginsDetailsRecentError says "Recent error"
+// in the language of msgs.
+//
+// Label for the most recent plugin command error.
+func (msgs Messages) PluginsDetailsRecentError() string {
+	return Catalog.Format(msgs.locale, "pluginsDetailsRecentError", nil)
+}
+
+// PluginsCardLabel says "Plugin {name}"
+// in the language the app shows.
+//
+// Accessible label for a plugin summary card.
+func PluginsCardLabel(name string) string { return In(i18n.Locale()).PluginsCardLabel(name) }
+
+// PluginsCardLabel says "Plugin {name}"
+// in the language of msgs.
+//
+// Accessible label for a plugin summary card.
+func (msgs Messages) PluginsCardLabel(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsCardLabel", map[string]any{"name": name})
+}
+
+// PluginsVersionRuntime says "v{version} · {runtime}"
+// in the language the app shows.
+//
+// Compact plugin version and runtime summary for a card.
+func PluginsVersionRuntime(version string, runtime string) string {
+	return In(i18n.Locale()).PluginsVersionRuntime(version, runtime)
+}
+
+// PluginsVersionRuntime says "v{version} · {runtime}"
+// in the language of msgs.
+//
+// Compact plugin version and runtime summary for a card.
+func (msgs Messages) PluginsVersionRuntime(version string, runtime string) string {
+	return Catalog.Format(msgs.locale, "pluginsVersionRuntime", map[string]any{"version": version, "runtime": runtime})
+}
+
+// PluginsLastResult says "{command} → {result}"
+// in the language the app shows.
+//
+// Compact summary of the latest successful plugin command.
+func PluginsLastResult(command string, result string) string {
+	return In(i18n.Locale()).PluginsLastResult(command, result)
+}
+
+// PluginsLastResult says "{command} → {result}"
+// in the language of msgs.
+//
+// Compact summary of the latest successful plugin command.
+func (msgs Messages) PluginsLastResult(command string, result string) string {
+	return Catalog.Format(msgs.locale, "pluginsLastResult", map[string]any{"command": command, "result": result})
 }
 
 // PluginsRunning says "Running {title}…"

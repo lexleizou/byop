@@ -58,6 +58,7 @@ func (s *appState) openPluginView(entry pluginRegistryEntry, view pluginViewCont
 	if entry.Status != pluginRegistered || entry.Manifest == nil || view.Location != "main" {
 		return
 	}
+	s.pluginDetailsOpenID = ""
 	s.page = pagePluginView
 	s.pluginViewPluginID = entry.ID
 	s.pluginViewID = view.ID

@@ -219,6 +219,7 @@ type appState struct {
 	noticeAction              func()
 	composerDraft             string
 	pluginSearch              string
+	pluginDetailsOpenID       string
 	pluginRegistry            pluginRegistry
 	pluginRegistryMu          sync.RWMutex
 	plugins                   *pluginHost
@@ -467,6 +468,9 @@ func (s *appState) scanPlugins(announce bool) {
 		s.pluginViewPluginID = ""
 		s.pluginViewID = ""
 		s.pluginViewKind = ""
+	}
+	if s.pluginDetailsOpenID != "" && !s.pluginEntryExists(s.pluginDetailsOpenID) {
+		s.pluginDetailsOpenID = ""
 	}
 	if s.automations != nil {
 		s.automations.refreshSessionLoopKeys(registeredSessionLoopKeys(s.pluginRegistrySnapshot()))
@@ -851,6 +855,9 @@ func (s *appState) persistPreferences() error {
 
 func (s *appState) setPage(p pageID) {
 	s.page = p
+	if p != pagePlugins {
+		s.pluginDetailsOpenID = ""
+	}
 	s.notice = ""
 	s.clearNoticeAction()
 }

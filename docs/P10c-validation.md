@@ -12,7 +12,7 @@
 
 - Pi 1.4.0 的 `get_session_stats` 已接入；Go 模型覆盖 session、消息数、tool 数、token 累计、cost 与可选 context usage。
 - 已按 Pi footer 的 `formatTokens` 实现 1,000、10,000、1,000,000、10,000,000 的格式边界。
-- HUD 的家目录缩短与 Pi `formatCwdForFooter` 一致；git 分支在后台查询，探到 detached HEAD 时显示短 hash，2 秒超时或失败时不显示分支。
+- HUD 的家目录缩短与 Pi `formatCwdForFooter` 一致；git 分支在后台查询，探到 detached HEAD 时显示短 hash，2 秒超时或失败时不显示分支。P10e 补充要求已改为只显示分支、不在 composer HUD 显示 cwd 路径，后者取代本阶段的家目录缩短展示。
 - token 段只显示非零项；累计缓存命中率使用 `cacheRead / (input + cacheRead + cacheWrite)`；费用为累计三位小数；上下文段在窗口已知但百分比未知时显示 `?/<window>`，窗口也未知时隐藏该段，自动压缩开启时显示 `(auto)`。
 - 上下文阈值按规格实现：大于 70% 进入 warning，大于 90% 进入 danger；恰好 70% 或 90% 不升级。扩展状态按 key 排序，单项最多 40 个字符。
 - 连接成功、会话切换、新会话、模型与思考强度变化、`agent_settled`、`compaction_end` 和重连均触发 HUD 刷新。切换、新会话与重连推进 generation；旧 stats 同时按 generation、Pi epoch 和 client 拒绝。

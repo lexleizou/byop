@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -155,28 +153,6 @@ func formatPiTokens(count int64) string {
 	}
 }
 
-func formatHUDCwd(cwd, home string) string {
-	cwd = strings.TrimSpace(cwd)
-	home = strings.TrimSpace(home)
-	if cwd == "" || home == "" {
-		return cwd
-	}
-	absCwd, cwdErr := filepath.Abs(cwd)
-	absHome, homeErr := filepath.Abs(home)
-	if cwdErr != nil || homeErr != nil {
-		return cwd
-	}
-	relative, err := filepath.Rel(absHome, absCwd)
-	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) ||
-		filepath.IsAbs(relative) {
-		return cwd
-	}
-	if relative == "." {
-		return "~"
-	}
-	return filepath.Join("~", relative)
-}
-
 func piCacheHitRate(stats *piSessionStats) (float64, bool) {
 	if stats == nil {
 		return 0, false
@@ -237,11 +213,8 @@ func (s *appState) piHUDLabel() string {
 		return textArgs("hudPiStatus", map[string]any{"status": s.connectionStateLabel()})
 	}
 	parts := make([]string, 0, 8)
-	if cwd := formatHUDCwd(s.hud.cwd, os.Getenv("HOME")); cwd != "" {
-		if branch := strings.TrimSpace(s.hud.branch); branch != "" {
-			cwd += " (" + branch + ")"
-		}
-		parts = append(parts, cwd)
+	if branch := strings.TrimSpace(s.hud.branch); branch != "" {
+		parts = append(parts, "("+branch+")")
 	}
 	if stats := s.hud.stats; stats != nil {
 		tokens := make([]string, 0, 4)

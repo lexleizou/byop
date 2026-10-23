@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -30,18 +30,35 @@ func TestP10cFormatPiTokens(t *testing.T) {
 	}
 }
 
-func TestP10cFormatHUDCwd(t *testing.T) {
-	home := t.TempDir()
-	if got := formatHUDCwd(home, home); got != "~" {
-		t.Fatalf("home cwd = %q, want ~", got)
+func TestP10cHUDLabelOmitsCwdAndKeepsBranch(t *testing.T) {
+	contextPercent := 50.0
+	state := &appState{
+		piConn: piConnected,
+		hud: hudState{
+			cwd:    "/Users/example/Documents/private/byop-prototype",
+			branch: "main",
+			stats: &piSessionStats{
+				Tokens: piSessionTokens{
+					Input:      1200,
+					Output:     300,
+					CacheRead:  400,
+					CacheWrite: 100,
+				},
+				Cost: 0.012,
+				ContextUsage: &piContextUsage{
+					ContextWindow: 128000,
+					Percent:       &contextPercent,
+				},
+			},
+		},
 	}
-	child := filepath.Join(home, "work", "byop")
-	if got := formatHUDCwd(child, home); got != filepath.Join("~", "work", "byop") {
-		t.Fatalf("child cwd = %q", got)
+	got := state.piHUDLabel()
+	want := "(main) · ↑1.2k ↓300 R400 W100 · CH23.5% · $0.012 · 50.0%/128k"
+	if got != want {
+		t.Fatalf("HUD label = %q, want %q", got, want)
 	}
-	outside := filepath.Dir(home)
-	if got := formatHUDCwd(outside, home); got != outside {
-		t.Fatalf("outside cwd = %q, want %q", got, outside)
+	if strings.Contains(got, "byop-prototype") || strings.Contains(got, "~") {
+		t.Fatalf("HUD label exposed cwd: %q", got)
 	}
 }
 

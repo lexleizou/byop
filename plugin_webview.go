@@ -103,6 +103,7 @@ func (s *appState) openPluginWebView(entry pluginRegistryEntry, view pluginWebVi
 	if !ok || registeredView.Entry != view.Entry {
 		return
 	}
+	s.pluginDetailsOpenID = ""
 	s.page = pagePluginView
 	s.pluginViewPluginID = registeredEntry.ID
 	s.pluginViewID = registeredView.ID
