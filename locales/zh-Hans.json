@@ -2276,6 +2276,10 @@
   "@contextNone": {
     "description": "Empty context picker state."
   },
+  "contextLabel": "上下文",
+  "@contextLabel": {
+    "description": "Context-window selector label inside the model picker."
+  },
   "noticeThinkingDefaulted": "思考档位已改为模型默认值。",
   "@noticeThinkingDefaulted": {
     "description": "Short notice shown when the remembered thinking level is unavailable for a newly selected model."

@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/egoist/mygo/ui"
 )
 
 func TestP11ModelFamiliesSelectContextVariant(t *testing.T) {
@@ -103,6 +105,69 @@ func TestP11ModelFamiliesMergeOnlyDistinctKnownContexts(t *testing.T) {
 				t.Fatalf("description = %q, selected ID = %q", options[0].Description, selected)
 			}
 		})
+	}
+}
+
+func TestP11bComposerShowsCapacityWithoutStandaloneContextControl(t *testing.T) {
+	restoreAppearance := stableTestAppearance(t)
+	defer restoreAppearance()
+
+	state := layoutTestState(t)
+	state.piModelProvider = "magpie"
+	state.piModelID = "deepseek-1m"
+	state.piModelName = "DeepSeek V4.1 Flash"
+	state.piModels = []piModel{
+		{Provider: "magpie", ID: "deepseek-256k", Name: "DeepSeek V4.1 Flash", ContextWindow: 256_000},
+		{Provider: "magpie", ID: "deepseek-1m", Name: "DeepSeek V4.1 Flash", ContextWindow: 1_000_000},
+	}
+
+	tt := ui.NewTester(state.view, 1180, 760)
+	capacityLabels := 0
+	for _, label := range tt.Texts() {
+		if label == "1M" {
+			capacityLabels++
+		}
+	}
+	if capacityLabels != 1 {
+		t.Fatalf("capacity label count = %d, want one inside the composer model control", capacityLabels)
+	}
+	if _, ok := tt.Find(text("contextLabel")); ok {
+		t.Fatalf("standalone %q control rendered before opening the model picker", text("contextLabel"))
+	}
+	if err := tt.Click("DeepSeek V4.1 Flash"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := tt.Find(text("contextLabel")); !ok {
+		t.Fatalf("model picker did not render %q", text("contextLabel"))
+	}
+}
+
+func TestP11bHUDContextFallbackClearsWhenPiReportsUnknown(t *testing.T) {
+	restoreAppearance := stableTestAppearance(t)
+	defer restoreAppearance()
+
+	state := layoutTestState(t)
+	state.piModelProvider = "magpie"
+	state.piModelID = "deepseek-unknown"
+	state.piModelName = "DeepSeek V4.1 Flash"
+	state.piModels = []piModel{{
+		Provider: "magpie",
+		ID:       "deepseek-unknown",
+		Name:     "DeepSeek V4.1 Flash",
+	}}
+	known := &piSessionState{}
+	known.Model.ContextWindow = 1_000_000
+	state.applyPiHUDState(known)
+
+	tt := ui.NewTester(state.view, 1180, 760)
+	if _, ok := tt.Find("1M"); !ok {
+		t.Fatal("composer did not show the initial 1M capacity")
+	}
+
+	state.applyPiHUDState(&piSessionState{})
+	tt = ui.NewTester(state.view, 1180, 760)
+	if _, ok := tt.Find("1M"); ok {
+		t.Fatal("composer retained 1M after Pi reported an unknown capacity")
 	}
 }
 

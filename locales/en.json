@@ -2421,6 +2421,10 @@
   "@contextNone": {
     "description": "Empty context picker state."
   },
+  "contextLabel": "Context",
+  "@contextLabel": {
+    "description": "Context-window selector label inside the model picker."
+  },
   "noticeThinkingDefaulted": "Thinking level changed to the model default.",
   "@noticeThinkingDefaulted": {
     "description": "Short notice shown when the remembered thinking level is unavailable for a newly selected model."

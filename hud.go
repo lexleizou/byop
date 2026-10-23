@@ -70,9 +70,7 @@ func (s *appState) applyPiHUDState(state *piSessionState) {
 		return
 	}
 	s.hud.autoCompact = state.AutoCompactionEnabled
-	if state.Model.ContextWindow > 0 {
-		s.hud.contextWindowFallback = state.Model.ContextWindow
-	}
+	s.hud.contextWindowFallback = state.Model.ContextWindow
 }
 
 func (s *appState) refreshPiHUDBranch() {

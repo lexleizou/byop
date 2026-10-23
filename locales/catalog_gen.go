@@ -8102,6 +8102,20 @@ func (msgs Messages) ContextNone() string {
 	return Catalog.Format(msgs.locale, "contextNone", nil)
 }
 
+// ContextLabel says "Context"
+// in the language the app shows.
+//
+// Context-window selector label inside the model picker.
+func ContextLabel() string { return In(i18n.Locale()).ContextLabel() }
+
+// ContextLabel says "Context"
+// in the language of msgs.
+//
+// Context-window selector label inside the model picker.
+func (msgs Messages) ContextLabel() string {
+	return Catalog.Format(msgs.locale, "contextLabel", nil)
+}
+
 // NoticeThinkingDefaulted says "Thinking level changed to the model default."
 // in the language the app shows.
 //

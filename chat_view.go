@@ -807,7 +807,6 @@ func (s *appState) composerChoices(c *ui.Context) {
 		activeFamily, activeFamilyOK, s.piModelID, s.hud.contextWindowFallback,
 	)
 	s.composerModelControl(c, readOnly, families, activeFamily, activeFamilyOK, contextWindow)
-	s.composerContextControl(c, readOnly, activeFamily, activeFamilyOK, contextWindow)
 
 	levels := buildPiThinkingOptions(s.piThinkingLevels)
 	if !s.piThinkingLevelsKnown || !reasoningLevelsVisible(s.piThinkingLevels) || len(levels) == 0 {
@@ -858,6 +857,7 @@ func (s *appState) composerModelControl(c *ui.Context, readOnly bool, families [
 	leading := modelBrandLeading(brand)
 	if len(s.piModels) == 0 || readOnly {
 		s.chatView.modelPicker.Open = false
+		s.chatView.contextPicker.Open = false
 		if s.piModel != "" || s.modelStateUnconfirmed {
 			s.composerModelChip(c, modelLabel, s.piModelProvider, contextWindow, leading, readOnly,
 				activeFamily, activeFamilyOK)
@@ -917,10 +917,8 @@ func (s *appState) composerModelChip(c *ui.Context, label, provider string, cont
 		if strings.TrimSpace(provider) != "" {
 			components.Text(c, provider).Shrink(0).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
 		}
-		if !activeFamilyOK || len(piContextVariants(activeFamily)) == 0 {
-			if capacity := formatContextWindow(contextWindow); capacity != "" {
-				components.Text(c, capacity).Shrink(0).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
-			}
+		if capacity := formatContextWindow(contextWindow); capacity != "" {
+			components.Text(c, capacity).Shrink(0).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
 		}
 		if !readOnly {
 			components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).TextColor(t.TextMuted.Alpha(.7))
@@ -957,11 +955,9 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 			components.Text(c, s.piModelProvider).Shrink(0).SingleLine().
 				FontSize(fontSmall).TextColor(t.TextMuted)
 		}
-		if !activeFamilyOK || len(piContextVariants(activeFamily)) == 0 {
-			if capacity := formatContextWindow(contextWindow); capacity != "" {
-				components.Text(c, capacity).Shrink(0).SingleLine().
-					FontSize(fontSmall).TextColor(t.TextMuted)
-			}
+		if capacity := formatContextWindow(contextWindow); capacity != "" {
+			components.Text(c, capacity).Shrink(0).SingleLine().
+				FontSize(fontSmall).TextColor(t.TextMuted)
 		}
 		components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).
 			TextColor(t.TextMuted.Alpha(.7))
@@ -971,6 +967,10 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 		s.chatView.modelPicker.Query = ""
 	}
 	chosen := ""
+	variants := piContextVariants(activeFamily)
+	if !s.chatView.modelPicker.Open || !activeFamilyOK || len(variants) == 0 {
+		s.chatView.contextPicker.Open = false
+	}
 	components.Popover(c, chip, &s.chatView.modelPicker.Open, func(panel ui.Element) {
 		panel.Label(label).Width(300).Padding(0).Gap(0).Children(func() {
 			ui.Row(c).FillWidth().Padding(8, 8, 0, 8).Children(func() {
@@ -989,25 +989,43 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 			if len(visible) == 0 {
 				components.Text(c, text("modelsNone")).FontSize(fontSmall).
 					TextColor(t.TextMuted).Padding(12)
-				return
+			} else {
+				components.ScrollView(c, components.ScrollViewOptions{}).FillWidth().
+					MaxHeight(348).Padding(4).Gap(1).Children(func() {
+					group := ""
+					for i, option := range visible {
+						if option.Group != "" && (i == 0 || option.Group != group) {
+							components.Text(c, option.Group).FontSize(fontSmall).FontWeight(500).
+								TextColor(t.TextMuted).Padding(8, 8, 3, 8)
+						}
+						group = option.Group
+						selected := activeFamilyOK &&
+							option.ID == piModelChoiceID(activeFamily.Provider, activeFamily.Key)
+						if s.customModelPickerRow(c, option, selected) {
+							chosen = option.ID
+							s.chatView.modelPicker.Open = false
+						}
+					}
+				})
 			}
-			components.ScrollView(c, components.ScrollViewOptions{}).FillWidth().
-				MaxHeight(348).Padding(4).Gap(1).Children(func() {
-				group := ""
-				for i, option := range visible {
-					if option.Group != "" && (i == 0 || option.Group != group) {
-						components.Text(c, option.Group).FontSize(fontSmall).FontWeight(500).
-							TextColor(t.TextMuted).Padding(8, 8, 3, 8)
-					}
-					group = option.Group
-					selected := activeFamilyOK &&
-						option.ID == piModelChoiceID(activeFamily.Provider, activeFamily.Key)
-					if s.customModelPickerRow(c, option, selected) {
-						chosen = option.ID
+			if activeFamilyOK && len(variants) > 0 {
+				ui.Box(c).FillWidth().Height(0.5).Shrink(0).Background(t.Border)
+				ui.Row(c).FillWidth().Padding(8, 10).Justify(ui.SpaceBetween).
+					AlignItems(ui.Center).Gap(12).Children(func() {
+					components.Text(c, text("contextLabel")).FontSize(fontBody).TextColor(t.Text)
+					result := chat.Picker(c.Key("context-picker"), &s.chatView.contextPicker,
+						chat.PickerOptions{
+							Label:    formatContextWindow(contextWindow),
+							Options:  buildPiContextOptions(variants),
+							Selected: s.piModelID,
+							Width:    140,
+						})
+					if result.Chosen != "" && result.Chosen != s.piModelID {
 						s.chatView.modelPicker.Open = false
+						s.selectModel(activeFamily.Provider, result.Chosen)
 					}
-				}
-			})
+				})
+			}
 		})
 	})
 	return chosen
@@ -1047,38 +1065,6 @@ func piActiveContextWindow(family piModelFamily, ok bool, modelID string, fallba
 		}
 	}
 	return fallback
-}
-
-func (s *appState) composerContextControl(c *ui.Context, readOnly bool, family piModelFamily,
-	found bool, contextWindow int,
-) {
-	if !found {
-		s.chatView.contextPicker.Open = false
-		return
-	}
-	variants := piContextVariants(family)
-	if len(variants) == 0 {
-		s.chatView.contextPicker.Open = false
-		return
-	}
-	options := buildPiContextOptions(variants)
-	if readOnly {
-		s.chatView.contextPicker.Open = false
-		chat.Chip(c, formatContextWindow(contextWindow), chat.ChipOptions{ReadOnly: true})
-		return
-	}
-	result := chat.Picker(c.Key("context-picker"), &s.chatView.contextPicker, chat.PickerOptions{
-		Label:       formatContextWindow(contextWindow),
-		Options:     options,
-		Selected:    s.piModelID,
-		Searchable:  100,
-		SearchLabel: text("contextSearch"),
-		EmptyText:   text("contextNone"),
-		Width:       260,
-	})
-	if result.Chosen != "" && result.Chosen != s.piModelID {
-		s.selectModel(family.Provider, result.Chosen)
-	}
 }
 
 func (s *appState) setThinkingPending(level string) {
