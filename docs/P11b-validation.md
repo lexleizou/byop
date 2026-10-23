@@ -69,3 +69,10 @@ P11b 聚焦测试验证了多容量家族在 Composer 只显示一个容量标�
 ## 规格偏差
 
 无。
+
+## Packaging and install
+
+- Build: `go run github.com/egoist/mygo/cmd/mygo build -skip-notarize -skip-dmg` produced `dist/darwin-arm64/BYOP.app` (14.0 MB, version 0.11.1). The output folder is git-ignored.
+- Install: the previous `/Applications/BYOP.app` (0.11.0) was moved to the Trash, then the new bundle was copied to `/Applications/BYOP.app`. `CFBundleShortVersionString` reads `0.11.1`.
+- Launch: the installed app started from a terminal session and kept running (about 170 MB resident memory). macOS was locked during the launch, so no real-window screenshot was taken. The screenshots above are headless renders.
+- Not verified: real-window keyboard, focus and click behavior; end-to-end model and context switching against a live Pi CLI; notarized distribution.
