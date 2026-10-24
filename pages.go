@@ -8,14 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/egoist/mygo/i18n"
 	"github.com/egoist/mygo/ui"
-
-	"byop/locales"
 )
 
 const (
-	pluginCardDefaultHeight      float32 = 236
+	pluginCardDefaultHeight      float32 = 212
 	pluginCardMinWidth           float32 = 320
 	pluginCardMaxWidth           float32 = 360
 	pluginCardsSingleColumnWidth float32 = pluginCardMaxWidth*2 + 12 + 56
@@ -54,7 +51,7 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 					ui.Spacer(c)
 					secondaryAction(c, p, "plugin-dir", text("pluginsFolders"), func() {
 						s.showNotice(textArgs("pluginsRoots", map[string]any{
-							"roots": strings.Join(registry.Roots, " · "),
+							"roots": strings.Join(registry.Roots, "; "),
 						}))
 					})
 				})
@@ -74,26 +71,6 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 					})
 				}
 
-				sectionLabel(c, p, text("pluginsContractPreview"))
-				ui.Column(c).FillWidth().Gap(10).Padding(14).Radius(11).
-					Border(1, p.border).Background(p.surface).Children(func() {
-					ui.Text(c, textArgs("pluginsContractDescription", map[string]any{
-						"host":   registry.HostVersion,
-						"schema": pluginManifestSchemaVersion,
-						"api":    registry.PluginAPI,
-					})).
-						FontSize(fontBody).LineHeight(1.5).TextColor(p.text)
-					ui.Row(c).Wrap().Gap(7).Children(func() {
-						contractChip(c, p, text("pluginsContractCommands"))
-						contractChip(c, p, text("pluginsContractViews"))
-						contractChip(c, p, text("pluginsContractWebViews"))
-						contractChip(c, p, text("pluginsContractTasks"))
-						contractChip(c, p, text("pluginsContractSettings"))
-						contractChip(c, p, text("pluginsContractHostCalls"))
-						contractChip(c, p, text("pluginsContractNodePermissions"))
-						contractChip(c, p, text("pluginsContractSchemeCSP"))
-					})
-				})
 			})
 		})
 	})
@@ -170,15 +147,15 @@ func pluginContributionSearchText(manifest *pluginManifest) string {
 }
 
 func (s *appState) pluginRegistryIssues(c *ui.Context, p palette, issues []pluginRegistryIssue) {
-	ui.Column(c).FillWidth().Gap(8).Padding(14).Radius(11).
-		Border(1, p.border).Background(p.surface).Children(func() {
+	ui.Column(c).FillWidth().Gap(8).Padding(14).Radius(12).
+		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icon("x")).Size(14, 14).TextColor(p.danger)
 			ui.Text(c, text("pluginsRegistryScanIssues")).FontSize(fontBody).FontWeight(650).TextColor(p.text)
 		})
 		for _, issue := range issues {
-			ui.Text(c, issue.Path+" · "+issue.Message).Font("monospace").FontSize(fontCaption).
-				TextColor(p.danger).Selectable()
+			ui.Text(c, issue.Path+": "+issue.Message).Font("monospace").FontSize(fontCaption).
+				TextColor(p.dangerText).Selectable()
 		}
 	})
 }
@@ -188,10 +165,10 @@ func (s *appState) emptyPluginRegistry(c *ui.Context, p palette) {
 	if strings.TrimSpace(s.pluginSearch) != "" {
 		message = textArgs("pluginsNoMatch", map[string]any{"query": s.pluginSearch})
 	}
-	ui.Column(c).FillWidth().Gap(10).Padding(18).Radius(11).
-		Border(1, p.border).Background(p.surface).Children(func() {
+	ui.Column(c).FillWidth().Gap(10).Padding(18).Radius(12).
+		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-			ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
+			ui.Row(c).Size(34, 34).Radius(8).Background(p.surfaceHover).Center().Children(func() {
 				ui.Icon(c, icon("package")).Size(17, 17).TextColor(p.muted)
 			})
 			ui.Column(c).Gap(2).Grow(1).Children(func() {
@@ -258,14 +235,14 @@ func (s *appState) pluginCardStatusSummary(
 ) (string, ui.Color) {
 	if entry.Error != "" {
 		return summarizeLine(uiErrorFromText(entry.Error, text("pluginsFailedFallback")), 240),
-			p.danger
+			p.dangerText
 	}
 	if runtime.LastError != "" {
 		return summarizeLine(uiErrorFromText(runtime.LastError, text("pluginsFailedFallback")), 240),
-			p.danger
+			p.dangerText
 	}
 	if runtime.LastResult != "" {
-		return pluginRuntimeResultSummary(entry, runtime), p.success
+		return pluginRuntimeResultSummary(entry, runtime), p.successText
 	}
 	if entry.Manifest != nil {
 		return textArgs("pluginsVersionRuntime", map[string]any{
@@ -273,7 +250,7 @@ func (s *appState) pluginCardStatusSummary(
 			"runtime": entry.Manifest.Runtime,
 		}), p.muted
 	}
-	return text("pluginsManifestRejected"), p.danger
+	return text("pluginsManifestRejected"), p.dangerText
 }
 
 func pluginRuntimeResultSummary(entry pluginRegistryEntry, runtime pluginRuntimeStatus) string {
@@ -327,8 +304,7 @@ func (s *appState) pluginCard(
 		Label(textArgs("pluginsCardLabel", map[string]any{"name": title})).
 		Height(pluginCardDefaultHeight).MinHeight(pluginCardDefaultHeight).
 		MaxHeight(pluginCardDefaultHeight).AlignItems(ui.Start).Gap(6).Padding(16).
-		Radius(12).Border(1, p.border).Background(p.surface).
-		Shadow(0, 1, 3, 0, p.shadowCard).Clip()
+		Radius(12).Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Clip()
 	if narrow {
 		card.FillWidth()
 	} else {
@@ -339,13 +315,12 @@ func (s *appState) pluginCard(
 		card.Transition(ui.ElementTransition{Duration: duration, Colors: true})
 	}
 	if card.Hovered() {
-		card.Background(p.surfaceHover).Border(1, p.muted).
-			Shadow(0, 4, 12, 0, p.shadowOverlay)
+		card.Background(p.surfaceHover).Border(runtimeTokens.Dimension.Border.Value, p.muted)
 	}
 	var detailsButton ui.Element
 	card.Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
-			ui.Row(c).Size(34, 34).Radius(9).Background(p.surfaceHover).Center().Children(func() {
+			ui.Row(c).Size(34, 34).Radius(8).Background(p.surfaceHover).Center().Children(func() {
 				ui.Icon(c, iconOr(iconName, "plugins")).Size(17, 17).TextColor(tone)
 			})
 			ui.Spacer(c)
@@ -391,7 +366,7 @@ func (s *appState) pluginCard(
 			}
 			ui.Spacer(c)
 			detailsButton = ui.ButtonBase(c.Key("plugin-details-"+entryKey)).
-				Padding(6, 9).Radius(7).Background(ui.Color{}).
+				Padding(6, 9).Radius(8).Background(ui.Color{}).
 				Cursor(ui.CursorPointer).Label(textArgs("pluginsDetailsFor", map[string]any{
 				"name": title,
 			})).Shrink(0)
@@ -433,8 +408,8 @@ func (s *appState) pluginCardPrimaryButton(
 	}
 	btn.Children(func() {
 		ui.Row(c).FillWidth().MinWidth(0).Gap(5).AlignItems(ui.Center).Children(func() {
-			ui.Icon(c, icon(iconName)).Size(13, 13).Shrink(0).TextColor(p.accentText)
-			ui.Text(c, label).FontSize(fontSmall).FontWeight(650).TextColor(p.accentText).
+			ui.Icon(c, icon(iconName)).Size(13, 13).Shrink(0).TextColor(p.onAccent)
+			ui.Text(c, label).FontSize(fontSmall).FontWeight(650).TextColor(p.onAccent).
 				Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 		})
 	})
@@ -462,7 +437,7 @@ func (s *appState) pluginDetailsPanel(
 		maxHeight = 240
 	}
 	panel.Width(420).MinWidth(360).MaxWidth(420).MaxHeight(maxHeight).
-		Padding(16).Radius(12).Border(1, p.muted).Background(p.surface).
+		Padding(16).Radius(12).Border(runtimeTokens.Dimension.Border.Value, p.muted).Background(p.surface).
 		Shadow(0, 8, 24, 0, p.shadowOverlay).Children(func() {
 		ui.Scroll(c).Fill().Children(func() {
 			ui.Column(c).FillWidth().Gap(12).Children(func() {
@@ -625,7 +600,7 @@ func pluginDetailBlock(c *ui.Context, p palette, label, value string, success bo
 		ui.Text(c, label).FontSize(fontCaption).FontWeight(650).TextColor(p.muted)
 		tone := p.text
 		if success {
-			tone = p.success
+			tone = p.successText
 		}
 		ui.Text(c, value).Selectable().FontSize(fontSmall).LineHeight(1.4).TextColor(tone)
 	})
@@ -656,7 +631,7 @@ func pluginEnforcementLine(runtime string) string {
 
 func pluginCommandButton(c *ui.Context, p palette, key string, command pluginCommandContribution, busy bool, click func()) {
 	label := fallback(command.Title, command.ID)
-	btn := ui.ButtonBase(c.Key(key)).Padding(6, 10).Radius(7).Border(1, p.border).
+	btn := ui.ButtonBase(c.Key(key)).Padding(6, 10).Radius(8).Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(p.background).Cursor(ui.CursorPointer).Label(label).
 		Tooltip(fallback(command.Description, command.ID)).Disabled(busy)
 	if btn.Hovered() && !busy {
@@ -696,7 +671,7 @@ func (s *appState) runPluginCommandWithArgs(
 				}))
 				return
 			}
-			s.showNotice(title + " · " + pluginResultSummary(result))
+			s.showNotice(title + ": " + pluginResultSummary(result))
 			if s.page == pagePluginView && s.pluginViewPluginID == entry.ID &&
 				s.pluginViewID != "" && s.pluginViewKind != "" {
 				s.refreshPluginView(entry.ID, s.pluginViewID)
@@ -801,15 +776,7 @@ func pluginContributionSummary(manifest *pluginManifest) string {
 	if len(parts) == 0 {
 		return textArgs("pluginsContributionCount", map[string]any{"count": 0})
 	}
-	return strings.Join(parts, " · ")
-}
-
-func contractChip(c *ui.Context, p palette, label string) {
-	ui.Row(c).Padding(4, 8).Radius(999).Background(p.surfaceHover).Gap(5).
-		AlignItems(ui.Center).Children(func() {
-		ui.Icon(c, icon("check")).Size(11, 11).TextColor(p.success)
-		ui.Text(c, label).Font("monospace").FontSize(fontMicro).TextColor(p.text)
-	})
+	return strings.Join(parts, "; ")
 }
 
 func (s *appState) automationsPage(c *ui.Context, p palette) {
@@ -885,14 +852,14 @@ func (s *appState) automationsPage(c *ui.Context, p palette) {
 				if s.automations != nil {
 					for _, warning := range s.automations.warningsSnapshot() {
 						ui.Text(c, automationWarningLabel(warning)).FontSize(fontCaption).
-							TextColor(p.danger)
+							TextColor(p.dangerText)
 					}
 				}
 
 				sectionLabel(c, p, text("automationsRegisteredSection"))
 				if len(items) == 0 {
-					ui.Column(c).FillWidth().Gap(7).Padding(18).Radius(11).
-						Border(1, p.border).Background(p.surface).Children(func() {
+					ui.Column(c).FillWidth().Gap(7).Padding(18).Radius(12).
+						Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
 						ui.Text(c, text("automationsEmptyTitle")).FontSize(fontBody).
 							FontWeight(650).TextColor(p.text)
 						ui.Row(c).AlignItems(ui.Center).Children(func() {
@@ -928,13 +895,13 @@ func (s *appState) automationContributionCard(
 	title := fallback(contribution.Title, contribution.ID)
 	description := fallback(contribution.Description, text("pluginsNoDescription"))
 	status, tone := automationStatusLabel(p, state, running)
-	ui.Column(c).FillWidth().Gap(12).Padding(16).Radius(11).
-		Border(1, p.border).Background(p.surface).Children(func() {
+	ui.Column(c).FillWidth().Gap(12).Padding(16).Radius(12).
+		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Gap(2).Grow(1).Children(func() {
 				ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
 				ui.Text(c, fallback(entry.Name, entry.ID)).FontSize(fontCaption).
-					TextColor(p.accent)
+					TextColor(p.accentText)
 			})
 			ui.Spacer(c)
 			statusPill(c, p, status, tone)
@@ -959,12 +926,12 @@ func (s *appState) automationContributionCard(
 		ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
 		if !state.Enabled && state.AutoPausedReason != "" {
 			ui.Text(c, automationPausedReason(state.AutoPausedReason)).FontSize(fontCaption).
-				TextColor(p.danger)
+				TextColor(p.dangerText)
 		}
 		ui.Row(c).Wrap().GapX(7).GapY(7).AlignItems(ui.Center).Children(func() {
 			runDisabled := running || !state.Enabled
 			runButton := ui.ButtonBase(c.Key("automation-run-"+key)).
-				Padding(7, 11).Radius(7).Border(1, p.border).Background(p.surface).
+				Padding(7, 11).Radius(8).Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).
 				Cursor(ui.CursorPointer).Label(text("automationsRunNow")).Disabled(runDisabled)
 			if runButton.Hovered() && !runDisabled {
 				runButton.Background(p.surfaceHover)
@@ -1179,16 +1146,20 @@ func automationRunDuration(run automationRunRecord) string {
 
 func (s *appState) automationRunRow(c *ui.Context, p palette, run automationRunRecord) {
 	tone := p.muted
+	textTone := p.muted
 	iconName := "clock"
 	switch run.State {
 	case automationRunSucceeded:
 		tone = p.success
+		textTone = p.successText
 		iconName = "check"
 	case automationRunFailed, automationRunAborted:
 		tone = p.danger
+		textTone = p.dangerText
 		iconName = "x"
 	case automationRunRunning:
 		tone = p.accent
+		textTone = p.accentText
 	}
 	detail := pluginResultSummaryLabel(run.Result)
 	if run.ErrorCode != "" || run.Error != "" {
@@ -1198,7 +1169,7 @@ func (s *appState) automationRunRow(c *ui.Context, p palette, run automationRunR
 		} else if errorText != "" {
 			errorText = uiErrorFromText(errorText, text("automationsFailedFallback"))
 		}
-		detail = strings.TrimSpace(strings.Join(nonEmpty(automationErrorCodeLabel(run.ErrorCode), errorText), " · "))
+		detail = strings.TrimSpace(strings.Join(nonEmpty(automationErrorCodeLabel(run.ErrorCode), errorText), ": "))
 	}
 	if detail == "" {
 		detail = text("automationsNoResult")
@@ -1209,9 +1180,9 @@ func (s *appState) automationRunRow(c *ui.Context, p palette, run automationRunR
 	}
 	ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
 		ui.Icon(c, icon(iconName)).Size(12, 12).TextColor(tone)
-		ui.Text(c, fmt.Sprintf("%s · %s · %s · %s", automationRunStateLabel(string(run.State)),
+		ui.Text(c, fmt.Sprintf("%s, %s, %s, %s", automationRunStateLabel(string(run.State)),
 			automationTriggerLabel(run.Trigger), startedAt, automationRunDuration(run))).
-			Font("monospace").FontSize(fontCaption).TextColor(tone).Grow(1).SingleLine()
+			Font("monospace").FontSize(fontCaption).TextColor(textTone).Grow(1).SingleLine()
 		ui.Text(c, summarizeLine(detail, 150)).FontSize(fontCaption).TextColor(p.muted).
 			MaxWidth(380).SingleLine()
 	})
@@ -1345,145 +1316,9 @@ func (s *appState) setAutomationPaused(key string, paused bool) {
 	}
 }
 
-func (s *appState) settingsPage(c *ui.Context, p palette) {
-	registry := s.pluginRegistrySnapshot()
-	ui.Scroll(c).Fill().Children(func() {
-		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
-			ui.Column(c).Grow(1).MaxWidth(820).Gap(22).Children(func() {
-				pageHeader(c, p, locales.SettingsSection(), locales.SettingsTitle(),
-					locales.SettingsDescription())
-
-				settingsCard(c, p, locales.SettingsLanguageTitle(),
-					locales.SettingsLanguageDescription(), func() {
-						ui.Row(c).Gap(8).Wrap().Children(func() {
-							s.languageButton(c, p, uiLanguageSystem, locales.SettingsLanguageSystem())
-							for _, tag := range locales.Catalog.Languages() {
-								s.languageButton(c, p, tag, i18n.Autonym(tag))
-							}
-						})
-					})
-
-				settingsCard(c, p, locales.SettingsAppearanceTitle(),
-					locales.SettingsAppearanceDescription(), func() {
-						ui.Row(c).Gap(8).Wrap().Children(func() {
-							s.themeButton(c, p, themeSystem, "monitor", locales.SettingsAppearanceSystem())
-							s.themeButton(c, p, themeLight, "sun", locales.SettingsAppearanceLight())
-							s.themeButton(c, p, themeDark, "moon", locales.SettingsAppearanceDark())
-						})
-						s.settingsChoiceRow(c, p, "contrast",
-							text("settingsContrastTitle"), text("settingsContrastDescription"),
-							[]settingsChoice{
-								{"system", "monitor", text("settingsContrastSystem"), func() { s.setContrast(contrastSystem) }},
-								{"standard", "sun", text("settingsContrastStandard"), func() { s.setContrast(contrastNormal) }},
-								{"high", "contrast", text("settingsContrastHigh"), func() { s.setContrast(contrastHigh) }},
-							},
-						)
-						s.settingsChoiceRow(c, p, "motion",
-							text("settingsMotionTitle"), text("settingsMotionDescription"),
-							[]settingsChoice{
-								{"system", "monitor", text("settingsMotionSystem"), func() { s.setMotion(motionSystem) }},
-								{"standard", "activity", text("settingsMotionStandard"), func() { s.setMotion(motionStandard) }},
-								{"reduced", "stop", text("settingsMotionReduced"), func() { s.setMotion(motionReduced) }},
-							},
-						)
-						s.settingsChoiceRow(c, p, "panel-animation",
-							text("settingsPanelAnimationTitle"), text("settingsPanelAnimationDescription"),
-							[]settingsChoice{
-								{"0", "", text("settingsPanelAnimation0"), func() { s.setPanelAnimationMS(0) }},
-								{"150", "", text("settingsPanelAnimation150"), func() { s.setPanelAnimationMS(150) }},
-								{"250", "", text("settingsPanelAnimation250"), func() { s.setPanelAnimationMS(250) }},
-								{"400", "", text("settingsPanelAnimation400"), func() { s.setPanelAnimationMS(400) }},
-							},
-						)
-					})
-
-				settingsCard(c, p, locales.SettingsFollowUpTitle(),
-					locales.SettingsFollowUpDescription(), func() {
-						ui.Row(c).Gap(8).Wrap().Children(func() {
-							s.followUpStyleButton(c, p, followUpStyleGhost, "chat",
-								locales.SettingsFollowUpGhost())
-							s.followUpStyleButton(c, p, followUpStyleCard, "document",
-								locales.SettingsFollowUpCard())
-						})
-						ui.Text(c, locales.ChatFollowUpHint()).FontSize(fontSmall).TextColor(p.muted)
-					})
-
-				settingsCard(c, p, locales.SettingsPiTitle(), locales.SettingsPiDescription(), func() {
-					ui.Row(c).Gap(9).AlignItems(ui.Center).Children(func() {
-						ui.Box(c).Size(8, 8).Radius(4).Background(s.piTone(p))
-						statusLabel := s.piConnectionLabel()
-						if message := s.piConnectionErrorText(); message != "" {
-							statusLabel = message
-						}
-						ui.Text(c, statusLabel).FontSize(fontSmall).TextColor(p.text).
-							Grow(1).MinWidth(0).MaxLines(2).Tooltip(statusLabel)
-						label := locales.SettingsConnect()
-						if s.piConn == piConnected {
-							label = locales.SettingsReconnect()
-						}
-						secondaryAction(c, p, "settings-pi-connect", label, func() {
-							s.reconnectPi()
-						})
-					})
-					ui.Column(c).Gap(8).Children(func() {
-						settingsValue(c, p, locales.SettingsCliPath(), s.piPathLabel())
-						settingsValue(c, p, locales.SettingsVersion(),
-							fallback(s.piVersion, locales.SettingsPendingHandshake()))
-					})
-					if s.piConnectionErrorActive() {
-						label := text("settingsShowPiDetails")
-						if s.piErrorDetailsOpen {
-							label = text("settingsHidePiDetails")
-						}
-						button := ui.ButtonBase(c.Key("settings-pi-error-details")).Justify(ui.Start).
-							Shrink(0).Padding(0).Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
-						if button.Hovered() {
-							button.Background(p.surfaceHover)
-						}
-						button.Children(func() {
-							ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(p.muted)
-						})
-						if button.Clicked() {
-							s.piErrorDetailsOpen = !s.piErrorDetailsOpen
-						}
-						if s.piErrorDetailsOpen {
-							ui.Row(c).FillWidth().Padding(9, 10).Radius(7).
-								Background(p.background).Children(func() {
-								ui.Text(c, s.piError).Font("monospace").FontSize(fontCaption).
-									LineHeight(1.4).TextColor(p.danger).FillWidth().MinWidth(0)
-							})
-						}
-					}
-				})
-				s.legacyMigrationSettingsControl(c, p)
-
-				sectionLabel(c, p, locales.SettingsPluginSettings())
-				s.pluginSettingsSection(c, p)
-
-				s.diagnosticsSettingsCard(c, p, registry)
-
-				settingsCard(c, p, locales.SettingsAboutTitle(),
-					locales.SettingsAboutDescription(), func() {
-						ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
-							brandMark(c, p, 38)
-							ui.Column(c).Gap(1).Children(func() {
-								ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
-								ui.Text(c, textArgs("settingsAboutVersion", map[string]any{
-									"version": appVersion,
-									"build":   appBuildVersion(),
-								})).FontSize(fontCaption).
-									TextColor(p.muted)
-							})
-						})
-					})
-			})
-		})
-	})
-}
-
 func settingsCard(c *ui.Context, p palette, title, description string, body func()) {
 	ui.Column(c).FillWidth().Gap(13).Padding(16).Radius(12).
-		Border(1, p.border).Background(p.surface).Children(func() {
+		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
 		ui.Column(c).Gap(4).Children(func() {
 			ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
 			ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
@@ -1493,7 +1328,7 @@ func settingsCard(c *ui.Context, p palette, title, description string, body func
 }
 
 func settingsValue(c *ui.Context, p palette, label, value string) {
-	ui.Row(c).FillWidth().Padding(8, 10).Radius(7).Background(p.background).
+	ui.Row(c).FillWidth().Padding(8, 10).Radius(8).Background(p.background).
 		AlignItems(ui.Center).Children(func() {
 		ui.Text(c, label).FontSize(fontCaption).TextColor(p.muted).Width(180)
 		ui.Text(c, value).FontSize(fontCaption).FontWeight(600).TextColor(p.text).Grow(1)
@@ -1507,11 +1342,11 @@ func (s *appState) themeButton(c *ui.Context, p palette, mode themeMode, iconNam
 	border := p.border
 	if selected {
 		bg = p.surfaceHover
-		fg = p.accent
+		fg = p.accentText
 		border = p.accent
 	}
 	btn := ui.ButtonBase(c.Key("theme-"+mode)).Padding(8, 12).Radius(8).
-		Border(1, border).Background(bg).Cursor(ui.CursorPointer).Label(label)
+		Border(runtimeTokens.Dimension.Border.Value, border).Background(bg).Cursor(ui.CursorPointer).Label(label)
 	if btn.Hovered() && !selected {
 		btn.Background(p.surfaceHover)
 	}
@@ -1536,11 +1371,11 @@ func (s *appState) languageButton(c *ui.Context, p palette, value, label string)
 	border := p.border
 	if selected {
 		bg = p.surfaceHover
-		fg = p.accent
+		fg = p.accentText
 		border = p.accent
 	}
 	btn := ui.ButtonBase(c.Key("language-"+value)).Padding(8, 12).Radius(8).
-		Border(1, border).Background(bg).Cursor(ui.CursorPointer).Label(label)
+		Border(runtimeTokens.Dimension.Border.Value, border).Background(bg).Cursor(ui.CursorPointer).Label(label)
 	if btn.Hovered() && !selected {
 		btn.Background(p.surfaceHover)
 	}
@@ -1565,11 +1400,11 @@ func (s *appState) followUpStyleButton(c *ui.Context, p palette, style followUpS
 	border := p.border
 	if selected {
 		bg = p.surfaceHover
-		fg = p.accent
+		fg = p.accentText
 		border = p.accent
 	}
 	btn := ui.ButtonBase(c.Key("follow-up-style-"+string(style))).Padding(8, 12).Radius(8).
-		Border(1, border).Background(bg).Cursor(ui.CursorPointer).Label(label)
+		Border(runtimeTokens.Dimension.Border.Value, border).Background(bg).Cursor(ui.CursorPointer).Label(label)
 	if btn.Hovered() && !selected {
 		btn.Background(p.surfaceHover)
 	}
@@ -1610,9 +1445,6 @@ func (s *appState) settingsChoiceRow(c *ui.Context, p palette, key, title, descr
 				case "motion":
 					values := []motionMode{motionSystem, motionStandard, motionReduced}
 					selected = normalizeMotionMode(s.preferences.Motion) == values[index]
-				case "panel-animation":
-					values := []int{0, 150, 250, 400}
-					selected = normalizePanelAnimationMS(s.preferences.PanelAnimationMS) == values[index]
 				}
 				s.choiceButton(c, p, key+"-"+choice.id, choice.iconName, choice.label, selected, choice.click)
 			}
@@ -1623,10 +1455,10 @@ func (s *appState) settingsChoiceRow(c *ui.Context, p palette, key, title, descr
 func (s *appState) choiceButton(c *ui.Context, p palette, key, iconName, label string, selected bool, click func()) {
 	bg, fg, border := p.background, p.muted, p.border
 	if selected {
-		bg, fg, border = p.surfaceHover, p.accent, p.accent
+		bg, fg, border = p.surfaceHover, p.accentText, p.accent
 	}
 	button := ui.ButtonBase(c.Key(key)).Padding(8, 12).Radius(8).
-		Border(1, border).Background(bg).Cursor(ui.CursorPointer).Label(label)
+		Border(runtimeTokens.Dimension.Border.Value, border).Background(bg).Cursor(ui.CursorPointer).Label(label)
 	if button.Hovered() && !selected {
 		button.Background(p.surfaceHover)
 	}

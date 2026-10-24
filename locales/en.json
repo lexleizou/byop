@@ -347,7 +347,7 @@
   "@errorToolFallback": {
     "description": "User-interface text for error Tool Fallback."
   },
-  "runDetailCurrentTool": "{tool} · {status} in {duration}",
+  "runDetailCurrentTool": "{tool}; {status} in {duration}",
   "@runDetailCurrentTool": {
     "description": "User-interface text for run Detail Current Tool."
   },
@@ -431,7 +431,7 @@
   "@pluginsTitle": {
     "description": "User-interface text for plugins Title."
   },
-  "pluginsDescription": "Discover local plugins, open typed native views, or host isolated HTML in a capability-checked WebView. Native and Node runtimes start lazily and share the same host API.",
+  "pluginsDescription": "Manage installed plugins",
   "@pluginsDescription": {
     "description": "User-interface text for plugins Description."
   },
@@ -447,11 +447,11 @@
   "@pluginsFolders": {
     "description": "User-interface text for plugins Folders."
   },
-  "pluginsRoots": "Plugin roots · {roots}",
+  "pluginsRoots": "Plugin roots; {roots}",
   "@pluginsRoots": {
     "description": "User-interface text for plugins Roots."
   },
-  "pluginsRegistrySummary": "{registered} REGISTERED · {contributions} CONTRIBUTIONS",
+  "pluginsRegistrySummary": "{registered} REGISTERED; {contributions} CONTRIBUTIONS",
   "@pluginsRegistrySummary": {
     "description": "User-interface text for plugins Registry Summary."
   },
@@ -527,7 +527,7 @@
   "@pluginsContributionCount": {
     "description": "User-interface text for plugins Contribution Count."
   },
-  "pluginsWebViewMeta": "{entry} · Isolated · byop-plugin scheme · CSP",
+  "pluginsWebViewMeta": "{entry}; Isolated; byop-plugin scheme; CSP",
   "@pluginsWebViewMeta": {
     "description": "User-interface text for plugins Web View Meta."
   },
@@ -627,7 +627,7 @@
   "@pluginsCardLabel": {
     "description": "Accessible label for a plugin summary card."
   },
-  "pluginsVersionRuntime": "v{version} · {runtime}",
+  "pluginsVersionRuntime": "v{version}; {runtime}",
   "@pluginsVersionRuntime": {
     "description": "Compact plugin version and runtime summary for a card."
   },
@@ -651,7 +651,7 @@
   "@pluginsDeactivated": {
     "description": "User-interface text for plugins Deactivated."
   },
-  "pluginsPermissions": "workspace {workspace} · files {files} · network {network} · process {process}",
+  "pluginsPermissions": "workspace {workspace}; files {files}; network {network}; process {process}",
   "@pluginsPermissions": {
     "description": "User-interface text for plugins Permissions."
   },
@@ -671,7 +671,7 @@
   "@pluginsEnforcementNode": {
     "description": "User-interface text for plugins Enforcement Node."
   },
-  "pluginsEnforcementHost": "Host checks only · process unsandboxed",
+  "pluginsEnforcementHost": "Host checks only; process unsandboxed",
   "@pluginsEnforcementHost": {
     "description": "User-interface text for plugins Enforcement Host."
   },
@@ -867,7 +867,7 @@
   "@pluginsWebViewSection": {
     "description": "User-interface text for plugins Web View Section."
   },
-  "pluginsWebViewDescription": "{plugin} · byop-plugin scheme · strict CSP",
+  "pluginsWebViewDescription": "{plugin}; byop-plugin scheme; strict CSP",
   "@pluginsWebViewDescription": {
     "description": "User-interface text for plugins Web View Description."
   },
@@ -903,7 +903,7 @@
   "@automationsTitle": {
     "description": "User-interface text for automations Title."
   },
-  "automationsDescription": "Plugin-registered automations and Loops. Declared rules are validated and displayed; P7 runs them manually.",
+  "automationsDescription": "Manage plugin automations",
   "@automationsDescription": {
     "description": "User-interface text for automations Description."
   },
@@ -915,7 +915,7 @@
   "@automationsPausedCount": {
     "description": "User-interface text for automations Paused Count."
   },
-  "automationsManualNote": "Timed triggers arrive in a later phase; runs are manual in P7.",
+  "automationsManualNote": "Only manual runs are currently supported",
   "@automationsManualNote": {
     "description": "User-interface text for automations Manual Note."
   },
@@ -943,7 +943,7 @@
   "@automationsFailures": {
     "description": "User-interface text for automations Failures."
   },
-  "automationsLastRun": "Last run {time} · {state}",
+  "automationsLastRun": "Last run {time}; {state}",
   "@automationsLastRun": {
     "description": "User-interface text for automations Last Run."
   },
@@ -967,15 +967,15 @@
   "@automationsRecentRuns": {
     "description": "User-interface text for automations Recent Runs."
   },
-  "automationsKindScheduledLoop": "Scheduled loop · {rule}",
+  "automationsKindScheduledLoop": "Scheduled loop; {rule}",
   "@automationsKindScheduledLoop": {
     "description": "User-interface text for automations Kind Scheduled Loop."
   },
-  "automationsKindSessionLoop": "Session loop · {rule}",
+  "automationsKindSessionLoop": "Session loop; {rule}",
   "@automationsKindSessionLoop": {
     "description": "User-interface text for automations Kind Session Loop."
   },
-  "automationsKindOnce": "Once · {rule}",
+  "automationsKindOnce": "Once; {rule}",
   "@automationsKindOnce": {
     "description": "User-interface text for automations Kind Once."
   },
@@ -1179,7 +1179,7 @@
   "@automationsFinishSaveFailed": {
     "description": "User-interface text for automations Finish Save Failed."
   },
-  "automationsCompleted": "{title} · {result}",
+  "automationsCompleted": "{title}; {result}",
   "@automationsCompleted": {
     "description": "User-interface text for automations Completed."
   },
@@ -1287,7 +1287,7 @@
   "@chatAttachmentNotice": {
     "description": "Notice shown when attachment support is requested."
   },
-  "chatFollowUpHint": "Tab to use · Esc to dismiss",
+  "chatFollowUpHint": "Tab to use; Esc to dismiss",
   "@chatFollowUpHint": {
     "description": "Keyboard hint for the follow-up suggestion."
   },
@@ -1313,7 +1313,7 @@
       }
     }
   },
-  "chatWorkingFor": "Working · {duration}",
+  "chatWorkingFor": "Working; {duration}",
   "@chatWorkingFor": {
     "description": "Summary of a running assistant turn.",
     "placeholders": {
@@ -1535,7 +1535,7 @@
   "@settingsNativeRuntime": {
     "description": "Label for the native runtime."
   },
-  "settingsNativeRuntimeValue": "MyGo · fixed baseline",
+  "settingsNativeRuntimeValue": "MyGo; fixed baseline",
   "@settingsNativeRuntimeValue": {
     "description": "Native runtime value."
   },
@@ -1563,7 +1563,7 @@
   "@settingsPluginRuntime": {
     "description": "Label for plugin runtime support."
   },
-  "settingsPluginRuntimeValue": "Native + Node · native and WebView surfaces",
+  "settingsPluginRuntimeValue": "Native + Node; native and WebView surfaces",
   "@settingsPluginRuntimeValue": {
     "description": "Plugin runtime value."
   },
@@ -1571,11 +1571,11 @@
   "@settingsWebViewBoundary": {
     "description": "Label for the WebView security boundary."
   },
-  "settingsWebViewBoundaryValue": "byop-plugin · strict CSP · locked navigation",
+  "settingsWebViewBoundaryValue": "byop-plugin; strict CSP; locked navigation",
   "@settingsWebViewBoundaryValue": {
     "description": "WebView security boundary value."
   },
-  "settingsPluginRegistryValue": "{registered} registered · {contributions} contributions",
+  "settingsPluginRegistryValue": "{registered} registered; {contributions} contributions",
   "@settingsPluginRegistryValue": {
     "description": "Settings plugin registry counts.",
     "placeholders": {
@@ -1597,7 +1597,7 @@
   "@settingsAboutDescription": {
     "description": "About card description."
   },
-  "settingsAboutVersion": "Version {version} · Build {build}",
+  "settingsAboutVersion": "Version {version}; Build {build}",
   "@settingsAboutVersion": {
     "description": "Application version and build shown in the About section."
   },
@@ -1697,6 +1697,10 @@
   "@modelsNone": {
     "description": "Empty model picker state."
   },
+  "modelsManage": "Manage models",
+  "@modelsManage": {
+    "description": "Opens the Models and channels settings category from the model picker."
+  },
   "thinkingOff": "Off",
   "@thinkingOff": {
     "description": "Thinking level off."
@@ -1725,7 +1729,7 @@
   "@thinkingTitle": {
     "description": "Thinking picker label."
   },
-  "thinkingTooltip": "Thinking · {level}",
+  "thinkingTooltip": "Thinking; {level}",
   "@thinkingTooltip": {
     "description": "Thinking picker tooltip.",
     "placeholders": {
@@ -2011,7 +2015,7 @@
   "@legacyImported": {
     "description": "Legacy import success notice."
   },
-  "compactionCompletedTokens": "Context compacted · {before} → {after} tokens",
+  "compactionCompletedTokens": "Context compacted; {before} → {after} tokens",
   "@compactionCompletedTokens": {
     "description": "Compaction result with token count.",
     "placeholders": {
@@ -2025,7 +2029,7 @@
       }
     }
   },
-  "diagnosticCompacting": "Compacting · {reason}",
+  "diagnosticCompacting": "Compacting; {reason}",
   "@diagnosticCompacting": {
     "description": "Runtime diagnostic while compacting.",
     "placeholders": {
@@ -2035,7 +2039,7 @@
       }
     }
   },
-  "diagnosticCompactionError": "Compaction error · {error}",
+  "diagnosticCompactionError": "Compaction error; {error}",
   "@diagnosticCompactionError": {
     "description": "Runtime compaction error.",
     "placeholders": {
@@ -2045,7 +2049,7 @@
       }
     }
   },
-  "diagnosticExtensionError": "Extension error · {source} · {error}",
+  "diagnosticExtensionError": "Extension error; {source}; {error}",
   "@diagnosticExtensionError": {
     "description": "Runtime extension error.",
     "placeholders": {
@@ -2059,7 +2063,7 @@
       }
     }
   },
-  "diagnosticQueued": "Queued · {steering} steering · {followUp} follow-up",
+  "diagnosticQueued": "Queued; {steering} steering; {followUp} follow-up",
   "@diagnosticQueued": {
     "description": "Runtime queued messages.",
     "placeholders": {
@@ -2073,7 +2077,7 @@
       }
     }
   },
-  "diagnosticRetryFailed": "Retry failed · {error}",
+  "diagnosticRetryFailed": "Retry failed; {error}",
   "@diagnosticRetryFailed": {
     "description": "Runtime retry error.",
     "placeholders": {
@@ -2083,7 +2087,7 @@
       }
     }
   },
-  "piSecondaryConnectedModel": "Connected · {model}",
+  "piSecondaryConnectedModel": "Connected; {model}",
   "@piSecondaryConnectedModel": {
     "description": "Pi secondary status with model.",
     "placeholders": {
@@ -2093,7 +2097,7 @@
       }
     }
   },
-  "retryStatus": "{label} · {seconds}s",
+  "retryStatus": "{label}; {seconds}s",
   "@retryStatus": {
     "description": "Retry countdown.",
     "placeholders": {
@@ -2107,7 +2111,7 @@
       }
     }
   },
-  "tasksPluginRegistryDetail": "{registered} registered · {active} active · {contributions} contributions · {issues} issues",
+  "tasksPluginRegistryDetail": "{registered} registered; {active} active; {contributions} contributions; {issues} issues",
   "@tasksPluginRegistryDetail": {
     "description": "Task panel plugin registry detail.",
     "placeholders": {
@@ -2221,7 +2225,7 @@
   "@queueTitle": {
     "description": "Heading for the running message queue."
   },
-  "runningSendOppositeTooltip": "{mode} · {shortcut}",
+  "runningSendOppositeTooltip": "{mode}; {shortcut}",
   "@runningSendOppositeTooltip": {
     "description": "Tooltip explaining the opposite running-send shortcut."
   },
@@ -2498,5 +2502,614 @@
         "type": "String"
       }
     }
+  },
+  "settingsBackToChat": "Back to chat",
+  "@settingsBackToChat": {
+    "description": "Returns from Settings to the chat workspace."
+  },
+  "settingsSearchPlaceholder": "Search settings",
+  "@settingsSearchPlaceholder": {
+    "description": "Placeholder and accessible label for settings search."
+  },
+  "settingsSearchResults": "Settings",
+  "@settingsSearchResults": {
+    "description": "Heading above matching settings categories."
+  },
+  "settingsSearchNoResults": "No matching settings",
+  "@settingsSearchNoResults": {
+    "description": "Empty state when settings search has no matches."
+  },
+  "settingsSearchOpenCategory": "Open {category}",
+  "@settingsSearchOpenCategory": {
+    "description": "Action that opens a matching settings category.",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCategoryGeneral": "General",
+  "@settingsCategoryGeneral": {
+    "description": "Settings category for language and general behavior."
+  },
+  "settingsCategoryAppearance": "Appearance",
+  "@settingsCategoryAppearance": {
+    "description": "Settings category for theme, contrast, and motion."
+  },
+  "settingsCategoryModels": "Models and channels",
+  "@settingsCategoryModels": {
+    "description": "Settings category for Pi model and provider configuration."
+  },
+  "settingsCategoryConversation": "Conversation",
+  "@settingsCategoryConversation": {
+    "description": "Settings category for chat behavior."
+  },
+  "settingsCategoryWorkspace": "Workspace",
+  "@settingsCategoryWorkspace": {
+    "description": "Settings category for the active workspace."
+  },
+  "settingsCategoryExtensions": "Extensions",
+  "@settingsCategoryExtensions": {
+    "description": "Settings category for plugin-provided settings."
+  },
+  "settingsCategoryData": "Data and diagnostics",
+  "@settingsCategoryData": {
+    "description": "Settings category for diagnostics and migration data."
+  },
+  "settingsCategoryAbout": "About",
+  "@settingsCategoryAbout": {
+    "description": "Settings category for product and build information."
+  },
+  "settingsShortcutsTitle": "Keyboard shortcuts",
+  "@settingsShortcutsTitle": {
+    "description": "Heading for keyboard shortcut settings."
+  },
+  "settingsShortcutNavigationAction": "Toggle navigation",
+  "@settingsShortcutNavigationAction": {
+    "description": "Keyboard shortcut action for toggling navigation."
+  },
+  "settingsShortcutTasksAction": "Toggle task panel",
+  "@settingsShortcutTasksAction": {
+    "description": "Keyboard shortcut action for toggling the task panel."
+  },
+  "settingsFollowUpKeyboardHint": "Press Tab to use a suggestion.",
+  "@settingsFollowUpKeyboardHint": {
+    "description": "Keyboard hint for follow-up suggestions."
+  },
+  "settingsWorkspaceTitle": "Workspace",
+  "@settingsWorkspaceTitle": {
+    "description": "Heading for workspace path settings."
+  },
+  "settingsWorkspacePath": "Path",
+  "@settingsWorkspacePath": {
+    "description": "Label for the active workspace path."
+  },
+  "settingsExtensionsTitle": "Extensions",
+  "@settingsExtensionsTitle": {
+    "description": "Heading for extension settings."
+  },
+  "settingsPiExtensionsReadOnly": "Pi extensions are available as diagnostics only.",
+  "@settingsPiExtensionsReadOnly": {
+    "description": "Explains that Pi extension controls are read-only in the current slice."
+  },
+  "settingsBuild": "Build",
+  "@settingsBuild": {
+    "description": "Label for the application build version."
+  },
+  "channelModelsFileDialog": "Choose Pi models.json",
+  "@channelModelsFileDialog": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSettingsTitle": "Models and channels",
+  "@channelSettingsTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryTitle": "Configured channels",
+  "@channelInventoryTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshInventory": "Refresh list",
+  "@channelRefreshInventory": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryReadFailed": "Could not read models.json: {detail}",
+  "@channelInventoryReadFailed": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelInventoryLoading": "Loading channels",
+  "@channelInventoryLoading": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryDiagnostics": "Pi configuration",
+  "@channelInventoryDiagnostics": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPiDirectory": "Pi agent directory",
+  "@channelPiDirectory": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsFile": "models.json",
+  "@channelModelsFile": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryEmptyTitle": "No channels configured",
+  "@channelInventoryEmptyTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryEmptyDescription": "Add a channel below. Preview changes before applying them.",
+  "@channelInventoryEmptyDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelBaseURL": "Base URL",
+  "@channelBaseURL": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModels": "Models",
+  "@channelModels": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsCount": "{count} models",
+  "@channelModelsCount": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelDetails": "Details",
+  "@channelDetails": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelOverrides": "Model overrides",
+  "@channelModelOverrides": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAddSourceTitle": "Add a channel",
+  "@channelAddSourceTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSourcePreset": "Pi preset",
+  "@channelSourcePreset": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSourceCustom": "Custom channel",
+  "@channelSourceCustom": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSourceModelsFile": "Import models.json",
+  "@channelSourceModelsFile": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsFileDescription": "Select a Pi models.json file, choose a provider, then choose the models to import.",
+  "@channelModelsFileDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelChooseModelsFile": "Choose models.json",
+  "@channelChooseModelsFile": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsFileReadFailed": "Could not read this models.json: {detail}",
+  "@channelModelsFileReadFailed": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelRetryReadFile": "Read file again",
+  "@channelRetryReadFile": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsFileAwaiting": "Choose a models.json file to inspect its providers.",
+  "@channelModelsFileAwaiting": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSelectProvider": "Select a provider",
+  "@channelSelectProvider": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSelectModels": "Select models",
+  "@channelSelectModels": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSelectOverrides": "Select model overrides",
+  "@channelSelectOverrides": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewImport": "Preview import",
+  "@channelPreviewImport": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPresetDescription": "Choose a provider preset. Authentication remains in Pi.",
+  "@channelPresetDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSelectPresetFirst": "Choose a preset to continue.",
+  "@channelSelectPresetFirst": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPiLoginManagedTitle": "Sign-in managed by Pi",
+  "@channelPiLoginManagedTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPiLoginManagedDescription": "Pi manages this sign-in. BYOP does not copy OAuth tokens.",
+  "@channelPiLoginManagedDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAdvanced": "Advanced",
+  "@channelAdvanced": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAPIKeyEnvironment": "API key environment reference",
+  "@channelAPIKeyEnvironment": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAPIKeyEnvironmentHint": "Use $NAME or ${NAME}. The value stays in Pi; BYOP never stores the secret.",
+  "@channelAPIKeyEnvironmentHint": {
+    "description": "Pi environment-variable syntax reference. Braces are literal text and are not format placeholders."
+  },
+  "channelPreviewPreset": "Preview preset",
+  "@channelPreviewPreset": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCustomDescription": "Define a channel using typed fields. Secrets are configured in Pi through environment references.",
+  "@channelCustomDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderID": "Provider ID",
+  "@channelProviderID": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderIDHint": "Identifier used in Pi models.json.",
+  "@channelProviderIDHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderName": "Provider name",
+  "@channelProviderName": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderNameHint": "Optional display name.",
+  "@channelProviderNameHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelBaseURLHint": "Endpoint for this channel.",
+  "@channelBaseURLHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAPI": "API protocol",
+  "@channelAPI": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAPIHint": "For example, openai-completions. Leave this blank to use the Pi provider default.",
+  "@channelAPIHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelUseAuthorizationHeader": "Use an Authorization header",
+  "@channelUseAuthorizationHeader": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewCustom": "Preview custom channel",
+  "@channelPreviewCustom": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelEntryTitle": "Model entry",
+  "@channelModelEntryTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelID": "Model ID",
+  "@channelModelID": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelIDHint": "Model identifier reported by Pi or the provider.",
+  "@channelModelIDHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelName": "Model name",
+  "@channelModelName": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelNameHint": "Optional display name.",
+  "@channelModelNameHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideEntryTitle": "Model override",
+  "@channelOverrideEntryTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideID": "Override model ID",
+  "@channelOverrideID": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideIDHint": "ID of the built-in or existing model to override.",
+  "@channelOverrideIDHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideName": "Override display name",
+  "@channelOverrideName": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideNameHint": "Optional display name for the override.",
+  "@channelOverrideNameHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewErrorTitle": "Preview unavailable",
+  "@channelPreviewErrorTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRepreview": "Preview again",
+  "@channelRepreview": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewTitle": "Preview changes",
+  "@channelPreviewTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreserveConflictDescription": "Existing entries and conflicting routes are preserved.",
+  "@channelPreserveConflictDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewDiagnostics": "Technical details",
+  "@channelPreviewDiagnostics": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewSource": "Source version",
+  "@channelPreviewSource": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewDestination": "Destination version",
+  "@channelPreviewDestination": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderAction": "Provider {provider}: {action}",
+  "@channelProviderAction": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "provider": {
+        "type": "String",
+        "example": "value"
+      },
+      "action": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelConflictPolicyPreserve": "Existing values are preserved",
+  "@channelConflictPolicyPreserve": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelConflictSummary": "Conflicting route preserved at {path}",
+  "@channelConflictSummary": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelPreviewStaleDescription": "The source or Pi configuration changed after preview. Preview again to continue.",
+  "@channelPreviewStaleDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyImport": "Apply selected models",
+  "@channelApplyImport": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyCustom": "Apply custom channel",
+  "@channelApplyCustom": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyResultTitle": "Apply result",
+  "@channelApplyResultTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyNoChanges": "Nothing needed to change.",
+  "@channelApplyNoChanges": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplySucceeded": "Channel configuration saved.",
+  "@channelApplySucceeded": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPendingRefreshDescription": "Saved to Pi. The active session will refresh only after it becomes idle.",
+  "@channelPendingRefreshDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAddAnotherSource": "Add another channel",
+  "@channelAddAnotherSource": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPiRefreshTitle": "Pi session refresh",
+  "@channelPiRefreshTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshWaitingIdle": "The current run is still active. Refresh will start when Pi is idle.",
+  "@channelRefreshWaitingIdle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshRecoveryPreserved": "The saved state was preserved. Retry when Pi is available.",
+  "@channelRefreshRecoveryPreserved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshReadbackSucceeded": "Session, model, thinking level, and transcript were read back.",
+  "@channelRefreshReadbackSucceeded": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshRetry": "Retry refresh",
+  "@channelRefreshRetry": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshSucceeded": "Pi session refreshed.",
+  "@channelRefreshSucceeded": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailed": "Refresh failed: {reason}",
+  "@channelRefreshFailed": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelRefreshRunning": "Refreshing the Pi session.",
+  "@channelRefreshRunning": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshPending": "Waiting to refresh the Pi session.",
+  "@channelRefreshPending": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshIdle": "Not refreshed",
+  "@channelRefreshIdle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryError": "Could not read channels",
+  "@channelInventoryError": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryMissing": "models.json not found",
+  "@channelInventoryMissing": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryProviderCount": "{count} channels",
+  "@channelInventoryProviderCount": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "channelCredentialEnvironment": "Environment reference",
+  "@channelCredentialEnvironment": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCredentialCommand": "Command reference",
+  "@channelCredentialCommand": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCredentialLiteral": "Literal value",
+  "@channelCredentialLiteral": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCredentialOAuth": "Pi OAuth",
+  "@channelCredentialOAuth": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCredentialNone": "Not configured",
+  "@channelCredentialNone": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelConfiguredInPi": "Configured in Pi",
+  "@channelConfiguredInPi": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeConfigureInPi": "Configure this credential or command in Pi.",
+  "@channelNoticeConfigureInPi": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeProviderConflict": "The provider route differs. The existing channel and destination credential were preserved.",
+  "@channelNoticeProviderConflict": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeEndpointInherited": "The model endpoint will inherit from the existing Pi provider.",
+  "@channelNoticeEndpointInherited": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeCommentsRemoved": "Comments will be removed when models.json is saved.",
+  "@channelNoticeCommentsRemoved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeProviderPreserved": "The existing provider was preserved.",
+  "@channelNoticeProviderPreserved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeModelPreserved": "The existing model was preserved.",
+  "@channelNoticeModelPreserved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeOverridePreserved": "The existing model override was preserved.",
+  "@channelNoticeOverridePreserved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPickerUnavailable": "The system file picker is unavailable.",
+  "@channelPickerUnavailable": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelBackendUnavailable": "The Pi channel service is unavailable.",
+  "@channelBackendUnavailable": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewRequired": "Preview the current values before applying.",
+  "@channelPreviewRequired": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewFailedSummary": "Could not prepare these changes.",
+  "@channelPreviewFailedSummary": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyFailedSummary": "Could not save channel changes.",
+  "@channelApplyFailedSummary": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionAdd": "Add",
+  "@channelMergeActionAdd": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionPreserve": "Keep existing",
+  "@channelMergeActionPreserve": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionInherit": "Inherit channel endpoint",
+  "@channelMergeActionInherit": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionRemoved": "Removed",
+  "@channelMergeActionRemoved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionUnknown": "Review required",
+  "@channelMergeActionUnknown": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelDigestMissing": "Version unavailable",
+  "@channelDigestMissing": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureUnknown": "Unknown refresh error.",
+  "@channelRefreshFailureUnknown": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureLaunch": "Pi did not start.",
+  "@channelRefreshFailureLaunch": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureSession": "The saved session is unavailable.",
+  "@channelRefreshFailureSession": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureModel": "The saved model is unavailable.",
+  "@channelRefreshFailureModel": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureThinking": "The saved thinking level is unavailable.",
+  "@channelRefreshFailureThinking": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureReadback": "Pi state could not be read back.",
+  "@channelRefreshFailureReadback": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureTranscript": "The conversation transcript could not be restored.",
+  "@channelRefreshFailureTranscript": {
+    "description": "Channel configuration and refresh interface."
   }
 }

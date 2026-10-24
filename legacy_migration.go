@@ -298,10 +298,10 @@ func scanLegacyDesktop(
 			localStatus = "found"
 			localSummary = fmt.Sprintf("%d preference key(s)", len(localValues))
 			if len(localUndecodable) > 0 {
-				localSummary += fmt.Sprintf(" · %d undecodable", len(localUndecodable))
+				localSummary += fmt.Sprintf("; %d undecodable", len(localUndecodable))
 			}
 			if localCount > 1 {
-				localSummary += fmt.Sprintf(" · latest of %d databases", localCount)
+				localSummary += fmt.Sprintf("; latest of %d databases", localCount)
 			}
 		}
 	}
@@ -406,9 +406,9 @@ func scanLegacyAppDir(
 		parts = append(parts, "App directory found")
 	}
 	if err := ctx.Err(); err != nil {
-		return true, strings.Join(parts, " · ")
+		return true, strings.Join(parts, "; ")
 	}
-	return true, strings.Join(parts, " · ")
+	return true, strings.Join(parts, "; ")
 }
 
 func legacyVersionFromJSON(data []byte) string {
@@ -986,7 +986,7 @@ func addLegacyWorkspaceSession(
 	if canonicalWorkspace == "" {
 		scan.Entries = append(scan.Entries, legacyPreviewEntry{
 			ID: "pi-workspace-v1/sessionId", Source: "localStorage",
-			Summary: summary + " · workspace missing", Target: "Last session",
+			Summary: summary + "; workspace missing", Target: "Last session",
 			Status: legacyStatusMissing,
 		})
 		return
@@ -997,7 +997,7 @@ func addLegacyWorkspaceSession(
 	if _, err := findLegacyPiSession(canonicalWorkspace, sessionID); err != nil {
 		scan.Entries = append(scan.Entries, legacyPreviewEntry{
 			ID: "pi-workspace-v1/sessionId", Source: "localStorage",
-			Summary: summary + " · session missing", Target: "Last session",
+			Summary: summary + "; session missing", Target: "Last session",
 			Status: legacyStatusMissing,
 		})
 		return
@@ -1097,11 +1097,11 @@ func addLegacyLastSessions(scan *legacyScan, prefs byopPreferences, raw json.Raw
 			continue
 		}
 		canonical := canonicalPiPath(cwd)
-		summary := filepath.Base(canonical) + " · " + legacySessionIDSummary(sessionID)
+		summary := filepath.Base(canonical) + ": " + legacySessionIDSummary(sessionID)
 		if _, err := findLegacyPiSession(canonical, sessionID); err != nil {
 			scan.Entries = append(scan.Entries, legacyPreviewEntry{
 				ID: "pi-web:last-open-by-workspace/" + filepath.Base(canonical), Source: "localStorage",
-				Summary: summary + " · session missing", Target: "Last session",
+				Summary: summary + "; session missing", Target: "Last session",
 				Status: legacyStatusMissing,
 			})
 			continue
@@ -1259,7 +1259,7 @@ func addLegacyDrafts(
 		}
 		scan.Entries = append(scan.Entries, legacyPreviewEntry{
 			ID: sourceKey + "/" + key, Source: "localStorage",
-			Summary: fmt.Sprintf("Draft · %d character(s)", len([]rune(text))),
+			Summary: fmt.Sprintf("Draft: %d character(s)", len([]rune(text))),
 			Target:  "Drafts", Status: status, action: action,
 		})
 		if action != nil {

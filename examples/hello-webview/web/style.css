@@ -1,16 +1,5 @@
 :root {
-  --byop-background: #fcfbf9;
-  --byop-surface: #fefefd;
-  --byop-surface-hover: #eceae4;
-  --byop-text: #33332f;
-  --byop-muted: #72726a;
-  --byop-border: #deded5;
-  --byop-accent: #bd481b;
-  --byop-success: #059669;
-  --byop-warning: #b45309;
-  --byop-danger: #b4444c;
-  --byop-font-body: 14px;
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
 * {
@@ -19,19 +8,19 @@
 
 body {
   margin: 0;
-  background: var(--byop-background);
-  color: var(--byop-text);
-  font: var(--byop-font-body)/1.55 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--byop-background, Canvas);
+  color: var(--byop-text, CanvasText);
+  font: var(--byop-font-body, 14px)/1.5 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 main {
-  width: min(760px, calc(100% - 40px));
+  width: min(760px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 36px 0 48px;
+  padding: 24px 0 40px;
 }
 
 header {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 h1,
@@ -41,43 +30,42 @@ p {
 }
 
 h1 {
-  margin-bottom: 8px;
-  font-size: 30px;
+  margin-bottom: 6px;
+  font-size: var(--byop-font-title, 18px);
   line-height: 1.15;
 }
 
 h2 {
-  margin-bottom: 10px;
-  font-size: 18px;
+  margin-bottom: 8px;
+  font-size: var(--byop-font-body, 14px);
 }
 
 .eyebrow {
   margin-bottom: 6px;
-  color: var(--byop-accent);
-  font-size: 11px;
+  color: var(--byop-accent, Highlight);
+  font-size: var(--byop-font-caption, 12px);
   font-weight: 700;
-  letter-spacing: 0.08em;
 }
 
 .lede,
 .card p,
 a {
-  color: var(--byop-muted);
+  color: var(--byop-muted, GrayText);
 }
 
 .card {
-  margin-bottom: 14px;
-  padding: 18px;
-  border: 1px solid var(--byop-border);
-  border-radius: 10px;
-  background: var(--byop-surface);
+  margin-bottom: 12px;
+  padding: 16px;
+  border: var(--byop-border-width, 0.5px) solid var(--byop-border, GrayText);
+  border-radius: var(--byop-radius-overlay, 12px);
+  background: var(--byop-surface, Canvas);
 }
 
 .section-title,
 .actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -86,64 +74,78 @@ a {
 }
 
 .badge {
-  padding: 3px 8px;
-  border: 1px solid var(--byop-border);
-  border-radius: 999px;
-  color: var(--byop-muted);
-  font-size: 11px;
+  padding: 3px 7px;
+  border: var(--byop-border-width, 0.5px) solid var(--byop-border, GrayText);
+  border-radius: var(--byop-radius-chip, 6px);
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-caption, 12px);
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.theme-status {
+  margin: 0 0 8px;
+  color: var(--byop-success-text, CanvasText);
+  font-size: var(--byop-font-caption, 12px);
 }
 
 .swatches {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  margin: 14px 0;
+  margin: 12px 0;
 }
 
 .swatch {
-  min-height: 58px;
-  padding: 9px;
-  border: 1px solid var(--byop-border);
-  border-radius: 8px;
-  font-size: 11px;
+  min-height: 52px;
+  padding: 8px;
+  border: var(--byop-border-width, 0.5px) solid var(--byop-border, GrayText);
+  border-radius: var(--byop-radius-input, 8px);
+  font-size: var(--byop-font-caption, 12px);
   font-weight: 650;
 }
 
 .swatch.surface {
-  background: var(--byop-surface);
+  background: var(--byop-surface, Canvas);
 }
 
 .swatch.text {
-  background: var(--byop-text);
-  color: var(--byop-background);
+  background: var(--byop-text, CanvasText);
+  color: var(--byop-background, Canvas);
 }
 
 .swatch.accent {
-  background: var(--byop-accent);
-  color: white;
+  background: var(--byop-accent, Highlight);
+  color: var(--byop-on-accent, CanvasText);
 }
 
 .swatch.success {
-  background: var(--byop-success);
-  color: white;
+  background: var(--byop-success, CanvasText);
+  color: var(--byop-on-accent, CanvasText);
 }
 
 button {
   padding: 7px 11px;
-  border: 1px solid var(--byop-border);
-  border-radius: 7px;
-  background: var(--byop-background);
-  color: var(--byop-text);
+  border: var(--byop-border-width, 0.5px) solid var(--byop-border, GrayText);
+  border-radius: var(--byop-radius-input, 8px);
+  background: var(--byop-surface, Canvas);
+  color: var(--byop-text, CanvasText);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--byop-font-body, 14px);
   font-weight: 650;
   cursor: pointer;
+  transition: background-color var(--byop-motion-duration, 250ms)
+    var(--byop-motion-easing, ease-out);
 }
 
 button:hover {
-  background: var(--byop-surface-hover);
+  background: var(--byop-surface-hover, ButtonFace);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--byop-focus, Highlight);
+  outline-offset: 2px;
 }
 
 a {
@@ -151,17 +153,42 @@ a {
 }
 
 pre {
-  min-height: 92px;
+  min-height: 88px;
   margin: 0;
-  padding: 14px;
+  padding: 12px;
   overflow: auto;
-  border: 1px solid var(--byop-border);
-  border-radius: 9px;
-  background: var(--byop-surface);
-  color: var(--byop-text);
+  border: var(--byop-border-width, 0.5px) solid var(--byop-border, GrayText);
+  border-radius: var(--byop-radius-input, 8px);
+  background: var(--byop-surface, Canvas);
+  color: var(--byop-text, CanvasText);
+  font: var(--byop-font-code, 14px)/1.5 ui-monospace, "SFMono-Regular", monospace;
   white-space: pre-wrap;
 }
 
+pre[data-state="error"] {
+  border-color: var(--byop-danger, Mark);
+}
+
 code {
-  color: var(--byop-text);
+  color: var(--byop-text, CanvasText);
+  font-size: var(--byop-font-code, 14px);
+}
+
+html[data-reduce-transparency="true"] body,
+html[data-high-contrast="true"] body {
+  background: var(--byop-background, Canvas);
+}
+
+html[data-reduce-transparency="true"] .card,
+html[data-reduce-transparency="true"] pre,
+html[data-high-contrast="true"] .card,
+html[data-high-contrast="true"] pre {
+  background: var(--byop-surface, Canvas);
+  box-shadow: none;
+}
+
+@media (max-width: 560px) {
+  .swatches {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

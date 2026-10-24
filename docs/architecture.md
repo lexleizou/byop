@@ -1,12 +1,15 @@
 # BYOP Workbench Architecture
 
-Status: P9c session organization, running queue/steer delivery, appearance
-preferences, panel animation and grouped panel toggles; P9b language packs;
-P8 native shell; persisted external Pi sessions; read-only session discovery
-and RPC-only session mutation; ordered timeline restoration; model and
-thinking-level selection; transient runtime diagnostics; the P5 plugin
-platform; plugin-registered automation run records; and explicit migration of
-legacy Pi Agent Desktop preferences are implemented. Chat renders through
+Status: P12 integration. The P12a BYOP Radix token foundation is published;
+P12b/P12c page polish, model-channel closure and real-window validation remain
+in progress. UI targets 12/14/18 px type, 0.5 px visible borders, 8 px inputs,
+12 px overlays, 250 ms ease-out transitions and opaque reading/Composer
+surfaces. Session organization, queue/steer delivery, appearance preferences,
+grouped panel toggles, language packs, the native shell, persisted external Pi
+sessions, RPC-only session mutation, ordered timeline restoration, model and
+thinking-level selection, runtime diagnostics, the P5 plugin platform,
+automation run records and legacy preference migration remain implemented
+unless a surface-specific limitation is stated below. Chat renders through
 Onevra v0.2026.13 components. The host UI and plugin manifest display strings
 are resolved from extensible language packs at display time.
 
@@ -111,12 +114,13 @@ permanent turn completed, stopped or failed.
 
 | Capability | Owner | Current behavior |
 |---|---|---|
-| Window, navigation, themes | BYOP | Implemented natively |
-| Chat transcript projection | BYOP plus Onevra components | Ordered text/tool timeline rendered as Onevra turns, activity groups and glass composer |
+| Window, navigation, themes | BYOP | Implemented natively; Liquid Glass is limited to chrome, navigation and necessary overlays |
+| Chat transcript projection | BYOP plus Onevra components | Ordered text/tool timeline uses Onevra transcript primitives behind a BYOP token wrapper; the Composer background is opaque |
+| Settings | BYOP | Categorized navigation, unified search and About at the bottom |
 | Plugin metadata and contributions | BYOP | Validates manifests, scans local roots and records contribution conflicts |
 | Plugin lifecycle, commands and views | BYOP Plugin Host | Starts native and Node plugins lazily, routes declared commands, renders typed views and stops processes on deactivate, rescan and window close |
 | Plugin settings and host calls | BYOP Plugin Host | Persists typed values, injects settings, accepts JSON-RPC requests from plugins and enforces declared capabilities |
-| Automation contributions and run state | BYOP | Validates plugin declarations, persists manual run records and enforces pause/resume and failure rules |
+| Automation contributions and run state | BYOP | Keeps existing registration, run history, pause/resume and failure auto-pause; Run now remains the only trigger |
 | Model calls and provider auth | Pi | Delegated |
 | Session persistence and credentials | Pi | Pi owns JSONL and credentials; BYOP scans file metadata and conversation fields read-only for the sidebar, then mutates sessions only through RPC |
 | Session list and active transcript | BYOP | Debounced discovery outside the UI goroutine; switch/create responses rebuild the native transcript through `get_messages` |
@@ -445,7 +449,7 @@ expose only selected `BindAs` services on handled custom schemes.
 
 The preload script exposes `window.byop.call`, `postMessage`, `onTheme`,
 `theme`, `locale` and `onLocale`. It maps the host palette to `--byop-*` CSS
-variables, keeps `--byop-font-body` at 14 px and updates `color-scheme`. Theme
+variables, exposes 12/14/18 px type with 14 px body and code, and includes `onAccent`, `dangerText`, `warningText`, `successText` and `focus`; high contrast or reduced transparency uses opaque Radix colors. Theme
 changes update the WebView background and emit the `byop.theme` event to each
 live page. Language changes emit the `byop.locale` event and update
 `window.byop.locale`. Each completed page load also emits the current theme
@@ -488,9 +492,10 @@ start the plugin when a run begins.
 `missedPolicy` accepts an empty value (meaning `catchUpLatest`), `catchUpLatest`
 or `skip`. `maxDurationMinutes` defaults to 30 when omitted and is bounded to
 1–1440. Rules and activation are validated when the plugin registry is scanned.
-P7 has no timed scheduler, ticker or live duration refresh: interval, cron and
-`at` declarations are validated and displayed only, and the sole trigger is the
-manual **Run now** action with `trigger: "manual"`.
+P7 has no timed scheduler, ticker or live duration refresh, and P12 adds no
+scheduler or `/loop` parser: interval, cron and `at` declarations are validated
+and displayed only. The sole trigger remains the manual **Run now** action with
+`trigger: "manual"`.
 
 Automation state lives under `<pluginConfigDir()>/automations/`. `state.json`
 maps `<pluginID>/<automationID>` to enabled state, consecutive failures,
@@ -547,9 +552,9 @@ not shown.
 
 After P5, the plugin platform is functionally ready for local native, Node and
 declared WebView surfaces. No feature plugin will be developed until Lex
-explicitly asks. The earlier Library and Document placeholder pages and
-navigation entries were removed in P5 and must not be implemented as feature
-plugins. `examples/` contains contract fixtures only.
+explicitly asks. Library and Document remain frozen design candidates and are
+not current pages or navigation entries; the current top-level entry is Chat,
+Plugins, Automations and Settings. `examples/` contains contract fixtures only.
 
 ## Migration Map
 
@@ -563,15 +568,30 @@ plugins. `examples/` contains contract fixtures only.
 | Tool execution timelines | Ordered native text/tool blocks implemented for the active run |
 | Mermaid, KaTeX, xterm, rich document editor | Consider declared WebView plugins |
 | Themes, sidebar widths, drafts | Themes and drafts have BYOP preferences with explicit, idempotent import; legacy width and scale values are preserved without changing BYOP layout |
-| Scheduled tasks and Loop semantics | Rebuild in BYOP with plugin-owned jobs |
+| Scheduled tasks and Loop semantics | Existing automation contributions remain manual-only in P12; no scheduler or `/loop` is added |
 
-## Next Phases
+## Current P12 Integration and Validation
+
+The source and model-channel design follows P11b. `models.json` import remains
+pending until an idle Pi restart can save and restore the session file, channel
+and Model ID, thinking level, per-session model memory and draft, then read the
+state and model catalogue back before reporting success. Running work defers
+the refresh. A new-conversation default is undecided and has no standalone page;
+the HUD display-toggle is not implemented. Library and Document stay frozen.
+
+P12 native-window, light/dark, Chinese/English, narrow-window, glass,
+Reduce Transparency, High Contrast, model-import refresh and Pi state-restoration
+checks remain pending until the delivery matrix owner records runtime evidence.
+Penpot was not re-exported. Only design versions 0.3.0 and 0.2.1 are retained;
+Git, research and validation history remain intact.
+
+## Phase History
 
 | Phase | Scope |
 |---|---|
 | P3.1 | Structured tool lifecycle, native cards and active-tool task state |
 | P3.2 | Ordered text/tool timeline, in-place lifecycle updates and automatic folding |
-| P3.2a | Onevra Chat reading area, turn summaries, activity rows and glass composer; task panel collapsed by default |
+| P3.2a | Onevra Chat transcript primitives, turn summaries and activity rows behind BYOP styling; Composer background is opaque; task panel collapsed by default |
 | P3.3a | Queue, compaction, retry, extension-error and Stop-during-retry diagnostics |
 | P4 | Strict manifest validation, local root discovery, registry search and duplicate/conflict reporting |
 | P4.1 | Native lazy activation, lifecycle states, declared command routing, deactivate and shutdown cleanup |
@@ -582,4 +602,4 @@ plugins. `examples/` contains contract fixtures only.
 | P7 | Automation and Loop contributions, manual run records, failure auto-pause and pause/resume (implemented) |
 | P8 | Import old desktop preferences and migration verification (implemented) |
 | P9b | English and Simplified Chinese UI language packs, generated accessors, plugin manifest localization and WebView locale bridge (implemented) |
-| P9c | Grouped panel toggles, session organization, running queue/steer mode, contrast and motion preferences, and panel animation (implemented) |
+| P9c | Grouped panel toggles, session organization, running queue/steer mode, contrast and motion preferences (implemented); P12 fixes enabled transitions at 250 ms ease-out with a 0 ms reduced-motion fallback |

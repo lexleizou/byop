@@ -138,7 +138,7 @@ func (s *appState) legacyMigrationPrompt(c *ui.Context, p palette) {
 	}
 	ui.Row(c).FillWidth().Justify(ui.Center).MarginY(8).Children(func() {
 		ui.Row(c).FillWidth().MaxWidth(chat.ContentWidth).MinWidth(0).Padding(9, 12).Gap(10).
-			Radius(8).Border(1, p.accent.Alpha(.35)).Background(p.accent.Alpha(.08)).
+			Radius(12).Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).
 			AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icon("info")).Size(16, 16).Shrink(0).TextColor(p.accent)
 			ui.Text(c, text("legacyPromptDiscovered")).FontSize(fontBody).LineHeight(1.4).
@@ -166,11 +166,11 @@ func legacyPromptAction(
 	border := p.border
 	if primary {
 		background = p.accent
-		foreground = p.accentText
+		foreground = p.onAccent
 		border = p.accent
 	}
-	button := ui.ButtonBase(c.Key(key)).Shrink(0).Padding(7, 10).Radius(7).
-		Border(1, border).Background(background).Cursor(ui.CursorPointer).Label(label).
+	button := ui.ButtonBase(c.Key(key)).Shrink(0).Padding(7, 10).Radius(8).
+		Border(runtimeTokens.Dimension.Border.Value, border).Background(background).Cursor(ui.CursorPointer).Label(label).
 		Tooltip(label)
 	if button.Hovered() {
 		if primary {
@@ -189,7 +189,7 @@ func legacyPromptAction(
 
 func (s *appState) legacyMigrationSettingsControl(c *ui.Context, p palette) {
 	if s.legacyScanFailed {
-		ui.Text(c, text("legacyScanFailed")).FontSize(fontCaption).LineHeight(1.4).TextColor(p.warning)
+		ui.Text(c, text("legacyScanFailed")).FontSize(fontCaption).LineHeight(1.4).TextColor(p.warningText)
 		return
 	}
 	if s.legacyScanning {
@@ -205,7 +205,7 @@ func (s *appState) legacyMigrationSettingsControl(c *ui.Context, p palette) {
 		button.Background(p.surfaceHover)
 	}
 	button.Children(func() {
-		ui.Text(c, text("legacyReimport")).FontSize(fontSmall).FontWeight(600).TextColor(p.accent)
+		ui.Text(c, text("legacyReimport")).FontSize(fontSmall).FontWeight(600).TextColor(p.accentText)
 	})
 	if button.Clicked() {
 		s.reimportLegacyMigration()
@@ -218,7 +218,7 @@ func (s *appState) diagnosticsSettingsCard(
 	registry pluginRegistry,
 ) {
 	ui.Column(c).FillWidth().Gap(13).Padding(16).Radius(12).
-		Border(1, p.border).Background(p.surface).Children(func() {
+		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
 		header := ui.ButtonBase(c.Key("settings-diagnostics-toggle")).FillWidth().Padding(0).
 			Background(ui.Color{}).Cursor(ui.CursorPointer).
 			Label(text("settingsDiagnosticsTitle")).Tooltip(text("settingsDiagnosticsToggle"))
@@ -244,15 +244,15 @@ func (s *appState) diagnosticsSettingsCard(
 			LineHeight(1.45).TextColor(p.muted)
 		if s.preferencesWarning != "" {
 			ui.Text(c, preferencesWarningLabel(s.preferencesWarning)).FontSize(fontCaption).
-				LineHeight(1.4).TextColor(p.danger)
+				LineHeight(1.4).TextColor(p.dangerText)
 		}
 		if s.savedWorkspaceMiss {
 			ui.Text(c, text("legacyWorkspaceMissing")).FontSize(fontCaption).
-				LineHeight(1.4).TextColor(p.warning)
+				LineHeight(1.4).TextColor(p.warningText)
 		}
 		if s.legacyScan.ScanWarning != "" {
 			ui.Text(c, legacyScanWarningLabel(s.legacyScan.ScanWarning)).FontSize(fontCaption).
-				LineHeight(1.4).TextColor(p.warning)
+				LineHeight(1.4).TextColor(p.warningText)
 		}
 		ui.Column(c).Gap(8).Children(func() {
 			settingsValue(c, p, locales.SettingsNativeRuntime(),

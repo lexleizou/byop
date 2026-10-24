@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/egoist/mygo/ui"
 )
 
@@ -22,9 +24,12 @@ func (s *appState) pluginWebViewPage(c *ui.Context, p palette) {
 
 	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
 		s.pluginWebViewHeader(c, p, entry, view)
-		ui.Row(c).FillWidth().Grow(1).Padding(12).Children(func() {
-			ui.WebView(c, snapshot.webView).FillWidth().Grow(1).Radius(9)
-		})
+		ui.Row(c).FillWidth().Grow(1).Padding(16).Background(p.background).
+			Children(func() {
+				ui.WebView(c, snapshot.webView).FillWidth().Grow(1).Radius(
+					runtimeTokens.Dimension.Radius["overlay"].Value,
+				)
+			})
 	})
 }
 
@@ -36,19 +41,23 @@ func (s *appState) pluginWebViewHeader(
 ) {
 	title := fallback(view.Title, view.ID)
 	pluginName := fallback(entry.Name, entry.ID)
-	ui.Row(c).FillWidth().Height(58).Padding(0, 16).
-		BorderWidth(0, 0, 1, 0).BorderColor(p.border).
-		Background(p.surface).AlignItems(ui.Center).Gap(12).Children(func() {
+	sameName := strings.EqualFold(strings.TrimSpace(pluginName), strings.TrimSpace(title))
+	ui.Row(c).FillWidth().MinHeight(64).Padding(12, 16).
+		BorderWidth(0, 0, runtimeTokens.Dimension.Border.Value, 0).
+		BorderColor(p.border).Background(p.surface).AlignItems(ui.Center).
+		Gap(12).Children(func() {
 		ui.Column(c).Grow(1).Gap(2).Children(func() {
-			ui.Text(c, title).FontSize(fontBodyLarge).FontWeight(650).TextColor(p.text)
-			ui.Text(c, pluginName).FontSize(fontBody).TextColor(p.muted)
+			ui.Text(c, title).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
+			if !sameName {
+				ui.Text(c, pluginName).FontSize(fontCaption).TextColor(p.muted)
+			}
 		})
-		statusPill(c, p, text("pluginsWebViewIsolated"), p.success)
-		secondaryAction(c, p, "plugin-webview-reload-"+entry.ID+"-"+view.ID,
+		pluginWebViewStatusPill(c, p, text("pluginsWebViewIsolated"), p.success)
+		pluginSecondaryAction(c, p, "plugin-webview-reload-"+entry.ID+"-"+view.ID,
 			text("pluginsWebViewReload"), func() {
 				s.recreatePluginWebView(entry.ID, view.ID)
 			})
-		secondaryAction(c, p, "plugin-webview-back-"+entry.ID+"-"+view.ID,
+		pluginSecondaryAction(c, p, "plugin-webview-back-"+entry.ID+"-"+view.ID,
 			text("pluginsWebViewBack"), s.leavePluginWebView)
 	})
 }
@@ -65,33 +74,42 @@ func (s *appState) pluginWebViewFallback(
 	}
 	title := fallback(view.Title, view.ID)
 	ui.Scroll(c).Fill().Children(func() {
-		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
-			ui.Column(c).Grow(1).MaxWidth(880).Gap(18).Children(func() {
-				pageHeader(c, p, text("pluginsWebViewSection"), title,
-					textArgs("pluginsWebViewDescription", map[string]any{
-						"plugin": fallback(entry.Name, entry.ID),
-					}))
-				ui.Column(c).FillWidth().Gap(12).Padding(18).Radius(12).
-					Border(1, p.warning).Background(p.surface).Children(func() {
-					ui.Row(c).AlignItems(ui.Center).Gap(9).Children(func() {
-						ui.Icon(c, icon("info")).Size(17, 17).TextColor(p.warning)
+		ui.Row(c).FillWidth().Justify(ui.Center).Padding(24).Children(func() {
+			ui.Column(c).Grow(1).MaxWidth(880).Gap(16).Children(func() {
+				pluginPageHeader(c, p, fallback(entry.Name, entry.ID), title, "")
+				ui.Column(c).FillWidth().Gap(12).Padding(16).Radius(
+					runtimeTokens.Dimension.Radius["overlay"].Value,
+				).Border(runtimeTokens.Dimension.Border.Value, p.warning).
+					Background(p.surface).Children(func() {
+					ui.Row(c).AlignItems(ui.Center).Gap(8).Children(func() {
+						ui.Icon(c, icon("info")).Size(16, 16).TextColor(p.warning)
 						ui.Text(c, text("pluginsWebViewUnavailable")).FontSize(fontBody).
 							FontWeight(650).
-							TextColor(p.warning)
+							TextColor(p.warningText)
 					})
 					ui.Text(c, message).Selectable().FontSize(fontBody).LineHeight(1.5).
 						TextColor(p.text)
 					ui.Row(c).Gap(8).Children(func() {
-						secondaryAction(c, p, "plugin-webview-fallback-reload-"+entry.ID+"-"+view.ID,
+						pluginSecondaryAction(c, p, "plugin-webview-fallback-reload-"+entry.ID+"-"+view.ID,
 							text("pluginsWebViewReload"), func() {
 								s.recreatePluginWebView(entry.ID, view.ID)
 							})
-						secondaryAction(c, p, "plugin-webview-fallback-back-"+entry.ID+"-"+view.ID,
+						pluginSecondaryAction(c, p, "plugin-webview-fallback-back-"+entry.ID+"-"+view.ID,
 							text("pluginsWebViewBack"), s.leavePluginWebView)
 					})
 				})
 			})
 		})
+	})
+}
+
+func pluginWebViewStatusPill(c *ui.Context, p palette, label string, tone ui.Color) {
+	ui.Row(c).Padding(4, 8).Radius(
+		runtimeTokens.Dimension.Radius["chip"].Value,
+	).Border(runtimeTokens.Dimension.Border.Value, p.border).
+		Background(p.background).Gap(6).AlignItems(ui.Center).Children(func() {
+		ui.Box(c).Size(6, 6).Radius(3).Background(tone)
+		ui.Text(c, label).FontSize(fontCaption).FontWeight(650).TextColor(p.muted)
 	})
 }
 

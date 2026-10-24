@@ -10,9 +10,9 @@
   <body>
     <main>
       <header>
-        <p class="eyebrow" data-i18n="eyebrow">LANGUAGE PACK CONTRACT FIXTURE</p>
+        <p class="eyebrow" data-i18n="eyebrow">THEME AND LOCALE FIXTURE</p>
         <h1 data-i18n="heading">Isolated WebView</h1>
-        <p class="lede"><span data-i18n="lede">This page is served by byop-plugin:// and reaches BYOP only through the identity-checked bridge.</span></p>
+        <p class="lede" data-i18n="lede">Reads host theme and locale through the isolated bridge.</p>
       </header>
 
       <section class="card">
@@ -20,11 +20,12 @@
           <h2 data-i18n="themeTitle">Theme bridge</h2>
           <span id="theme-mode" class="badge" data-i18n="loading">loading</span>
         </div>
+        <p id="theme-status" class="theme-status" data-i18n="themeStatus">Host colors active</p>
         <div class="swatches">
-          <span class="swatch surface">surface</span>
-          <span class="swatch text">text</span>
-          <span class="swatch accent">accent</span>
-          <span class="swatch success">success</span>
+          <span class="swatch surface" data-i18n="surface">surface</span>
+          <span class="swatch text" data-i18n="text">text</span>
+          <span class="swatch accent" data-i18n="accent">accent</span>
+          <span class="swatch success" data-i18n="success">success</span>
         </div>
         <button id="get-theme" type="button" data-i18n="getTheme">Get theme</button>
       </section>
@@ -34,13 +35,13 @@
           <h2 data-i18n="localeTitle">Locale bridge</h2>
           <span id="locale-mode" class="badge">en</span>
         </div>
-        <p data-i18n="localeDetail">The manifest and this page receive language changes from the host.</p>
+        <p data-i18n="localeDetail">The page follows host language changes.</p>
         <button id="get-locale" type="button" data-i18n="getLocale">Get locale</button>
       </section>
 
       <section class="card">
         <h2 data-i18n="hostCallsTitle">Host and plugin calls</h2>
-        <p data-i18n="hostCallsDetail">File access is intentionally undeclared, so a read request must be denied by the host.</p>
+        <p data-i18n="hostCallsDetail">Undeclared file access must be denied.</p>
         <div class="actions">
           <button id="show-notice" type="button" data-i18n="showNotice">Show notice</button>
           <button id="ping-plugin" type="button" data-i18n="pingPlugin">Ping plugin</button>
@@ -50,11 +51,11 @@
 
       <section class="card">
         <h2 data-i18n="navigationTitle">Navigation lock</h2>
-        <p data-i18n="navigationDetail">The host prevents top-level navigation away from this plugin origin.</p>
+        <p data-i18n="navigationDetail">Top-level navigation stays on this plugin origin.</p>
         <a href="https://example.com" target="_self" data-i18n="externalLink">Try an external link</a>
       </section>
 
-      <pre id="output" aria-live="polite" data-i18n="ready">Ready.</pre>
+      <pre id="output" aria-live="polite" data-state="ready" data-i18n="ready">Ready.</pre>
     </main>
   </body>
 </html>

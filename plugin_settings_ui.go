@@ -94,11 +94,13 @@ func (s *appState) pluginSettingsSection(c *ui.Context, p palette) {
 	if hasSettings {
 		return
 	}
-	ui.Column(c).FillWidth().Gap(8).Padding(16).Radius(12).
-		Border(1, p.border).Background(p.surface).Children(func() {
+	ui.Column(c).FillWidth().Gap(8).Padding(16).Radius(
+		runtimeTokens.Dimension.Radius["overlay"].Value,
+	).Border(runtimeTokens.Dimension.Border.Value, p.border).
+		Background(p.surface).Children(func() {
 		ui.Text(c, text("pluginsSettingsEmptyTitle")).FontSize(fontBody).
 			FontWeight(650).TextColor(p.text)
-		ui.Text(c, text("pluginsSettingsEmptyDescription")).FontSize(fontSmall).
+		ui.Text(c, text("pluginsSettingsEmptyDescription")).FontSize(fontCaption).
 			TextColor(p.muted)
 	})
 }
@@ -116,12 +118,12 @@ func (s *appState) pluginSettingCard(
 		return
 	}
 	description := fallback(contribution.Description, text("pluginsSettingsDefaultDescription"))
-	settingsCard(c, p, contribution.Title, description, func() {
+	pluginSettingsCard(c, p, contribution.Title, description, func() {
 		ui.Text(c, fallback(entry.Name, entry.ID)).FontSize(fontCaption).
-			FontWeight(650).TextColor(p.accent)
+			FontWeight(650).TextColor(p.accentText)
 		if form.warning != "" {
 			ui.Text(c, form.warning).FontSize(fontCaption).LineHeight(1.4).
-				TextColor(p.warning)
+				TextColor(p.warningText)
 		}
 		if len(contribution.Fields) == 0 {
 			ui.Text(c, text("pluginsSettingsNoFields")).
@@ -130,12 +132,12 @@ func (s *appState) pluginSettingCard(
 		for _, field := range contribution.Fields {
 			s.pluginSettingField(c, p, entry, entryKey, form, field)
 		}
-		ui.Row(c).AlignItems(ui.Center).Gap(8).Children(func() {
+		ui.Column(c).FillWidth().Gap(8).Children(func() {
 			label := text("pluginsSettingsSave")
 			if form.saving {
 				label = text("pluginsSettingsSaving")
 			}
-			secondaryAction(c, p,
+			pluginSecondaryAction(c, p,
 				"plugin-settings-save-"+entryKey+"-"+contribution.ID,
 				label,
 				func() {
@@ -145,11 +147,12 @@ func (s *appState) pluginSettingCard(
 				},
 			)
 			if form.status != "" {
-				color := p.success
+				color := p.successText
 				if form.statusError {
-					color = p.danger
+					color = p.dangerText
 				}
-				ui.Text(c, form.status).FontSize(fontCaption).TextColor(color)
+				ui.Text(c, form.status).FontSize(fontCaption).LineHeight(1.4).
+					TextColor(color)
 			}
 		})
 	})
@@ -163,16 +166,18 @@ func (s *appState) pluginSettingField(
 	form *pluginSettingForm,
 	field pluginSettingField,
 ) {
-	ui.Column(c).FillWidth().Gap(5).Children(func() {
-		ui.Text(c, field.Label).FontSize(fontSmall).FontWeight(600).TextColor(p.text)
+	ui.Column(c).FillWidth().Gap(4).Children(func() {
+		ui.Text(c, field.Label).FontSize(fontCaption).FontWeight(600).TextColor(p.text)
 		if field.Description != "" {
 			ui.Text(c, field.Description).FontSize(fontCaption).TextColor(p.muted)
 		}
 		switch field.Type {
 		case "string", "number":
 			input := form.inputs[field.Key]
-			ui.Row(c).Height(36).Padding(0, 10).Radius(8).Border(1, p.border).
-				Background(p.background).AlignItems(ui.Center).Children(func() {
+			ui.Row(c).Height(36).Padding(0, 10).Radius(
+				runtimeTokens.Dimension.Radius["input"].Value,
+			).Border(runtimeTokens.Dimension.Border.Value, p.border).
+				Background(p.surface).AlignItems(ui.Center).Children(func() {
 				ui.TextInputBase(c.Key("plugin-setting-"+entryKey+"-"+field.Key), input).
 					Grow(1).Placeholder(field.Placeholder).FontSize(fontBody).
 					TextColor(p.text).Background(ui.Color{}).Border(0, ui.Color{}).
@@ -181,13 +186,15 @@ func (s *appState) pluginSettingField(
 			if field.Type == "number" && input != nil && strings.TrimSpace(*input) != "" {
 				if _, err := parsePluginSettingNumber(*input); err != nil {
 					ui.Text(c, text("pluginsSettingsInvalidNumber")).FontSize(fontCaption).
-						TextColor(p.danger)
+						TextColor(p.dangerText)
 				}
 			}
 		case "boolean":
-			ui.Row(c).FillWidth().Padding(8, 10).Radius(7).Background(p.background).
-				AlignItems(ui.Center).Children(func() {
-				ui.Text(c, field.Label).FontSize(fontCaption).TextColor(p.muted).Grow(1)
+			ui.Row(c).FillWidth().Padding(8, 10).Radius(
+				runtimeTokens.Dimension.Radius["input"].Value,
+			).Border(runtimeTokens.Dimension.Border.Value, p.border).
+				Background(p.surface).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, field.Label).FontSize(fontBody).TextColor(p.text).Grow(1)
 				if input := form.booleans[field.Key]; input != nil {
 					ui.Switch(c, input).Label(field.Label)
 				}
@@ -197,7 +204,7 @@ func (s *appState) pluginSettingField(
 				for _, option := range field.Options {
 					option := option
 					selected := form.selections[field.Key] == option
-					textButton(c, p, "plugin-setting-"+entry.ID+"-"+field.Key+"-"+option,
+					pluginSettingOption(c, p, "plugin-setting-"+entry.ID+"-"+field.Key+"-"+option,
 						pluginLocalizedText(entry.Manifest, option), selected, func() {
 							form.selections[field.Key] = option
 						})
@@ -205,6 +212,57 @@ func (s *appState) pluginSettingField(
 			})
 		}
 	})
+}
+
+func pluginSettingsCard(
+	c *ui.Context,
+	p palette,
+	title,
+	description string,
+	body func(),
+) {
+	ui.Column(c).FillWidth().Gap(12).Padding(16).Radius(
+		runtimeTokens.Dimension.Radius["overlay"].Value,
+	).Border(runtimeTokens.Dimension.Border.Value, p.border).
+		Background(p.surface).Children(func() {
+		ui.Column(c).Gap(4).Children(func() {
+			ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
+			ui.Text(c, description).FontSize(fontCaption).LineHeight(1.4).
+				TextColor(p.muted)
+		})
+		body()
+	})
+}
+
+func pluginSettingOption(
+	c *ui.Context,
+	p palette,
+	key,
+	label string,
+	selected bool,
+	click func(),
+) {
+	background := p.surface
+	textColor := p.text
+	borderColor := p.border
+	if selected {
+		background = p.accent
+		textColor = p.onAccent
+		borderColor = p.accent
+	}
+	btn := ui.ButtonBase(c.Key(key)).Padding(7, 11).Radius(
+		runtimeTokens.Dimension.Radius["input"].Value,
+	).Border(runtimeTokens.Dimension.Border.Value, borderColor).
+		Background(background).Cursor(ui.CursorPointer).Label(label)
+	if !selected && btn.Hovered() {
+		btn.Background(p.surfaceHover)
+	}
+	btn.Children(func() {
+		ui.Text(c, label).FontSize(fontBody).FontWeight(600).TextColor(textColor)
+	})
+	if btn.Clicked() {
+		click()
+	}
 }
 
 func (s *appState) savePluginSettings(

@@ -69,7 +69,12 @@ func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, pa
 		if h.themeHighContrast != nil {
 			high = h.themeHighContrast()
 		}
-		return pluginHandleResult{Value: currentPluginThemePayload(dark, high)}
+		reduceTransparency := false
+		if h.themeReduceTransparency != nil {
+			reduceTransparency = h.themeReduceTransparency()
+		}
+		reduceMotion := h.reducedMotion.Load()
+		return pluginHandleResult{Value: currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion)}
 	case "host.getLocale":
 		if err := requireEmptyPluginParams(params); err != nil {
 			return pluginHostFailure(pluginRPCInvalidParams, err.Error())
@@ -395,14 +400,21 @@ func atomicWritePluginFile(filename string, content []byte) error {
 	return nil
 }
 
-func currentPluginThemePayload(dark, high bool) map[string]any {
+func currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion bool) map[string]any {
 	palette := themePaletteWithContrast(dark, high)
+	statusColors := runtimeTokens.Color.Light
 	mode := "light"
 	if dark {
 		mode = "dark"
+		statusColors = runtimeTokens.Color.Dark
+	}
+	statusText := func(tone string) string {
+		return pluginColorHex(tokenColor(statusColors, tone+"Text"))
 	}
 	return map[string]any{
-		"mode": mode,
+		"mode":               mode,
+		"highContrast":       high,
+		"reduceTransparency": reduceTransparency,
 		"colors": map[string]string{
 			"background":   pluginColorHex(palette.background),
 			"surface":      pluginColorHex(palette.surface),
@@ -411,18 +423,39 @@ func currentPluginThemePayload(dark, high bool) map[string]any {
 			"muted":        pluginColorHex(palette.muted),
 			"border":       pluginColorHex(palette.border),
 			"accent":       pluginColorHex(palette.accent),
+			"onAccent":     pluginColorHex(palette.onAccent),
 			"success":      pluginColorHex(palette.success),
 			"warning":      pluginColorHex(palette.warning),
 			"danger":       pluginColorHex(palette.danger),
+			"successText":  statusText("success"),
+			"warningText":  statusText("warning"),
+			"dangerText":   statusText("danger"),
+			"focus":        pluginColorHex(palette.focus),
 		},
 		"fontSize": map[string]float32{
-			"caption":   fontCaption,
-			"small":     fontSmall,
-			"body":      fontBody,
-			"bodyLarge": fontBodyLarge,
-			"title":     fontTitle,
+			"caption": runtimeTokens.Font.Caption.Value,
+			"body":    runtimeTokens.Font.Body.Value,
+			"title":   runtimeTokens.Font.Title.Value,
+			"code":    runtimeTokens.Font.Code.Value,
+		},
+		"borderWidth": tokenDimensionCSS(runtimeTokens.Dimension.Border),
+		"radius": map[string]float32{
+			"chip":    runtimeTokens.Dimension.Radius["chip"].Value,
+			"input":   runtimeTokens.Dimension.Radius["input"].Value,
+			"overlay": runtimeTokens.Dimension.Radius["overlay"].Value,
+		},
+		"motion": map[string]any{
+			"duration": pluginMotionDuration(reduceMotion),
+			"easing":   runtimeTokens.Motion.Easing,
 		},
 	}
+}
+
+func pluginMotionDuration(systemReduceMotion bool) float32 {
+	if systemReduceMotion {
+		return runtimeTokens.Motion.ReducedDuration.Value
+	}
+	return runtimeTokens.Motion.Duration.Value
 }
 
 func pluginColorHex(color ui.Color) string {

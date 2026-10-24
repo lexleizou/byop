@@ -16,11 +16,14 @@ BYOP（Build You Own Pi）是 MyGo 原生 UI + 外部 Pi CLI 的多插件工作�
 
 ## 产品约束
 
-- 产品名 BYOP，标识使用 Pi 图标；UI token 以 `design-system/onevra/tokens.json` 为准，扩展写在 `design-system/pi-workbench/`。
+- 产品名 BYOP，标识使用 Pi 图标；运行时 UI token 以 BYOP Radix 产品 token `design-system/pi-workbench/tokens.json` 为准，设计根同名文件是权威来源，仓库文件是相同发布副本。`tokens.extensions.json` 只保留兼容、迁移和非冲突的组件几何；Onevra 原始 token 是只读上游参考，不覆盖其数值。
 - 界面文字一律写入 locales/ 语言包（en 为源语言），不得在代码中硬编码用户可见文字；新增文字需同时补齐所有语言包并重新生成 locales/catalog_gen.go。
-- 正文 14px，其他字号按现有 `font*` 常量换算；右侧任务栏默认收起。
+- 字号仅 12/14/18px：正文与代码 14px，标题 18px，最小 12px；可见边框 0.5px；间距 4/8/12/16/24px；输入 8px、浮层 12px 圆角。必要过渡统一 250ms ease-out，减少动态为 0。
+- Liquid Glass 只用于标题、导航和必要浮层；阅读区与 Composer 内容背景不透明。高对比、减少透明度或不支持平台回退到 Radix 实色。
+- 右侧任务栏默认收起。当前简单侧栏只是实施基底，不代表 A/B/C 布局已经由用户选定。
 - Pi 以独立安装的 Pi CLI 运行，BYOP 通过 JSONL RPC 调用，不内置 Pi 内核，不复制凭据。
-- 插件开发暂停：插件平台能力可以继续建设，但在 Lex 明确要求前不开发任何功能插件（包括原设计中的 Library、Document）。`examples/` 只放契约 fixture。
+- 插件开发暂停：插件平台能力可以继续建设，但在 Lex 明确要求前不开发任何功能插件。Library、Document 是冻结候选，不出现在当前页面入口；`examples/` 只放契约 fixture。
+- Automations 只统一已有登记、运行历史和失败暂停/恢复，不新增 Loop 调度器或 `/loop`。新对话默认值仍待决，不新增独立设置页；HUD 显示项开关尚未实施。
 
 ## 交付与检查
 

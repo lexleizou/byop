@@ -105,6 +105,7 @@ func TestP10dPiErrorDetailsOnlyRenderForConnectionErrors(t *testing.T) {
 		t.Helper()
 		state := layoutTestState(t)
 		state.page = pageSettings
+		state.settingsPageState.ActiveCategory = settingsCategoryData
 		setup(state)
 		tester := ui.NewTester(state.view, 1180, 1100)
 		tester.Scroll(590, 550, 0, 620)

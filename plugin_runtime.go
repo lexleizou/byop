@@ -57,14 +57,16 @@ type pluginRuntimeStatus struct {
 // pluginHost owns lazy activation, lifecycle state and command routing for
 // local plugin processes. Each plugin communicates over JSONL JSON-RPC.
 type pluginHost struct {
-	hostVersion       string
-	onChange          func()
-	onNotice          func(pluginID, pluginName, text, tone string)
-	onTaskUpdate      func(update pluginTaskUpdate)
-	onRefreshView     func(pluginID, viewID string)
-	themeDark         func() bool
-	themeHighContrast func() bool
-	locale            func() string
+	hostVersion             string
+	onChange                func()
+	onNotice                func(pluginID, pluginName, text, tone string)
+	onTaskUpdate            func(update pluginTaskUpdate)
+	onRefreshView           func(pluginID, viewID string)
+	themeDark               func() bool
+	themeHighContrast       func() bool
+	themeReduceTransparency func() bool
+	reducedMotion           atomic.Bool
+	locale                  func() string
 
 	workspaceRoot string
 	settings      *pluginSettingsStore
@@ -127,6 +129,12 @@ func pluginHostHighContrast(high func() bool) pluginHostOption {
 	}
 }
 
+func pluginHostReduceTransparency(reduce func() bool) pluginHostOption {
+	return func(host *pluginHost) {
+		host.themeReduceTransparency = reduce
+	}
+}
+
 func pluginHostLocale(locale func() string) pluginHostOption {
 	return func(host *pluginHost) {
 		host.locale = locale
@@ -151,17 +159,18 @@ func newPluginHost(hostVersion string, onChange func(), options ...pluginHostOpt
 		configDir = filepath.Join(os.TempDir(), "byop-config")
 	}
 	host := &pluginHost{
-		hostVersion:       hostVersion,
-		onChange:          onChange,
-		processes:         make(map[string]*pluginProcess),
-		statuses:          make(map[string]pluginRuntimeStatus),
-		starting:          make(map[string]*sync.Mutex),
-		workspaceRoot:     workspace,
-		settings:          newPluginSettingsStore(configDir),
-		settingsByPlugin:  make(map[string]map[string]any),
-		themeDark:         func() bool { return false },
-		themeHighContrast: func() bool { return false },
-		locale:            func() string { return "en" },
+		hostVersion:             hostVersion,
+		onChange:                onChange,
+		processes:               make(map[string]*pluginProcess),
+		statuses:                make(map[string]pluginRuntimeStatus),
+		starting:                make(map[string]*sync.Mutex),
+		workspaceRoot:           workspace,
+		settings:                newPluginSettingsStore(configDir),
+		settingsByPlugin:        make(map[string]map[string]any),
+		themeDark:               func() bool { return false },
+		themeHighContrast:       func() bool { return false },
+		themeReduceTransparency: func() bool { return false },
+		locale:                  func() string { return "en" },
 	}
 	for _, option := range options {
 		if option != nil {
@@ -720,7 +729,7 @@ func (p *pluginProcess) exitSummary() string {
 		message += ": " + p.exitErr.Error()
 	}
 	if tail := strings.TrimSpace(stripANSI(string(p.stderr))); tail != "" {
-		message += " · " + summarizeLine(tail, 240)
+		message += ": " + summarizeLine(tail, 240)
 	}
 	return message
 }

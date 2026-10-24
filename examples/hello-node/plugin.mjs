@@ -46,7 +46,7 @@ async function renderView() {
     items.push({ label: "Tone", value: settings.tone });
   }
   return {
-    title: `${settings.greeting} · Node`,
+    title: `${settings.greeting} Node fixture`,
     blocks: [
       { type: "heading", text: `${settings.greeting} from a Node plugin` },
       {

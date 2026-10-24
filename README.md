@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本完成 P11：模型选择器按渠道聚合容量变体，并显示模型品牌、完整名称与当前 Model ID；输入框提供按内容排布的模型、上下文和思考控件，当前会话会在进程内恢复各模型最后确认的上下文变体与思考档位。HUD 显示分支、Token、费用、缓存命中率、平均输出速度和上下文占用，不再使用中点分隔。原生界面可在跟随系统、English 和简体中文之间即时切换，宿主 UI 与插件清单文字都从语言包读取；会话可按置顶、会话、稍后处理和已归档整理，运行中消息可排队或插话，外观可独立设置对比度、动效和面板动画速度。P9a 的后续消息建议仍保留：每轮 Pi 正常结束后，BYOP 通过独立的一次性 Pi 进程生成一条简短消息，默认以 ghost text 显示，Tab 采纳、Esc 关闭；Settings 可切换为输入框上方的卡片。生成不使用主 JSONL RPC 会话，也不会自动发送。主题、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好继续保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本 0.12.0：P12 完整界面、BYOP Radix 产品 token、分组设置与模型渠道流程已实施，macOS 原生窗口已走查；具体证据和限制见 [P12 验证记录](docs/P12-validation.md)。P11b 的模型与渠道选择、HUD 指标、后续消息建议、中英界面、会话整理、运行中排队/插话和迁移能力继续保留。产品字号只使用 12/14/18 px，正文与代码为 14 px；可见边框为 0.5 px，必要过渡为 250 ms ease-out。Liquid Glass 只用于 chrome、导航和必要浮层，阅读区与 Composer 背景不透明。主题、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -13,14 +13,14 @@
 ## 当前能力
 
 - MyGo 原生窗口与按插件视图懒创建的隔离 WebView；
-- Onevra 语义色、间距、圆角和 14 px 默认正文；Chat 输入框也调整为 14 px；
+- BYOP Radix 产品 token 提供语义色、间距与圆角；字号仅 12/14/18 px，正文和代码 14 px，标题 18 px；可见边框 0.5 px；
 - Chat、Plugins、Automations、Settings 导航；
 - Settings 顶部提供跟随系统、English 与简体中文；切换后原生界面、窗口标题、插件清单显示文字和现有 WebView 立即刷新，无需重启；
 - 宿主界面文字来自 `locales/<tag>.json`，新增语言只需复制源语言文件、翻译、重新生成访问器并构建；
 - Light、Dark、System 三种主题；
 - 对比度可跟随系统、固定标准或增强；增强主题使用单独的高对比度 palette，并同步到插件 WebView；
 - 动效可跟随系统、固定标准或减少；减少动效时状态文字保持静态，不启动持续重绘；
-- 面板动画支持 0 / 150 / 250 / 400 ms，默认 150 ms；导航栏、任务栏、归档分区、队列条和后续建议卡使用同一时长；
+- 必要界面过渡统一为 250 ms ease-out；跟随系统减少动态或固定减少动效时为 0 ms；
 - 默认收起的右侧任务栏；
 - 顶栏将导航栏与任务栏开关合并为单个分组，支持 `⌘B` / `Ctrl+B` 与 `⌘⌥B` / `Ctrl+Alt+B`；
 - 偏好持久化到 `<config>/preferences.json`，环境变量 `BYOP_THEME`、`BYOP_TASKS`、`BYOP_NAV`、`BYOP_WORKSPACE` 优先于文件；
@@ -34,11 +34,11 @@
 - 会话区按 Pinned、Sessions、Later、Archived 分区；支持置顶顺序拖拽、右键整理、归档与恢复，以及 8 秒内撤销；
 - Later 到期后回到 Sessions 并显示 accent 圆点；打开会话后清除 BYOP 侧整理状态，Pi 会话文件始终不变；
 - 连接、创建或切换会话后加载可用模型和 thinking levels；模型 Picker 按渠道分组，同一渠道内的同名模型聚合为容量 family，行内使用 DeepSeek、Claude、Qwen 或中性品牌图标，并始终显示当前变体的 Model ID；
-- composer 模型控件按内容展开，显示完整模型名、渠道与已知容量；同一 family 有至少两个已知容量时提供独立上下文 Picker，思考强度继续使用 Onevra `EffortPicker`；模型、上下文、思考和快速模式按当前会话在进程内保存；
+- composer 模型控件按内容展开，显示完整模型名、渠道与已知容量；同一 family 有至少两个已知容量时提供独立上下文 Picker，思考强度使用 BYOP 的 native 控件；模型、上下文、思考和快速模式按当前会话在进程内保存；
 - 按 `toolCallId` 关联 `tool_execution_start/update/end`；
 - 原生会话时间线按“文字 → 工具 → 文字”的真实顺序保留内容块；
 - `tool_execution_start/update/end` 按 `toolCallId` 原位更新，不改变工具卡位置；
-- Chat 使用 Onevra `FloatingConversation`、`Turn`、`ActivityGroup`、`Activity` 和 `GlassComposer`；
+- Chat 使用 Onevra transcript primitives 渲染时间线，并由 BYOP token wrapper 统一产品视觉；Composer 背景不透明，Glass 只用于 chrome、导航和必要浮层；
 - 正常完成的轮次会以独立、无会话、无工具的 Pi one-shot 进程生成一条后续消息建议；默认显示为 ghost text，也可在 Settings 切换为输入框上方的卡片；
 - 建议只提供 `Tab` / `Use` 采纳和 `Esc` / dismiss 关闭，不会自动发送；采纳后清空输入框会重新显示，发送、新一轮、会话切换和关闭都会取消或移除旧建议；
 - 连续工具合并为可折叠的活动组，运行中显示最新动作，完成后显示“Ran N tools”；
@@ -74,13 +74,13 @@
 - 设置页按插件声明生成 string、number、boolean、select 字段，保存到 `~/.byop/plugin-settings/<pluginId>.json`，目录权限 `0700`、文件权限 `0600`；
 - 主视图使用类型化 block 模型渲染 heading、text、notice、keyValue、list、code 和 button；未知 block 显示为 Unsupported block，未声明命令的按钮禁用；
 - 带 navigation 的 native view 或 WebView 进入侧栏 `PLUGINS` 区域；插件页面支持打开任意主视图，secondary 视图只在卡片中列出；
-- 插件卡片显示 runtime、能力行、执行边界、inactive / starting / active / running / stopped / failed 生命周期状态、命令按钮、最近结果或错误，并提供 Open view 与 Deactivate；
+- 插件卡片以身份、生命周期状态、简短说明和主操作为主；runtime、权限、宿主调用、完整契约和运行结果放在详情中，并提供 Open view 与 Deactivate；
 - 视图在 UI goroutine 外渲染，支持 Refresh、Retry、自动刷新、错误态和重新扫描后的失效回退；
 - 每个 WebView 视图最多复用一个 MyGo `ui.WebView` 实例；通过 `byop-plugin://<pluginId>/<relative-path>` 读取插件根目录内的静态文件，只允许同插件导航，并拒绝 `window.open` 与所有浏览器权限；
 - WebView 响应使用 5 MiB 文件上限、`nosniff`、`no-store` 和严格 CSP；只有 `network: true` 时把 `connect-src` 放宽为 `https:`；
 - WebView bridge 通过 `mygo.CallerPage(ctx)` 反查唯一的插件视图，不信任页面传入的插件 ID；每次调用都重新检查当前 URL、插件注册状态、视图声明以及清单/根目录指纹；
 - `host.*` 与 Node/native 插件共用同一套能力检查；`plugin.postMessage` 限制 64 KiB，并按插件限制并发；
-- WebView 提供 Light/Dark CSS 变量、运行时主题事件和固定 14 px 正文字号；页面可调用 `host.getLocale`，读取 `window.byop.locale`，并用 `window.byop.onLocale` 订阅运行时语言变化；加载或渲染进程失败时显示原生错误卡，可 Reload 或返回 Plugins；
+- WebView 提供 Light/Dark CSS 变量、运行时主题事件和 12/14/18 px 字号，正文与代码为 14 px；主题包含 `onAccent`、`dangerText`、`warningText`、`successText` 和 `focus`，高对比或减少透明度时使用不透明 Radix 实色；页面可调用 `host.getLocale`，读取 `window.byop.locale`，并用 `window.byop.onLocale` 订阅运行时语言变化；加载或渲染进程失败时显示原生错误卡，可 Reload 或返回 Plugins；
 - 重新扫描、停用、进程停止和关闭窗口时销毁相关 WebView；离开页面只隐藏实例；
 - 重新扫描和关闭窗口前会停用全部插件进程；插件意外退出时标记为 failed 并保留 stderr 尾部摘要。
 - 插件可声明 manual、once、scheduledLoop 和 sessionLoop 自动化；自动化命令必须同时是插件已声明的 command，并出现在 `activation.events` 的精确 `onCommand:<command>` 项中；
@@ -90,11 +90,11 @@
 - JSONL 按行解析，坏行产生可见 warning 后跳过；整个 run 文件都无法解析时先转为 `.corrupt-<UTC timestamp>.jsonl`，损坏的 `state.json` 也先转为 `.corrupt-<UTC timestamp>.json`，再写新文件；
 - 连续 5 次失败自动暂停；用户可暂停和恢复，恢复会清除失败计数；sessionLoop 在应用重启后自动暂停并显示 `App restarted`；
 - 插件因重扫、停用或窗口关闭而主动停止时，待处理运行记录为 `aborted/stopped`，不计入连续失败数；
-- P7 没有定时 scheduler、ticker 或运行计时刷新；所有运行都由 Run now 手动触发，`trigger` 固定为 `manual`。
+- P7 没有定时 scheduler、ticker 或运行计时刷新，P12 也不新增 Loop 调度器或解析 `/loop`；所有运行都由 Run now 手动触发，`trigger` 固定为 `manual`。既有登记、运行历史、暂停/恢复和失败自动暂停行为保留。
 
 插件安装与附件仍属于后续阶段。模型、上下文与 Thinking chip 在运行、压缩或会话操作期间切为只读；模型元数据未加载时，模型 chip 仍为只读。Pi 1.4.0 未开放快速模式 RPC，因此不渲染闪电开关。P6a 已提供会话历史与切换。
 
-**Plugin development hold：** P5 后插件平台功能已就绪，但在 Lex 明确要求前不开发功能插件；此前 Library 与 Document 的页面和导航占位已在 P5 移除，其设计不得转为插件。`examples/` 只放契约 fixture。
+**Plugin development hold：** P5 后插件平台功能已就绪，但在 Lex 明确要求前不开发功能插件。Library 与 Document 是冻结候选，不属于当前页面或导航入口；当前入口为 Chat、Plugins、Automations、Settings。`examples/` 只放契约 fixture。
 
 ## 架构
 
@@ -122,6 +122,7 @@ flowchart LR
 | 对象 | 所有者 |
 |---|---|
 | 窗口、导航、主题、任务栏 | BYOP |
+| Settings | BYOP；分类导航、统一搜索与分类控件在页面主体，About 位于底部 |
 | 插件清单、目录扫描、贡献点和冲突状态 | BYOP |
 | 模型、provider、OAuth、凭据 | Pi |
 | 会话 JSONL、扩展、Skills、工具执行 | Pi；BYOP 只读扫描列表，所有会话变更走 RPC |
@@ -277,12 +278,13 @@ BYOP_PI_INTEGRATION=1 go test \
 
 ## 设计系统
 
-仓库内自带两份可复用 token，公开构建不依赖仓库外的本地路径：
+权威设计与 token 位于项目根 `design-system/pi-workbench/`；仓库发布副本如下：
 
-- [Onevra 基础 token](design-system/onevra/tokens.json)
-- [BYOP 扩展 token](design-system/pi-workbench/tokens.extensions.json)
+- [BYOP Radix 产品 token](design-system/pi-workbench/tokens.json)：运行时颜色与基础尺寸的权威发布副本
+- [BYOP 扩展 token](design-system/pi-workbench/tokens.extensions.json)：兼容、迁移和非冲突组件几何
+- [Onevra 原始 token](design-system/onevra/tokens.json)：只读上游参考，不代表当前产品数值
 
-正文 token 为 14 px，完整层级为 10 / 11 / 12 / 14 / 15 / 16 / 18 / 30 / 32 px。颜色、间距、圆角、动效、Loop 和工作台扩展语义均保留在 JSON 中；Go 源码通过 `theme.go` 固定当前原生主题子集。
+根与仓库的 `tokens.json`、`tokens.extensions.json` 必须逐字一致。字号仅 12/14/18 px，正文与代码 14 px；可见边框 0.5 px，输入圆角 8 px，浮层 12 px，chip 6 px。设计版本只保留当前 0.3.0 与上一版 0.2.1；Git、研究、验证历史继续保留。
 
 ## 参考
 

@@ -159,19 +159,20 @@ func (s *appState) pluginViewPage(c *ui.Context, p palette) {
 	model := s.pluginViewModels[pluginViewCacheKey(entry.ID, view.ID)]
 	title := pluginLocalizedText(entry.Manifest, pluginViewTitle(view, model))
 	ui.Scroll(c).Fill().Children(func() {
-		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
-			ui.Column(c).Grow(1).MaxWidth(880).Gap(22).Children(func() {
-				ui.Row(c).FillWidth().AlignItems(ui.End).Gap(16).Children(func() {
+		ui.Row(c).FillWidth().Justify(ui.Center).Padding(24).Children(func() {
+			ui.Column(c).Grow(1).MaxWidth(880).Gap(16).Children(func() {
+				ui.Row(c).FillWidth().AlignItems(ui.Start).Gap(12).Children(func() {
 					ui.Column(c).Grow(1).Children(func() {
-						pageHeader(c, p, strings.ToUpper(entry.Name), title,
-							fallback(entry.Description, text("pluginsViewDefaultDescription")))
+						pluginPageHeader(c, p, strings.ToUpper(entry.Name), title, "")
 					})
-					secondaryAction(c, p, "plugin-view-refresh-"+entry.ID+"-"+view.ID,
+					pluginSecondaryAction(c, p, "plugin-view-back-"+entry.ID+"-"+view.ID,
+						text("pluginsWebViewBack"), s.leavePluginWebView)
+					pluginSecondaryAction(c, p, "plugin-view-refresh-"+entry.ID+"-"+view.ID,
 						text("pluginsViewRefresh"), func() {
 							s.loadPluginViewByID(entry.ID, view.ID)
 						})
 					if s.plugins.status(entry.ID).State == pluginStateActive {
-						secondaryAction(c, p, "plugin-view-stop-"+entry.ID,
+						pluginSecondaryAction(c, p, "plugin-view-stop-"+entry.ID,
 							text("pluginsDeactivate"), func() {
 								s.deactivatePlugin(entry)
 							})
@@ -208,19 +209,23 @@ func (s *appState) pluginViewUnavailable(
 		s.pluginViewError = ""
 	})
 	ui.Scroll(c).Fill().Children(func() {
-		ui.Row(c).FillWidth().Justify(ui.Center).Padding(30, 28, 38, 28).Children(func() {
-			ui.Column(c).Grow(1).MaxWidth(880).Gap(14).Children(func() {
-				pageHeader(c, p, text("pluginsViewUnavailableSection"),
+		ui.Row(c).FillWidth().Justify(ui.Center).Padding(24).Children(func() {
+			ui.Column(c).Grow(1).MaxWidth(880).Gap(16).Children(func() {
+				pluginPageHeader(c, p, text("pluginsViewUnavailableSection"),
 					text("pluginsViewUnavailableTitle"), text("pluginsViewUnavailableDescription"))
+				pluginSecondaryAction(c, p, "plugin-view-unavailable-back",
+					text("pluginsWebViewBack"), s.leavePluginWebView)
 			})
 		})
 	})
 }
 
 func (s *appState) pluginViewLoadingState(c *ui.Context, p palette) {
-	ui.Row(c).FillWidth().Padding(16).Radius(12).Border(1, p.border).
-		Background(p.surface).AlignItems(ui.Center).Gap(9).Children(func() {
-		ui.Icon(c, icon("clock")).Size(15, 15).TextColor(p.accent)
+	ui.Row(c).FillWidth().Padding(16).Radius(
+		runtimeTokens.Dimension.Radius["overlay"].Value,
+	).Border(runtimeTokens.Dimension.Border.Value, p.border).
+		Background(p.surface).AlignItems(ui.Center).Gap(12).Children(func() {
+		ui.Icon(c, icon("clock")).Size(16, 16).TextColor(p.accent)
 		ui.Text(c, text("pluginsViewRendering")).FontSize(fontBody).TextColor(p.muted)
 	})
 }
@@ -231,15 +236,24 @@ func (s *appState) pluginViewErrorState(
 	entry pluginRegistryEntry,
 	view pluginViewContribution,
 ) {
-	ui.Column(c).FillWidth().Gap(10).Padding(16).Radius(12).
-		Border(1, p.border).Background(p.surface).Children(func() {
-		ui.Text(c, text("pluginsViewFailed")).FontSize(fontBody).FontWeight(650).
-			TextColor(p.danger)
+	ui.Column(c).FillWidth().Gap(12).Padding(16).Radius(
+		runtimeTokens.Dimension.Radius["overlay"].Value,
+	).Border(runtimeTokens.Dimension.Border.Value, p.border).
+		Background(p.surface).Children(func() {
+		ui.Row(c).AlignItems(ui.Center).Gap(8).Children(func() {
+			ui.Icon(c, icon("info")).Size(16, 16).TextColor(p.danger)
+			ui.Text(c, text("pluginsViewFailed")).FontSize(fontBody).FontWeight(650).
+				TextColor(p.dangerText)
+		})
 		ui.Text(c, s.pluginViewError).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
-		secondaryAction(c, p, "plugin-view-retry-"+entry.ID+"-"+view.ID,
-			text("pluginsViewRetry"), func() {
-				s.loadPluginViewByID(entry.ID, view.ID)
-			})
+		ui.Row(c).Gap(8).Children(func() {
+			pluginSecondaryAction(c, p, "plugin-view-retry-"+entry.ID+"-"+view.ID,
+				text("pluginsViewRetry"), func() {
+					s.loadPluginViewByID(entry.ID, view.ID)
+				})
+			pluginSecondaryAction(c, p, "plugin-view-error-back-"+entry.ID+"-"+view.ID,
+				text("pluginsWebViewBack"), s.leavePluginWebView)
+		})
 	})
 }
 
@@ -250,10 +264,15 @@ func (s *appState) pluginViewBlocks(
 	blocks []pluginViewBlock,
 ) {
 	if len(blocks) == 0 {
-		ui.Text(c, text("pluginsViewEmpty")).FontSize(fontBody).TextColor(p.muted)
+		ui.Row(c).FillWidth().Padding(16).Radius(
+			runtimeTokens.Dimension.Radius["overlay"].Value,
+		).Border(runtimeTokens.Dimension.Border.Value, p.border).
+			Background(p.surface).Children(func() {
+			ui.Text(c, text("pluginsViewEmpty")).FontSize(fontBody).TextColor(p.muted)
+		})
 		return
 	}
-	ui.Column(c).FillWidth().Gap(14).Children(func() {
+	ui.Column(c).FillWidth().Gap(12).Children(func() {
 		for index, block := range blocks {
 			block.Text = pluginLocalizedText(entry.Manifest, block.Text)
 			switch block.Type {
@@ -264,9 +283,11 @@ func (s *appState) pluginViewBlocks(
 					TextColor(p.text)
 			case "notice":
 				tone := pluginBlockTone(p, block.Tone)
-				ui.Row(c).FillWidth().Gap(9).Padding(12).Radius(9).
-					Border(1, p.border).Background(p.surface).Children(func() {
-					ui.Box(c).Width(3).MinHeight(22).Radius(2).Background(tone)
+				ui.Row(c).FillWidth().AlignItems(ui.Start).Gap(12).Padding(12).Radius(
+					runtimeTokens.Dimension.Radius["input"].Value,
+				).Border(runtimeTokens.Dimension.Border.Value, p.border).
+					Background(p.surface).Children(func() {
+					ui.Icon(c, icon("info")).Size(16, 16).TextColor(tone).Shrink(0)
 					ui.Text(c, block.Text).FontSize(fontBody).LineHeight(1.45).
 						TextColor(p.text).Grow(1)
 				})
@@ -279,12 +300,14 @@ func (s *appState) pluginViewBlocks(
 					}
 				})
 			case "list":
-				ui.Column(c).FillWidth().Gap(7).Children(func() {
+				ui.Column(c).FillWidth().Gap(8).Children(func() {
 					for _, item := range block.Items {
 						item.Title = pluginLocalizedText(entry.Manifest, item.Title)
 						item.Detail = pluginLocalizedText(entry.Manifest, item.Detail)
-						ui.Column(c).FillWidth().Gap(3).Padding(11).Radius(9).
-							Border(1, p.border).Background(p.surface).Children(func() {
+						ui.Column(c).FillWidth().Gap(4).Padding(12).Radius(
+							runtimeTokens.Dimension.Radius["input"].Value,
+						).Border(runtimeTokens.Dimension.Border.Value, p.border).
+							Background(p.surface).Children(func() {
 							if item.Title != "" {
 								ui.Text(c, item.Title).FontSize(fontBody).FontWeight(600).
 									TextColor(p.text)
@@ -297,9 +320,11 @@ func (s *appState) pluginViewBlocks(
 					}
 				})
 			case "code":
-				ui.Column(c).FillWidth().Padding(12).Radius(9).Border(1, p.border).
+				ui.Column(c).FillWidth().Padding(12).Radius(
+					runtimeTokens.Dimension.Radius["input"].Value,
+				).Border(runtimeTokens.Dimension.Border.Value, p.border).
 					Background(p.surface).Children(func() {
-					ui.Text(c, block.Text).Selectable().Font("monospace").FontSize(fontSmall).
+					ui.Text(c, block.Text).Selectable().Font("monospace").FontSize(fontBody).
 						LineHeight(1.45).TextColor(p.text)
 				})
 			case "button":
@@ -323,7 +348,9 @@ func (s *appState) pluginViewButton(
 	label := fallback(pluginLocalizedText(entry.Manifest, block.Label),
 		fallback(block.Command, text("pluginsCommandFallback")))
 	key := fmt.Sprintf("plugin-view-button-%s-%d", entry.ID, index)
-	btn := ui.ButtonBase(c.Key(key)).Padding(6, 10).Radius(7).Border(1, p.border).
+	btn := ui.ButtonBase(c.Key(key)).Padding(7, 11).Radius(
+		runtimeTokens.Dimension.Radius["input"].Value,
+	).Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(p.background).Cursor(ui.CursorPointer).Label(label)
 	if !declared {
 		btn.Disabled(true).Tooltip(text("pluginsUndeclaredCommand"))
@@ -334,8 +361,8 @@ func (s *appState) pluginViewButton(
 		}
 	}
 	btn.Children(func() {
-		ui.Row(c).Gap(5).AlignItems(ui.Center).Children(func() {
-			ui.Icon(c, icon("play")).Size(11, 11).TextColor(p.accent)
+		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+			ui.Icon(c, icon("play")).Size(14, 14).TextColor(p.accent)
 			ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(p.text)
 		})
 	})
@@ -350,6 +377,48 @@ func (s *appState) pluginViewButton(
 		command, _ := pluginCommandByID(entry.Manifest, block.Command)
 		s.runPluginCommandWithArgs(entry, command, args)
 	}
+}
+
+func pluginSecondaryAction(
+	c *ui.Context,
+	p palette,
+	key,
+	label string,
+	click func(),
+) {
+	btn := ui.ButtonBase(c.Key(key)).Padding(7, 11).Radius(
+		runtimeTokens.Dimension.Radius["input"].Value,
+	).Border(runtimeTokens.Dimension.Border.Value, p.border).
+		Background(p.surface).Cursor(ui.CursorPointer).Label(label)
+	if btn.Hovered() {
+		btn.Background(p.surfaceHover)
+	}
+	btn.Children(func() {
+		ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(p.text)
+	})
+	if btn.Clicked() {
+		click()
+	}
+}
+
+func pluginPageHeader(
+	c *ui.Context,
+	p palette,
+	eyebrow,
+	title,
+	description string,
+) {
+	ui.Column(c).FillWidth().Gap(4).Children(func() {
+		if eyebrow != "" {
+			ui.Text(c, eyebrow).FontSize(fontCaption).FontWeight(700).
+				TextColor(p.accentText)
+		}
+		ui.Text(c, title).FontSize(fontTitle).FontWeight(650).TextColor(p.text)
+		if description != "" {
+			ui.Text(c, description).FontSize(fontBody).LineHeight(1.45).
+				TextColor(p.muted).MaxWidth(680)
+		}
+	})
 }
 
 func pluginCommandByID(manifest *pluginManifest, id string) (pluginCommandContribution, bool) {

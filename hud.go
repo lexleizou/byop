@@ -238,7 +238,7 @@ func truncateHUDStatus(value string, limit int) string {
 
 func (s *appState) piHUDLabel() string {
 	if s.piConn != piConnected || s.piConnectionErrorActive() {
-		return textArgs("hudPiStatus", map[string]any{"status": s.connectionStateLabel()})
+		return ""
 	}
 	parts := make([]string, 0, 8)
 	if branch := strings.TrimSpace(s.hud.branch); branch != "" {

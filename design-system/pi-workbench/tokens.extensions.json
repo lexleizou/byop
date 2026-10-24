@@ -4,12 +4,13 @@
     "name": "BYOP Extensions",
     "product": "Build You Own Pi",
     "productAbbreviation": "BYOP",
-    "version": "0.2.5",
-    "updated": "2026-10-23",
+    "version": "0.3.0",
+    "updated": "2026-10-24",
     "base": "../onevra/tokens.json",
     "baseVersion": "1.0.0",
-    "status": "design source; P3.2a native Go consumes a subset and renders Chat through Onevra v0.2026.13 components",
-    "format": "project DTCG-style; not a formal schema conformance claim"
+    "status": "P12 compatibility and migration layer; BYOP Radix product tokens.json is authoritative",
+    "format": "project DTCG-style; not a formal schema conformance claim",
+    "authority": "tokens.json is the product source consumed at runtime. This file preserves non-conflicting extension geometry, Chat details and migration aliases only."
   },
   "workbench": {
     "color": {
@@ -107,22 +108,6 @@
       }
     },
     "dimension": {
-      "shellGap": {
-        "$type": "dimension",
-        "$value": {
-          "value": 8,
-          "unit": "px"
-        },
-        "$description": "Space around the workbench canvas and between the title bar, navigation, main area, and task panel cards."
-      },
-      "shellRadius": {
-        "$type": "dimension",
-        "$value": {
-          "value": 12,
-          "unit": "px"
-        },
-        "$description": "Outer radius for the title bar, navigation, main area, and task panel cards."
-      },
       "navRailWidth": {
         "$type": "dimension",
         "$value": {
@@ -234,24 +219,40 @@
           "unit": "px"
         },
         "$description": "Visible focus outline target; contrast still needs rendered validation."
+      },
+      "shellGap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Space around the workbench canvas and between the title bar, navigation, main area, and task panel cards."
+      },
+      "shellRadius": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Outer radius for the title bar, navigation, main area, and task panel cards."
       }
     },
     "typography": {
       "displaySize": {
         "$type": "dimension",
         "$value": {
-          "value": 32,
+          "value": 18,
           "unit": "px"
         },
-        "$description": "BYOP product override. Chat empty-state display text."
+        "$description": "P12 compatibility mapping: display and page titles use the product 18px title token."
       },
       "pageTitleSize": {
         "$type": "dimension",
         "$value": {
-          "value": 30,
+          "value": 18,
           "unit": "px"
         },
-        "$description": "BYOP product override. Workspace and document page titles; deliberate increase from the Onevra ece5cd9 source value of 18."
+        "$description": "P12 compatibility mapping: all page titles use the product 18px title token."
       },
       "pageTitleWeight": {
         "$type": "fontWeight",
@@ -264,23 +265,23 @@
           "value": 18,
           "unit": "px"
         },
-        "$description": "BYOP product override. Dialog and compact section titles."
+        "$description": "P12 title token."
       },
       "uiLargeSize": {
         "$type": "dimension",
         "$value": {
-          "value": 16,
+          "value": 14,
           "unit": "px"
         },
-        "$description": "BYOP product override. App bar and page-header titles."
+        "$description": "P12 compatibility mapping: former 16px UI-large text resolves to body 14px."
       },
       "bodyLargeSize": {
         "$type": "dimension",
         "$value": {
-          "value": 15,
+          "value": 14,
           "unit": "px"
         },
-        "$description": "BYOP product override. Emphasized body and panel headings."
+        "$description": "P12 compatibility mapping: former 15px emphasized body resolves to body 14px."
       },
       "bodySize": {
         "$type": "dimension",
@@ -321,18 +322,18 @@
       "microSize": {
         "$type": "dimension",
         "$value": {
-          "value": 10,
+          "value": 12,
           "unit": "px"
         },
-        "$description": "BYOP product override. Reserved for short status pills and keyboard hints, never running prose."
+        "$description": "P12 compatibility mapping: former micro text resolves to the 12px minimum."
       },
       "captionSize": {
         "$type": "dimension",
         "$value": {
-          "value": 11,
+          "value": 12,
           "unit": "px"
         },
-        "$description": "BYOP product override. Metadata and secondary descriptions; integer pixel value for MyGo native rendering."
+        "$description": "P12 compatibility mapping: auxiliary text uses the 12px caption token."
       },
       "labelSize": {
         "$type": "dimension",
@@ -340,7 +341,7 @@
           "value": 12,
           "unit": "px"
         },
-        "$description": "BYOP product override. Small controls, tool metadata, chips, and action labels."
+        "$description": "P12 compact labels and controls use 12px."
       },
       "labelMediumWeight": {
         "$type": "fontWeight",
@@ -358,15 +359,15 @@
           "value": 12,
           "unit": "px"
         },
-        "$description": "BYOP product override. Picker rows share the compact label tier."
+        "$description": "P12 compatibility mapping: picker labels use the 12px caption tier."
       },
       "secondaryLabelSize": {
         "$type": "dimension",
         "$value": {
-          "value": 15,
+          "value": 14,
           "unit": "px"
         },
-        "$description": "BYOP product override. Fold rows and working labels use the emphasized body tier."
+        "$description": "P12 compatibility mapping: fold and working labels use body 14px."
       },
       "noteSize": {
         "$type": "dimension",
@@ -379,15 +380,15 @@
       "monoSize": {
         "$type": "dimension",
         "$value": {
-          "value": 12,
+          "value": 14,
           "unit": "px"
         },
-        "$description": "Onevra ece5cd9 source/components/chat/chat.go:337-348 activity detail monospace."
+        "$description": "P12 code and tool detail use 14px code text."
       },
       "navHeadingScale": {
         "$type": "number",
-        "$value": 0.7857142857,
-        "$description": "BYOP product override. At the 14px body size this resolves to 11px for navigation group headings."
+        "$value": 0.857143,
+        "$description": "P12 compatibility mapping. At the 14px body size this resolves to the 12px minimum for navigation group headings."
       },
       "navHeadingWeight": {
         "$type": "fontWeight",
@@ -398,140 +399,6 @@
         "$type": "dimension",
         "$value": "{workbench.typography.bodySize}",
         "$description": "BYOP product override. Navigation uses the 14px body size on every platform."
-      }
-    },
-    "shadow": {
-      "container": {
-        "$type": "shadow",
-        "$value": {
-          "light": {
-            "color": "#332B2214",
-            "offsetX": {
-              "value": 0,
-              "unit": "px"
-            },
-            "offsetY": {
-              "value": 1,
-              "unit": "px"
-            },
-            "blur": {
-              "value": 3,
-              "unit": "px"
-            },
-            "spread": {
-              "value": 0,
-              "unit": "px"
-            }
-          },
-          "dark": {
-            "color": "#00000038",
-            "offsetX": {
-              "value": 0,
-              "unit": "px"
-            },
-            "offsetY": {
-              "value": 1,
-              "unit": "px"
-            },
-            "blur": {
-              "value": 3,
-              "unit": "px"
-            },
-            "spread": {
-              "value": 0,
-              "unit": "px"
-            }
-          }
-        },
-        "$description": "Outer workbench card shadow; matches palette.shadow in theme.go."
-      },
-      "card": {
-        "$type": "shadow",
-        "$value": {
-          "light": {
-            "color": "#332B2210",
-            "offsetX": {
-              "value": 0,
-              "unit": "px"
-            },
-            "offsetY": {
-              "value": 1,
-              "unit": "px"
-            },
-            "blur": {
-              "value": 2,
-              "unit": "px"
-            },
-            "spread": {
-              "value": 0,
-              "unit": "px"
-            }
-          },
-          "dark": {
-            "color": "#00000048",
-            "offsetX": {
-              "value": 0,
-              "unit": "px"
-            },
-            "offsetY": {
-              "value": 1,
-              "unit": "px"
-            },
-            "blur": {
-              "value": 2,
-              "unit": "px"
-            },
-            "spread": {
-              "value": 0,
-              "unit": "px"
-            }
-          }
-        },
-        "$description": "Content card shadow token; reserved for content cards and plugin cards."
-      },
-      "overlay": {
-        "$type": "shadow",
-        "$value": {
-          "light": {
-            "color": "#332B2220",
-            "offsetX": {
-              "value": 0,
-              "unit": "px"
-            },
-            "offsetY": {
-              "value": 8,
-              "unit": "px"
-            },
-            "blur": {
-              "value": 24,
-              "unit": "px"
-            },
-            "spread": {
-              "value": 0,
-              "unit": "px"
-            }
-          },
-          "dark": {
-            "color": "#00000070",
-            "offsetX": {
-              "value": 0,
-              "unit": "px"
-            },
-            "offsetY": {
-              "value": 8,
-              "unit": "px"
-            },
-            "blur": {
-              "value": 24,
-              "unit": "px"
-            },
-            "spread": {
-              "value": 0,
-              "unit": "px"
-            }
-          }
-        },
-        "$description": "Native overlay shadow token; MyGo menu and popover shadows remain platform-managed."
       }
     },
     "layout": {
@@ -640,18 +507,18 @@
       "hoverDuration": {
         "$type": "duration",
         "$value": {
-          "value": 120,
+          "value": 250,
           "unit": "ms"
         },
-        "$description": "Subtle state transition; not execution delay."
+        "$description": "P12 compatibility mapping: all necessary transitions use the product 250ms ease-out duration."
       },
       "expandDuration": {
         "$type": "duration",
         "$value": {
-          "value": 180,
+          "value": 250,
           "unit": "ms"
         },
-        "$description": "Panel/detail transition; not execution delay."
+        "$description": "P12 compatibility mapping: all necessary transitions use the product 250ms ease-out duration."
       },
       "reducedDuration": {
         "$type": "duration",
@@ -696,18 +563,18 @@
       "switchKnobDuration": {
         "$type": "duration",
         "$value": {
-          "value": 140,
+          "value": 250,
           "unit": "ms"
         },
-        "$description": "Onevra ece5cd9 source/components/chip/chip.go:81 switch chip knob."
+        "$description": "P12 compatibility mapping: switch knobs use the product 250ms ease-out duration."
       },
       "effortTransitionDuration": {
         "$type": "duration",
         "$value": {
-          "value": 900,
+          "value": 250,
           "unit": "ms"
         },
-        "$description": "Onevra ece5cd9 source/components/effort/effort.go:35."
+        "$description": "P12 compatibility mapping: thinking controls use the product 250ms ease-out duration."
       }
     },
     "markdown": {
@@ -733,8 +600,8 @@
       },
       "codeSizeEm": {
         "$type": "number",
-        "$value": 0.875,
-        "$description": "MyGo 4d8673c ui/markdown/theme.go:114; em of Markdown font size."
+        "$value": 1,
+        "$description": "P12 compatibility mapping: inline and block code resolve to the 14px product code token. Onevra 0.875em remains source history only."
       },
       "codeBackgroundAlpha": {
         "$type": "number",
@@ -777,10 +644,10 @@
       "codeBlockRadius": {
         "$type": "dimension",
         "$value": {
-          "value": 10,
+          "value": 8,
           "unit": "px"
         },
-        "$description": "MyGo 4d8673c ui/markdown/theme.go:124 Radius+2 with Onevra radius 8."
+        "$description": "P12 compatibility mapping: code blocks use the 8px input/content radius; Onevra Radius+2 remains source history only."
       },
       "codeBlockPaddingEm": {
         "$type": "number",
@@ -824,8 +691,8 @@
       },
       "h1SizeEm": {
         "$type": "number",
-        "$value": 1.6,
-        "$description": "MyGo 4d8673c ui/markdown/theme.go:137."
+        "$value": 1.285714,
+        "$description": "P12 compatibility mapping: at 14px body size, h1 resolves to the 18px title token. MyGo 1.6em remains source history only."
       },
       "h1Weight": {
         "$type": "fontWeight",
@@ -834,8 +701,8 @@
       },
       "h2SizeEm": {
         "$type": "number",
-        "$value": 1.35,
-        "$description": "MyGo 4d8673c ui/markdown/theme.go:137."
+        "$value": 1.285714,
+        "$description": "P12 compatibility mapping: at 14px body size, h2 resolves to the 18px title token. MyGo 1.35em remains source history only."
       },
       "h2Weight": {
         "$type": "fontWeight",
@@ -844,8 +711,8 @@
       },
       "h3SizeEm": {
         "$type": "number",
-        "$value": 1.15,
-        "$description": "MyGo 4d8673c ui/markdown/theme.go:137."
+        "$value": 1,
+        "$description": "P12 compatibility mapping: h3 resolves to the 14px body token. MyGo 1.15em remains source history only."
       },
       "h3Weight": {
         "$type": "fontWeight",
@@ -864,8 +731,8 @@
       },
       "h5SizeEm": {
         "$type": "number",
-        "$value": 0.95,
-        "$description": "MyGo 4d8673c ui/markdown/theme.go:137."
+        "$value": 0.857143,
+        "$description": "P12 compatibility mapping: h5 resolves to the 12px minimum token. MyGo 0.95em remains source history only."
       },
       "h5Weight": {
         "$type": "fontWeight",
@@ -874,8 +741,8 @@
       },
       "h6SizeEm": {
         "$type": "number",
-        "$value": 0.9,
-        "$description": "MyGo 4d8673c ui/markdown/theme.go:137. h6 uses TextMuted (theme.go:142)."
+        "$value": 0.857143,
+        "$description": "P12 compatibility mapping: h6 resolves to the 12px minimum token and uses TextMuted. MyGo 0.9em remains source history only."
       },
       "h6Weight": {
         "$type": "fontWeight",
@@ -1107,7 +974,7 @@
           "value": 12,
           "unit": "px"
         },
-        "$description": "Onevra ece5cd9 source/chat.go:275 with 1px Border left rule."
+        "$description": "Onevra ece5cd9 source/chat.go:275 geometry with the P12 0.5px Border left rule."
       },
       "activityListPaddingBottom": {
         "$type": "dimension",
@@ -1197,6 +1064,14 @@
         },
         "$description": "Onevra ece5cd9 source/chat.go:476-477."
       },
+      "activityMonoFontSize": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "P12 compatibility mapping: tool and activity details use the 14px code token."
+      },
       "composerInputFontSize": {
         "$type": "dimension",
         "$value": {
@@ -1208,26 +1083,18 @@
       "microLabelFontSize": {
         "$type": "dimension",
         "$value": {
-          "value": 12.5,
+          "value": 12,
           "unit": "px"
         },
-        "$description": "P3.2a keeps Onevra defaults for chips, activity actions and step titles (source/components/chat/chat.go:260,299,625; chip.go:57)."
+        "$description": "P12 compatibility mapping: Chat micro labels use the 12px minimum."
       },
       "turnSummaryFontSize": {
         "$type": "dimension",
         "$value": {
-          "value": 13.5,
+          "value": 14,
           "unit": "px"
         },
-        "$description": "P3.2a keeps Onevra fold and working rows at 13.5 (source/components/chat/chat.go:203,222)."
-      },
-      "activityMonoFontSize": {
-        "$type": "dimension",
-        "$value": {
-          "value": 12,
-          "unit": "px"
-        },
-        "$description": "P3.2a keeps Onevra monospace activity body (source/components/chat/chat.go:348); BYOP limits activity content height to 240px."
+        "$description": "P12 compatibility mapping: fold and working rows use body 14px."
       }
     },
     "tone": {
@@ -1466,10 +1333,10 @@
       "attachmentRadius": {
         "$type": "dimension",
         "$value": {
-          "value": 7,
+          "value": 8,
           "unit": "px"
         },
-        "$description": "Onevra ece5cd9 source/attachment.go:74-75."
+        "$description": "P12 compatibility mapping: attachment chip uses the 8px input/content radius. Onevra 7px remains source history only."
       },
       "attachmentBadgeSize": {
         "$type": "dimension",
@@ -1482,18 +1349,18 @@
       "attachmentBadgeRadius": {
         "$type": "dimension",
         "$value": {
-          "value": 5,
+          "value": 6,
           "unit": "px"
         },
-        "$description": "Onevra ece5cd9 source/attachment.go:40."
+        "$description": "P12 compatibility mapping: attachment badge uses the 6px chip radius. Onevra 5px remains source history only."
       },
       "attachmentRemoveRadius": {
         "$type": "dimension",
         "$value": {
-          "value": 4,
+          "value": 6,
           "unit": "px"
         },
-        "$description": "Onevra ece5cd9 source/attachment.go:95."
+        "$description": "P12 compatibility mapping: attachment remove button uses the 6px chip radius. Onevra 4px remains source history only."
       },
       "sidebarPaddingX": {
         "$type": "dimension",
@@ -1619,32 +1486,6 @@
           "unit": "px"
         },
         "$description": "Onevra ece5cd9 source/shells/sidebar shell_width_test."
-      }
-    },
-    "pluginCard": {
-      "defaultHeight": {
-        "$type": "dimension",
-        "$value": {
-          "value": 236,
-          "unit": "px"
-        },
-        "$description": "Fixed plugin card height. Descriptions and summaries truncate within this height."
-      },
-      "minWidth": {
-        "$type": "dimension",
-        "$value": {
-          "value": 320,
-          "unit": "px"
-        },
-        "$description": "Minimum plugin card width in the multi-column grid."
-      },
-      "maxWidth": {
-        "$type": "dimension",
-        "$value": {
-          "value": 360,
-          "unit": "px"
-        },
-        "$description": "Maximum plugin card width in the multi-column grid; single-column cards may fill the available width."
       }
     },
     "indicator": {
@@ -1782,6 +1623,166 @@
         "$type": "string",
         "$value": "09:00",
         "$description": "sync-074 lib/scheduled-tasks/schedule-presets.ts:18,22-26."
+      }
+    },
+    "pluginCard": {
+      "defaultHeight": {
+        "$type": "dimension",
+        "$value": {
+          "value": 212,
+          "unit": "px"
+        },
+        "$description": "Fixed plugin card height. Descriptions and summaries truncate within this height."
+      },
+      "minWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 320,
+          "unit": "px"
+        },
+        "$description": "Minimum plugin card width in the multi-column grid."
+      },
+      "maxWidth": {
+        "$type": "dimension",
+        "$value": {
+          "value": 360,
+          "unit": "px"
+        },
+        "$description": "Maximum plugin card width in the multi-column grid; single-column cards may fill the available width."
+      }
+    },
+    "shadow": {
+      "card": {
+        "$type": "shadow",
+        "$value": {
+          "light": {
+            "color": "#332B2210",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 1,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 2,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          },
+          "dark": {
+            "color": "#00000048",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 1,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 2,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          }
+        },
+        "$description": "Content card shadow token; reserved for content cards and plugin cards."
+      },
+      "container": {
+        "$type": "shadow",
+        "$value": {
+          "light": {
+            "color": "#332B2214",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 1,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 3,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          },
+          "dark": {
+            "color": "#00000038",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 1,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 3,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          }
+        },
+        "$description": "Outer workbench card shadow; matches palette.shadow in theme.go."
+      },
+      "overlay": {
+        "$type": "shadow",
+        "$value": {
+          "light": {
+            "color": "#332B2220",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 8,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 24,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          },
+          "dark": {
+            "color": "#00000070",
+            "offsetX": {
+              "value": 0,
+              "unit": "px"
+            },
+            "offsetY": {
+              "value": 8,
+              "unit": "px"
+            },
+            "blur": {
+              "value": 24,
+              "unit": "px"
+            },
+            "spread": {
+              "value": 0,
+              "unit": "px"
+            }
+          }
+        },
+        "$description": "Native overlay shadow token; MyGo menu and popover shadows remain platform-managed."
       }
     }
   }

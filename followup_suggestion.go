@@ -331,7 +331,7 @@ func followUpConnectionDisabled() bool {
 func (s *appState) followUpSuggestionCard(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Key("follow-up-suggestion").FillWidth().MinWidth(0).Margin(0, 0, 8, 0).
-		Padding(12, 14).Radius(12).Border(1, t.Border).Background(t.Surface.Alpha(.9)).Gap(8).Children(func() {
+		Padding(12, 14).Radius(12).Border(runtimeTokens.Dimension.Border.Value, t.Border).Background(t.Surface).Gap(8).Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
 			components.Text(c, text("followUpSuggestedNext")).FontSize(fontSmall).FontWeight(600).TextColor(t.TextMuted)
 			ui.Spacer(c)
@@ -341,7 +341,7 @@ func (s *appState) followUpSuggestionCard(c *ui.Context) {
 		})
 		components.Text(c, s.followUpSuggestion).FontSize(fontBody).LineHeight(1.45).TextColor(t.Text)
 		ui.Row(c).Children(func() {
-			use := chat.Chip(c, text("followUpUse"), chat.ChipOptions{Icon: lu.ArrowUpRight})
+			use := chipV12(c, text("followUpUse"), chat.ChipOptions{Icon: lu.ArrowUpRight})
 			if use.Clicked() {
 				s.adoptFollowUpSuggestion(true)
 			}

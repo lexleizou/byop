@@ -101,6 +101,16 @@ func (store *byopPreferencesStore) load() (byopPreferences, string) {
 		store.warning = "Preferences file is damaged; defaults are in use and the original file is preserved."
 		return defaultByopPreferences(), store.warning
 	}
+	var rawFields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &rawFields); err != nil {
+		store.warning = "Preferences file is damaged; defaults are in use and the original file is preserved."
+		return defaultByopPreferences(), store.warning
+	}
+	_, hasMotion := rawFields["motion"]
+	_, hasPanelAnimationMS := rawFields["panelAnimationMs"]
+	if hasMotion && !hasPanelAnimationMS {
+		preferences.Motion = string(motionReduced)
+	}
 	normalizeByopPreferences(&preferences)
 	store.warning = ""
 	return preferences, ""

@@ -27,7 +27,7 @@ const (
 	motionStandard motionMode = "standard"
 	motionReduced  motionMode = "reduced"
 
-	defaultPanelAnimationMS = 150
+	defaultPanelAnimationMS = 250
 )
 
 func normalizeRunningSendMode(value string) runningSendMode {
@@ -80,12 +80,7 @@ func normalizeMotionMode(value string) motionMode {
 }
 
 func normalizePanelAnimationMS(value int) int {
-	switch value {
-	case 0, 150, 250, 400:
-		return value
-	default:
-		return defaultPanelAnimationMS
-	}
+	return defaultPanelAnimationMS
 }
 
 func (s *appState) highContrastActive(systemHighContrast bool) bool {

@@ -142,13 +142,15 @@ func (s *appState) ensurePluginWebView(
 	s.pluginWebViewsMu.RLock()
 	dark := s.pluginWebViewDark
 	high := s.pluginWebViewHighContrast
+	reduceTransparency := s.pluginWebViewReduceTransparency
+	reduceMotion := s.reducedMotionActive(currentAppearanceReduceMotion())
 	s.pluginWebViewsMu.RUnlock()
 	locale := s.locale()
 	webView, err := s.window.NewWebView(mygo.WebViewOptions{
 		URL:             "byop-plugin://" + entry.ID + "/" + view.Entry,
 		BackgroundColor: pluginColorHex(themePaletteWithContrast(dark, high).background),
 		Page: mygo.PageOptions{
-			PreloadScript: pluginWebViewBridgeScript(dark, high, locale),
+			PreloadScript: pluginWebViewBridgeScript(dark, high, reduceTransparency, reduceMotion, locale),
 		},
 	})
 	if err != nil {
@@ -203,8 +205,10 @@ func (s *appState) ensurePluginWebView(
 		s.pluginWebViewsMu.RLock()
 		dark := s.pluginWebViewDark
 		high := s.pluginWebViewHighContrast
+		reduceTransparency := s.pluginWebViewReduceTransparency
+		reduceMotion := s.reducedMotionActive(currentAppearanceReduceMotion())
 		s.pluginWebViewsMu.RUnlock()
-		_ = pluginWebViewThemeEvent.EmitPage(page, currentPluginThemePayload(dark, high))
+		_ = pluginWebViewThemeEvent.EmitPage(page, currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion))
 		_ = pluginWebViewLocaleEvent.EmitPage(page, currentPluginLocalePayload(s.locale()))
 	})
 	page.OnDidFailLoad(func(loadErr *mygo.LoadError) {
@@ -429,21 +433,30 @@ func (s *appState) removePluginWebView(key string, expected *pluginWebViewState)
 	}
 }
 
-func (s *appState) syncPluginWebViewTheme(dark, high bool) {
+func (s *appState) syncPluginWebViewTheme(dark, high, reduceTransparency bool, explicitReduceMotion ...bool) {
+	reduceMotion := s.reducedMotionActive(currentAppearanceReduceMotion())
+	if len(explicitReduceMotion) > 0 {
+		reduceMotion = explicitReduceMotion[0]
+	}
+	if s.plugins != nil {
+		s.plugins.reducedMotion.Store(reduceMotion)
+	}
 	s.pluginWebViewsMu.Lock()
-	if s.pluginWebViewDark == dark && s.pluginWebViewHighContrast == high {
+	if s.pluginWebViewDark == dark && s.pluginWebViewHighContrast == high &&
+		s.pluginWebViewReduceTransparency == reduceTransparency {
 		s.pluginWebViewsMu.Unlock()
 		return
 	}
 	s.pluginWebViewDark = dark
 	s.pluginWebViewHighContrast = high
+	s.pluginWebViewReduceTransparency = reduceTransparency
 	views := make([]*pluginWebViewState, 0, len(s.pluginWebViews))
 	for _, state := range s.pluginWebViews {
 		views = append(views, state)
 	}
 	s.pluginWebViewsMu.Unlock()
 
-	payload := currentPluginThemePayload(dark, high)
+	payload := currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion)
 	background := pluginColorHex(themePaletteWithContrast(dark, high).background)
 	for _, state := range views {
 		if state.webView == nil || state.webView.IsDestroyed() {
@@ -635,8 +648,8 @@ func currentPluginLocalePayload(locale string) map[string]any {
 	return map[string]any{"locale": fallback(strings.TrimSpace(locale), "en")}
 }
 
-func pluginWebViewBridgeScript(dark, high bool, locale string) string {
-	initialTheme, _ := json.Marshal(currentPluginThemePayload(dark, high))
+func pluginWebViewBridgeScript(dark, high, reduceTransparency, reduceMotion bool, locale string) string {
+	initialTheme, _ := json.Marshal(currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion))
 	initialLocale, _ := json.Marshal(currentPluginLocalePayload(locale))
 	return fmt.Sprintf(`(() => {
   "use strict";
@@ -659,16 +672,35 @@ func pluginWebViewBridgeScript(dark, high bool, locale string) string {
       "--byop-text": colors.text,
       "--byop-muted": colors.muted,
       "--byop-border": colors.border,
+      "--byop-border-width": next.borderWidth,
       "--byop-accent": colors.accent,
+      "--byop-on-accent": colors.onAccent,
       "--byop-success": colors.success,
       "--byop-warning": colors.warning,
       "--byop-danger": colors.danger,
-      "--byop-font-body": "14px"
+      "--byop-success-text": colors.successText,
+      "--byop-warning-text": colors.warningText,
+      "--byop-danger-text": colors.dangerText,
+      "--byop-focus": colors.focus,
+      "--byop-font-caption": next.fontSize.caption + "px",
+      "--byop-font-body": next.fontSize.body + "px",
+      "--byop-font-title": next.fontSize.title + "px",
+      "--byop-font-code": next.fontSize.code + "px",
+      "--byop-radius-chip": next.radius.chip + "px",
+      "--byop-radius-input": next.radius.input + "px",
+      "--byop-radius-overlay": next.radius.overlay + "px",
+      "--byop-motion-duration": next.motion.duration + "ms",
+      "--byop-motion-easing": next.motion.easing
     };
     for (const [name, value] of Object.entries(variables)) {
       if (value) root.style.setProperty(name, value);
     }
     root.style.colorScheme = next && next.mode === "dark" ? "dark" : "light";
+    root.dataset.reduceTransparency = next && next.reduceTransparency ? "true" : "false";
+    root.dataset.highContrast = next && next.highContrast ? "true" : "false";
+    if (next && next.reduceTransparency) {
+      root.style.setProperty("--byop-surface", colors.surface);
+    }
     for (const listener of themeListeners) {
       try { listener(theme); } catch (_) {}
     }

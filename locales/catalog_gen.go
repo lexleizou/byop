@@ -1236,7 +1236,7 @@ func (msgs Messages) ErrorToolFallback() string {
 	return Catalog.Format(msgs.locale, "errorToolFallback", nil)
 }
 
-// RunDetailCurrentTool says "{tool} · {status} in {duration}"
+// RunDetailCurrentTool says "{tool}; {status} in {duration}"
 // in the language the app shows.
 //
 // User-interface text for run Detail Current Tool.
@@ -1244,7 +1244,7 @@ func RunDetailCurrentTool(tool string, status string, duration string) string {
 	return In(i18n.Locale()).RunDetailCurrentTool(tool, status, duration)
 }
 
-// RunDetailCurrentTool says "{tool} · {status} in {duration}"
+// RunDetailCurrentTool says "{tool}; {status} in {duration}"
 // in the language of msgs.
 //
 // User-interface text for run Detail Current Tool.
@@ -1532,13 +1532,13 @@ func (msgs Messages) PluginsTitle() string {
 	return Catalog.Format(msgs.locale, "pluginsTitle", nil)
 }
 
-// PluginsDescription says "Discover local plugins, open typed native views, or host isolated HTML in a capability-checked WebView. Native and No…"
+// PluginsDescription says "Manage installed plugins"
 // in the language the app shows.
 //
 // User-interface text for plugins Description.
 func PluginsDescription() string { return In(i18n.Locale()).PluginsDescription() }
 
-// PluginsDescription says "Discover local plugins, open typed native views, or host isolated HTML in a capability-checked WebView. Native and No…"
+// PluginsDescription says "Manage installed plugins"
 // in the language of msgs.
 //
 // User-interface text for plugins Description.
@@ -1588,13 +1588,13 @@ func (msgs Messages) PluginsFolders() string {
 	return Catalog.Format(msgs.locale, "pluginsFolders", nil)
 }
 
-// PluginsRoots says "Plugin roots · {roots}"
+// PluginsRoots says "Plugin roots; {roots}"
 // in the language the app shows.
 //
 // User-interface text for plugins Roots.
 func PluginsRoots(roots string) string { return In(i18n.Locale()).PluginsRoots(roots) }
 
-// PluginsRoots says "Plugin roots · {roots}"
+// PluginsRoots says "Plugin roots; {roots}"
 // in the language of msgs.
 //
 // User-interface text for plugins Roots.
@@ -1602,7 +1602,7 @@ func (msgs Messages) PluginsRoots(roots string) string {
 	return Catalog.Format(msgs.locale, "pluginsRoots", map[string]any{"roots": roots})
 }
 
-// PluginsRegistrySummary says "{registered} REGISTERED · {contributions} CONTRIBUTIONS"
+// PluginsRegistrySummary says "{registered} REGISTERED; {contributions} CONTRIBUTIONS"
 // in the language the app shows.
 //
 // User-interface text for plugins Registry Summary.
@@ -1610,7 +1610,7 @@ func PluginsRegistrySummary(registered string, contributions string) string {
 	return In(i18n.Locale()).PluginsRegistrySummary(registered, contributions)
 }
 
-// PluginsRegistrySummary says "{registered} REGISTERED · {contributions} CONTRIBUTIONS"
+// PluginsRegistrySummary says "{registered} REGISTERED; {contributions} CONTRIBUTIONS"
 // in the language of msgs.
 //
 // User-interface text for plugins Registry Summary.
@@ -1876,13 +1876,13 @@ func (msgs Messages) PluginsContributionCount(count int) string {
 	return Catalog.Format(msgs.locale, "pluginsContributionCount", map[string]any{"count": count})
 }
 
-// PluginsWebViewMeta says "{entry} · Isolated · byop-plugin scheme · CSP"
+// PluginsWebViewMeta says "{entry}; Isolated; byop-plugin scheme; CSP"
 // in the language the app shows.
 //
 // User-interface text for plugins Web View Meta.
 func PluginsWebViewMeta(entry string) string { return In(i18n.Locale()).PluginsWebViewMeta(entry) }
 
-// PluginsWebViewMeta says "{entry} · Isolated · byop-plugin scheme · CSP"
+// PluginsWebViewMeta says "{entry}; Isolated; byop-plugin scheme; CSP"
 // in the language of msgs.
 //
 // User-interface text for plugins Web View Meta.
@@ -2228,7 +2228,7 @@ func (msgs Messages) PluginsCardLabel(name string) string {
 	return Catalog.Format(msgs.locale, "pluginsCardLabel", map[string]any{"name": name})
 }
 
-// PluginsVersionRuntime says "v{version} · {runtime}"
+// PluginsVersionRuntime says "v{version}; {runtime}"
 // in the language the app shows.
 //
 // Compact plugin version and runtime summary for a card.
@@ -2236,7 +2236,7 @@ func PluginsVersionRuntime(version string, runtime string) string {
 	return In(i18n.Locale()).PluginsVersionRuntime(version, runtime)
 }
 
-// PluginsVersionRuntime says "v{version} · {runtime}"
+// PluginsVersionRuntime says "v{version}; {runtime}"
 // in the language of msgs.
 //
 // Compact plugin version and runtime summary for a card.
@@ -2320,7 +2320,7 @@ func (msgs Messages) PluginsDeactivated(name string) string {
 	return Catalog.Format(msgs.locale, "pluginsDeactivated", map[string]any{"name": name})
 }
 
-// PluginsPermissions says "workspace {workspace} · files {files} · network {network} · process {process}"
+// PluginsPermissions says "workspace {workspace}; files {files}; network {network}; process {process}"
 // in the language the app shows.
 //
 // User-interface text for plugins Permissions.
@@ -2328,7 +2328,7 @@ func PluginsPermissions(workspace string, files string, network string, process 
 	return In(i18n.Locale()).PluginsPermissions(workspace, files, network, process)
 }
 
-// PluginsPermissions says "workspace {workspace} · files {files} · network {network} · process {process}"
+// PluginsPermissions says "workspace {workspace}; files {files}; network {network}; process {process}"
 // in the language of msgs.
 //
 // User-interface text for plugins Permissions.
@@ -2392,13 +2392,13 @@ func (msgs Messages) PluginsEnforcementNode() string {
 	return Catalog.Format(msgs.locale, "pluginsEnforcementNode", nil)
 }
 
-// PluginsEnforcementHost says "Host checks only · process unsandboxed"
+// PluginsEnforcementHost says "Host checks only; process unsandboxed"
 // in the language the app shows.
 //
 // User-interface text for plugins Enforcement Host.
 func PluginsEnforcementHost() string { return In(i18n.Locale()).PluginsEnforcementHost() }
 
-// PluginsEnforcementHost says "Host checks only · process unsandboxed"
+// PluginsEnforcementHost says "Host checks only; process unsandboxed"
 // in the language of msgs.
 //
 // User-interface text for plugins Enforcement Host.
@@ -3092,7 +3092,7 @@ func (msgs Messages) PluginsWebViewSection() string {
 	return Catalog.Format(msgs.locale, "pluginsWebViewSection", nil)
 }
 
-// PluginsWebViewDescription says "{plugin} · byop-plugin scheme · strict CSP"
+// PluginsWebViewDescription says "{plugin}; byop-plugin scheme; strict CSP"
 // in the language the app shows.
 //
 // User-interface text for plugins Web View Description.
@@ -3100,7 +3100,7 @@ func PluginsWebViewDescription(plugin string) string {
 	return In(i18n.Locale()).PluginsWebViewDescription(plugin)
 }
 
-// PluginsWebViewDescription says "{plugin} · byop-plugin scheme · strict CSP"
+// PluginsWebViewDescription says "{plugin}; byop-plugin scheme; strict CSP"
 // in the language of msgs.
 //
 // User-interface text for plugins Web View Description.
@@ -3224,13 +3224,13 @@ func (msgs Messages) AutomationsTitle() string {
 	return Catalog.Format(msgs.locale, "automationsTitle", nil)
 }
 
-// AutomationsDescription says "Plugin-registered automations and Loops. Declared rules are validated and displayed; P7 runs them manually."
+// AutomationsDescription says "Manage plugin automations"
 // in the language the app shows.
 //
 // User-interface text for automations Description.
 func AutomationsDescription() string { return In(i18n.Locale()).AutomationsDescription() }
 
-// AutomationsDescription says "Plugin-registered automations and Loops. Declared rules are validated and displayed; P7 runs them manually."
+// AutomationsDescription says "Manage plugin automations"
 // in the language of msgs.
 //
 // User-interface text for automations Description.
@@ -3270,13 +3270,13 @@ func (msgs Messages) AutomationsPausedCount(count string) string {
 	return Catalog.Format(msgs.locale, "automationsPausedCount", map[string]any{"count": count})
 }
 
-// AutomationsManualNote says "Timed triggers arrive in a later phase; runs are manual in P7."
+// AutomationsManualNote says "Only manual runs are currently supported"
 // in the language the app shows.
 //
 // User-interface text for automations Manual Note.
 func AutomationsManualNote() string { return In(i18n.Locale()).AutomationsManualNote() }
 
-// AutomationsManualNote says "Timed triggers arrive in a later phase; runs are manual in P7."
+// AutomationsManualNote says "Only manual runs are currently supported"
 // in the language of msgs.
 //
 // User-interface text for automations Manual Note.
@@ -3370,7 +3370,7 @@ func (msgs Messages) AutomationsFailures(count string, max string) string {
 	return Catalog.Format(msgs.locale, "automationsFailures", map[string]any{"count": count, "max": max})
 }
 
-// AutomationsLastRun says "Last run {time} · {state}"
+// AutomationsLastRun says "Last run {time}; {state}"
 // in the language the app shows.
 //
 // User-interface text for automations Last Run.
@@ -3378,7 +3378,7 @@ func AutomationsLastRun(time_ string, state string) string {
 	return In(i18n.Locale()).AutomationsLastRun(time_, state)
 }
 
-// AutomationsLastRun says "Last run {time} · {state}"
+// AutomationsLastRun says "Last run {time}; {state}"
 // in the language of msgs.
 //
 // User-interface text for automations Last Run.
@@ -3456,7 +3456,7 @@ func (msgs Messages) AutomationsRecentRuns() string {
 	return Catalog.Format(msgs.locale, "automationsRecentRuns", nil)
 }
 
-// AutomationsKindScheduledLoop says "Scheduled loop · {rule}"
+// AutomationsKindScheduledLoop says "Scheduled loop; {rule}"
 // in the language the app shows.
 //
 // User-interface text for automations Kind Scheduled Loop.
@@ -3464,7 +3464,7 @@ func AutomationsKindScheduledLoop(rule string) string {
 	return In(i18n.Locale()).AutomationsKindScheduledLoop(rule)
 }
 
-// AutomationsKindScheduledLoop says "Scheduled loop · {rule}"
+// AutomationsKindScheduledLoop says "Scheduled loop; {rule}"
 // in the language of msgs.
 //
 // User-interface text for automations Kind Scheduled Loop.
@@ -3472,7 +3472,7 @@ func (msgs Messages) AutomationsKindScheduledLoop(rule string) string {
 	return Catalog.Format(msgs.locale, "automationsKindScheduledLoop", map[string]any{"rule": rule})
 }
 
-// AutomationsKindSessionLoop says "Session loop · {rule}"
+// AutomationsKindSessionLoop says "Session loop; {rule}"
 // in the language the app shows.
 //
 // User-interface text for automations Kind Session Loop.
@@ -3480,7 +3480,7 @@ func AutomationsKindSessionLoop(rule string) string {
 	return In(i18n.Locale()).AutomationsKindSessionLoop(rule)
 }
 
-// AutomationsKindSessionLoop says "Session loop · {rule}"
+// AutomationsKindSessionLoop says "Session loop; {rule}"
 // in the language of msgs.
 //
 // User-interface text for automations Kind Session Loop.
@@ -3488,13 +3488,13 @@ func (msgs Messages) AutomationsKindSessionLoop(rule string) string {
 	return Catalog.Format(msgs.locale, "automationsKindSessionLoop", map[string]any{"rule": rule})
 }
 
-// AutomationsKindOnce says "Once · {rule}"
+// AutomationsKindOnce says "Once; {rule}"
 // in the language the app shows.
 //
 // User-interface text for automations Kind Once.
 func AutomationsKindOnce(rule string) string { return In(i18n.Locale()).AutomationsKindOnce(rule) }
 
-// AutomationsKindOnce says "Once · {rule}"
+// AutomationsKindOnce says "Once; {rule}"
 // in the language of msgs.
 //
 // User-interface text for automations Kind Once.
@@ -4248,7 +4248,7 @@ func (msgs Messages) AutomationsFinishSaveFailed(error string) string {
 	return Catalog.Format(msgs.locale, "automationsFinishSaveFailed", map[string]any{"error": error})
 }
 
-// AutomationsCompleted says "{title} · {result}"
+// AutomationsCompleted says "{title}; {result}"
 // in the language the app shows.
 //
 // User-interface text for automations Completed.
@@ -4256,7 +4256,7 @@ func AutomationsCompleted(title string, result string) string {
 	return In(i18n.Locale()).AutomationsCompleted(title, result)
 }
 
-// AutomationsCompleted says "{title} · {result}"
+// AutomationsCompleted says "{title}; {result}"
 // in the language of msgs.
 //
 // User-interface text for automations Completed.
@@ -4602,13 +4602,13 @@ func (msgs Messages) ChatAttachmentNotice() string {
 	return Catalog.Format(msgs.locale, "chatAttachmentNotice", nil)
 }
 
-// ChatFollowUpHint says "Tab to use · Esc to dismiss"
+// ChatFollowUpHint says "Tab to use; Esc to dismiss"
 // in the language the app shows.
 //
 // Keyboard hint for the follow-up suggestion.
 func ChatFollowUpHint() string { return In(i18n.Locale()).ChatFollowUpHint() }
 
-// ChatFollowUpHint says "Tab to use · Esc to dismiss"
+// ChatFollowUpHint says "Tab to use; Esc to dismiss"
 // in the language of msgs.
 //
 // Keyboard hint for the follow-up suggestion.
@@ -4672,13 +4672,13 @@ func (msgs Messages) ChatWorkedFor(duration string) string {
 	return Catalog.Format(msgs.locale, "chatWorkedFor", map[string]any{"duration": duration})
 }
 
-// ChatWorkingFor says "Working · {duration}"
+// ChatWorkingFor says "Working; {duration}"
 // in the language the app shows.
 //
 // Summary of a running assistant turn.
 func ChatWorkingFor(duration string) string { return In(i18n.Locale()).ChatWorkingFor(duration) }
 
-// ChatWorkingFor says "Working · {duration}"
+// ChatWorkingFor says "Working; {duration}"
 // in the language of msgs.
 //
 // Summary of a running assistant turn.
@@ -5378,13 +5378,13 @@ func (msgs Messages) SettingsNativeRuntime() string {
 	return Catalog.Format(msgs.locale, "settingsNativeRuntime", nil)
 }
 
-// SettingsNativeRuntimeValue says "MyGo · fixed baseline"
+// SettingsNativeRuntimeValue says "MyGo; fixed baseline"
 // in the language the app shows.
 //
 // Native runtime value.
 func SettingsNativeRuntimeValue() string { return In(i18n.Locale()).SettingsNativeRuntimeValue() }
 
-// SettingsNativeRuntimeValue says "MyGo · fixed baseline"
+// SettingsNativeRuntimeValue says "MyGo; fixed baseline"
 // in the language of msgs.
 //
 // Native runtime value.
@@ -5476,13 +5476,13 @@ func (msgs Messages) SettingsPluginRuntime() string {
 	return Catalog.Format(msgs.locale, "settingsPluginRuntime", nil)
 }
 
-// SettingsPluginRuntimeValue says "Native + Node · native and WebView surfaces"
+// SettingsPluginRuntimeValue says "Native + Node; native and WebView surfaces"
 // in the language the app shows.
 //
 // Plugin runtime value.
 func SettingsPluginRuntimeValue() string { return In(i18n.Locale()).SettingsPluginRuntimeValue() }
 
-// SettingsPluginRuntimeValue says "Native + Node · native and WebView surfaces"
+// SettingsPluginRuntimeValue says "Native + Node; native and WebView surfaces"
 // in the language of msgs.
 //
 // Plugin runtime value.
@@ -5504,13 +5504,13 @@ func (msgs Messages) SettingsWebViewBoundary() string {
 	return Catalog.Format(msgs.locale, "settingsWebViewBoundary", nil)
 }
 
-// SettingsWebViewBoundaryValue says "byop-plugin · strict CSP · locked navigation"
+// SettingsWebViewBoundaryValue says "byop-plugin; strict CSP; locked navigation"
 // in the language the app shows.
 //
 // WebView security boundary value.
 func SettingsWebViewBoundaryValue() string { return In(i18n.Locale()).SettingsWebViewBoundaryValue() }
 
-// SettingsWebViewBoundaryValue says "byop-plugin · strict CSP · locked navigation"
+// SettingsWebViewBoundaryValue says "byop-plugin; strict CSP; locked navigation"
 // in the language of msgs.
 //
 // WebView security boundary value.
@@ -5518,7 +5518,7 @@ func (msgs Messages) SettingsWebViewBoundaryValue() string {
 	return Catalog.Format(msgs.locale, "settingsWebViewBoundaryValue", nil)
 }
 
-// SettingsPluginRegistryValue says "{registered} registered · {contributions} contributions"
+// SettingsPluginRegistryValue says "{registered} registered; {contributions} contributions"
 // in the language the app shows.
 //
 // Settings plugin registry counts.
@@ -5526,7 +5526,7 @@ func SettingsPluginRegistryValue(registered int, contributions int) string {
 	return In(i18n.Locale()).SettingsPluginRegistryValue(registered, contributions)
 }
 
-// SettingsPluginRegistryValue says "{registered} registered · {contributions} contributions"
+// SettingsPluginRegistryValue says "{registered} registered; {contributions} contributions"
 // in the language of msgs.
 //
 // Settings plugin registry counts.
@@ -5562,7 +5562,7 @@ func (msgs Messages) SettingsAboutDescription() string {
 	return Catalog.Format(msgs.locale, "settingsAboutDescription", nil)
 }
 
-// SettingsAboutVersion says "Version {version} · Build {build}"
+// SettingsAboutVersion says "Version {version}; Build {build}"
 // in the language the app shows.
 //
 // Application version and build shown in the About section.
@@ -5570,7 +5570,7 @@ func SettingsAboutVersion(version string, build string) string {
 	return In(i18n.Locale()).SettingsAboutVersion(version, build)
 }
 
-// SettingsAboutVersion says "Version {version} · Build {build}"
+// SettingsAboutVersion says "Version {version}; Build {build}"
 // in the language of msgs.
 //
 // Application version and build shown in the About section.
@@ -5832,6 +5832,20 @@ func (msgs Messages) ModelsNone() string {
 	return Catalog.Format(msgs.locale, "modelsNone", nil)
 }
 
+// ModelsManage says "Manage models"
+// in the language the app shows.
+//
+// Opens the Models and channels settings category from the model picker.
+func ModelsManage() string { return In(i18n.Locale()).ModelsManage() }
+
+// ModelsManage says "Manage models"
+// in the language of msgs.
+//
+// Opens the Models and channels settings category from the model picker.
+func (msgs Messages) ModelsManage() string {
+	return Catalog.Format(msgs.locale, "modelsManage", nil)
+}
+
 // ThinkingOff says "Off"
 // in the language the app shows.
 //
@@ -5930,13 +5944,13 @@ func (msgs Messages) ThinkingTitle() string {
 	return Catalog.Format(msgs.locale, "thinkingTitle", nil)
 }
 
-// ThinkingTooltip says "Thinking · {level}"
+// ThinkingTooltip says "Thinking; {level}"
 // in the language the app shows.
 //
 // Thinking picker tooltip.
 func ThinkingTooltip(level string) string { return In(i18n.Locale()).ThinkingTooltip(level) }
 
-// ThinkingTooltip says "Thinking · {level}"
+// ThinkingTooltip says "Thinking; {level}"
 // in the language of msgs.
 //
 // Thinking picker tooltip.
@@ -6910,7 +6924,7 @@ func (msgs Messages) LegacyImported() string {
 	return Catalog.Format(msgs.locale, "legacyImported", nil)
 }
 
-// CompactionCompletedTokens says "Context compacted · {before} → {after} tokens"
+// CompactionCompletedTokens says "Context compacted; {before} → {after} tokens"
 // in the language the app shows.
 //
 // Compaction result with token count.
@@ -6918,7 +6932,7 @@ func CompactionCompletedTokens(before string, after string) string {
 	return In(i18n.Locale()).CompactionCompletedTokens(before, after)
 }
 
-// CompactionCompletedTokens says "Context compacted · {before} → {after} tokens"
+// CompactionCompletedTokens says "Context compacted; {before} → {after} tokens"
 // in the language of msgs.
 //
 // Compaction result with token count.
@@ -6926,7 +6940,7 @@ func (msgs Messages) CompactionCompletedTokens(before string, after string) stri
 	return Catalog.Format(msgs.locale, "compactionCompletedTokens", map[string]any{"before": before, "after": after})
 }
 
-// DiagnosticCompacting says "Compacting · {reason}"
+// DiagnosticCompacting says "Compacting; {reason}"
 // in the language the app shows.
 //
 // Runtime diagnostic while compacting.
@@ -6934,7 +6948,7 @@ func DiagnosticCompacting(reason string) string {
 	return In(i18n.Locale()).DiagnosticCompacting(reason)
 }
 
-// DiagnosticCompacting says "Compacting · {reason}"
+// DiagnosticCompacting says "Compacting; {reason}"
 // in the language of msgs.
 //
 // Runtime diagnostic while compacting.
@@ -6942,7 +6956,7 @@ func (msgs Messages) DiagnosticCompacting(reason string) string {
 	return Catalog.Format(msgs.locale, "diagnosticCompacting", map[string]any{"reason": reason})
 }
 
-// DiagnosticCompactionError says "Compaction error · {error}"
+// DiagnosticCompactionError says "Compaction error; {error}"
 // in the language the app shows.
 //
 // Runtime compaction error.
@@ -6950,7 +6964,7 @@ func DiagnosticCompactionError(error string) string {
 	return In(i18n.Locale()).DiagnosticCompactionError(error)
 }
 
-// DiagnosticCompactionError says "Compaction error · {error}"
+// DiagnosticCompactionError says "Compaction error; {error}"
 // in the language of msgs.
 //
 // Runtime compaction error.
@@ -6958,7 +6972,7 @@ func (msgs Messages) DiagnosticCompactionError(error string) string {
 	return Catalog.Format(msgs.locale, "diagnosticCompactionError", map[string]any{"error": error})
 }
 
-// DiagnosticExtensionError says "Extension error · {source} · {error}"
+// DiagnosticExtensionError says "Extension error; {source}; {error}"
 // in the language the app shows.
 //
 // Runtime extension error.
@@ -6966,7 +6980,7 @@ func DiagnosticExtensionError(source string, error string) string {
 	return In(i18n.Locale()).DiagnosticExtensionError(source, error)
 }
 
-// DiagnosticExtensionError says "Extension error · {source} · {error}"
+// DiagnosticExtensionError says "Extension error; {source}; {error}"
 // in the language of msgs.
 //
 // Runtime extension error.
@@ -6974,7 +6988,7 @@ func (msgs Messages) DiagnosticExtensionError(source string, error string) strin
 	return Catalog.Format(msgs.locale, "diagnosticExtensionError", map[string]any{"source": source, "error": error})
 }
 
-// DiagnosticQueued says "Queued · {steering} steering · {followUp} follow-up"
+// DiagnosticQueued says "Queued; {steering} steering; {followUp} follow-up"
 // in the language the app shows.
 //
 // Runtime queued messages.
@@ -6982,7 +6996,7 @@ func DiagnosticQueued(steering int, followUp int) string {
 	return In(i18n.Locale()).DiagnosticQueued(steering, followUp)
 }
 
-// DiagnosticQueued says "Queued · {steering} steering · {followUp} follow-up"
+// DiagnosticQueued says "Queued; {steering} steering; {followUp} follow-up"
 // in the language of msgs.
 //
 // Runtime queued messages.
@@ -6990,7 +7004,7 @@ func (msgs Messages) DiagnosticQueued(steering int, followUp int) string {
 	return Catalog.Format(msgs.locale, "diagnosticQueued", map[string]any{"steering": steering, "followUp": followUp})
 }
 
-// DiagnosticRetryFailed says "Retry failed · {error}"
+// DiagnosticRetryFailed says "Retry failed; {error}"
 // in the language the app shows.
 //
 // Runtime retry error.
@@ -6998,7 +7012,7 @@ func DiagnosticRetryFailed(error string) string {
 	return In(i18n.Locale()).DiagnosticRetryFailed(error)
 }
 
-// DiagnosticRetryFailed says "Retry failed · {error}"
+// DiagnosticRetryFailed says "Retry failed; {error}"
 // in the language of msgs.
 //
 // Runtime retry error.
@@ -7006,7 +7020,7 @@ func (msgs Messages) DiagnosticRetryFailed(error string) string {
 	return Catalog.Format(msgs.locale, "diagnosticRetryFailed", map[string]any{"error": error})
 }
 
-// PiSecondaryConnectedModel says "Connected · {model}"
+// PiSecondaryConnectedModel says "Connected; {model}"
 // in the language the app shows.
 //
 // Pi secondary status with model.
@@ -7014,7 +7028,7 @@ func PiSecondaryConnectedModel(model string) string {
 	return In(i18n.Locale()).PiSecondaryConnectedModel(model)
 }
 
-// PiSecondaryConnectedModel says "Connected · {model}"
+// PiSecondaryConnectedModel says "Connected; {model}"
 // in the language of msgs.
 //
 // Pi secondary status with model.
@@ -7022,7 +7036,7 @@ func (msgs Messages) PiSecondaryConnectedModel(model string) string {
 	return Catalog.Format(msgs.locale, "piSecondaryConnectedModel", map[string]any{"model": model})
 }
 
-// RetryStatus says "{label} · {seconds}s"
+// RetryStatus says "{label}; {seconds}s"
 // in the language the app shows.
 //
 // Retry countdown.
@@ -7030,7 +7044,7 @@ func RetryStatus(label string, seconds int) string {
 	return In(i18n.Locale()).RetryStatus(label, seconds)
 }
 
-// RetryStatus says "{label} · {seconds}s"
+// RetryStatus says "{label}; {seconds}s"
 // in the language of msgs.
 //
 // Retry countdown.
@@ -7038,7 +7052,7 @@ func (msgs Messages) RetryStatus(label string, seconds int) string {
 	return Catalog.Format(msgs.locale, "retryStatus", map[string]any{"label": label, "seconds": seconds})
 }
 
-// TasksPluginRegistryDetail says "{registered} registered · {active} active · {contributions} contributions · {issues} issues"
+// TasksPluginRegistryDetail says "{registered} registered; {active} active; {contributions} contributions; {issues} issues"
 // in the language the app shows.
 //
 // Task panel plugin registry detail.
@@ -7046,7 +7060,7 @@ func TasksPluginRegistryDetail(registered int, active int, contributions int, is
 	return In(i18n.Locale()).TasksPluginRegistryDetail(registered, active, contributions, issues)
 }
 
-// TasksPluginRegistryDetail says "{registered} registered · {active} active · {contributions} contributions · {issues} issues"
+// TasksPluginRegistryDetail says "{registered} registered; {active} active; {contributions} contributions; {issues} issues"
 // in the language of msgs.
 //
 // Task panel plugin registry detail.
@@ -7386,7 +7400,7 @@ func (msgs Messages) QueueTitle() string {
 	return Catalog.Format(msgs.locale, "queueTitle", nil)
 }
 
-// RunningSendOppositeTooltip says "{mode} · {shortcut}"
+// RunningSendOppositeTooltip says "{mode}; {shortcut}"
 // in the language the app shows.
 //
 // Tooltip explaining the opposite running-send shortcut.
@@ -7394,7 +7408,7 @@ func RunningSendOppositeTooltip(mode string, shortcut string) string {
 	return In(i18n.Locale()).RunningSendOppositeTooltip(mode, shortcut)
 }
 
-// RunningSendOppositeTooltip says "{mode} · {shortcut}"
+// RunningSendOppositeTooltip says "{mode}; {shortcut}"
 // in the language of msgs.
 //
 // Tooltip explaining the opposite running-send shortcut.
@@ -8252,4 +8266,2020 @@ func HudCacheTokens(read string, write string) string {
 // HUD tooltip detail for cache token counts.
 func (msgs Messages) HudCacheTokens(read string, write string) string {
 	return Catalog.Format(msgs.locale, "hudCacheTokens", map[string]any{"read": read, "write": write})
+}
+
+// SettingsBackToChat says "Back to chat"
+// in the language the app shows.
+//
+// Returns from Settings to the chat workspace.
+func SettingsBackToChat() string { return In(i18n.Locale()).SettingsBackToChat() }
+
+// SettingsBackToChat says "Back to chat"
+// in the language of msgs.
+//
+// Returns from Settings to the chat workspace.
+func (msgs Messages) SettingsBackToChat() string {
+	return Catalog.Format(msgs.locale, "settingsBackToChat", nil)
+}
+
+// SettingsSearchPlaceholder says "Search settings"
+// in the language the app shows.
+//
+// Placeholder and accessible label for settings search.
+func SettingsSearchPlaceholder() string { return In(i18n.Locale()).SettingsSearchPlaceholder() }
+
+// SettingsSearchPlaceholder says "Search settings"
+// in the language of msgs.
+//
+// Placeholder and accessible label for settings search.
+func (msgs Messages) SettingsSearchPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsSearchPlaceholder", nil)
+}
+
+// SettingsSearchResults says "Settings"
+// in the language the app shows.
+//
+// Heading above matching settings categories.
+func SettingsSearchResults() string { return In(i18n.Locale()).SettingsSearchResults() }
+
+// SettingsSearchResults says "Settings"
+// in the language of msgs.
+//
+// Heading above matching settings categories.
+func (msgs Messages) SettingsSearchResults() string {
+	return Catalog.Format(msgs.locale, "settingsSearchResults", nil)
+}
+
+// SettingsSearchNoResults says "No matching settings"
+// in the language the app shows.
+//
+// Empty state when settings search has no matches.
+func SettingsSearchNoResults() string { return In(i18n.Locale()).SettingsSearchNoResults() }
+
+// SettingsSearchNoResults says "No matching settings"
+// in the language of msgs.
+//
+// Empty state when settings search has no matches.
+func (msgs Messages) SettingsSearchNoResults() string {
+	return Catalog.Format(msgs.locale, "settingsSearchNoResults", nil)
+}
+
+// SettingsSearchOpenCategory says "Open {category}"
+// in the language the app shows.
+//
+// Action that opens a matching settings category.
+func SettingsSearchOpenCategory(category string) string {
+	return In(i18n.Locale()).SettingsSearchOpenCategory(category)
+}
+
+// SettingsSearchOpenCategory says "Open {category}"
+// in the language of msgs.
+//
+// Action that opens a matching settings category.
+func (msgs Messages) SettingsSearchOpenCategory(category string) string {
+	return Catalog.Format(msgs.locale, "settingsSearchOpenCategory", map[string]any{"category": category})
+}
+
+// SettingsCategoryGeneral says "General"
+// in the language the app shows.
+//
+// Settings category for language and general behavior.
+func SettingsCategoryGeneral() string { return In(i18n.Locale()).SettingsCategoryGeneral() }
+
+// SettingsCategoryGeneral says "General"
+// in the language of msgs.
+//
+// Settings category for language and general behavior.
+func (msgs Messages) SettingsCategoryGeneral() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryGeneral", nil)
+}
+
+// SettingsCategoryAppearance says "Appearance"
+// in the language the app shows.
+//
+// Settings category for theme, contrast, and motion.
+func SettingsCategoryAppearance() string { return In(i18n.Locale()).SettingsCategoryAppearance() }
+
+// SettingsCategoryAppearance says "Appearance"
+// in the language of msgs.
+//
+// Settings category for theme, contrast, and motion.
+func (msgs Messages) SettingsCategoryAppearance() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryAppearance", nil)
+}
+
+// SettingsCategoryModels says "Models and channels"
+// in the language the app shows.
+//
+// Settings category for Pi model and provider configuration.
+func SettingsCategoryModels() string { return In(i18n.Locale()).SettingsCategoryModels() }
+
+// SettingsCategoryModels says "Models and channels"
+// in the language of msgs.
+//
+// Settings category for Pi model and provider configuration.
+func (msgs Messages) SettingsCategoryModels() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryModels", nil)
+}
+
+// SettingsCategoryConversation says "Conversation"
+// in the language the app shows.
+//
+// Settings category for chat behavior.
+func SettingsCategoryConversation() string { return In(i18n.Locale()).SettingsCategoryConversation() }
+
+// SettingsCategoryConversation says "Conversation"
+// in the language of msgs.
+//
+// Settings category for chat behavior.
+func (msgs Messages) SettingsCategoryConversation() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryConversation", nil)
+}
+
+// SettingsCategoryWorkspace says "Workspace"
+// in the language the app shows.
+//
+// Settings category for the active workspace.
+func SettingsCategoryWorkspace() string { return In(i18n.Locale()).SettingsCategoryWorkspace() }
+
+// SettingsCategoryWorkspace says "Workspace"
+// in the language of msgs.
+//
+// Settings category for the active workspace.
+func (msgs Messages) SettingsCategoryWorkspace() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryWorkspace", nil)
+}
+
+// SettingsCategoryExtensions says "Extensions"
+// in the language the app shows.
+//
+// Settings category for plugin-provided settings.
+func SettingsCategoryExtensions() string { return In(i18n.Locale()).SettingsCategoryExtensions() }
+
+// SettingsCategoryExtensions says "Extensions"
+// in the language of msgs.
+//
+// Settings category for plugin-provided settings.
+func (msgs Messages) SettingsCategoryExtensions() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryExtensions", nil)
+}
+
+// SettingsCategoryData says "Data and diagnostics"
+// in the language the app shows.
+//
+// Settings category for diagnostics and migration data.
+func SettingsCategoryData() string { return In(i18n.Locale()).SettingsCategoryData() }
+
+// SettingsCategoryData says "Data and diagnostics"
+// in the language of msgs.
+//
+// Settings category for diagnostics and migration data.
+func (msgs Messages) SettingsCategoryData() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryData", nil)
+}
+
+// SettingsCategoryAbout says "About"
+// in the language the app shows.
+//
+// Settings category for product and build information.
+func SettingsCategoryAbout() string { return In(i18n.Locale()).SettingsCategoryAbout() }
+
+// SettingsCategoryAbout says "About"
+// in the language of msgs.
+//
+// Settings category for product and build information.
+func (msgs Messages) SettingsCategoryAbout() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryAbout", nil)
+}
+
+// SettingsShortcutsTitle says "Keyboard shortcuts"
+// in the language the app shows.
+//
+// Heading for keyboard shortcut settings.
+func SettingsShortcutsTitle() string { return In(i18n.Locale()).SettingsShortcutsTitle() }
+
+// SettingsShortcutsTitle says "Keyboard shortcuts"
+// in the language of msgs.
+//
+// Heading for keyboard shortcut settings.
+func (msgs Messages) SettingsShortcutsTitle() string {
+	return Catalog.Format(msgs.locale, "settingsShortcutsTitle", nil)
+}
+
+// SettingsShortcutNavigationAction says "Toggle navigation"
+// in the language the app shows.
+//
+// Keyboard shortcut action for toggling navigation.
+func SettingsShortcutNavigationAction() string {
+	return In(i18n.Locale()).SettingsShortcutNavigationAction()
+}
+
+// SettingsShortcutNavigationAction says "Toggle navigation"
+// in the language of msgs.
+//
+// Keyboard shortcut action for toggling navigation.
+func (msgs Messages) SettingsShortcutNavigationAction() string {
+	return Catalog.Format(msgs.locale, "settingsShortcutNavigationAction", nil)
+}
+
+// SettingsShortcutTasksAction says "Toggle task panel"
+// in the language the app shows.
+//
+// Keyboard shortcut action for toggling the task panel.
+func SettingsShortcutTasksAction() string { return In(i18n.Locale()).SettingsShortcutTasksAction() }
+
+// SettingsShortcutTasksAction says "Toggle task panel"
+// in the language of msgs.
+//
+// Keyboard shortcut action for toggling the task panel.
+func (msgs Messages) SettingsShortcutTasksAction() string {
+	return Catalog.Format(msgs.locale, "settingsShortcutTasksAction", nil)
+}
+
+// SettingsFollowUpKeyboardHint says "Press Tab to use a suggestion."
+// in the language the app shows.
+//
+// Keyboard hint for follow-up suggestions.
+func SettingsFollowUpKeyboardHint() string { return In(i18n.Locale()).SettingsFollowUpKeyboardHint() }
+
+// SettingsFollowUpKeyboardHint says "Press Tab to use a suggestion."
+// in the language of msgs.
+//
+// Keyboard hint for follow-up suggestions.
+func (msgs Messages) SettingsFollowUpKeyboardHint() string {
+	return Catalog.Format(msgs.locale, "settingsFollowUpKeyboardHint", nil)
+}
+
+// SettingsWorkspaceTitle says "Workspace"
+// in the language the app shows.
+//
+// Heading for workspace path settings.
+func SettingsWorkspaceTitle() string { return In(i18n.Locale()).SettingsWorkspaceTitle() }
+
+// SettingsWorkspaceTitle says "Workspace"
+// in the language of msgs.
+//
+// Heading for workspace path settings.
+func (msgs Messages) SettingsWorkspaceTitle() string {
+	return Catalog.Format(msgs.locale, "settingsWorkspaceTitle", nil)
+}
+
+// SettingsWorkspacePath says "Path"
+// in the language the app shows.
+//
+// Label for the active workspace path.
+func SettingsWorkspacePath() string { return In(i18n.Locale()).SettingsWorkspacePath() }
+
+// SettingsWorkspacePath says "Path"
+// in the language of msgs.
+//
+// Label for the active workspace path.
+func (msgs Messages) SettingsWorkspacePath() string {
+	return Catalog.Format(msgs.locale, "settingsWorkspacePath", nil)
+}
+
+// SettingsExtensionsTitle says "Extensions"
+// in the language the app shows.
+//
+// Heading for extension settings.
+func SettingsExtensionsTitle() string { return In(i18n.Locale()).SettingsExtensionsTitle() }
+
+// SettingsExtensionsTitle says "Extensions"
+// in the language of msgs.
+//
+// Heading for extension settings.
+func (msgs Messages) SettingsExtensionsTitle() string {
+	return Catalog.Format(msgs.locale, "settingsExtensionsTitle", nil)
+}
+
+// SettingsPiExtensionsReadOnly says "Pi extensions are available as diagnostics only."
+// in the language the app shows.
+//
+// Explains that Pi extension controls are read-only in the current slice.
+func SettingsPiExtensionsReadOnly() string { return In(i18n.Locale()).SettingsPiExtensionsReadOnly() }
+
+// SettingsPiExtensionsReadOnly says "Pi extensions are available as diagnostics only."
+// in the language of msgs.
+//
+// Explains that Pi extension controls are read-only in the current slice.
+func (msgs Messages) SettingsPiExtensionsReadOnly() string {
+	return Catalog.Format(msgs.locale, "settingsPiExtensionsReadOnly", nil)
+}
+
+// SettingsBuild says "Build"
+// in the language the app shows.
+//
+// Label for the application build version.
+func SettingsBuild() string { return In(i18n.Locale()).SettingsBuild() }
+
+// SettingsBuild says "Build"
+// in the language of msgs.
+//
+// Label for the application build version.
+func (msgs Messages) SettingsBuild() string {
+	return Catalog.Format(msgs.locale, "settingsBuild", nil)
+}
+
+// ChannelModelsFileDialog says "Choose Pi models.json"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelsFileDialog() string { return In(i18n.Locale()).ChannelModelsFileDialog() }
+
+// ChannelModelsFileDialog says "Choose Pi models.json"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelsFileDialog() string {
+	return Catalog.Format(msgs.locale, "channelModelsFileDialog", nil)
+}
+
+// ChannelSettingsTitle says "Models and channels"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelSettingsTitle() string { return In(i18n.Locale()).ChannelSettingsTitle() }
+
+// ChannelSettingsTitle says "Models and channels"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelSettingsTitle() string {
+	return Catalog.Format(msgs.locale, "channelSettingsTitle", nil)
+}
+
+// ChannelInventoryTitle says "Configured channels"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelInventoryTitle() string { return In(i18n.Locale()).ChannelInventoryTitle() }
+
+// ChannelInventoryTitle says "Configured channels"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelInventoryTitle() string {
+	return Catalog.Format(msgs.locale, "channelInventoryTitle", nil)
+}
+
+// ChannelRefreshInventory says "Refresh list"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshInventory() string { return In(i18n.Locale()).ChannelRefreshInventory() }
+
+// ChannelRefreshInventory says "Refresh list"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshInventory() string {
+	return Catalog.Format(msgs.locale, "channelRefreshInventory", nil)
+}
+
+// ChannelInventoryReadFailed says "Could not read models.json: {detail}"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelInventoryReadFailed(detail string) string {
+	return In(i18n.Locale()).ChannelInventoryReadFailed(detail)
+}
+
+// ChannelInventoryReadFailed says "Could not read models.json: {detail}"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelInventoryReadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "channelInventoryReadFailed", map[string]any{"detail": detail})
+}
+
+// ChannelInventoryLoading says "Loading channels"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelInventoryLoading() string { return In(i18n.Locale()).ChannelInventoryLoading() }
+
+// ChannelInventoryLoading says "Loading channels"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelInventoryLoading() string {
+	return Catalog.Format(msgs.locale, "channelInventoryLoading", nil)
+}
+
+// ChannelInventoryDiagnostics says "Pi configuration"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelInventoryDiagnostics() string { return In(i18n.Locale()).ChannelInventoryDiagnostics() }
+
+// ChannelInventoryDiagnostics says "Pi configuration"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelInventoryDiagnostics() string {
+	return Catalog.Format(msgs.locale, "channelInventoryDiagnostics", nil)
+}
+
+// ChannelPiDirectory says "Pi agent directory"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPiDirectory() string { return In(i18n.Locale()).ChannelPiDirectory() }
+
+// ChannelPiDirectory says "Pi agent directory"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPiDirectory() string {
+	return Catalog.Format(msgs.locale, "channelPiDirectory", nil)
+}
+
+// ChannelModelsFile says "models.json"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelsFile() string { return In(i18n.Locale()).ChannelModelsFile() }
+
+// ChannelModelsFile says "models.json"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelsFile() string {
+	return Catalog.Format(msgs.locale, "channelModelsFile", nil)
+}
+
+// ChannelInventoryEmptyTitle says "No channels configured"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelInventoryEmptyTitle() string { return In(i18n.Locale()).ChannelInventoryEmptyTitle() }
+
+// ChannelInventoryEmptyTitle says "No channels configured"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelInventoryEmptyTitle() string {
+	return Catalog.Format(msgs.locale, "channelInventoryEmptyTitle", nil)
+}
+
+// ChannelInventoryEmptyDescription says "Add a channel below. Preview changes before applying them."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelInventoryEmptyDescription() string {
+	return In(i18n.Locale()).ChannelInventoryEmptyDescription()
+}
+
+// ChannelInventoryEmptyDescription says "Add a channel below. Preview changes before applying them."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelInventoryEmptyDescription() string {
+	return Catalog.Format(msgs.locale, "channelInventoryEmptyDescription", nil)
+}
+
+// ChannelBaseURL says "Base URL"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelBaseURL() string { return In(i18n.Locale()).ChannelBaseURL() }
+
+// ChannelBaseURL says "Base URL"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelBaseURL() string {
+	return Catalog.Format(msgs.locale, "channelBaseURL", nil)
+}
+
+// ChannelModels says "Models"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModels() string { return In(i18n.Locale()).ChannelModels() }
+
+// ChannelModels says "Models"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModels() string {
+	return Catalog.Format(msgs.locale, "channelModels", nil)
+}
+
+// ChannelModelsCount says "{count} models"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelsCount(count string) string { return In(i18n.Locale()).ChannelModelsCount(count) }
+
+// ChannelModelsCount says "{count} models"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelsCount(count string) string {
+	return Catalog.Format(msgs.locale, "channelModelsCount", map[string]any{"count": count})
+}
+
+// ChannelDetails says "Details"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelDetails() string { return In(i18n.Locale()).ChannelDetails() }
+
+// ChannelDetails says "Details"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelDetails() string {
+	return Catalog.Format(msgs.locale, "channelDetails", nil)
+}
+
+// ChannelModelOverrides says "Model overrides"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelOverrides() string { return In(i18n.Locale()).ChannelModelOverrides() }
+
+// ChannelModelOverrides says "Model overrides"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelOverrides() string {
+	return Catalog.Format(msgs.locale, "channelModelOverrides", nil)
+}
+
+// ChannelAddSourceTitle says "Add a channel"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelAddSourceTitle() string { return In(i18n.Locale()).ChannelAddSourceTitle() }
+
+// ChannelAddSourceTitle says "Add a channel"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelAddSourceTitle() string {
+	return Catalog.Format(msgs.locale, "channelAddSourceTitle", nil)
+}
+
+// ChannelSourcePreset says "Pi preset"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelSourcePreset() string { return In(i18n.Locale()).ChannelSourcePreset() }
+
+// ChannelSourcePreset says "Pi preset"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelSourcePreset() string {
+	return Catalog.Format(msgs.locale, "channelSourcePreset", nil)
+}
+
+// ChannelSourceCustom says "Custom channel"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelSourceCustom() string { return In(i18n.Locale()).ChannelSourceCustom() }
+
+// ChannelSourceCustom says "Custom channel"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelSourceCustom() string {
+	return Catalog.Format(msgs.locale, "channelSourceCustom", nil)
+}
+
+// ChannelSourceModelsFile says "Import models.json"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelSourceModelsFile() string { return In(i18n.Locale()).ChannelSourceModelsFile() }
+
+// ChannelSourceModelsFile says "Import models.json"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelSourceModelsFile() string {
+	return Catalog.Format(msgs.locale, "channelSourceModelsFile", nil)
+}
+
+// ChannelModelsFileDescription says "Select a Pi models.json file, choose a provider, then choose the models to import."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelsFileDescription() string { return In(i18n.Locale()).ChannelModelsFileDescription() }
+
+// ChannelModelsFileDescription says "Select a Pi models.json file, choose a provider, then choose the models to import."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelsFileDescription() string {
+	return Catalog.Format(msgs.locale, "channelModelsFileDescription", nil)
+}
+
+// ChannelChooseModelsFile says "Choose models.json"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelChooseModelsFile() string { return In(i18n.Locale()).ChannelChooseModelsFile() }
+
+// ChannelChooseModelsFile says "Choose models.json"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelChooseModelsFile() string {
+	return Catalog.Format(msgs.locale, "channelChooseModelsFile", nil)
+}
+
+// ChannelModelsFileReadFailed says "Could not read this models.json: {detail}"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelsFileReadFailed(detail string) string {
+	return In(i18n.Locale()).ChannelModelsFileReadFailed(detail)
+}
+
+// ChannelModelsFileReadFailed says "Could not read this models.json: {detail}"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelsFileReadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "channelModelsFileReadFailed", map[string]any{"detail": detail})
+}
+
+// ChannelRetryReadFile says "Read file again"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRetryReadFile() string { return In(i18n.Locale()).ChannelRetryReadFile() }
+
+// ChannelRetryReadFile says "Read file again"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRetryReadFile() string {
+	return Catalog.Format(msgs.locale, "channelRetryReadFile", nil)
+}
+
+// ChannelModelsFileAwaiting says "Choose a models.json file to inspect its providers."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelsFileAwaiting() string { return In(i18n.Locale()).ChannelModelsFileAwaiting() }
+
+// ChannelModelsFileAwaiting says "Choose a models.json file to inspect its providers."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelsFileAwaiting() string {
+	return Catalog.Format(msgs.locale, "channelModelsFileAwaiting", nil)
+}
+
+// ChannelSelectProvider says "Select a provider"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelSelectProvider() string { return In(i18n.Locale()).ChannelSelectProvider() }
+
+// ChannelSelectProvider says "Select a provider"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelSelectProvider() string {
+	return Catalog.Format(msgs.locale, "channelSelectProvider", nil)
+}
+
+// ChannelSelectModels says "Select models"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelSelectModels() string { return In(i18n.Locale()).ChannelSelectModels() }
+
+// ChannelSelectModels says "Select models"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelSelectModels() string {
+	return Catalog.Format(msgs.locale, "channelSelectModels", nil)
+}
+
+// ChannelSelectOverrides says "Select model overrides"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelSelectOverrides() string { return In(i18n.Locale()).ChannelSelectOverrides() }
+
+// ChannelSelectOverrides says "Select model overrides"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelSelectOverrides() string {
+	return Catalog.Format(msgs.locale, "channelSelectOverrides", nil)
+}
+
+// ChannelPreviewImport says "Preview import"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewImport() string { return In(i18n.Locale()).ChannelPreviewImport() }
+
+// ChannelPreviewImport says "Preview import"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewImport() string {
+	return Catalog.Format(msgs.locale, "channelPreviewImport", nil)
+}
+
+// ChannelPresetDescription says "Choose a provider preset. Authentication remains in Pi."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPresetDescription() string { return In(i18n.Locale()).ChannelPresetDescription() }
+
+// ChannelPresetDescription says "Choose a provider preset. Authentication remains in Pi."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPresetDescription() string {
+	return Catalog.Format(msgs.locale, "channelPresetDescription", nil)
+}
+
+// ChannelSelectPresetFirst says "Choose a preset to continue."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelSelectPresetFirst() string { return In(i18n.Locale()).ChannelSelectPresetFirst() }
+
+// ChannelSelectPresetFirst says "Choose a preset to continue."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelSelectPresetFirst() string {
+	return Catalog.Format(msgs.locale, "channelSelectPresetFirst", nil)
+}
+
+// ChannelPiLoginManagedTitle says "Sign-in managed by Pi"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPiLoginManagedTitle() string { return In(i18n.Locale()).ChannelPiLoginManagedTitle() }
+
+// ChannelPiLoginManagedTitle says "Sign-in managed by Pi"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPiLoginManagedTitle() string {
+	return Catalog.Format(msgs.locale, "channelPiLoginManagedTitle", nil)
+}
+
+// ChannelPiLoginManagedDescription says "Pi manages this sign-in. BYOP does not copy OAuth tokens."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPiLoginManagedDescription() string {
+	return In(i18n.Locale()).ChannelPiLoginManagedDescription()
+}
+
+// ChannelPiLoginManagedDescription says "Pi manages this sign-in. BYOP does not copy OAuth tokens."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPiLoginManagedDescription() string {
+	return Catalog.Format(msgs.locale, "channelPiLoginManagedDescription", nil)
+}
+
+// ChannelAdvanced says "Advanced"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelAdvanced() string { return In(i18n.Locale()).ChannelAdvanced() }
+
+// ChannelAdvanced says "Advanced"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelAdvanced() string {
+	return Catalog.Format(msgs.locale, "channelAdvanced", nil)
+}
+
+// ChannelAPIKeyEnvironment says "API key environment reference"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelAPIKeyEnvironment() string { return In(i18n.Locale()).ChannelAPIKeyEnvironment() }
+
+// ChannelAPIKeyEnvironment says "API key environment reference"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelAPIKeyEnvironment() string {
+	return Catalog.Format(msgs.locale, "channelAPIKeyEnvironment", nil)
+}
+
+// ChannelAPIKeyEnvironmentHint says "Use $NAME or ${NAME}. The value stays in Pi; BYOP never stores the secret."
+// in the language the app shows.
+//
+// Pi environment-variable syntax reference. Braces are literal text and are
+// not format placeholders.
+func ChannelAPIKeyEnvironmentHint(NAME string) string {
+	return In(i18n.Locale()).ChannelAPIKeyEnvironmentHint(NAME)
+}
+
+// ChannelAPIKeyEnvironmentHint says "Use $NAME or ${NAME}. The value stays in Pi; BYOP never stores the secret."
+// in the language of msgs.
+//
+// Pi environment-variable syntax reference. Braces are literal text and are
+// not format placeholders.
+func (msgs Messages) ChannelAPIKeyEnvironmentHint(NAME string) string {
+	return Catalog.Format(msgs.locale, "channelAPIKeyEnvironmentHint", map[string]any{"NAME": NAME})
+}
+
+// ChannelPreviewPreset says "Preview preset"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewPreset() string { return In(i18n.Locale()).ChannelPreviewPreset() }
+
+// ChannelPreviewPreset says "Preview preset"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewPreset() string {
+	return Catalog.Format(msgs.locale, "channelPreviewPreset", nil)
+}
+
+// ChannelCustomDescription says "Define a channel using typed fields. Secrets are configured in Pi through environment references."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelCustomDescription() string { return In(i18n.Locale()).ChannelCustomDescription() }
+
+// ChannelCustomDescription says "Define a channel using typed fields. Secrets are configured in Pi through environment references."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelCustomDescription() string {
+	return Catalog.Format(msgs.locale, "channelCustomDescription", nil)
+}
+
+// ChannelProviderID says "Provider ID"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelProviderID() string { return In(i18n.Locale()).ChannelProviderID() }
+
+// ChannelProviderID says "Provider ID"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelProviderID() string {
+	return Catalog.Format(msgs.locale, "channelProviderID", nil)
+}
+
+// ChannelProviderIDHint says "Identifier used in Pi models.json."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelProviderIDHint() string { return In(i18n.Locale()).ChannelProviderIDHint() }
+
+// ChannelProviderIDHint says "Identifier used in Pi models.json."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelProviderIDHint() string {
+	return Catalog.Format(msgs.locale, "channelProviderIDHint", nil)
+}
+
+// ChannelProviderName says "Provider name"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelProviderName() string { return In(i18n.Locale()).ChannelProviderName() }
+
+// ChannelProviderName says "Provider name"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelProviderName() string {
+	return Catalog.Format(msgs.locale, "channelProviderName", nil)
+}
+
+// ChannelProviderNameHint says "Optional display name."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelProviderNameHint() string { return In(i18n.Locale()).ChannelProviderNameHint() }
+
+// ChannelProviderNameHint says "Optional display name."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelProviderNameHint() string {
+	return Catalog.Format(msgs.locale, "channelProviderNameHint", nil)
+}
+
+// ChannelBaseURLHint says "Endpoint for this channel."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelBaseURLHint() string { return In(i18n.Locale()).ChannelBaseURLHint() }
+
+// ChannelBaseURLHint says "Endpoint for this channel."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelBaseURLHint() string {
+	return Catalog.Format(msgs.locale, "channelBaseURLHint", nil)
+}
+
+// ChannelAPI says "API protocol"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelAPI() string { return In(i18n.Locale()).ChannelAPI() }
+
+// ChannelAPI says "API protocol"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelAPI() string {
+	return Catalog.Format(msgs.locale, "channelAPI", nil)
+}
+
+// ChannelAPIHint says "For example, openai-completions. Leave this blank to use the Pi provider default."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelAPIHint() string { return In(i18n.Locale()).ChannelAPIHint() }
+
+// ChannelAPIHint says "For example, openai-completions. Leave this blank to use the Pi provider default."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelAPIHint() string {
+	return Catalog.Format(msgs.locale, "channelAPIHint", nil)
+}
+
+// ChannelUseAuthorizationHeader says "Use an Authorization header"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelUseAuthorizationHeader() string { return In(i18n.Locale()).ChannelUseAuthorizationHeader() }
+
+// ChannelUseAuthorizationHeader says "Use an Authorization header"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelUseAuthorizationHeader() string {
+	return Catalog.Format(msgs.locale, "channelUseAuthorizationHeader", nil)
+}
+
+// ChannelPreviewCustom says "Preview custom channel"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewCustom() string { return In(i18n.Locale()).ChannelPreviewCustom() }
+
+// ChannelPreviewCustom says "Preview custom channel"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewCustom() string {
+	return Catalog.Format(msgs.locale, "channelPreviewCustom", nil)
+}
+
+// ChannelModelEntryTitle says "Model entry"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelEntryTitle() string { return In(i18n.Locale()).ChannelModelEntryTitle() }
+
+// ChannelModelEntryTitle says "Model entry"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelEntryTitle() string {
+	return Catalog.Format(msgs.locale, "channelModelEntryTitle", nil)
+}
+
+// ChannelModelID says "Model ID"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelID() string { return In(i18n.Locale()).ChannelModelID() }
+
+// ChannelModelID says "Model ID"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelID() string {
+	return Catalog.Format(msgs.locale, "channelModelID", nil)
+}
+
+// ChannelModelIDHint says "Model identifier reported by Pi or the provider."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelIDHint() string { return In(i18n.Locale()).ChannelModelIDHint() }
+
+// ChannelModelIDHint says "Model identifier reported by Pi or the provider."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelIDHint() string {
+	return Catalog.Format(msgs.locale, "channelModelIDHint", nil)
+}
+
+// ChannelModelName says "Model name"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelName() string { return In(i18n.Locale()).ChannelModelName() }
+
+// ChannelModelName says "Model name"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelName() string {
+	return Catalog.Format(msgs.locale, "channelModelName", nil)
+}
+
+// ChannelModelNameHint says "Optional display name."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelModelNameHint() string { return In(i18n.Locale()).ChannelModelNameHint() }
+
+// ChannelModelNameHint says "Optional display name."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelModelNameHint() string {
+	return Catalog.Format(msgs.locale, "channelModelNameHint", nil)
+}
+
+// ChannelOverrideEntryTitle says "Model override"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelOverrideEntryTitle() string { return In(i18n.Locale()).ChannelOverrideEntryTitle() }
+
+// ChannelOverrideEntryTitle says "Model override"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelOverrideEntryTitle() string {
+	return Catalog.Format(msgs.locale, "channelOverrideEntryTitle", nil)
+}
+
+// ChannelOverrideID says "Override model ID"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelOverrideID() string { return In(i18n.Locale()).ChannelOverrideID() }
+
+// ChannelOverrideID says "Override model ID"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelOverrideID() string {
+	return Catalog.Format(msgs.locale, "channelOverrideID", nil)
+}
+
+// ChannelOverrideIDHint says "ID of the built-in or existing model to override."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelOverrideIDHint() string { return In(i18n.Locale()).ChannelOverrideIDHint() }
+
+// ChannelOverrideIDHint says "ID of the built-in or existing model to override."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelOverrideIDHint() string {
+	return Catalog.Format(msgs.locale, "channelOverrideIDHint", nil)
+}
+
+// ChannelOverrideName says "Override display name"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelOverrideName() string { return In(i18n.Locale()).ChannelOverrideName() }
+
+// ChannelOverrideName says "Override display name"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelOverrideName() string {
+	return Catalog.Format(msgs.locale, "channelOverrideName", nil)
+}
+
+// ChannelOverrideNameHint says "Optional display name for the override."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelOverrideNameHint() string { return In(i18n.Locale()).ChannelOverrideNameHint() }
+
+// ChannelOverrideNameHint says "Optional display name for the override."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelOverrideNameHint() string {
+	return Catalog.Format(msgs.locale, "channelOverrideNameHint", nil)
+}
+
+// ChannelPreviewErrorTitle says "Preview unavailable"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewErrorTitle() string { return In(i18n.Locale()).ChannelPreviewErrorTitle() }
+
+// ChannelPreviewErrorTitle says "Preview unavailable"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewErrorTitle() string {
+	return Catalog.Format(msgs.locale, "channelPreviewErrorTitle", nil)
+}
+
+// ChannelRepreview says "Preview again"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRepreview() string { return In(i18n.Locale()).ChannelRepreview() }
+
+// ChannelRepreview says "Preview again"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRepreview() string {
+	return Catalog.Format(msgs.locale, "channelRepreview", nil)
+}
+
+// ChannelPreviewTitle says "Preview changes"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewTitle() string { return In(i18n.Locale()).ChannelPreviewTitle() }
+
+// ChannelPreviewTitle says "Preview changes"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewTitle() string {
+	return Catalog.Format(msgs.locale, "channelPreviewTitle", nil)
+}
+
+// ChannelPreserveConflictDescription says "Existing entries and conflicting routes are preserved."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreserveConflictDescription() string {
+	return In(i18n.Locale()).ChannelPreserveConflictDescription()
+}
+
+// ChannelPreserveConflictDescription says "Existing entries and conflicting routes are preserved."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreserveConflictDescription() string {
+	return Catalog.Format(msgs.locale, "channelPreserveConflictDescription", nil)
+}
+
+// ChannelPreviewDiagnostics says "Technical details"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewDiagnostics() string { return In(i18n.Locale()).ChannelPreviewDiagnostics() }
+
+// ChannelPreviewDiagnostics says "Technical details"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewDiagnostics() string {
+	return Catalog.Format(msgs.locale, "channelPreviewDiagnostics", nil)
+}
+
+// ChannelPreviewSource says "Source version"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewSource() string { return In(i18n.Locale()).ChannelPreviewSource() }
+
+// ChannelPreviewSource says "Source version"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewSource() string {
+	return Catalog.Format(msgs.locale, "channelPreviewSource", nil)
+}
+
+// ChannelPreviewDestination says "Destination version"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewDestination() string { return In(i18n.Locale()).ChannelPreviewDestination() }
+
+// ChannelPreviewDestination says "Destination version"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewDestination() string {
+	return Catalog.Format(msgs.locale, "channelPreviewDestination", nil)
+}
+
+// ChannelProviderAction says "Provider {provider}: {action}"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelProviderAction(provider string, action string) string {
+	return In(i18n.Locale()).ChannelProviderAction(provider, action)
+}
+
+// ChannelProviderAction says "Provider {provider}: {action}"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelProviderAction(provider string, action string) string {
+	return Catalog.Format(msgs.locale, "channelProviderAction", map[string]any{"provider": provider, "action": action})
+}
+
+// ChannelConflictPolicyPreserve says "Existing values are preserved"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelConflictPolicyPreserve() string { return In(i18n.Locale()).ChannelConflictPolicyPreserve() }
+
+// ChannelConflictPolicyPreserve says "Existing values are preserved"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelConflictPolicyPreserve() string {
+	return Catalog.Format(msgs.locale, "channelConflictPolicyPreserve", nil)
+}
+
+// ChannelConflictSummary says "Conflicting route preserved at {path}"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelConflictSummary(path string) string {
+	return In(i18n.Locale()).ChannelConflictSummary(path)
+}
+
+// ChannelConflictSummary says "Conflicting route preserved at {path}"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelConflictSummary(path string) string {
+	return Catalog.Format(msgs.locale, "channelConflictSummary", map[string]any{"path": path})
+}
+
+// ChannelPreviewStaleDescription says "The source or Pi configuration changed after preview. Preview again to continue."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewStaleDescription() string {
+	return In(i18n.Locale()).ChannelPreviewStaleDescription()
+}
+
+// ChannelPreviewStaleDescription says "The source or Pi configuration changed after preview. Preview again to continue."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewStaleDescription() string {
+	return Catalog.Format(msgs.locale, "channelPreviewStaleDescription", nil)
+}
+
+// ChannelApplyImport says "Apply selected models"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelApplyImport() string { return In(i18n.Locale()).ChannelApplyImport() }
+
+// ChannelApplyImport says "Apply selected models"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelApplyImport() string {
+	return Catalog.Format(msgs.locale, "channelApplyImport", nil)
+}
+
+// ChannelApplyCustom says "Apply custom channel"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelApplyCustom() string { return In(i18n.Locale()).ChannelApplyCustom() }
+
+// ChannelApplyCustom says "Apply custom channel"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelApplyCustom() string {
+	return Catalog.Format(msgs.locale, "channelApplyCustom", nil)
+}
+
+// ChannelApplyResultTitle says "Apply result"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelApplyResultTitle() string { return In(i18n.Locale()).ChannelApplyResultTitle() }
+
+// ChannelApplyResultTitle says "Apply result"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelApplyResultTitle() string {
+	return Catalog.Format(msgs.locale, "channelApplyResultTitle", nil)
+}
+
+// ChannelApplyNoChanges says "Nothing needed to change."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelApplyNoChanges() string { return In(i18n.Locale()).ChannelApplyNoChanges() }
+
+// ChannelApplyNoChanges says "Nothing needed to change."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelApplyNoChanges() string {
+	return Catalog.Format(msgs.locale, "channelApplyNoChanges", nil)
+}
+
+// ChannelApplySucceeded says "Channel configuration saved."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelApplySucceeded() string { return In(i18n.Locale()).ChannelApplySucceeded() }
+
+// ChannelApplySucceeded says "Channel configuration saved."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelApplySucceeded() string {
+	return Catalog.Format(msgs.locale, "channelApplySucceeded", nil)
+}
+
+// ChannelPendingRefreshDescription says "Saved to Pi. The active session will refresh only after it becomes idle."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPendingRefreshDescription() string {
+	return In(i18n.Locale()).ChannelPendingRefreshDescription()
+}
+
+// ChannelPendingRefreshDescription says "Saved to Pi. The active session will refresh only after it becomes idle."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPendingRefreshDescription() string {
+	return Catalog.Format(msgs.locale, "channelPendingRefreshDescription", nil)
+}
+
+// ChannelAddAnotherSource says "Add another channel"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelAddAnotherSource() string { return In(i18n.Locale()).ChannelAddAnotherSource() }
+
+// ChannelAddAnotherSource says "Add another channel"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelAddAnotherSource() string {
+	return Catalog.Format(msgs.locale, "channelAddAnotherSource", nil)
+}
+
+// ChannelPiRefreshTitle says "Pi session refresh"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPiRefreshTitle() string { return In(i18n.Locale()).ChannelPiRefreshTitle() }
+
+// ChannelPiRefreshTitle says "Pi session refresh"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPiRefreshTitle() string {
+	return Catalog.Format(msgs.locale, "channelPiRefreshTitle", nil)
+}
+
+// ChannelRefreshWaitingIdle says "The current run is still active. Refresh will start when Pi is idle."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshWaitingIdle() string { return In(i18n.Locale()).ChannelRefreshWaitingIdle() }
+
+// ChannelRefreshWaitingIdle says "The current run is still active. Refresh will start when Pi is idle."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshWaitingIdle() string {
+	return Catalog.Format(msgs.locale, "channelRefreshWaitingIdle", nil)
+}
+
+// ChannelRefreshRecoveryPreserved says "The saved state was preserved. Retry when Pi is available."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshRecoveryPreserved() string {
+	return In(i18n.Locale()).ChannelRefreshRecoveryPreserved()
+}
+
+// ChannelRefreshRecoveryPreserved says "The saved state was preserved. Retry when Pi is available."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshRecoveryPreserved() string {
+	return Catalog.Format(msgs.locale, "channelRefreshRecoveryPreserved", nil)
+}
+
+// ChannelRefreshReadbackSucceeded says "Session, model, thinking level, and transcript were read back."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshReadbackSucceeded() string {
+	return In(i18n.Locale()).ChannelRefreshReadbackSucceeded()
+}
+
+// ChannelRefreshReadbackSucceeded says "Session, model, thinking level, and transcript were read back."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshReadbackSucceeded() string {
+	return Catalog.Format(msgs.locale, "channelRefreshReadbackSucceeded", nil)
+}
+
+// ChannelRefreshRetry says "Retry refresh"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshRetry() string { return In(i18n.Locale()).ChannelRefreshRetry() }
+
+// ChannelRefreshRetry says "Retry refresh"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshRetry() string {
+	return Catalog.Format(msgs.locale, "channelRefreshRetry", nil)
+}
+
+// ChannelRefreshSucceeded says "Pi session refreshed."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshSucceeded() string { return In(i18n.Locale()).ChannelRefreshSucceeded() }
+
+// ChannelRefreshSucceeded says "Pi session refreshed."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshSucceeded() string {
+	return Catalog.Format(msgs.locale, "channelRefreshSucceeded", nil)
+}
+
+// ChannelRefreshFailed says "Refresh failed: {reason}"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshFailed(reason string) string {
+	return In(i18n.Locale()).ChannelRefreshFailed(reason)
+}
+
+// ChannelRefreshFailed says "Refresh failed: {reason}"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "channelRefreshFailed", map[string]any{"reason": reason})
+}
+
+// ChannelRefreshRunning says "Refreshing the Pi session."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshRunning() string { return In(i18n.Locale()).ChannelRefreshRunning() }
+
+// ChannelRefreshRunning says "Refreshing the Pi session."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshRunning() string {
+	return Catalog.Format(msgs.locale, "channelRefreshRunning", nil)
+}
+
+// ChannelRefreshPending says "Waiting to refresh the Pi session."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshPending() string { return In(i18n.Locale()).ChannelRefreshPending() }
+
+// ChannelRefreshPending says "Waiting to refresh the Pi session."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshPending() string {
+	return Catalog.Format(msgs.locale, "channelRefreshPending", nil)
+}
+
+// ChannelRefreshIdle says "Not refreshed"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshIdle() string { return In(i18n.Locale()).ChannelRefreshIdle() }
+
+// ChannelRefreshIdle says "Not refreshed"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshIdle() string {
+	return Catalog.Format(msgs.locale, "channelRefreshIdle", nil)
+}
+
+// ChannelInventoryError says "Could not read channels"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelInventoryError() string { return In(i18n.Locale()).ChannelInventoryError() }
+
+// ChannelInventoryError says "Could not read channels"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelInventoryError() string {
+	return Catalog.Format(msgs.locale, "channelInventoryError", nil)
+}
+
+// ChannelInventoryMissing says "models.json not found"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelInventoryMissing() string { return In(i18n.Locale()).ChannelInventoryMissing() }
+
+// ChannelInventoryMissing says "models.json not found"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelInventoryMissing() string {
+	return Catalog.Format(msgs.locale, "channelInventoryMissing", nil)
+}
+
+// ChannelInventoryProviderCount says "{count} channels"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelInventoryProviderCount(count int) string {
+	return In(i18n.Locale()).ChannelInventoryProviderCount(count)
+}
+
+// ChannelInventoryProviderCount says "{count} channels"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelInventoryProviderCount(count int) string {
+	return Catalog.Format(msgs.locale, "channelInventoryProviderCount", map[string]any{"count": count})
+}
+
+// ChannelCredentialEnvironment says "Environment reference"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelCredentialEnvironment() string { return In(i18n.Locale()).ChannelCredentialEnvironment() }
+
+// ChannelCredentialEnvironment says "Environment reference"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelCredentialEnvironment() string {
+	return Catalog.Format(msgs.locale, "channelCredentialEnvironment", nil)
+}
+
+// ChannelCredentialCommand says "Command reference"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelCredentialCommand() string { return In(i18n.Locale()).ChannelCredentialCommand() }
+
+// ChannelCredentialCommand says "Command reference"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelCredentialCommand() string {
+	return Catalog.Format(msgs.locale, "channelCredentialCommand", nil)
+}
+
+// ChannelCredentialLiteral says "Literal value"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelCredentialLiteral() string { return In(i18n.Locale()).ChannelCredentialLiteral() }
+
+// ChannelCredentialLiteral says "Literal value"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelCredentialLiteral() string {
+	return Catalog.Format(msgs.locale, "channelCredentialLiteral", nil)
+}
+
+// ChannelCredentialOAuth says "Pi OAuth"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelCredentialOAuth() string { return In(i18n.Locale()).ChannelCredentialOAuth() }
+
+// ChannelCredentialOAuth says "Pi OAuth"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelCredentialOAuth() string {
+	return Catalog.Format(msgs.locale, "channelCredentialOAuth", nil)
+}
+
+// ChannelCredentialNone says "Not configured"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelCredentialNone() string { return In(i18n.Locale()).ChannelCredentialNone() }
+
+// ChannelCredentialNone says "Not configured"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelCredentialNone() string {
+	return Catalog.Format(msgs.locale, "channelCredentialNone", nil)
+}
+
+// ChannelConfiguredInPi says "Configured in Pi"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelConfiguredInPi() string { return In(i18n.Locale()).ChannelConfiguredInPi() }
+
+// ChannelConfiguredInPi says "Configured in Pi"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelConfiguredInPi() string {
+	return Catalog.Format(msgs.locale, "channelConfiguredInPi", nil)
+}
+
+// ChannelNoticeConfigureInPi says "Configure this credential or command in Pi."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelNoticeConfigureInPi() string { return In(i18n.Locale()).ChannelNoticeConfigureInPi() }
+
+// ChannelNoticeConfigureInPi says "Configure this credential or command in Pi."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelNoticeConfigureInPi() string {
+	return Catalog.Format(msgs.locale, "channelNoticeConfigureInPi", nil)
+}
+
+// ChannelNoticeProviderConflict says "The provider route differs. The existing channel and destination credential were preserved."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelNoticeProviderConflict() string { return In(i18n.Locale()).ChannelNoticeProviderConflict() }
+
+// ChannelNoticeProviderConflict says "The provider route differs. The existing channel and destination credential were preserved."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelNoticeProviderConflict() string {
+	return Catalog.Format(msgs.locale, "channelNoticeProviderConflict", nil)
+}
+
+// ChannelNoticeEndpointInherited says "The model endpoint will inherit from the existing Pi provider."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelNoticeEndpointInherited() string {
+	return In(i18n.Locale()).ChannelNoticeEndpointInherited()
+}
+
+// ChannelNoticeEndpointInherited says "The model endpoint will inherit from the existing Pi provider."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelNoticeEndpointInherited() string {
+	return Catalog.Format(msgs.locale, "channelNoticeEndpointInherited", nil)
+}
+
+// ChannelNoticeCommentsRemoved says "Comments will be removed when models.json is saved."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelNoticeCommentsRemoved() string { return In(i18n.Locale()).ChannelNoticeCommentsRemoved() }
+
+// ChannelNoticeCommentsRemoved says "Comments will be removed when models.json is saved."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelNoticeCommentsRemoved() string {
+	return Catalog.Format(msgs.locale, "channelNoticeCommentsRemoved", nil)
+}
+
+// ChannelNoticeProviderPreserved says "The existing provider was preserved."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelNoticeProviderPreserved() string {
+	return In(i18n.Locale()).ChannelNoticeProviderPreserved()
+}
+
+// ChannelNoticeProviderPreserved says "The existing provider was preserved."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelNoticeProviderPreserved() string {
+	return Catalog.Format(msgs.locale, "channelNoticeProviderPreserved", nil)
+}
+
+// ChannelNoticeModelPreserved says "The existing model was preserved."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelNoticeModelPreserved() string { return In(i18n.Locale()).ChannelNoticeModelPreserved() }
+
+// ChannelNoticeModelPreserved says "The existing model was preserved."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelNoticeModelPreserved() string {
+	return Catalog.Format(msgs.locale, "channelNoticeModelPreserved", nil)
+}
+
+// ChannelNoticeOverridePreserved says "The existing model override was preserved."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelNoticeOverridePreserved() string {
+	return In(i18n.Locale()).ChannelNoticeOverridePreserved()
+}
+
+// ChannelNoticeOverridePreserved says "The existing model override was preserved."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelNoticeOverridePreserved() string {
+	return Catalog.Format(msgs.locale, "channelNoticeOverridePreserved", nil)
+}
+
+// ChannelPickerUnavailable says "The system file picker is unavailable."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPickerUnavailable() string { return In(i18n.Locale()).ChannelPickerUnavailable() }
+
+// ChannelPickerUnavailable says "The system file picker is unavailable."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPickerUnavailable() string {
+	return Catalog.Format(msgs.locale, "channelPickerUnavailable", nil)
+}
+
+// ChannelBackendUnavailable says "The Pi channel service is unavailable."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelBackendUnavailable() string { return In(i18n.Locale()).ChannelBackendUnavailable() }
+
+// ChannelBackendUnavailable says "The Pi channel service is unavailable."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelBackendUnavailable() string {
+	return Catalog.Format(msgs.locale, "channelBackendUnavailable", nil)
+}
+
+// ChannelPreviewRequired says "Preview the current values before applying."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewRequired() string { return In(i18n.Locale()).ChannelPreviewRequired() }
+
+// ChannelPreviewRequired says "Preview the current values before applying."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewRequired() string {
+	return Catalog.Format(msgs.locale, "channelPreviewRequired", nil)
+}
+
+// ChannelPreviewFailedSummary says "Could not prepare these changes."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelPreviewFailedSummary() string { return In(i18n.Locale()).ChannelPreviewFailedSummary() }
+
+// ChannelPreviewFailedSummary says "Could not prepare these changes."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelPreviewFailedSummary() string {
+	return Catalog.Format(msgs.locale, "channelPreviewFailedSummary", nil)
+}
+
+// ChannelApplyFailedSummary says "Could not save channel changes."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelApplyFailedSummary() string { return In(i18n.Locale()).ChannelApplyFailedSummary() }
+
+// ChannelApplyFailedSummary says "Could not save channel changes."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelApplyFailedSummary() string {
+	return Catalog.Format(msgs.locale, "channelApplyFailedSummary", nil)
+}
+
+// ChannelMergeActionAdd says "Add"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelMergeActionAdd() string { return In(i18n.Locale()).ChannelMergeActionAdd() }
+
+// ChannelMergeActionAdd says "Add"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelMergeActionAdd() string {
+	return Catalog.Format(msgs.locale, "channelMergeActionAdd", nil)
+}
+
+// ChannelMergeActionPreserve says "Keep existing"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelMergeActionPreserve() string { return In(i18n.Locale()).ChannelMergeActionPreserve() }
+
+// ChannelMergeActionPreserve says "Keep existing"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelMergeActionPreserve() string {
+	return Catalog.Format(msgs.locale, "channelMergeActionPreserve", nil)
+}
+
+// ChannelMergeActionInherit says "Inherit channel endpoint"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelMergeActionInherit() string { return In(i18n.Locale()).ChannelMergeActionInherit() }
+
+// ChannelMergeActionInherit says "Inherit channel endpoint"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelMergeActionInherit() string {
+	return Catalog.Format(msgs.locale, "channelMergeActionInherit", nil)
+}
+
+// ChannelMergeActionRemoved says "Removed"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelMergeActionRemoved() string { return In(i18n.Locale()).ChannelMergeActionRemoved() }
+
+// ChannelMergeActionRemoved says "Removed"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelMergeActionRemoved() string {
+	return Catalog.Format(msgs.locale, "channelMergeActionRemoved", nil)
+}
+
+// ChannelMergeActionUnknown says "Review required"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelMergeActionUnknown() string { return In(i18n.Locale()).ChannelMergeActionUnknown() }
+
+// ChannelMergeActionUnknown says "Review required"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelMergeActionUnknown() string {
+	return Catalog.Format(msgs.locale, "channelMergeActionUnknown", nil)
+}
+
+// ChannelDigestMissing says "Version unavailable"
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelDigestMissing() string { return In(i18n.Locale()).ChannelDigestMissing() }
+
+// ChannelDigestMissing says "Version unavailable"
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelDigestMissing() string {
+	return Catalog.Format(msgs.locale, "channelDigestMissing", nil)
+}
+
+// ChannelRefreshFailureUnknown says "Unknown refresh error."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshFailureUnknown() string { return In(i18n.Locale()).ChannelRefreshFailureUnknown() }
+
+// ChannelRefreshFailureUnknown says "Unknown refresh error."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshFailureUnknown() string {
+	return Catalog.Format(msgs.locale, "channelRefreshFailureUnknown", nil)
+}
+
+// ChannelRefreshFailureLaunch says "Pi did not start."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshFailureLaunch() string { return In(i18n.Locale()).ChannelRefreshFailureLaunch() }
+
+// ChannelRefreshFailureLaunch says "Pi did not start."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshFailureLaunch() string {
+	return Catalog.Format(msgs.locale, "channelRefreshFailureLaunch", nil)
+}
+
+// ChannelRefreshFailureSession says "The saved session is unavailable."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshFailureSession() string { return In(i18n.Locale()).ChannelRefreshFailureSession() }
+
+// ChannelRefreshFailureSession says "The saved session is unavailable."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshFailureSession() string {
+	return Catalog.Format(msgs.locale, "channelRefreshFailureSession", nil)
+}
+
+// ChannelRefreshFailureModel says "The saved model is unavailable."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshFailureModel() string { return In(i18n.Locale()).ChannelRefreshFailureModel() }
+
+// ChannelRefreshFailureModel says "The saved model is unavailable."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshFailureModel() string {
+	return Catalog.Format(msgs.locale, "channelRefreshFailureModel", nil)
+}
+
+// ChannelRefreshFailureThinking says "The saved thinking level is unavailable."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshFailureThinking() string { return In(i18n.Locale()).ChannelRefreshFailureThinking() }
+
+// ChannelRefreshFailureThinking says "The saved thinking level is unavailable."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshFailureThinking() string {
+	return Catalog.Format(msgs.locale, "channelRefreshFailureThinking", nil)
+}
+
+// ChannelRefreshFailureReadback says "Pi state could not be read back."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshFailureReadback() string { return In(i18n.Locale()).ChannelRefreshFailureReadback() }
+
+// ChannelRefreshFailureReadback says "Pi state could not be read back."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshFailureReadback() string {
+	return Catalog.Format(msgs.locale, "channelRefreshFailureReadback", nil)
+}
+
+// ChannelRefreshFailureTranscript says "The conversation transcript could not be restored."
+// in the language the app shows.
+//
+// Channel configuration and refresh interface.
+func ChannelRefreshFailureTranscript() string {
+	return In(i18n.Locale()).ChannelRefreshFailureTranscript()
+}
+
+// ChannelRefreshFailureTranscript says "The conversation transcript could not be restored."
+// in the language of msgs.
+//
+// Channel configuration and refresh interface.
+func (msgs Messages) ChannelRefreshFailureTranscript() string {
+	return Catalog.Format(msgs.locale, "channelRefreshFailureTranscript", nil)
 }

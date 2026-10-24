@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.11.1"
+	appVersion = "0.12.0"
 )
 
 func appBuildVersion() string {
@@ -66,7 +66,7 @@ func main() {
 	mygo.App.WhenReady(func() {
 		appearanceReady.Store(true)
 		state.applyUILanguage()
-		state.syncPluginWebViewTheme(currentAppearanceDark(), state.highContrastActive(currentAppearanceHighContrast()))
+		state.syncPluginWebViewTheme(currentAppearanceDark(), state.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
 		state.syncPluginWebViewLocale()
 		win := mygo.NewWindow(mygo.WindowOptions{
 			Title:         locales.AppWindowTitle(),
@@ -197,48 +197,51 @@ type chatMessage struct {
 }
 
 type appState struct {
-	page                      pageID
-	themeMode                 themeMode
-	uiLanguage                string
-	effectiveLocale           atomic.Pointer[string]
-	navCollapsed              bool
-	tasksOpen                 bool
-	configDir                 string
-	preferences               byopPreferences
-	preferencesStore          *byopPreferencesStore
-	preferencesWarning        string
-	savedWorkspaceMiss        bool
-	legacySources             legacyMigrationSources
-	legacyScan                legacyScan
-	legacyScanned             bool
-	legacyScanning            bool
-	legacyScanFailed          bool
-	diagnosticsOpen           bool
-	notice                    string
-	noticeActionLabel         string
-	noticeAction              func()
-	composerDraft             string
-	pluginSearch              string
-	pluginDetailsOpenID       string
-	pluginRegistry            pluginRegistry
-	pluginRegistryMu          sync.RWMutex
-	plugins                   *pluginHost
-	pluginSettingForms        map[string]*pluginSettingForm
-	pluginTasks               map[string]pluginTaskUpdate
-	pluginViewPluginID        string
-	pluginViewID              string
-	pluginViewKind            pluginViewKind
-	pluginViewModels          map[string]pluginViewModel
-	pluginViewLoading         bool
-	pluginViewError           string
-	pluginViewEpoch           uint64
-	pluginWebViews            map[string]*pluginWebViewState
-	pluginWebViewsMu          sync.RWMutex
-	pluginWebViewDark         bool
-	pluginWebViewHighContrast bool
-	pluginBridgeSlots         map[string]chan struct{}
-	pluginBridgeMu            sync.Mutex
-	automations               *automationStore
+	page                            pageID
+	themeMode                       themeMode
+	uiLanguage                      string
+	effectiveLocale                 atomic.Pointer[string]
+	navCollapsed                    bool
+	tasksOpen                       bool
+	channelRefresh                  channelRefreshCoordinator
+	configDir                       string
+	preferences                     byopPreferences
+	preferencesStore                *byopPreferencesStore
+	preferencesWarning              string
+	settingsPageState               SettingsPageState
+	savedWorkspaceMiss              bool
+	legacySources                   legacyMigrationSources
+	legacyScan                      legacyScan
+	legacyScanned                   bool
+	legacyScanning                  bool
+	legacyScanFailed                bool
+	diagnosticsOpen                 bool
+	notice                          string
+	noticeActionLabel               string
+	noticeAction                    func()
+	composerDraft                   string
+	pluginSearch                    string
+	pluginDetailsOpenID             string
+	pluginRegistry                  pluginRegistry
+	pluginRegistryMu                sync.RWMutex
+	plugins                         *pluginHost
+	pluginSettingForms              map[string]*pluginSettingForm
+	pluginTasks                     map[string]pluginTaskUpdate
+	pluginViewPluginID              string
+	pluginViewID                    string
+	pluginViewKind                  pluginViewKind
+	pluginViewModels                map[string]pluginViewModel
+	pluginViewLoading               bool
+	pluginViewError                 string
+	pluginViewEpoch                 uint64
+	pluginWebViews                  map[string]*pluginWebViewState
+	pluginWebViewsMu                sync.RWMutex
+	pluginWebViewDark               bool
+	pluginWebViewHighContrast       bool
+	pluginWebViewReduceTransparency bool
+	pluginBridgeSlots               map[string]chan struct{}
+	pluginBridgeMu                  sync.Mutex
+	automations                     *automationStore
 
 	window                  *mygo.Window
 	closed                  atomic.Bool
@@ -391,6 +394,7 @@ func newAppState() *appState {
 		pluginHostHighContrast(func() bool {
 			return s.highContrastActive(currentAppearanceHighContrast())
 		}),
+		pluginHostReduceTransparency(currentAppearanceReduceTransparency),
 		pluginHostLocale(func() string {
 			return s.locale()
 		}),
@@ -627,7 +631,7 @@ func (s *appState) setTheme(mode themeMode) {
 func (s *appState) applyTheme(mode themeMode) {
 	s.themeMode = mode
 	setMygoThemeSource(themeSource(mode))
-	s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()))
+	s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
 }
 
 func (s *appState) setNavCollapsed(collapsed bool) {
@@ -722,13 +726,13 @@ func (s *appState) setContrast(mode contrastMode) {
 	}
 	previous := s.preferences.Contrast
 	s.preferences.Contrast = string(mode)
-	s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()))
+	s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
 	if s.window != nil {
 		s.window.Invalidate()
 	}
 	if err := s.persistPreferences(); err != nil {
 		s.preferences.Contrast = previous
-		s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()))
+		s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
 		if s.window != nil {
 			s.window.Invalidate()
 		}
@@ -752,25 +756,6 @@ func (s *appState) setMotion(mode motionMode) {
 			s.window.Invalidate()
 		}
 		s.showNotice(text("noticePreferenceSaveMotion"))
-	}
-}
-
-func (s *appState) setPanelAnimationMS(milliseconds int) {
-	milliseconds = normalizePanelAnimationMS(milliseconds)
-	if normalizePanelAnimationMS(s.preferences.PanelAnimationMS) == milliseconds {
-		return
-	}
-	previous := s.preferences.PanelAnimationMS
-	s.preferences.PanelAnimationMS = milliseconds
-	if s.window != nil {
-		s.window.Invalidate()
-	}
-	if err := s.persistPreferences(); err != nil {
-		s.preferences.PanelAnimationMS = previous
-		if s.window != nil {
-			s.window.Invalidate()
-		}
-		s.showNotice(text("noticePreferenceSavePanelAnimation"))
 	}
 }
 
@@ -2223,6 +2208,7 @@ func (s *appState) connectPi() {
 				s.showNotice(text("noticePiConnected"))
 			}
 			s.refreshPiSessions()
+			s.pumpChannelRefresh()
 		})
 	}()
 }
@@ -2804,6 +2790,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.refreshPiSessionState()
 		s.refreshPiHUD()
 		s.schedulePiSessionsRefresh()
+		s.pumpChannelRefresh()
 	case piEventParseError:
 		s.piError = uiErrorFromText(event.Error, text("errorProtocolWarning"))
 		s.notice = textArgs("noticePiProtocolWarning", map[string]any{"error": s.piError})
@@ -2845,6 +2832,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		} else if s.closed.Load() {
 			return
 		}
+		s.pumpChannelRefresh()
 	}
 }
 

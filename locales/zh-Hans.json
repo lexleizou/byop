@@ -342,7 +342,7 @@
   "@errorToolFallback": {
     "description": "User-interface text for error Tool Fallback."
   },
-  "runDetailCurrentTool": "{tool} · {status}，用时 {duration}",
+  "runDetailCurrentTool": "{tool}；{status}，用时 {duration}",
   "@runDetailCurrentTool": {
     "description": "User-interface text for run Detail Current Tool."
   },
@@ -426,7 +426,7 @@
   "@pluginsTitle": {
     "description": "User-interface text for plugins Title."
   },
-  "pluginsDescription": "发现本地插件、打开类型化原生视图，或在经过能力检查的 WebView 中承载隔离 HTML。原生与 Node 运行时按需启动，并共用同一套宿主 API。",
+  "pluginsDescription": "管理已安装的插件",
   "@pluginsDescription": {
     "description": "User-interface text for plugins Description."
   },
@@ -442,11 +442,11 @@
   "@pluginsFolders": {
     "description": "User-interface text for plugins Folders."
   },
-  "pluginsRoots": "插件目录 · {roots}",
+  "pluginsRoots": "插件目录；{roots}",
   "@pluginsRoots": {
     "description": "User-interface text for plugins Roots."
   },
-  "pluginsRegistrySummary": "已注册 {registered} 个 · {contributions} 项贡献",
+  "pluginsRegistrySummary": "已注册 {registered} 个；{contributions} 项贡献",
   "@pluginsRegistrySummary": {
     "description": "User-interface text for plugins Registry Summary."
   },
@@ -522,7 +522,7 @@
   "@pluginsContributionCount": {
     "description": "User-interface text for plugins Contribution Count."
   },
-  "pluginsWebViewMeta": "{entry} · 隔离 · byop-plugin 协议 · CSP",
+  "pluginsWebViewMeta": "{entry}；隔离；byop-plugin 协议；CSP",
   "@pluginsWebViewMeta": {
     "description": "User-interface text for plugins Web View Meta."
   },
@@ -622,7 +622,7 @@
   "@pluginsCardLabel": {
     "description": "Accessible label for a plugin summary card."
   },
-  "pluginsVersionRuntime": "v{version} · {runtime}",
+  "pluginsVersionRuntime": "v{version}；{runtime}",
   "@pluginsVersionRuntime": {
     "description": "Compact plugin version and runtime summary for a card."
   },
@@ -646,7 +646,7 @@
   "@pluginsDeactivated": {
     "description": "User-interface text for plugins Deactivated."
   },
-  "pluginsPermissions": "工作区 {workspace} · 文件 {files} · 网络 {network} · 进程 {process}",
+  "pluginsPermissions": "工作区 {workspace}；文件 {files}；网络 {network}；进程 {process}",
   "@pluginsPermissions": {
     "description": "User-interface text for plugins Permissions."
   },
@@ -666,7 +666,7 @@
   "@pluginsEnforcementNode": {
     "description": "User-interface text for plugins Enforcement Node."
   },
-  "pluginsEnforcementHost": "仅宿主检查 · 进程未沙箱化",
+  "pluginsEnforcementHost": "仅宿主检查；进程未沙箱化",
   "@pluginsEnforcementHost": {
     "description": "User-interface text for plugins Enforcement Host."
   },
@@ -862,7 +862,7 @@
   "@pluginsWebViewSection": {
     "description": "User-interface text for plugins Web View Section."
   },
-  "pluginsWebViewDescription": "{plugin} · byop-plugin 协议 · 严格 CSP",
+  "pluginsWebViewDescription": "{plugin}；byop-plugin 协议；严格 CSP",
   "@pluginsWebViewDescription": {
     "description": "User-interface text for plugins Web View Description."
   },
@@ -898,7 +898,7 @@
   "@automationsTitle": {
     "description": "User-interface text for automations Title."
   },
-  "automationsDescription": "由插件注册的自动化与循环。已声明的规则会经过校验并显示；P7 中仅手动运行。",
+  "automationsDescription": "管理插件自动化",
   "@automationsDescription": {
     "description": "User-interface text for automations Description."
   },
@@ -910,7 +910,7 @@
   "@automationsPausedCount": {
     "description": "User-interface text for automations Paused Count."
   },
-  "automationsManualNote": "定时触发将在后续阶段加入；P7 中仅支持手动运行。",
+  "automationsManualNote": "当前支持手动运行",
   "@automationsManualNote": {
     "description": "User-interface text for automations Manual Note."
   },
@@ -938,7 +938,7 @@
   "@automationsFailures": {
     "description": "User-interface text for automations Failures."
   },
-  "automationsLastRun": "上次运行 {time} · {state}",
+  "automationsLastRun": "上次运行 {time}；{state}",
   "@automationsLastRun": {
     "description": "User-interface text for automations Last Run."
   },
@@ -962,15 +962,15 @@
   "@automationsRecentRuns": {
     "description": "User-interface text for automations Recent Runs."
   },
-  "automationsKindScheduledLoop": "定时循环 · {rule}",
+  "automationsKindScheduledLoop": "定时循环；{rule}",
   "@automationsKindScheduledLoop": {
     "description": "User-interface text for automations Kind Scheduled Loop."
   },
-  "automationsKindSessionLoop": "会话循环 · {rule}",
+  "automationsKindSessionLoop": "会话循环；{rule}",
   "@automationsKindSessionLoop": {
     "description": "User-interface text for automations Kind Session Loop."
   },
-  "automationsKindOnce": "一次 · {rule}",
+  "automationsKindOnce": "一次；{rule}",
   "@automationsKindOnce": {
     "description": "User-interface text for automations Kind Once."
   },
@@ -1174,7 +1174,7 @@
   "@automationsFinishSaveFailed": {
     "description": "User-interface text for automations Finish Save Failed."
   },
-  "automationsCompleted": "{title} · {result}",
+  "automationsCompleted": "{title}；{result}",
   "@automationsCompleted": {
     "description": "User-interface text for automations Completed."
   },
@@ -1282,7 +1282,7 @@
   "@chatAttachmentNotice": {
     "description": "Notice shown when attachment support is requested."
   },
-  "chatFollowUpHint": "Tab 使用 · Esc 关闭",
+  "chatFollowUpHint": "Tab 使用；Esc 关闭",
   "@chatFollowUpHint": {
     "description": "Keyboard hint for the follow-up suggestion."
   },
@@ -1302,7 +1302,7 @@
   "@chatWorkedFor": {
     "description": "Summary of a completed assistant turn."
   },
-  "chatWorkingFor": "正在工作 · {duration}",
+  "chatWorkingFor": "正在工作；{duration}",
   "@chatWorkingFor": {
     "description": "Summary of a running assistant turn."
   },
@@ -1502,7 +1502,7 @@
   "@settingsNativeRuntime": {
     "description": "Label for the native runtime."
   },
-  "settingsNativeRuntimeValue": "MyGo · 固定基线",
+  "settingsNativeRuntimeValue": "MyGo；固定基线",
   "@settingsNativeRuntimeValue": {
     "description": "Native runtime value."
   },
@@ -1530,7 +1530,7 @@
   "@settingsPluginRuntime": {
     "description": "Label for plugin runtime support."
   },
-  "settingsPluginRuntimeValue": "原生 + Node · 原生与 WebView 界面",
+  "settingsPluginRuntimeValue": "原生 + Node；原生与 WebView 界面",
   "@settingsPluginRuntimeValue": {
     "description": "Plugin runtime value."
   },
@@ -1538,11 +1538,11 @@
   "@settingsWebViewBoundary": {
     "description": "Label for the WebView security boundary."
   },
-  "settingsWebViewBoundaryValue": "byop-plugin · 严格 CSP · 锁定导航",
+  "settingsWebViewBoundaryValue": "byop-plugin；严格 CSP；锁定导航",
   "@settingsWebViewBoundaryValue": {
     "description": "WebView security boundary value."
   },
-  "settingsPluginRegistryValue": "已注册 {registered} 个 · {contributions} 项贡献",
+  "settingsPluginRegistryValue": "已注册 {registered} 个；{contributions} 项贡献",
   "@settingsPluginRegistryValue": {
     "description": "设置页中的插件注册数和贡献数。",
     "placeholders": {
@@ -1564,7 +1564,7 @@
   "@settingsAboutDescription": {
     "description": "About card description."
   },
-  "settingsAboutVersion": "版本 {version} · 构建 {build}",
+  "settingsAboutVersion": "版本 {version}；构建 {build}",
   "@settingsAboutVersion": {
     "description": "Application version and build shown in the About section."
   },
@@ -1640,6 +1640,10 @@
   "@modelsNone": {
     "description": "Empty model picker state."
   },
+  "modelsManage": "管理模型",
+  "@modelsManage": {
+    "description": "Opens the Models and channels settings category from the model picker."
+  },
   "thinkingOff": "关闭",
   "@thinkingOff": {
     "description": "Thinking level off."
@@ -1668,7 +1672,7 @@
   "@thinkingTitle": {
     "description": "Thinking picker label."
   },
-  "thinkingTooltip": "思考级别 · {level}",
+  "thinkingTooltip": "思考级别；{level}",
   "@thinkingTooltip": {
     "description": "Thinking picker tooltip."
   },
@@ -1948,39 +1952,39 @@
   "@legacyImported": {
     "description": "Legacy import success notice."
   },
-  "compactionCompletedTokens": "上下文已压缩 · {before} → {after} tokens",
+  "compactionCompletedTokens": "上下文已压缩；{before} → {after} tokens",
   "@compactionCompletedTokens": {
     "description": "Compaction result with token count."
   },
-  "diagnosticCompacting": "正在压缩 · {reason}",
+  "diagnosticCompacting": "正在压缩；{reason}",
   "@diagnosticCompacting": {
     "description": "Runtime diagnostic while compacting."
   },
-  "diagnosticCompactionError": "压缩错误 · {error}",
+  "diagnosticCompactionError": "压缩错误；{error}",
   "@diagnosticCompactionError": {
     "description": "Runtime compaction error."
   },
-  "diagnosticExtensionError": "扩展 {source} · {error}",
+  "diagnosticExtensionError": "扩展 {source}；{error}",
   "@diagnosticExtensionError": {
     "description": "Runtime extension error."
   },
-  "diagnosticQueued": "已排队 · {steering} 条引导 · {followUp} 条后续",
+  "diagnosticQueued": "已排队；{steering} 条引导；{followUp} 条后续",
   "@diagnosticQueued": {
     "description": "Runtime queued messages."
   },
-  "diagnosticRetryFailed": "重试失败 · {error}",
+  "diagnosticRetryFailed": "重试失败；{error}",
   "@diagnosticRetryFailed": {
     "description": "Runtime retry error."
   },
-  "piSecondaryConnectedModel": "已连接 · {model}",
+  "piSecondaryConnectedModel": "已连接；{model}",
   "@piSecondaryConnectedModel": {
     "description": "Pi secondary status with model."
   },
-  "retryStatus": "{label} · {seconds} 秒",
+  "retryStatus": "{label}；{seconds} 秒",
   "@retryStatus": {
     "description": "Retry countdown."
   },
-  "tasksPluginRegistryDetail": "已注册 {registered} 个 · 活动 {active} 个 · 贡献 {contributions} 项 · 问题 {issues} 个",
+  "tasksPluginRegistryDetail": "已注册 {registered} 个；活动 {active} 个；贡献 {contributions} 项；问题 {issues} 个",
   "@tasksPluginRegistryDetail": {
     "description": "Task panel plugin registry detail."
   },
@@ -2076,7 +2080,7 @@
   "@queueTitle": {
     "description": "Heading for the running message queue."
   },
-  "runningSendOppositeTooltip": "{mode} · {shortcut}",
+  "runningSendOppositeTooltip": "{mode}；{shortcut}",
   "@runningSendOppositeTooltip": {
     "description": "Tooltip explaining the opposite running-send shortcut."
   },
@@ -2353,5 +2357,614 @@
         "type": "String"
       }
     }
+  },
+  "settingsBackToChat": "返回对话",
+  "@settingsBackToChat": {
+    "description": "Returns from Settings to the chat workspace."
+  },
+  "settingsSearchPlaceholder": "搜索设置",
+  "@settingsSearchPlaceholder": {
+    "description": "Placeholder and accessible label for settings search."
+  },
+  "settingsSearchResults": "设置",
+  "@settingsSearchResults": {
+    "description": "Heading above matching settings categories."
+  },
+  "settingsSearchNoResults": "没有匹配的设置",
+  "@settingsSearchNoResults": {
+    "description": "Empty state when settings search has no matches."
+  },
+  "settingsSearchOpenCategory": "打开{category}",
+  "@settingsSearchOpenCategory": {
+    "description": "Action that opens a matching settings category.",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCategoryGeneral": "通用",
+  "@settingsCategoryGeneral": {
+    "description": "Settings category for language and general behavior."
+  },
+  "settingsCategoryAppearance": "外观",
+  "@settingsCategoryAppearance": {
+    "description": "Settings category for theme, contrast, and motion."
+  },
+  "settingsCategoryModels": "模型与渠道",
+  "@settingsCategoryModels": {
+    "description": "Settings category for Pi model and provider configuration."
+  },
+  "settingsCategoryConversation": "对话",
+  "@settingsCategoryConversation": {
+    "description": "Settings category for chat behavior."
+  },
+  "settingsCategoryWorkspace": "工作区",
+  "@settingsCategoryWorkspace": {
+    "description": "Settings category for the active workspace."
+  },
+  "settingsCategoryExtensions": "扩展",
+  "@settingsCategoryExtensions": {
+    "description": "Settings category for plugin-provided settings."
+  },
+  "settingsCategoryData": "数据与诊断",
+  "@settingsCategoryData": {
+    "description": "Settings category for diagnostics and migration data."
+  },
+  "settingsCategoryAbout": "关于",
+  "@settingsCategoryAbout": {
+    "description": "Settings category for product and build information."
+  },
+  "settingsShortcutsTitle": "快捷键",
+  "@settingsShortcutsTitle": {
+    "description": "Heading for keyboard shortcut settings."
+  },
+  "settingsShortcutNavigationAction": "切换导航栏",
+  "@settingsShortcutNavigationAction": {
+    "description": "Keyboard shortcut action for toggling navigation."
+  },
+  "settingsShortcutTasksAction": "切换任务栏",
+  "@settingsShortcutTasksAction": {
+    "description": "Keyboard shortcut action for toggling the task panel."
+  },
+  "settingsFollowUpKeyboardHint": "按 Tab 使用建议。",
+  "@settingsFollowUpKeyboardHint": {
+    "description": "Keyboard hint for follow-up suggestions."
+  },
+  "settingsWorkspaceTitle": "工作区",
+  "@settingsWorkspaceTitle": {
+    "description": "Heading for workspace path settings."
+  },
+  "settingsWorkspacePath": "路径",
+  "@settingsWorkspacePath": {
+    "description": "Label for the active workspace path."
+  },
+  "settingsExtensionsTitle": "扩展",
+  "@settingsExtensionsTitle": {
+    "description": "Heading for extension settings."
+  },
+  "settingsPiExtensionsReadOnly": "Pi 扩展目前仅供诊断。",
+  "@settingsPiExtensionsReadOnly": {
+    "description": "Explains that Pi extension controls are read-only in the current slice."
+  },
+  "settingsBuild": "构建",
+  "@settingsBuild": {
+    "description": "Label for the application build version."
+  },
+  "channelModelsFileDialog": "选择 Pi models.json",
+  "@channelModelsFileDialog": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSettingsTitle": "模型与渠道",
+  "@channelSettingsTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryTitle": "已配置渠道",
+  "@channelInventoryTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshInventory": "刷新列表",
+  "@channelRefreshInventory": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryReadFailed": "无法读取 models.json：{detail}",
+  "@channelInventoryReadFailed": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelInventoryLoading": "正在加载渠道",
+  "@channelInventoryLoading": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryDiagnostics": "Pi 配置位置",
+  "@channelInventoryDiagnostics": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPiDirectory": "Pi Agent 目录",
+  "@channelPiDirectory": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsFile": "models.json",
+  "@channelModelsFile": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryEmptyTitle": "尚未配置渠道",
+  "@channelInventoryEmptyTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryEmptyDescription": "在下方添加渠道。应用前先预览更改。",
+  "@channelInventoryEmptyDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelBaseURL": "Base URL",
+  "@channelBaseURL": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModels": "模型",
+  "@channelModels": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsCount": "{count} 个模型",
+  "@channelModelsCount": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelDetails": "详情",
+  "@channelDetails": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelOverrides": "模型覆盖",
+  "@channelModelOverrides": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAddSourceTitle": "添加渠道",
+  "@channelAddSourceTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSourcePreset": "Pi 预置",
+  "@channelSourcePreset": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSourceCustom": "自定义渠道",
+  "@channelSourceCustom": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSourceModelsFile": "导入 models.json",
+  "@channelSourceModelsFile": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsFileDescription": "选择 Pi models.json，然后选择渠道和要导入的模型。",
+  "@channelModelsFileDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelChooseModelsFile": "选择 models.json",
+  "@channelChooseModelsFile": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsFileReadFailed": "无法读取此 models.json：{detail}",
+  "@channelModelsFileReadFailed": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelRetryReadFile": "重新读取文件",
+  "@channelRetryReadFile": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelsFileAwaiting": "选择 models.json 后查看其中的渠道。",
+  "@channelModelsFileAwaiting": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSelectProvider": "选择渠道",
+  "@channelSelectProvider": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSelectModels": "选择模型",
+  "@channelSelectModels": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSelectOverrides": "选择模型覆盖",
+  "@channelSelectOverrides": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewImport": "预览导入",
+  "@channelPreviewImport": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPresetDescription": "选择供应商预置。认证信息保留在 Pi。",
+  "@channelPresetDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelSelectPresetFirst": "请选择预置后继续。",
+  "@channelSelectPresetFirst": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPiLoginManagedTitle": "由 Pi 管理登录",
+  "@channelPiLoginManagedTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPiLoginManagedDescription": "此登录由 Pi 管理，BYOP 不复制 OAuth 令牌。",
+  "@channelPiLoginManagedDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAdvanced": "高级选项",
+  "@channelAdvanced": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAPIKeyEnvironment": "API Key 环境变量引用",
+  "@channelAPIKeyEnvironment": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAPIKeyEnvironmentHint": "使用 $NAME 或 ${NAME}。值保留在 Pi，BYOP 不保存密钥。",
+  "@channelAPIKeyEnvironmentHint": {
+    "description": "Pi environment-variable syntax reference. Braces are literal text and are not format placeholders."
+  },
+  "channelPreviewPreset": "预览预置",
+  "@channelPreviewPreset": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCustomDescription": "通过字段定义渠道。密钥仅通过环境变量引用在 Pi 中配置。",
+  "@channelCustomDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderID": "渠道 ID",
+  "@channelProviderID": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderIDHint": "Pi models.json 中使用的标识。",
+  "@channelProviderIDHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderName": "渠道名称",
+  "@channelProviderName": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderNameHint": "可选的显示名称。",
+  "@channelProviderNameHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelBaseURLHint": "此渠道使用的接口地址。",
+  "@channelBaseURLHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAPI": "API 协议",
+  "@channelAPI": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAPIHint": "例如 openai-completions。留空时使用 Pi 供应商默认值。",
+  "@channelAPIHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelUseAuthorizationHeader": "使用 Authorization 请求头",
+  "@channelUseAuthorizationHeader": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewCustom": "预览自定义渠道",
+  "@channelPreviewCustom": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelEntryTitle": "模型条目",
+  "@channelModelEntryTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelID": "模型 ID",
+  "@channelModelID": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelIDHint": "Pi 或供应商使用的模型标识。",
+  "@channelModelIDHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelName": "模型名称",
+  "@channelModelName": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelModelNameHint": "可选的显示名称。",
+  "@channelModelNameHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideEntryTitle": "模型覆盖",
+  "@channelOverrideEntryTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideID": "覆盖模型 ID",
+  "@channelOverrideID": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideIDHint": "要覆盖的内置或现有模型 ID。",
+  "@channelOverrideIDHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideName": "覆盖显示名称",
+  "@channelOverrideName": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelOverrideNameHint": "覆盖项的可选显示名称。",
+  "@channelOverrideNameHint": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewErrorTitle": "无法预览",
+  "@channelPreviewErrorTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRepreview": "重新预览",
+  "@channelRepreview": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewTitle": "预览更改",
+  "@channelPreviewTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreserveConflictDescription": "保留现有条目和冲突路由。",
+  "@channelPreserveConflictDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewDiagnostics": "技术详情",
+  "@channelPreviewDiagnostics": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewSource": "来源版本",
+  "@channelPreviewSource": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewDestination": "目标版本",
+  "@channelPreviewDestination": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelProviderAction": "渠道 {provider}：{action}",
+  "@channelProviderAction": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "provider": {
+        "type": "String",
+        "example": "value"
+      },
+      "action": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelConflictPolicyPreserve": "保留现有值",
+  "@channelConflictPolicyPreserve": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelConflictSummary": "已保留 {path} 的冲突路由",
+  "@channelConflictSummary": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelPreviewStaleDescription": "预览后来源或 Pi 配置已变化。请重新预览后继续。",
+  "@channelPreviewStaleDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyImport": "应用所选模型",
+  "@channelApplyImport": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyCustom": "应用自定义渠道",
+  "@channelApplyCustom": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyResultTitle": "应用结果",
+  "@channelApplyResultTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyNoChanges": "无需更改。",
+  "@channelApplyNoChanges": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplySucceeded": "渠道配置已保存。",
+  "@channelApplySucceeded": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPendingRefreshDescription": "已保存到 Pi。当前会话仅在空闲后刷新。",
+  "@channelPendingRefreshDescription": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelAddAnotherSource": "添加其他渠道",
+  "@channelAddAnotherSource": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPiRefreshTitle": "Pi 会话刷新",
+  "@channelPiRefreshTitle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshWaitingIdle": "当前任务仍在运行。Pi 空闲后将开始刷新。",
+  "@channelRefreshWaitingIdle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshRecoveryPreserved": "已保留已保存状态。Pi 可用后重试。",
+  "@channelRefreshRecoveryPreserved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshReadbackSucceeded": "已读回会话、模型、思考档位和对话记录。",
+  "@channelRefreshReadbackSucceeded": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshRetry": "重试刷新",
+  "@channelRefreshRetry": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshSucceeded": "Pi 会话已刷新。",
+  "@channelRefreshSucceeded": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailed": "刷新失败：{reason}",
+  "@channelRefreshFailed": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "value"
+      }
+    }
+  },
+  "channelRefreshRunning": "正在刷新 Pi 会话。",
+  "@channelRefreshRunning": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshPending": "等待刷新 Pi 会话。",
+  "@channelRefreshPending": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshIdle": "尚未刷新",
+  "@channelRefreshIdle": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryError": "无法读取渠道",
+  "@channelInventoryError": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryMissing": "未找到 models.json",
+  "@channelInventoryMissing": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelInventoryProviderCount": "{count} 个渠道",
+  "@channelInventoryProviderCount": {
+    "description": "Channel configuration and refresh interface.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "channelCredentialEnvironment": "环境变量引用",
+  "@channelCredentialEnvironment": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCredentialCommand": "命令引用",
+  "@channelCredentialCommand": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCredentialLiteral": "字面值",
+  "@channelCredentialLiteral": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCredentialOAuth": "Pi OAuth",
+  "@channelCredentialOAuth": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelCredentialNone": "未配置",
+  "@channelCredentialNone": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelConfiguredInPi": "已配置（Pi）",
+  "@channelConfiguredInPi": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeConfigureInPi": "请在 Pi 中配置此凭据或命令。",
+  "@channelNoticeConfigureInPi": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeProviderConflict": "渠道路由不同。已保留现有渠道和目标凭据。",
+  "@channelNoticeProviderConflict": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeEndpointInherited": "模型接口将继承现有 Pi 渠道。",
+  "@channelNoticeEndpointInherited": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeCommentsRemoved": "保存 models.json 时将移除注释。",
+  "@channelNoticeCommentsRemoved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeProviderPreserved": "已保留现有渠道。",
+  "@channelNoticeProviderPreserved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeModelPreserved": "已保留现有模型。",
+  "@channelNoticeModelPreserved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelNoticeOverridePreserved": "已保留现有模型覆盖。",
+  "@channelNoticeOverridePreserved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPickerUnavailable": "系统文件选择器不可用。",
+  "@channelPickerUnavailable": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelBackendUnavailable": "Pi 渠道服务不可用。",
+  "@channelBackendUnavailable": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewRequired": "请先预览当前值再应用。",
+  "@channelPreviewRequired": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelPreviewFailedSummary": "无法准备这些更改。",
+  "@channelPreviewFailedSummary": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelApplyFailedSummary": "无法保存渠道更改。",
+  "@channelApplyFailedSummary": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionAdd": "添加",
+  "@channelMergeActionAdd": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionPreserve": "保留现有",
+  "@channelMergeActionPreserve": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionInherit": "继承渠道地址",
+  "@channelMergeActionInherit": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionRemoved": "已移除",
+  "@channelMergeActionRemoved": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelMergeActionUnknown": "需核对",
+  "@channelMergeActionUnknown": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelDigestMissing": "版本不可用",
+  "@channelDigestMissing": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureUnknown": "未知刷新错误。",
+  "@channelRefreshFailureUnknown": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureLaunch": "Pi 未能启动。",
+  "@channelRefreshFailureLaunch": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureSession": "已保存的会话不可用。",
+  "@channelRefreshFailureSession": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureModel": "已保存的模型不可用。",
+  "@channelRefreshFailureModel": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureThinking": "已保存的思考档位不可用。",
+  "@channelRefreshFailureThinking": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureReadback": "无法读回 Pi 状态。",
+  "@channelRefreshFailureReadback": {
+    "description": "Channel configuration and refresh interface."
+  },
+  "channelRefreshFailureTranscript": "无法恢复对话记录。",
+  "@channelRefreshFailureTranscript": {
+    "description": "Channel configuration and refresh interface."
   }
 }

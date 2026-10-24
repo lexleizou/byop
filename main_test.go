@@ -482,14 +482,14 @@ func TestRuntimeDiagnosticsProjection(t *testing.T) {
 		Error:          "bad tool output",
 	}, 0)
 
-	if state.compactionResult != "Context compacted · 12.0k → 2.4k tokens" {
+	if state.compactionResult != "Context compacted; 12.0k → 2.4k tokens" {
 		t.Fatalf("unexpected compaction label: %q", state.compactionResult)
 	}
 	if state.extensionError != "bad tool output" || state.extensionPath != "/tmp/demo-extension.ts" {
 		t.Fatalf("extension error was not kept separate: %#v", state)
 	}
 	if state.runtimeDiagnosticLabel() != "ATTENTION" ||
-		!strings.Contains(state.runtimeDiagnosticDetail(), "Extension error · demo-extension.ts · tool_call") {
+		!strings.Contains(state.runtimeDiagnosticDetail(), "Extension error; demo-extension.ts - tool_call") {
 		t.Fatalf("unexpected runtime diagnostics: %s", state.runtimeDiagnosticDetail())
 	}
 }

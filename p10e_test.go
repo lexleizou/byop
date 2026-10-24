@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"strings"
 	"testing"
 
@@ -82,7 +83,7 @@ func TestP10ePluginCardStatusSummaryPriority(t *testing.T) {
 		LastResult:  "result",
 		LastCommand: "command",
 	})
-	if !strings.Contains(got, "registration failed") || tone != p.danger {
+	if !strings.Contains(got, "registration failed") || tone != p.dangerText {
 		t.Fatalf("registration error summary = %q / %v", got, tone)
 	}
 
@@ -92,7 +93,7 @@ func TestP10ePluginCardStatusSummaryPriority(t *testing.T) {
 		LastResult:  "result",
 		LastCommand: "command",
 	})
-	if !strings.Contains(got, "runtime failed") || tone != p.danger {
+	if !strings.Contains(got, "runtime failed") || tone != p.dangerText {
 		t.Fatalf("runtime error summary = %q / %v", got, tone)
 	}
 
@@ -100,12 +101,12 @@ func TestP10ePluginCardStatusSummaryPriority(t *testing.T) {
 		LastResult:  "42",
 		LastCommand: "hello.say",
 	})
-	if got != "hello.say → 42" || tone != p.success {
+	if got != "hello.say → 42" || tone != p.successText {
 		t.Fatalf("result summary = %q / %v", got, tone)
 	}
 
 	got, tone = state.pluginCardStatusSummary(p, entry, pluginRuntimeStatus{})
-	if got != "v1.2.3 · node" || tone != p.muted {
+	if got != "v1.2.3; node" || tone != p.muted {
 		t.Fatalf("version/runtime summary = %q / %v", got, tone)
 	}
 }
@@ -124,11 +125,40 @@ func TestP10ePluginCardHeightAndNarrowGrid(t *testing.T) {
 	if !ok {
 		t.Fatal("plugin card was not rendered")
 	}
-	if rect.H != pluginCardDefaultHeight {
-		t.Fatalf("plugin card height = %.1f, want %.1f", rect.H, pluginCardDefaultHeight)
+	if math.Abs(float64(rect.H-pluginCardDefaultHeight)) > 0.001 {
+		t.Fatalf("plugin card height = %.6f, want %.6f within 0.001", rect.H, pluginCardDefaultHeight)
 	}
 	if rect.W <= pluginCardMaxWidth {
 		t.Fatalf("narrow plugin card width = %.1f, want FillWidth above %.1f", rect.W, pluginCardMaxWidth)
+	}
+	actionLabel := textArgs("pluginsOpen", map[string]any{"title": "Hello panel"})
+	action, ok := tt.Find(actionLabel)
+	if !ok {
+		t.Fatal("plugin card primary action was not rendered")
+	}
+	if action.Y+action.H > rect.Y+rect.H-16 {
+		t.Fatalf("plugin action bottom %.1f exceeds card bottom %.1f minus inset 16",
+			action.Y+action.H, rect.Y+rect.H)
+	}
+
+	wide := ui.NewTester(func(c *ui.Context) {
+		theme, palette := nativeThemeWithContrast(false, false)
+		c.SetTheme(theme)
+		state.pluginsPage(c, palette)
+	}, 1200, 720)
+	wideCard, ok := wide.Find(textArgs("pluginsCardLabel", map[string]any{
+		"name": "P10e Test Plugin",
+	}))
+	if !ok {
+		t.Fatal("plugin card was not rendered at 1200px")
+	}
+	wideAction, ok := wide.Find(actionLabel)
+	if !ok {
+		t.Fatal("plugin card primary action was not rendered at 1200px")
+	}
+	if wideAction.Y+wideAction.H > wideCard.Y+wideCard.H-16 {
+		t.Fatalf("1200px plugin action bottom %.1f exceeds card bottom %.1f minus inset 16",
+			wideAction.Y+wideAction.H, wideCard.Y+wideCard.H)
 	}
 }
 

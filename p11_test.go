@@ -140,6 +140,19 @@ func TestP11bComposerShowsCapacityWithoutStandaloneContextControl(t *testing.T) 
 	if _, ok := tt.Find(text("contextLabel")); !ok {
 		t.Fatalf("model picker did not render %q", text("contextLabel"))
 	}
+	if _, ok := tt.Find(text("modelsManage")); !ok {
+		t.Fatalf("model picker did not render %q", text("modelsManage"))
+	}
+	if err := tt.Click(text("modelsManage")); err != nil {
+		t.Fatal(err)
+	}
+	if state.page != pageSettings {
+		t.Fatalf("page after Manage models = %q, want %q", state.page, pageSettings)
+	}
+	if state.settingsPageState.ActiveCategory != settingsCategoryModels {
+		t.Fatalf("settings category after Manage models = %q, want %q",
+			state.settingsPageState.ActiveCategory, settingsCategoryModels)
+	}
 }
 
 func TestP11bHUDContextFallbackClearsWhenPiReportsUnknown(t *testing.T) {

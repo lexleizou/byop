@@ -1,19 +1,23 @@
 # BYOP Design System
 
-This directory makes the public repository self-contained.
+This directory is the public repository copy of the BYOP design data. The
+canonical design source is `../../../design-system/pi-workbench/`; the two
+`pi-workbench/tokens.json` files and the two
+`pi-workbench/tokens.extensions.json` files must remain byte-identical.
 
-| File | Purpose |
+| File | Authority |
 |---|---|
-| `onevra/tokens.json` | Onevra base colors, typography, spacing, radii, motion and product semantics |
-| `pi-workbench/tokens.extensions.json` | BYOP workbench, Chat, plugin, task panel and Loop extensions |
+| `pi-workbench/tokens.json` | Authoritative BYOP Radix product tokens consumed by the app |
+| `pi-workbench/tokens.extensions.json` | Compatibility and migration layer for non-conflicting extension geometry, Chat details and aliases |
+| `onevra/tokens.json` | Read-only Onevra upstream reference; not a replacement product palette |
 
-Both files are JSON and can be validated with `jq empty`.
+Validate both product JSON files with `jq empty`. Onevra values and source
+line references may remain in compatibility descriptions, but must not
+override the product values.
 
-The design source is pinned in each file's metadata. `tokens.extensions.json`
-keeps the compatibility namespace `workbench.*`. BYOP product behavior is
-encoded under `piWorkbench.*`, `chat.*` and related namespaces.
-
-The current P2 Go implementation consumes a deliberate subset: semantic
-colors, the 14 px body size, the full type scale, native spacing and the
-expanded/collapsed navigation dimensions. Token-to-CSS synchronization and a
-runtime token loader remain future work.
+The product foundation is 12/14/18 px type, 0.5 px visible borders, 4/8/12/16/24
+spacing, 8 px input and 12 px overlay radii, and 250 ms ease-out motion with a
+0 ms reduced-motion fallback. Liquid Glass is limited to chrome, navigation and
+necessary overlays; reading surfaces and the Composer background stay opaque.
+High contrast or reduced transparency uses opaque Radix colors. P12 token publication, existing page implementation and model-channel flows are complete. Native macOS checks and remaining limits are recorded in `docs/P12-validation.md`. The presence of tokens does
+not prove every page consumes them. Penpot was not re-exported.

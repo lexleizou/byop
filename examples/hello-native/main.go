@@ -36,7 +36,7 @@ func main() {
 		case "invokeCommand":
 			invocations++
 			response["result"] = map[string]any{
-				"message": fmt.Sprintf("Hello from native plugin · pid %d · call %d · up %s",
+				"message": fmt.Sprintf("Hello from native plugin. pid %d, call %d, up %s",
 					os.Getpid(), invocations, time.Since(started).Round(time.Millisecond)),
 			}
 		default:

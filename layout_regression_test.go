@@ -121,9 +121,13 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 				assertInsideViewport(t, tt, scenario.mark(state), size.height)
 				assertInsideViewport(t, tt, text("chatMessageLabel"), size.height)
 				assertInsideViewport(t, tt, text("chatAttachmentUnavailable"), size.height)
-				assertInsideViewport(t, tt, state.piHUDLabel(), size.height)
+				if hudLabel := state.piHUDLabel(); hudLabel != "" {
+					assertInsideViewport(t, tt, hudLabel, size.height)
+				} else {
+					assertNotRendered(t, tt, "pi-hud")
+				}
 				assertInsideViewport(t, tt, text("chatSend"), size.height)
-				assertComposerFooterInsideViewport(t, tt, state.piHUDLabel(), size.height)
+				assertComposerFooterInsideViewport(t, tt, "composer-footer", size.height)
 				if scenario.name == "running queue" {
 					assertInsideViewport(t, tt, text("runningSendQueue"), size.height)
 					assertInsideViewport(t, tt, text("runningSendSteer"), size.height)
@@ -133,6 +137,28 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestP12EffortPickerUsesAppReducedMotion(t *testing.T) {
+	state := &appState{preferences: byopPreferences{
+		Motion: string(motionReduced),
+	}}
+	if got := state.effortFillDuration(false); got != 0 {
+		t.Fatalf("effort fill duration with reduced app motion = %s, want 0", got)
+	}
+
+	state.preferences.Motion = string(motionStandard)
+	if got := state.effortFillDuration(true); got != 250*time.Millisecond {
+		t.Fatalf("effort fill duration with standard app motion = %s, want 250ms", got)
+	}
+	if got := state.effortFillDuration(false); got != 250*time.Millisecond {
+		t.Fatalf("effort fill duration with standard motion = %s, want 250ms", got)
+	}
+
+	state.preferences.Motion = string(motionSystem)
+	if got := state.effortFillDuration(true); got != 0 {
+		t.Fatalf("effort fill duration with reduced system motion = %s, want 0", got)
 	}
 }
 

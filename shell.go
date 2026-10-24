@@ -27,15 +27,19 @@ var navItems = []navItem{
 }
 
 const (
-	shellGap            float32 = 8
-	shellRadius         float32 = 12
 	shellTitleBarHeight float32 = 52
+)
+
+var (
+	shellGap    float32 = 8
+	shellRadius         = runtimeTokens.Dimension.Radius["shell"].Value
 )
 
 func (s *appState) view(c *ui.Context) {
 	dark := currentAppearanceDark()
 	high := s.highContrastActive(currentAppearanceHighContrast())
-	s.syncPluginWebViewTheme(dark, high)
+	reduceTransparency := currentAppearanceReduceTransparency()
+	s.syncPluginWebViewTheme(dark, high, reduceTransparency)
 	t, p := nativeThemeWithContrast(dark, high)
 	c.SetTheme(t)
 	c.Root().Background(p.background)
@@ -68,9 +72,11 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 		start = max(start, 72)
 	}
 
-	card := shellCard(ui.Row(c), p).Height(height).FillWidth()
+	card := glassChrome(ui.Row(c), p, currentAppearanceDark(),
+		s.highContrastActive(currentAppearanceHighContrast()),
+		currentAppearanceReduceTransparency()).Height(height).FillWidth()
 	card.Children(func() {
-		ui.Row(c).FillHeight().FillWidth().Radius(shellRadius-1).Clip().
+		ui.Row(c).FillHeight().FillWidth().Radius(shellRadius-.5).Clip().
 			Padding(0, end).AlignItems(ui.Center).Children(func() {
 			ui.Box(c).Width(start).FillHeight().Shrink(0).DragWindow()
 			ui.Row(c).Gap(10).AlignItems(ui.Center).Shrink(0).Children(func() {
@@ -94,9 +100,17 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 	})
 }
 
-func shellCard(card ui.Element, p palette) ui.Element {
-	return card.Border(1, p.border).Radius(shellRadius).Background(p.surface).
-		Shadow(0, 1, 3, 0, p.shadowCard)
+func glassChrome(card ui.Element, p palette, dark, high, reduceTransparency bool) ui.Element {
+	card.Radius(shellRadius)
+	if high || reduceTransparency {
+		return card.Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface)
+	}
+	return card.Material(productGlassWithTint(p.glassTint))
+}
+
+func opaqueContent(card ui.Element, p palette) ui.Element {
+	return card.Border(runtimeTokens.Dimension.Border.Value, p.border).Radius(shellRadius).
+		Background(p.surface)
 }
 
 func (s *appState) titleBarHeading(c *ui.Context, p palette) {
@@ -112,7 +126,8 @@ func (s *appState) titleBarHeading(c *ui.Context, p palette) {
 			AlignItems(ui.Center)
 		renameRow.Children(func() {
 			ui.Row(c).Height(32).Grow(1).MinWidth(0).Padding(0, 8).Radius(8).
-				Border(1, p.focus).Background(p.background).AlignItems(ui.Center).Children(func() {
+				Border(runtimeTokens.Dimension.Border.Value, p.focus).Background(p.background).
+				AlignItems(ui.Center).Children(func() {
 				input := ui.TextInputBase(c.Key("session-title-rename"), &s.sessionRenameDraft).
 					Grow(1).Placeholder(text("titleNewChat")).FontSize(fontBody).
 					TextColor(p.text).Background(ui.Color{}).Border(0, ui.Color{}).
@@ -210,7 +225,8 @@ func panelToggleGroup(c *ui.Context, p palette, toggleNavigation, toggleTasks fu
 	if runtime.GOOS == "darwin" {
 		modifier = "⌘"
 	}
-	ui.Row(c).Height(34).Radius(8).Border(1, p.border).Background(p.surface).
+	ui.Row(c).Height(34).Radius(8).
+		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).
 		AlignItems(ui.Center).Children(func() {
 		panelToggleButton(c, p, "nav-toggle", "panel-left",
 			textArgs("titleToggleNavigationShortcut", map[string]any{"shortcut": modifier + "B"}),
@@ -270,19 +286,18 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
 	animatedWidth := nav.AnimateWith("navigation-width", width+shellGap, duration, ui.EaseOut)
 	nav.Width(animatedWidth).FillHeight().Shrink(0).Padding(0, shellGap, 0, 0).Children(func() {
-		shellCard(ui.Column(c).FillHeight().FillWidth().MinWidth(0), p).Children(func() {
-			ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius-1).Clip().
+		glassChrome(ui.Column(c).FillHeight().FillWidth().MinWidth(0), p, currentAppearanceDark(),
+			s.highContrastActive(currentAppearanceHighContrast()),
+			currentAppearanceReduceTransparency()).Children(func() {
+			ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius-.5).Clip().
 				Padding(12, 8).Children(func() {
 				if !s.navCollapsed {
 					ui.Text(c, text("navWorkspace")).FontSize(fontCaption).FontWeight(650).TextColor(p.muted).
 						Padding(2, 10, 8, 10)
 				}
-				ui.Column(c).Grow(1).MinHeight(0).Gap(3).Children(func() {
+				ui.Column(c).FillWidth().Shrink(0).Gap(3).Children(func() {
 					for _, item := range navItems {
 						s.navButton(c, p, item)
-						if item.id == pageChat && !s.navCollapsed && s.chatCapablePage() {
-							s.sessionsNavigation(c, p)
-						}
 					}
 					if s.navCollapsed && s.chatCapablePage() {
 						s.collapsedNewSessionButton(c, p)
@@ -298,6 +313,11 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 						}
 					}
 				})
+				if !s.navCollapsed && s.chatCapablePage() {
+					s.sessionsNavigation(c, p)
+				} else {
+					ui.Spacer(c).Grow(1)
+				}
 				s.navigationFooter(c, p)
 			})
 		})
@@ -354,11 +374,6 @@ func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigati
 			}
 		})
 	})
-	if selected {
-		btn.Draw(func(painter *ui.Painter, r ui.Rect) {
-			painter.Fill(ui.Rect{X: 0, Y: (r.H - 18) / 2, W: 3, H: 18}, p.accent, 2)
-		})
-	}
 	if btn.Clicked() {
 		s.openPluginNavigation(item.entry, item)
 	}
@@ -399,11 +414,6 @@ func (s *appState) navButton(c *ui.Context, p palette, item navItem) {
 			}
 		})
 	})
-	if selected {
-		btn.Draw(func(painter *ui.Painter, r ui.Rect) {
-			painter.Fill(ui.Rect{X: 0, Y: (r.H - 18) / 2, W: 3, H: 18}, p.accent, 2)
-		})
-	}
 	if btn.Clicked() {
 		s.setPage(item.id)
 	}
@@ -470,7 +480,7 @@ func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
 		_, localOver := ui.DragOver[sessionDragPayload](sessionsHeader)
 		_, nativeOver := ui.DataDragOver(sessionsHeader, sessionDropOptions())
 		if localOver || nativeOver {
-			sessionsHeader.Border(1, p.accent)
+			sessionsHeader.Border(runtimeTokens.Dimension.Border.Value, p.accent)
 		}
 		if drop, ok := ui.Drop[sessionDragPayload](sessionsHeader); ok {
 			s.applySessionDrop(drop, "", "")
@@ -622,14 +632,14 @@ func (s *appState) sessionSectionHeader(c *ui.Context, p palette, key, label, st
 		})
 	})
 	if _, over := ui.DragOver[sessionDragPayload](header); over {
-		header.Border(1, p.accent)
+		header.Border(runtimeTokens.Dimension.Border.Value, p.accent)
 	}
 	if drop, ok := ui.Drop[sessionDragPayload](header); ok {
 		s.applySessionDrop(drop, state, "")
 	}
 	opts := sessionDropOptions()
 	if _, over := ui.DataDragOver(header, opts); over {
-		header.Border(1, p.accent)
+		header.Border(runtimeTokens.Dimension.Border.Value, p.accent)
 	}
 	if drop, ok := ui.DropData(header, opts); ok {
 		if payload, valid := decodeSessionDrop(drop); valid {
@@ -647,7 +657,7 @@ func (s *appState) sessionDropArea(c *ui.Context, p palette, key, state, label s
 	_, nativeOver := ui.DataDragOver(area, sessionDropOptions())
 	over := localOver || nativeOver
 	if over {
-		area.Border(1, p.accent).Padding(3).Background(p.surface)
+		area.Border(runtimeTokens.Dimension.Border.Value, p.accent).Padding(3).Background(p.surface)
 	}
 	area.Children(func() {
 		showPlaceholder := over || (state == "" && s.draggingSessionKey != "")
@@ -673,7 +683,7 @@ func (s *appState) sessionDropArea(c *ui.Context, p palette, key, state, label s
 
 func (s *appState) sessionDropPlaceholder(c *ui.Context, p palette, label string) {
 	ui.Row(c).Height(32).FillWidth().Padding(0, 9).AlignItems(ui.Center).
-		Radius(7).Border(1, p.accent).Children(func() {
+		Radius(7).Border(runtimeTokens.Dimension.Border.Value, p.accent).Children(func() {
 		ui.Text(c, label).FontSize(fontCaption).TextColor(p.muted)
 	})
 }
@@ -689,7 +699,7 @@ func (s *appState) sessionDropBadge(c *ui.Context, p palette, state string) {
 		label = text("sessionMoveToArchived")
 	}
 	ui.Row(c).Padding(3, 7).Radius(999).Background(p.accent).Children(func() {
-		ui.Text(c, label).FontSize(fontMicro).FontWeight(700).TextColor(p.accentText)
+		ui.Text(c, label).FontSize(fontMicro).FontWeight(700).TextColor(p.onAccent)
 	})
 }
 
@@ -857,7 +867,7 @@ func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSumm
 		})
 	})
 	if _, over := ui.DragOver[sessionDragPayload](btn); over {
-		btn.Border(1, p.accent).Background(p.surfaceHover)
+		btn.Border(runtimeTokens.Dimension.Border.Value, p.accent).Background(p.surfaceHover)
 		ui.Row(c).Justify(ui.End).Children(func() {
 			s.sessionDropBadge(c, p, displayedState)
 		})
@@ -1003,9 +1013,11 @@ func (s *appState) integrationStatus(c *ui.Context, p palette) {
 	if box.Clicked() {
 		s.piStatusPopoverOpen = !s.piStatusPopoverOpen
 	}
-	ui.Popover(c, box, &s.piStatusPopoverOpen, func() {
-		s.piConnectionPopover(c, p)
-	})
+	popoverV12(c, box, &s.piStatusPopoverOpen,
+		s.highContrastActive(currentAppearanceHighContrast()) || currentAppearanceReduceTransparency(),
+		func(panel ui.Element) {
+			panel.Children(func() { s.piConnectionPopover(c, p) })
+		})
 }
 
 func (s *appState) piConnectionPopover(c *ui.Context, p palette) {
@@ -1027,7 +1039,7 @@ func (s *appState) piConnectionPopover(c *ui.Context, p palette) {
 			field(text("settingsVersion"), s.piVersion)
 		}
 		if message := s.piConnectionErrorText(); message != "" {
-			ui.Text(c, message).FontSize(fontSmall).LineHeight(1.4).TextColor(p.danger)
+			ui.Text(c, message).FontSize(fontSmall).LineHeight(1.4).TextColor(p.dangerText)
 		}
 		if detail := strings.TrimSpace(s.piError); detail != "" && detail != s.piConnectionErrorText() {
 			ui.Text(c, detail).Font("monospace").FontSize(fontCaption).LineHeight(1.4).
@@ -1067,9 +1079,9 @@ func (s *appState) settingsGearButton(c *ui.Context, p palette) {
 }
 
 func (s *appState) main(c *ui.Context, p palette) {
-	card := shellCard(ui.Column(c), p).Grow(1).MinWidth(0).MinHeight(0).FillHeight()
+	card := opaqueContent(ui.Column(c), p).Grow(1).MinWidth(0).MinHeight(0).FillHeight()
 	card.Children(func() {
-		ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius - 1).Clip().
+		ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius - .5).Clip().
 			Children(func() {
 				if s.notice != "" {
 					s.noticeBanner(c, p)
@@ -1080,7 +1092,7 @@ func (s *appState) main(c *ui.Context, p palette) {
 				case pageAutomations:
 					s.automationsPage(c, p)
 				case pageSettings:
-					s.settingsPage(c, p)
+					s.settingsPageV12(c, p, &s.settingsPageState)
 				case pagePluginView:
 					s.pluginViewPage(c, p)
 				default:
@@ -1122,9 +1134,9 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 	leftGap := min(shellGap, animatedWidth)
 	panel.Width(animatedWidth).MinWidth(0).FillHeight().Shrink(0).Padding(0, 0, 0, leftGap).
 		Children(func() {
-			card := shellCard(ui.Column(c), p).FillWidth().FillHeight().MinWidth(0)
+			card := opaqueContent(ui.Column(c), p).FillWidth().FillHeight().MinWidth(0)
 			card.Children(func() {
-				ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius - 1).Clip().
+				ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius - .5).Clip().
 					Children(func() {
 						ui.Row(c).Height(52).FillWidth().Padding(0, 14).AlignItems(ui.Center).
 							BorderWidth(0, 0, 1, 0).BorderColor(p.border).Children(func() {
@@ -1153,7 +1165,8 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 						})
 
 						ui.Row(c).Padding(12, 14).Gap(8).AlignItems(ui.Center).
-							BorderWidth(1, 0, 0, 0).BorderColor(p.border).Children(func() {
+							BorderWidth(runtimeTokens.Dimension.Border.Value, 0, 0, 0).
+							BorderColor(p.border).Children(func() {
 							ui.Icon(c, icon("info")).Size(14, 14).TextColor(p.muted)
 							ui.Text(c, text("tasksOwnership")).FontSize(fontCaption).TextColor(p.muted)
 						})
@@ -1211,7 +1224,7 @@ func (s *appState) pluginRegistryTaskTone(p palette) ui.Color {
 
 func (s *appState) taskCard(c *ui.Context, p palette, title, detail, status string, statusColor ui.Color) {
 	ui.Column(c).FillWidth().Gap(7).Padding(12).Radius(10).
-		Border(1, p.border).Background(p.background).Children(func() {
+		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.background).Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, title).FontSize(fontBody).FontWeight(600).TextColor(p.text).Grow(1)
 			ui.Box(c).Size(7, 7).Radius(4).Background(statusColor)
@@ -1224,7 +1237,7 @@ func (s *appState) taskCard(c *ui.Context, p palette, title, detail, status stri
 func pageHeader(c *ui.Context, p palette, eyebrow, title, description string) {
 	ui.Column(c).FillWidth().Gap(5).Children(func() {
 		if eyebrow != "" {
-			ui.Text(c, eyebrow).FontSize(fontCaption).FontWeight(700).TextColor(p.accent)
+			ui.Text(c, eyebrow).FontSize(fontCaption).FontWeight(700).TextColor(p.accentText)
 		}
 		ui.Text(c, title).FontSize(fontPageTitle).FontWeight(650).TextColor(p.text)
 		ui.Text(c, description).FontSize(fontBody).LineHeight(1.45).TextColor(p.muted).MaxWidth(680)
@@ -1232,7 +1245,8 @@ func pageHeader(c *ui.Context, p palette, eyebrow, title, description string) {
 }
 
 func statusPill(c *ui.Context, p palette, label string, ccolor ui.Color) {
-	ui.Row(c).Padding(4, 9).Radius(999).Border(1, p.border).
+	ui.Row(c).Padding(4, 9).Radius(999).
+		Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(p.surface).Gap(6).AlignItems(ui.Center).Children(func() {
 		ui.Box(c).Size(6, 6).Radius(3).Background(ccolor)
 		ui.Text(c, label).FontSize(fontMicro).FontWeight(700).TextColor(p.muted)
@@ -1276,7 +1290,7 @@ func sendButton(c *ui.Context, p palette, click func()) {
 		btn.Background(p.accentHover)
 	}
 	btn.Children(func() {
-		ui.Icon(c, icon("send")).Size(16, 16).TextColor(p.accentText)
+		ui.Icon(c, icon("send")).Size(16, 16).TextColor(p.onAccent)
 	})
 	if btn.Clicked() {
 		click()
@@ -1287,7 +1301,7 @@ func stopButton(c *ui.Context, p palette, click func()) {
 	btn := ui.ButtonBase(c.Key("stop")).Size(34, 34).Radius(8).Background(p.danger).
 		Center().Cursor(ui.CursorPointer).Label(text("chatStopCurrentRun")).Tooltip(text("chatStopTooltip"))
 	btn.Children(func() {
-		ui.Icon(c, icon("stop")).Size(15, 15).TextColor(p.accentText)
+		ui.Icon(c, icon("stop")).Size(15, 15).TextColor(p.onAccent)
 	})
 	if btn.Clicked() {
 		click()
@@ -1322,8 +1336,8 @@ func primaryAction(c *ui.Context, p palette, key, label string, iconName string,
 	}
 	btn.Children(func() {
 		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-			ui.Icon(c, icon(iconName)).Size(14, 14).TextColor(p.accentText)
-			ui.Text(c, label).FontSize(fontSmall).FontWeight(650).TextColor(p.accentText)
+			ui.Icon(c, icon(iconName)).Size(14, 14).TextColor(p.onAccent)
+			ui.Text(c, label).FontSize(fontSmall).FontWeight(650).TextColor(p.onAccent)
 		})
 	})
 	if btn.Clicked() {
@@ -1332,7 +1346,8 @@ func primaryAction(c *ui.Context, p palette, key, label string, iconName string,
 }
 
 func secondaryAction(c *ui.Context, p palette, key, label string, click func()) {
-	btn := ui.ButtonBase(c.Key(key)).Padding(7, 11).Radius(7).Border(1, p.border).
+	btn := ui.ButtonBase(c.Key(key)).Padding(7, 11).Radius(7).
+		Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(p.surface).Cursor(ui.CursorPointer).Label(label)
 	if btn.Hovered() {
 		btn.Background(p.surfaceHover)
@@ -1346,7 +1361,8 @@ func secondaryAction(c *ui.Context, p palette, key, label string, click func()) 
 }
 
 func searchField(c *ui.Context, p palette, key string, value *string, placeholder string) {
-	ui.Row(c).Height(36).Gap(7).Padding(0, 10).Radius(8).Border(1, p.border).
+	ui.Row(c).Height(36).Gap(7).Padding(0, 10).Radius(8).
+		Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(p.surface).AlignItems(ui.Center).Children(func() {
 		ui.Icon(c, icon("search")).Size(15, 15).TextColor(p.muted)
 		ui.TextInputBase(c.Key(key), value).Grow(1).Placeholder(placeholder).
@@ -1523,7 +1539,7 @@ func (s *appState) runtimeDiagnosticDetail() string {
 			}
 		}
 		if s.retryError != "" {
-			retry += " · " + summarizeLine(s.retryError, 120)
+			retry += " - " + summarizeLine(s.retryError, 120)
 		}
 		parts = append(parts, retry)
 	} else if s.retryError != "" {
@@ -1546,7 +1562,7 @@ func (s *appState) runtimeDiagnosticDetail() string {
 	if s.extensionError != "" {
 		source := extensionDisplayName(s.extensionPath)
 		if source != "" && s.extensionEvent != "" {
-			source += " · " + s.extensionEvent
+			source += " - " + s.extensionEvent
 		}
 		parts = append(parts, textArgs("diagnosticExtensionError", map[string]any{
 			"source": fallback(source, text("diagnosticUnknownExtension")),
