@@ -65,6 +65,11 @@ Opus 第 8 轮复审：P0–P2 全部关闭。
 
 减少透明度为应用内模拟切换，未修改系统辅助功能设置。
 
+## 安装验证
+
+发布源码提交 `8e19653`，MyGo 本地签名构建（跳过公证）。安装路径 `/Applications/BYOP.app`，版本 0.13.0；原 0.12.0 移到 `/Users/lexleizou/.Trash/BYOP-pre-P13-20261026-003330.app`，可恢复。
+安装可执行文件与 dist 产物 SHA-256 一致：`865189de2df344c9641c014109aa5427e9168f023dba85682416354f20f08e99`；AppIcon.icns 与 dist 一致，为新版黑底白 π；codesign 校验通过。
+
 ## 已知限制
 
 - 玻璃为 MyGo 材质着色器，不是 Apple NSGlassEffectView；MyGo 不支持 text-shadow，原型中的文字阴影未复原。
