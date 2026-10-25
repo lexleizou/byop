@@ -21,6 +21,10 @@ type byopPreferences struct {
 	Contrast                       string                                `json:"contrast,omitempty"`
 	Motion                         string                                `json:"motion,omitempty"`
 	PanelAnimationMS               int                                   `json:"panelAnimationMs,omitempty"`
+	Wallpaper                      string                                `json:"wallpaper,omitempty"`
+	NavTransparency                int                                   `json:"navTransparency"`
+	GlassBlur                      int                                   `json:"glassBlur"`
+	GlassRefraction                bool                                  `json:"glassRefraction"`
 	UILanguage                     string                                `json:"uiLanguage,omitempty"`
 	FollowUpStyle                  string                                `json:"followUpStyle,omitempty"`
 	RunningSendMode                string                                `json:"runningSendMode,omitempty"`
@@ -59,6 +63,10 @@ func defaultByopPreferences() byopPreferences {
 		Contrast:               string(contrastSystem),
 		Motion:                 string(motionSystem),
 		PanelAnimationMS:       defaultPanelAnimationMS,
+		Wallpaper:              runtimeTokens.Glass.WallpaperDefault,
+		NavTransparency:        runtimeTokens.Glass.NavTransparencyDefault,
+		GlassBlur:              runtimeTokens.Glass.BlurDefault,
+		GlassRefraction:        runtimeTokens.Glass.RefractionDefault,
 		UILanguage:             "system",
 		FollowUpStyle:          string(followUpStyleGhost),
 		RunningSendMode:        string(runningSendQueue),
@@ -135,6 +143,9 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 	preferences.Contrast = string(normalizeContrastMode(preferences.Contrast))
 	preferences.Motion = string(normalizeMotionMode(preferences.Motion))
 	preferences.PanelAnimationMS = normalizePanelAnimationMS(preferences.PanelAnimationMS)
+	preferences.Wallpaper = normalizeWallpaper(preferences.Wallpaper)
+	preferences.NavTransparency = min(max(preferences.NavTransparency, 0), 100)
+	preferences.GlassBlur = min(max(preferences.GlassBlur, 0), runtimeTokens.Glass.BlurMax)
 	if preferences.LastSessionByWorkspace == nil {
 		preferences.LastSessionByWorkspace = make(map[string]string)
 	}
@@ -146,6 +157,19 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 	}
 	if preferences.Legacy == nil {
 		preferences.Legacy = make(map[string]legacyValue)
+	}
+}
+
+func normalizeWallpaper(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "ember", "jade", "graphite", "none":
+		return value
+	default:
+		if normalized := strings.ToLower(strings.TrimSpace(runtimeTokens.Glass.WallpaperDefault)); normalized != "" {
+			return normalized
+		}
+		return "ember"
 	}
 }
 

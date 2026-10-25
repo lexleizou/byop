@@ -96,6 +96,66 @@
   "@tasksCurrentRun": {
     "description": "Task card title for the current Pi run."
   },
+  "tasksQueueTitle": "队列",
+  "@tasksQueueTitle": {
+    "description": "Task panel section title for queued messages."
+  },
+  "tasksQueueEmpty": "无排队消息",
+  "@tasksQueueEmpty": {
+    "description": "Empty state for the queued messages section."
+  },
+  "tasksQueueCount": "{count} 条消息",
+  "@tasksQueueCount": {
+    "description": "Number of queued messages in the task panel."
+  },
+  "tasksToolRead": "读取 {target}",
+  "@tasksToolRead": {
+    "description": "Task row description for a file read."
+  },
+  "tasksToolSearch": "搜索 {target}",
+  "@tasksToolSearch": {
+    "description": "Task row description for a search."
+  },
+  "tasksToolGeneric": "{tool} {target}",
+  "@tasksToolGeneric": {
+    "description": "Fallback task row description for a tool call."
+  },
+  "tasksToolLines": "{count} 行",
+  "@tasksToolLines": {
+    "description": "Line count shown for a file read."
+  },
+  "tasksToolMatches": "{count} 处",
+  "@tasksToolMatches": {
+    "description": "Match count shown for a search."
+  },
+  "tasksUsageTitle": "本会话用量",
+  "@tasksUsageTitle": {
+    "description": "Task panel section title for session usage."
+  },
+  "tasksUsageEmpty": "暂无用量数据。",
+  "@tasksUsageEmpty": {
+    "description": "Empty state for session usage."
+  },
+  "tasksUsageInputOutput": "输入 / 输出",
+  "@tasksUsageInputOutput": {
+    "description": "Label for input and output token counts."
+  },
+  "tasksUsageCache": "缓存命中",
+  "@tasksUsageCache": {
+    "description": "Label for cache usage in the task panel."
+  },
+  "tasksUsageCost": "费用",
+  "@tasksUsageCost": {
+    "description": "Label for estimated cost in the task panel."
+  },
+  "tasksUsageContext": "上下文",
+  "@tasksUsageContext": {
+    "description": "Label for context usage in the task panel."
+  },
+  "tasksOtherSessionsTitle": "其他会话",
+  "@tasksOtherSessionsTitle": {
+    "description": "Task panel section title for other sessions."
+  },
   "tasksRuntimeDiagnostics": "运行时诊断",
   "@tasksRuntimeDiagnostics": {
     "description": "Task card title for runtime diagnostics."
@@ -104,7 +164,7 @@
   "@tasksPluginRegistry": {
     "description": "Task card title for plugin registry status."
   },
-  "tasksOwnership": "Pi 负责会话、凭据、模型和扩展",
+  "tasksOwnership": "会话、凭据、模型和扩展由 Pi 管理；BYOP 只显示状态。",
   "@tasksOwnership": {
     "description": "Footer explaining ownership of Pi state."
   },
@@ -1286,6 +1346,10 @@
   "@chatFollowUpHint": {
     "description": "Keyboard hint for the follow-up suggestion."
   },
+  "chatFollowUpKeyTab": "Tab",
+  "@chatFollowUpKeyTab": {
+    "description": "Keyboard key shown beside the follow-up suggestion."
+  },
   "chatStoppingPi": "正在停止 Pi",
   "@chatStoppingPi": {
     "description": "Composer status while stopping a Pi run."
@@ -1302,6 +1366,14 @@
   "@chatWorkedFor": {
     "description": "Summary of a completed assistant turn."
   },
+  "chatCompleted": "已完成",
+  "@chatCompleted": {
+    "description": "Success label in a completed assistant turn."
+  },
+  "chatCopy": "复制",
+  "@chatCopy": {
+    "description": "Accessible label for copying a completed response."
+  },
   "chatWorkingFor": "正在工作；{duration}",
   "@chatWorkingFor": {
     "description": "Summary of a running assistant turn."
@@ -1309,6 +1381,18 @@
   "chatRanTools": "运行了 {count} 个工具",
   "@chatRanTools": {
     "description": "Summary for a group of tool calls."
+  },
+  "chatToolCount": "{count} 个工具",
+  "@chatToolCount": {
+    "description": "Tool count in completed-turn metadata."
+  },
+  "modelsGroupTitle": "模型",
+  "@modelsGroupTitle": {
+    "description": "Heading for the model list in the model popover."
+  },
+  "thinkingStrengthTitle": "思考强度",
+  "@thinkingStrengthTitle": {
+    "description": "Heading for thinking strength in the model popover."
   },
   "chatWaitingForTool": "等待工具输出…",
   "@chatWaitingForTool": {
@@ -1333,6 +1417,10 @@
   "chatDuration": "{minutes} 分钟 {seconds} 秒",
   "@chatDuration": {
     "description": "Compact assistant turn duration."
+  },
+  "chatDurationSeconds": "{seconds} 秒",
+  "@chatDurationSeconds": {
+    "description": "Compact assistant turn duration under one minute."
   },
   "chatConnectionNotConnected": "Pi CLI 尚未连接，请在设置中重新连接。",
   "@chatConnectionNotConnected": {
@@ -1421,6 +1509,22 @@
   "settingsAppearanceDescription": "系统、浅色和深色模式共用 Onevra 语义色和原生文字比例。",
   "@settingsAppearanceDescription": {
     "description": "Appearance settings card description."
+  },
+  "settingsThemeTitle": "主题",
+  "@settingsThemeTitle": {
+    "description": "Label for the theme row in appearance settings."
+  },
+  "settingsThemeDescription": "选择浅色、深色或跟随系统。",
+  "@settingsThemeDescription": {
+    "description": "Description for the theme row in appearance settings."
+  },
+  "settingsReduceTransparencyTitle": "减少透明度",
+  "@settingsReduceTransparencyTitle": {
+    "description": "Label for the system reduce-transparency row."
+  },
+  "settingsReduceTransparencyDescription": "跟随系统设置；开启后所有玻璃改为实色。",
+  "@settingsReduceTransparencyDescription": {
+    "description": "Description for the system reduce-transparency row."
   },
   "settingsAppearanceSystem": "跟随系统",
   "@settingsAppearanceSystem": {
@@ -2387,37 +2491,73 @@
   "@settingsCategoryGeneral": {
     "description": "Settings category for language and general behavior."
   },
+  "settingsCategoryGeneralDescription": "界面语言、快捷键和日常应用默认设置。",
+  "@settingsCategoryGeneralDescription": {
+    "description": "Description shown above general settings."
+  },
   "settingsCategoryAppearance": "外观",
   "@settingsCategoryAppearance": {
     "description": "Settings category for theme, contrast, and motion."
+  },
+  "settingsCategoryAppearanceDescription": "导航、标题栏和弹出菜单使用玻璃；阅读区和输入框保持不透明。",
+  "@settingsCategoryAppearanceDescription": {
+    "description": "Description shown above appearance settings."
   },
   "settingsCategoryModels": "模型与渠道",
   "@settingsCategoryModels": {
     "description": "Settings category for Pi model and provider configuration."
   },
+  "settingsCategoryModelsDescription": "渠道和凭据由 Pi 管理，BYOP 只显示状态。",
+  "@settingsCategoryModelsDescription": {
+    "description": "Description shown above model and channel settings."
+  },
   "settingsCategoryConversation": "对话",
   "@settingsCategoryConversation": {
     "description": "Settings category for chat behavior."
+  },
+  "settingsCategoryConversationDescription": "后续建议和对话交互偏好。",
+  "@settingsCategoryConversationDescription": {
+    "description": "Description shown above conversation settings."
   },
   "settingsCategoryWorkspace": "工作区",
   "@settingsCategoryWorkspace": {
     "description": "Settings category for the active workspace."
   },
+  "settingsCategoryWorkspaceDescription": "当前 Pi 会话使用的工作目录。",
+  "@settingsCategoryWorkspaceDescription": {
+    "description": "Description shown above workspace settings."
+  },
   "settingsCategoryExtensions": "扩展",
   "@settingsCategoryExtensions": {
     "description": "Settings category for plugin-provided settings."
+  },
+  "settingsCategoryExtensionsDescription": "已安装的 Pi 扩展，以及插件提供的设置。",
+  "@settingsCategoryExtensionsDescription": {
+    "description": "Description shown above extension settings."
   },
   "settingsCategoryData": "数据与诊断",
   "@settingsCategoryData": {
     "description": "Settings category for diagnostics and migration data."
   },
-  "settingsCategoryAbout": "关于",
+  "settingsCategoryDataDescription": "运行时、插件、迁移和连接诊断。",
+  "@settingsCategoryDataDescription": {
+    "description": "Description shown above data and diagnostics settings."
+  },
+  "settingsCategoryAbout": "关于 BYOP",
   "@settingsCategoryAbout": {
     "description": "Settings category for product and build information."
+  },
+  "settingsCategoryAboutDescription": "产品、版本和构建信息。",
+  "@settingsCategoryAboutDescription": {
+    "description": "Description shown above product information."
   },
   "settingsShortcutsTitle": "快捷键",
   "@settingsShortcutsTitle": {
     "description": "Heading for keyboard shortcut settings."
+  },
+  "settingsAccessibilityTitle": "显示与动效",
+  "@settingsAccessibilityTitle": {
+    "description": "Heading for contrast and motion settings."
   },
   "settingsShortcutNavigationAction": "切换导航栏",
   "@settingsShortcutNavigationAction": {
@@ -2966,5 +3106,142 @@
   "channelRefreshFailureTranscript": "无法恢复对话记录。",
   "@channelRefreshFailureTranscript": {
     "description": "Channel configuration and refresh interface."
+  },
+  "navGlassButton": "导航栏玻璃",
+  "@navGlassButton": {
+    "description": "Button that opens navigation glass controls."
+  },
+  "navGlassTitle": "导航栏玻璃",
+  "@navGlassTitle": {
+    "description": "Title of the navigation glass controls."
+  },
+  "navGlassTransparencyTitle": "透明度",
+  "@navGlassTransparencyTitle": {
+    "description": "Transparency control label inside the navigation glass popover."
+  },
+  "navGlassBlurTitle": "模糊",
+  "@navGlassBlurTitle": {
+    "description": "Blur control label inside the navigation glass popover."
+  },
+  "navGlassValuePixels": "{value}px",
+  "@navGlassValuePixels": {
+    "description": "Pixel value inside the navigation glass popover."
+  },
+  "navGlassMoreSettings": "更多外观设置",
+  "@navGlassMoreSettings": {
+    "description": "Action that opens all appearance settings."
+  },
+  "settingsGlassTitle": "窗口与玻璃",
+  "@settingsGlassTitle": {
+    "description": "Settings section for the window wallpaper and glass material."
+  },
+  "settingsWallpaperTitle": "窗口壁纸",
+  "@settingsWallpaperTitle": {
+    "description": "Title of the window wallpaper choices."
+  },
+  "settingsWallpaperDescription": "只出现在玻璃后面，不铺到阅读区。",
+  "@settingsWallpaperDescription": {
+    "description": "Explains that the wallpaper remains behind glass surfaces."
+  },
+  "settingsWallpaperEmber": "余烬",
+  "@settingsWallpaperEmber": {
+    "description": "Name of the ember wallpaper."
+  },
+  "settingsWallpaperJade": "青岚",
+  "@settingsWallpaperJade": {
+    "description": "Name of the jade wallpaper."
+  },
+  "settingsWallpaperGraphite": "石墨",
+  "@settingsWallpaperGraphite": {
+    "description": "Name of the graphite wallpaper."
+  },
+  "settingsWallpaperNone": "无壁纸",
+  "@settingsWallpaperNone": {
+    "description": "Choice that removes the window wallpaper."
+  },
+  "settingsNavTransparencyTitle": "导航栏透明度",
+  "@settingsNavTransparencyTitle": {
+    "description": "Title of the navigation transparency slider."
+  },
+  "settingsNavTransparencyDescription": "越高越透；超过 75% 时文字会加深以保证可读。",
+  "@settingsNavTransparencyDescription": {
+    "description": "Explains the transparency value and high-transparency text behavior."
+  },
+  "settingsGlassBlurTitle": "玻璃模糊",
+  "@settingsGlassBlurTitle": {
+    "description": "Title of the glass blur slider."
+  },
+  "settingsGlassBlurDescription": "0 为几乎清透，数值越大背景越柔和。",
+  "@settingsGlassBlurDescription": {
+    "description": "Explains the glass blur range."
+  },
+  "settingsGlassRefractionTitle": "边缘折射",
+  "@settingsGlassRefractionTitle": {
+    "description": "Title of the glass refraction switch."
+  },
+  "settingsGlassRefractionDescription": "玻璃边缘把背后的画面轻微弯折。",
+  "@settingsGlassRefractionDescription": {
+    "description": "Explains the glass edge refraction effect."
+  },
+  "settingsGlassDarkOnly": "壁纸与导航玻璃只在深色主题生效。",
+  "@settingsGlassDarkOnly": {
+    "description": "Status shown when glass controls do not apply in the light theme."
+  },
+  "settingsGlassSolidFallback": "系统已开启减少透明度或高对比，当前使用实色。",
+  "@settingsGlassSolidFallback": {
+    "description": "Status shown when appearance settings require solid fallback colors."
+  },
+  "settingsGlassPreview": "预览",
+  "@settingsGlassPreview": {
+    "description": "Label for the wallpaper and navigation glass preview."
+  },
+  "settingsValuePercent": "{value}%",
+  "@settingsValuePercent": {
+    "description": "Percentage value used by appearance sliders."
+  },
+  "settingsValuePixels": "{value}px",
+  "@settingsValuePixels": {
+    "description": "Pixel value used by appearance sliders."
+  },
+  "noticePreferenceSaveGlass": "外观设置未能保存。",
+  "@noticePreferenceSaveGlass": {
+    "description": "Notice shown when appearance preferences cannot be saved."
+  },
+  "navNewChat": "新对话",
+  "@navNewChat": {
+    "description": "Primary navigation action that starts a new conversation."
+  },
+  "navToday": "今天",
+  "@navToday": {
+    "description": "Session group label for conversations updated today."
+  },
+  "navYesterday": "昨天",
+  "@navYesterday": {
+    "description": "Session group label for conversations updated yesterday."
+  },
+  "navEarlier": "更早",
+  "@navEarlier": {
+    "description": "Session group label for older conversations."
+  },
+  "navPiStatus": "Pi {version} · {status}",
+  "@navPiStatus": {
+    "description": "Pi version and connection state in the navigation footer.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "navPiStatusNoVersion": "Pi · {status}",
+  "@navPiStatusNoVersion": {
+    "description": "Pi connection state in the navigation footer when the version is unavailable.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
   }
 }

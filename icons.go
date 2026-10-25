@@ -17,6 +17,9 @@ var byopLogoData []byte
 //go:embed assets/byop-logo-1024.png
 var byopLogoPNG []byte
 
+//go:embed assets/byop-logo-mark.png
+var byopLogoMarkPNG []byte
+
 //go:embed assets/brands/deepseek.svg
 var deepseekBrandSVG []byte
 
@@ -27,6 +30,7 @@ var claudeBrandSVG []byte
 var qwenBrandSVG []byte
 
 var iconSet map[string]*ui.SVG
+var byopLogoMarkBitmap *ui.Bitmap
 
 func init() {
 	iconSet = make(map[string]*ui.SVG)
@@ -38,6 +42,9 @@ func init() {
 	iconSet["brand-deepseek"] = ui.MustParseSVG(deepseekBrandSVG)
 	iconSet["brand-claude"] = ui.MustParseSVG(claudeBrandSVG)
 	iconSet["brand-qwen"] = ui.MustParseSVG(qwenBrandSVG)
+	if bitmap, err := ui.DecodeBitmap(byopLogoMarkPNG); err == nil {
+		byopLogoMarkBitmap = bitmap
+	}
 }
 
 func icon(name string) *ui.SVG {
@@ -55,7 +62,7 @@ func iconOr(name, fallbackName string) *ui.SVG {
 }
 
 func lucide(elements string) string {
-	return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">` +
+	return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">` +
 		elements + `</svg>`
 }
 
@@ -64,10 +71,14 @@ func lucide(elements string) string {
 var lucideIcons = map[string]string{
 	"chat": `<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
 		<path d="M8 9h8M8 13h5"/>`,
-	"plugins": `<rect width="7" height="7" x="3" y="3" rx="1"/>
-		<rect width="7" height="7" x="14" y="3" rx="1"/>
-		<rect width="7" height="7" x="14" y="14" rx="1"/>
-		<rect width="7" height="7" x="3" y="14" rx="1"/>`,
+	"square-pen": `<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+		<path d="M18.4 2.6a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"/>`,
+	"message-square": `<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>`,
+	"blocks": `<rect width="7" height="7" x="14" y="3" rx="1"/>
+		<path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3"/>`,
+	"zap": `<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>`,
+	"plugins": `<rect width="7" height="7" x="14" y="3" rx="1"/>
+		<path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3"/>`,
 	"library": `<path d="M12 7v14"/>
 		<path d="M3 18a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5a3 3 0 0 1 3 3v1"/>
 		<path d="M21 18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-5a3 3 0 0 0-3 3v1"/>`,
@@ -77,13 +88,17 @@ var lucideIcons = map[string]string{
 		<path d="M19 17h-4v4"/>
 		<path d="M5 7a8 8 0 0 1 13.5-2"/>
 		<path d="M19 17A8 8 0 0 1 5.5 19"/>`,
-	"settings": `<path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
-		<path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/>`,
+	"settings": `<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+		<circle cx="12" cy="12" r="3"/>`,
 	"search": `<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>`,
 	"panel-right": `<rect width="18" height="18" x="3" y="3" rx="2"/>
 		<path d="M15 3v18"/>`,
 	"panel-left": `<rect width="18" height="18" x="3" y="3" rx="2"/>
 		<path d="M9 3v18"/>`,
+	"sliders-horizontal": `<path d="M20 7h-9"/>
+		<path d="M14 17H5"/>
+		<circle cx="17" cy="17" r="3"/>
+		<circle cx="7" cy="7" r="3"/>`,
 	"sun": `<circle cx="12" cy="12" r="4"/>
 		<path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>`,
 	"moon": `<path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>`,
@@ -93,6 +108,7 @@ var lucideIcons = map[string]string{
 		<path d="M2 5h12M7 2h1"/><path d="m22 22-5-10-5 10"/>
 		<path d="M14 18h6"/>`,
 	"send":      `<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>`,
+	"arrow-up":  `<path d="m5 12 7-7 7 7M12 19V5"/>`,
 	"stop":      `<rect width="14" height="14" x="5" y="5" rx="2"/>`,
 	"paperclip": `<path d="m21.4 11.6-8.9 8.9a6 6 0 0 1-8.5-8.5l9.6-9.6a4 4 0 1 1 5.7 5.7l-9.6 9.6a2 2 0 1 1-2.8-2.8l8.9-8.9"/>`,
 	"plus":      `<path d="M5 12h14M12 5v14"/>`,
@@ -133,4 +149,12 @@ var lucideIcons = map[string]string{
 		<circle cx="6" cy="19" r="2"/>
 		<path d="M6 7v10M8 7h5a5 5 0 0 1 5 5v0"/>
 		<path d="m14 10 3-3 3 3"/>`,
+	"git-branch": `<path d="M6 3v12"/>
+		<circle cx="18" cy="6" r="3"/>
+		<circle cx="6" cy="18" r="3"/>
+		<path d="M18 9a9 9 0 0 1-9 9"/>`,
+	"copy": `<rect width="13" height="13" x="9" y="9" rx="2"/>
+		<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>`,
+	"rotate-ccw": `<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/>
+		<path d="M3 3v5h5"/>`,
 }

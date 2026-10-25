@@ -96,6 +96,106 @@
   "@tasksCurrentRun": {
     "description": "Task card title for the current Pi run."
   },
+  "tasksQueueTitle": "Queue",
+  "@tasksQueueTitle": {
+    "description": "Task panel section title for queued messages."
+  },
+  "tasksQueueEmpty": "Nothing queued",
+  "@tasksQueueEmpty": {
+    "description": "Empty state for the queued messages section."
+  },
+  "tasksQueueCount": "{count, plural, one {# message} other {# messages}}",
+  "@tasksQueueCount": {
+    "description": "Number of queued messages in the task panel.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "tasksToolRead": "Read {target}",
+  "@tasksToolRead": {
+    "description": "Task row description for a file read.",
+    "placeholders": {
+      "target": {
+        "type": "String",
+        "example": "chat_view.go"
+      }
+    }
+  },
+  "tasksToolSearch": "Search {target}",
+  "@tasksToolSearch": {
+    "description": "Task row description for a search.",
+    "placeholders": {
+      "target": {
+        "type": "String",
+        "example": "pendingDraft"
+      }
+    }
+  },
+  "tasksToolGeneric": "{tool} {target}",
+  "@tasksToolGeneric": {
+    "description": "Fallback task row description for a tool call.",
+    "placeholders": {
+      "tool": {
+        "type": "String",
+        "example": "bash"
+      },
+      "target": {
+        "type": "String",
+        "example": "go test ./..."
+      }
+    }
+  },
+  "tasksToolLines": "{count, plural, one {# line} other {# lines}}",
+  "@tasksToolLines": {
+    "description": "Line count shown for a file read.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "48"
+      }
+    }
+  },
+  "tasksToolMatches": "{count, plural, one {# match} other {# matches}}",
+  "@tasksToolMatches": {
+    "description": "Match count shown for a search.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "tasksUsageTitle": "This session's usage",
+  "@tasksUsageTitle": {
+    "description": "Task panel section title for session usage."
+  },
+  "tasksUsageEmpty": "No usage data yet.",
+  "@tasksUsageEmpty": {
+    "description": "Empty state for session usage."
+  },
+  "tasksUsageInputOutput": "Input / output",
+  "@tasksUsageInputOutput": {
+    "description": "Label for input and output token counts."
+  },
+  "tasksUsageCache": "Cache hit",
+  "@tasksUsageCache": {
+    "description": "Label for cache usage in the task panel."
+  },
+  "tasksUsageCost": "Cost",
+  "@tasksUsageCost": {
+    "description": "Label for estimated cost in the task panel."
+  },
+  "tasksUsageContext": "Context",
+  "@tasksUsageContext": {
+    "description": "Label for context usage in the task panel."
+  },
+  "tasksOtherSessionsTitle": "Other sessions",
+  "@tasksOtherSessionsTitle": {
+    "description": "Task panel section title for other sessions."
+  },
   "tasksRuntimeDiagnostics": "Runtime diagnostics",
   "@tasksRuntimeDiagnostics": {
     "description": "Task card title for runtime diagnostics."
@@ -104,7 +204,7 @@
   "@tasksPluginRegistry": {
     "description": "Task card title for plugin registry status."
   },
-  "tasksOwnership": "Pi owns sessions, credentials, models, and extensions",
+  "tasksOwnership": "Pi manages sessions, credentials, models, and extensions; BYOP only shows status.",
   "@tasksOwnership": {
     "description": "Footer explaining ownership of Pi state."
   },
@@ -1291,6 +1391,10 @@
   "@chatFollowUpHint": {
     "description": "Keyboard hint for the follow-up suggestion."
   },
+  "chatFollowUpKeyTab": "Tab",
+  "@chatFollowUpKeyTab": {
+    "description": "Keyboard key shown beside the follow-up suggestion."
+  },
   "chatStoppingPi": "Stopping Pi",
   "@chatStoppingPi": {
     "description": "Composer status while stopping a Pi run."
@@ -1313,6 +1417,14 @@
       }
     }
   },
+  "chatCompleted": "Completed",
+  "@chatCompleted": {
+    "description": "Success label in a completed assistant turn."
+  },
+  "chatCopy": "Copy",
+  "@chatCopy": {
+    "description": "Accessible label for copying a completed response."
+  },
   "chatWorkingFor": "Working; {duration}",
   "@chatWorkingFor": {
     "description": "Summary of a running assistant turn.",
@@ -1323,6 +1435,14 @@
       }
     }
   },
+  "modelsGroupTitle": "Models",
+  "@modelsGroupTitle": {
+    "description": "Heading for the model list in the model popover."
+  },
+  "thinkingStrengthTitle": "Thinking strength",
+  "@thinkingStrengthTitle": {
+    "description": "Heading for thinking strength in the model popover."
+  },
   "chatRanTools": "{count, plural, =0 {Ran no tools} one {Ran # tool} other {Ran # tools}}",
   "@chatRanTools": {
     "description": "Summary for a group of tool calls.",
@@ -1330,6 +1450,16 @@
       "count": {
         "type": "int",
         "example": "2"
+      }
+    }
+  },
+  "chatToolCount": "{count, plural, one {# tool} other {# tools}}",
+  "@chatToolCount": {
+    "description": "Tool count in completed-turn metadata.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
       }
     }
   },
@@ -1364,6 +1494,16 @@
       "seconds": {
         "type": "int",
         "example": "8"
+      }
+    }
+  },
+  "chatDurationSeconds": "{seconds}s",
+  "@chatDurationSeconds": {
+    "description": "Compact assistant turn duration under one minute.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "example": "34"
       }
     }
   },
@@ -1454,6 +1594,22 @@
   "settingsAppearanceDescription": "System, Light, and Dark share the Onevra semantic colors and native text scale.",
   "@settingsAppearanceDescription": {
     "description": "Appearance settings card description."
+  },
+  "settingsThemeTitle": "Theme",
+  "@settingsThemeTitle": {
+    "description": "Label for the theme row in appearance settings."
+  },
+  "settingsThemeDescription": "Choose a light, dark, or system appearance.",
+  "@settingsThemeDescription": {
+    "description": "Description for the theme row in appearance settings."
+  },
+  "settingsReduceTransparencyTitle": "Reduce transparency",
+  "@settingsReduceTransparencyTitle": {
+    "description": "Label for the system reduce-transparency row."
+  },
+  "settingsReduceTransparencyDescription": "Follows the system setting; glass becomes solid when enabled.",
+  "@settingsReduceTransparencyDescription": {
+    "description": "Description for the system reduce-transparency row."
   },
   "settingsAppearanceSystem": "System",
   "@settingsAppearanceSystem": {
@@ -2532,37 +2688,73 @@
   "@settingsCategoryGeneral": {
     "description": "Settings category for language and general behavior."
   },
+  "settingsCategoryGeneralDescription": "Language, shortcuts, and everyday app defaults.",
+  "@settingsCategoryGeneralDescription": {
+    "description": "Description shown above general settings."
+  },
   "settingsCategoryAppearance": "Appearance",
   "@settingsCategoryAppearance": {
     "description": "Settings category for theme, contrast, and motion."
+  },
+  "settingsCategoryAppearanceDescription": "Navigation, title bar, and popovers use glass; reading and input areas stay opaque.",
+  "@settingsCategoryAppearanceDescription": {
+    "description": "Description shown above appearance settings."
   },
   "settingsCategoryModels": "Models and channels",
   "@settingsCategoryModels": {
     "description": "Settings category for Pi model and provider configuration."
   },
+  "settingsCategoryModelsDescription": "Channels and credentials are managed by Pi; BYOP shows status.",
+  "@settingsCategoryModelsDescription": {
+    "description": "Description shown above model and channel settings."
+  },
   "settingsCategoryConversation": "Conversation",
   "@settingsCategoryConversation": {
     "description": "Settings category for chat behavior."
+  },
+  "settingsCategoryConversationDescription": "Follow-up suggestions and chat interaction preferences.",
+  "@settingsCategoryConversationDescription": {
+    "description": "Description shown above conversation settings."
   },
   "settingsCategoryWorkspace": "Workspace",
   "@settingsCategoryWorkspace": {
     "description": "Settings category for the active workspace."
   },
+  "settingsCategoryWorkspaceDescription": "The working directory used by the current Pi session.",
+  "@settingsCategoryWorkspaceDescription": {
+    "description": "Description shown above workspace settings."
+  },
   "settingsCategoryExtensions": "Extensions",
   "@settingsCategoryExtensions": {
     "description": "Settings category for plugin-provided settings."
+  },
+  "settingsCategoryExtensionsDescription": "Installed Pi extensions and plugin-provided controls.",
+  "@settingsCategoryExtensionsDescription": {
+    "description": "Description shown above extension settings."
   },
   "settingsCategoryData": "Data and diagnostics",
   "@settingsCategoryData": {
     "description": "Settings category for diagnostics and migration data."
   },
-  "settingsCategoryAbout": "About",
+  "settingsCategoryDataDescription": "Runtime, plugin, migration, and connection diagnostics.",
+  "@settingsCategoryDataDescription": {
+    "description": "Description shown above data and diagnostics settings."
+  },
+  "settingsCategoryAbout": "About BYOP",
   "@settingsCategoryAbout": {
     "description": "Settings category for product and build information."
+  },
+  "settingsCategoryAboutDescription": "Product, version, and build information.",
+  "@settingsCategoryAboutDescription": {
+    "description": "Description shown above product information."
   },
   "settingsShortcutsTitle": "Keyboard shortcuts",
   "@settingsShortcutsTitle": {
     "description": "Heading for keyboard shortcut settings."
+  },
+  "settingsAccessibilityTitle": "Display and motion",
+  "@settingsAccessibilityTitle": {
+    "description": "Heading for contrast and motion settings."
   },
   "settingsShortcutNavigationAction": "Toggle navigation",
   "@settingsShortcutNavigationAction": {
@@ -3111,5 +3303,148 @@
   "channelRefreshFailureTranscript": "The conversation transcript could not be restored.",
   "@channelRefreshFailureTranscript": {
     "description": "Channel configuration and refresh interface."
+  },
+  "navGlassButton": "Navigation glass",
+  "@navGlassButton": {
+    "description": "Button that opens navigation glass controls."
+  },
+  "navGlassTitle": "Navigation glass",
+  "@navGlassTitle": {
+    "description": "Title of the navigation glass controls."
+  },
+  "navGlassTransparencyTitle": "Transparency",
+  "@navGlassTransparencyTitle": {
+    "description": "Transparency control label inside the navigation glass popover."
+  },
+  "navGlassBlurTitle": "Blur",
+  "@navGlassBlurTitle": {
+    "description": "Blur control label inside the navigation glass popover."
+  },
+  "navGlassValuePixels": "{value}px",
+  "@navGlassValuePixels": {
+    "description": "Pixel value inside the navigation glass popover.",
+    "placeholders": {
+      "value": {
+        "type": "int",
+        "example": "14"
+      }
+    }
+  },
+  "navGlassMoreSettings": "More appearance settings",
+  "@navGlassMoreSettings": {
+    "description": "Action that opens all appearance settings."
+  },
+  "settingsGlassTitle": "Window and glass",
+  "@settingsGlassTitle": {
+    "description": "Settings section for the window wallpaper and glass material."
+  },
+  "settingsWallpaperTitle": "Window wallpaper",
+  "@settingsWallpaperTitle": {
+    "description": "Title of the window wallpaper choices."
+  },
+  "settingsWallpaperDescription": "Shows only behind glass, never under the reading area.",
+  "@settingsWallpaperDescription": {
+    "description": "Explains that the wallpaper remains behind glass surfaces."
+  },
+  "settingsWallpaperEmber": "Ember",
+  "@settingsWallpaperEmber": {
+    "description": "Name of the ember wallpaper."
+  },
+  "settingsWallpaperJade": "Jade",
+  "@settingsWallpaperJade": {
+    "description": "Name of the jade wallpaper."
+  },
+  "settingsWallpaperGraphite": "Graphite",
+  "@settingsWallpaperGraphite": {
+    "description": "Name of the graphite wallpaper."
+  },
+  "settingsWallpaperNone": "No wallpaper",
+  "@settingsWallpaperNone": {
+    "description": "Choice that removes the window wallpaper."
+  },
+  "settingsNavTransparencyTitle": "Navigation transparency",
+  "@settingsNavTransparencyTitle": {
+    "description": "Title of the navigation transparency slider."
+  },
+  "settingsNavTransparencyDescription": "Higher is clearer; above 75% text gets stronger to stay readable.",
+  "@settingsNavTransparencyDescription": {
+    "description": "Explains the transparency value and high-transparency text behavior."
+  },
+  "settingsGlassBlurTitle": "Glass blur",
+  "@settingsGlassBlurTitle": {
+    "description": "Title of the glass blur slider."
+  },
+  "settingsGlassBlurDescription": "0 is nearly clear; higher values soften the background.",
+  "@settingsGlassBlurDescription": {
+    "description": "Explains the glass blur range."
+  },
+  "settingsGlassRefractionTitle": "Edge refraction",
+  "@settingsGlassRefractionTitle": {
+    "description": "Title of the glass refraction switch."
+  },
+  "settingsGlassRefractionDescription": "The glass edge slightly bends what is behind it.",
+  "@settingsGlassRefractionDescription": {
+    "description": "Explains the glass edge refraction effect."
+  },
+  "settingsGlassDarkOnly": "Wallpaper and navigation glass apply in the dark theme.",
+  "@settingsGlassDarkOnly": {
+    "description": "Status shown when glass controls do not apply in the light theme."
+  },
+  "settingsGlassSolidFallback": "Reduce Transparency or High Contrast is on, so solid colors are used.",
+  "@settingsGlassSolidFallback": {
+    "description": "Status shown when appearance settings require solid fallback colors."
+  },
+  "settingsGlassPreview": "Preview",
+  "@settingsGlassPreview": {
+    "description": "Label for the wallpaper and navigation glass preview."
+  },
+  "settingsValuePercent": "{value}%",
+  "@settingsValuePercent": {
+    "description": "Percentage value used by appearance sliders."
+  },
+  "settingsValuePixels": "{value}px",
+  "@settingsValuePixels": {
+    "description": "Pixel value used by appearance sliders."
+  },
+  "noticePreferenceSaveGlass": "Appearance settings could not be saved.",
+  "@noticePreferenceSaveGlass": {
+    "description": "Notice shown when appearance preferences cannot be saved."
+  },
+  "navNewChat": "New chat",
+  "@navNewChat": {
+    "description": "Primary navigation action that starts a new conversation."
+  },
+  "navToday": "Today",
+  "@navToday": {
+    "description": "Session group label for conversations updated today."
+  },
+  "navYesterday": "Yesterday",
+  "@navYesterday": {
+    "description": "Session group label for conversations updated yesterday."
+  },
+  "navEarlier": "Earlier",
+  "@navEarlier": {
+    "description": "Session group label for older conversations."
+  },
+  "navPiStatus": "Pi {version} · {status}",
+  "@navPiStatus": {
+    "description": "Pi version and connection state in the navigation footer.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "navPiStatusNoVersion": "Pi · {status}",
+  "@navPiStatusNoVersion": {
+    "description": "Pi connection state in the navigation footer when the version is unavailable.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
   }
 }

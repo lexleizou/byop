@@ -372,6 +372,218 @@ func (msgs Messages) TasksCurrentRun() string {
 	return Catalog.Format(msgs.locale, "tasksCurrentRun", nil)
 }
 
+// TasksQueueTitle says "Queue"
+// in the language the app shows.
+//
+// Task panel section title for queued messages.
+func TasksQueueTitle() string { return In(i18n.Locale()).TasksQueueTitle() }
+
+// TasksQueueTitle says "Queue"
+// in the language of msgs.
+//
+// Task panel section title for queued messages.
+func (msgs Messages) TasksQueueTitle() string {
+	return Catalog.Format(msgs.locale, "tasksQueueTitle", nil)
+}
+
+// TasksQueueEmpty says "Nothing queued"
+// in the language the app shows.
+//
+// Empty state for the queued messages section.
+func TasksQueueEmpty() string { return In(i18n.Locale()).TasksQueueEmpty() }
+
+// TasksQueueEmpty says "Nothing queued"
+// in the language of msgs.
+//
+// Empty state for the queued messages section.
+func (msgs Messages) TasksQueueEmpty() string {
+	return Catalog.Format(msgs.locale, "tasksQueueEmpty", nil)
+}
+
+// TasksQueueCount says "{count, plural, one {# message} other {# messages}}"
+// in the language the app shows.
+//
+// Number of queued messages in the task panel.
+func TasksQueueCount(count int) string { return In(i18n.Locale()).TasksQueueCount(count) }
+
+// TasksQueueCount says "{count, plural, one {# message} other {# messages}}"
+// in the language of msgs.
+//
+// Number of queued messages in the task panel.
+func (msgs Messages) TasksQueueCount(count int) string {
+	return Catalog.Format(msgs.locale, "tasksQueueCount", map[string]any{"count": count})
+}
+
+// TasksToolRead says "Read {target}"
+// in the language the app shows.
+//
+// Task row description for a file read.
+func TasksToolRead(target string) string { return In(i18n.Locale()).TasksToolRead(target) }
+
+// TasksToolRead says "Read {target}"
+// in the language of msgs.
+//
+// Task row description for a file read.
+func (msgs Messages) TasksToolRead(target string) string {
+	return Catalog.Format(msgs.locale, "tasksToolRead", map[string]any{"target": target})
+}
+
+// TasksToolSearch says "Search {target}"
+// in the language the app shows.
+//
+// Task row description for a search.
+func TasksToolSearch(target string) string { return In(i18n.Locale()).TasksToolSearch(target) }
+
+// TasksToolSearch says "Search {target}"
+// in the language of msgs.
+//
+// Task row description for a search.
+func (msgs Messages) TasksToolSearch(target string) string {
+	return Catalog.Format(msgs.locale, "tasksToolSearch", map[string]any{"target": target})
+}
+
+// TasksToolGeneric says "{tool} {target}"
+// in the language the app shows.
+//
+// Fallback task row description for a tool call.
+func TasksToolGeneric(tool string, target string) string {
+	return In(i18n.Locale()).TasksToolGeneric(tool, target)
+}
+
+// TasksToolGeneric says "{tool} {target}"
+// in the language of msgs.
+//
+// Fallback task row description for a tool call.
+func (msgs Messages) TasksToolGeneric(tool string, target string) string {
+	return Catalog.Format(msgs.locale, "tasksToolGeneric", map[string]any{"tool": tool, "target": target})
+}
+
+// TasksToolLines says "{count, plural, one {# line} other {# lines}}"
+// in the language the app shows.
+//
+// Line count shown for a file read.
+func TasksToolLines(count int) string { return In(i18n.Locale()).TasksToolLines(count) }
+
+// TasksToolLines says "{count, plural, one {# line} other {# lines}}"
+// in the language of msgs.
+//
+// Line count shown for a file read.
+func (msgs Messages) TasksToolLines(count int) string {
+	return Catalog.Format(msgs.locale, "tasksToolLines", map[string]any{"count": count})
+}
+
+// TasksToolMatches says "{count, plural, one {# match} other {# matches}}"
+// in the language the app shows.
+//
+// Match count shown for a search.
+func TasksToolMatches(count int) string { return In(i18n.Locale()).TasksToolMatches(count) }
+
+// TasksToolMatches says "{count, plural, one {# match} other {# matches}}"
+// in the language of msgs.
+//
+// Match count shown for a search.
+func (msgs Messages) TasksToolMatches(count int) string {
+	return Catalog.Format(msgs.locale, "tasksToolMatches", map[string]any{"count": count})
+}
+
+// TasksUsageTitle says "This session's usage"
+// in the language the app shows.
+//
+// Task panel section title for session usage.
+func TasksUsageTitle() string { return In(i18n.Locale()).TasksUsageTitle() }
+
+// TasksUsageTitle says "This session's usage"
+// in the language of msgs.
+//
+// Task panel section title for session usage.
+func (msgs Messages) TasksUsageTitle() string {
+	return Catalog.Format(msgs.locale, "tasksUsageTitle", nil)
+}
+
+// TasksUsageEmpty says "No usage data yet."
+// in the language the app shows.
+//
+// Empty state for session usage.
+func TasksUsageEmpty() string { return In(i18n.Locale()).TasksUsageEmpty() }
+
+// TasksUsageEmpty says "No usage data yet."
+// in the language of msgs.
+//
+// Empty state for session usage.
+func (msgs Messages) TasksUsageEmpty() string {
+	return Catalog.Format(msgs.locale, "tasksUsageEmpty", nil)
+}
+
+// TasksUsageInputOutput says "Input / output"
+// in the language the app shows.
+//
+// Label for input and output token counts.
+func TasksUsageInputOutput() string { return In(i18n.Locale()).TasksUsageInputOutput() }
+
+// TasksUsageInputOutput says "Input / output"
+// in the language of msgs.
+//
+// Label for input and output token counts.
+func (msgs Messages) TasksUsageInputOutput() string {
+	return Catalog.Format(msgs.locale, "tasksUsageInputOutput", nil)
+}
+
+// TasksUsageCache says "Cache hit"
+// in the language the app shows.
+//
+// Label for cache usage in the task panel.
+func TasksUsageCache() string { return In(i18n.Locale()).TasksUsageCache() }
+
+// TasksUsageCache says "Cache hit"
+// in the language of msgs.
+//
+// Label for cache usage in the task panel.
+func (msgs Messages) TasksUsageCache() string {
+	return Catalog.Format(msgs.locale, "tasksUsageCache", nil)
+}
+
+// TasksUsageCost says "Cost"
+// in the language the app shows.
+//
+// Label for estimated cost in the task panel.
+func TasksUsageCost() string { return In(i18n.Locale()).TasksUsageCost() }
+
+// TasksUsageCost says "Cost"
+// in the language of msgs.
+//
+// Label for estimated cost in the task panel.
+func (msgs Messages) TasksUsageCost() string {
+	return Catalog.Format(msgs.locale, "tasksUsageCost", nil)
+}
+
+// TasksUsageContext says "Context"
+// in the language the app shows.
+//
+// Label for context usage in the task panel.
+func TasksUsageContext() string { return In(i18n.Locale()).TasksUsageContext() }
+
+// TasksUsageContext says "Context"
+// in the language of msgs.
+//
+// Label for context usage in the task panel.
+func (msgs Messages) TasksUsageContext() string {
+	return Catalog.Format(msgs.locale, "tasksUsageContext", nil)
+}
+
+// TasksOtherSessionsTitle says "Other sessions"
+// in the language the app shows.
+//
+// Task panel section title for other sessions.
+func TasksOtherSessionsTitle() string { return In(i18n.Locale()).TasksOtherSessionsTitle() }
+
+// TasksOtherSessionsTitle says "Other sessions"
+// in the language of msgs.
+//
+// Task panel section title for other sessions.
+func (msgs Messages) TasksOtherSessionsTitle() string {
+	return Catalog.Format(msgs.locale, "tasksOtherSessionsTitle", nil)
+}
+
 // TasksRuntimeDiagnostics says "Runtime diagnostics"
 // in the language the app shows.
 //
@@ -400,13 +612,13 @@ func (msgs Messages) TasksPluginRegistry() string {
 	return Catalog.Format(msgs.locale, "tasksPluginRegistry", nil)
 }
 
-// TasksOwnership says "Pi owns sessions, credentials, models, and extensions"
+// TasksOwnership says "Pi manages sessions, credentials, models, and extensions; BYOP only shows status."
 // in the language the app shows.
 //
 // Footer explaining ownership of Pi state.
 func TasksOwnership() string { return In(i18n.Locale()).TasksOwnership() }
 
-// TasksOwnership says "Pi owns sessions, credentials, models, and extensions"
+// TasksOwnership says "Pi manages sessions, credentials, models, and extensions; BYOP only shows status."
 // in the language of msgs.
 //
 // Footer explaining ownership of Pi state.
@@ -4616,6 +4828,20 @@ func (msgs Messages) ChatFollowUpHint() string {
 	return Catalog.Format(msgs.locale, "chatFollowUpHint", nil)
 }
 
+// ChatFollowUpKeyTab says "Tab"
+// in the language the app shows.
+//
+// Keyboard key shown beside the follow-up suggestion.
+func ChatFollowUpKeyTab() string { return In(i18n.Locale()).ChatFollowUpKeyTab() }
+
+// ChatFollowUpKeyTab says "Tab"
+// in the language of msgs.
+//
+// Keyboard key shown beside the follow-up suggestion.
+func (msgs Messages) ChatFollowUpKeyTab() string {
+	return Catalog.Format(msgs.locale, "chatFollowUpKeyTab", nil)
+}
+
 // ChatStoppingPi says "Stopping Pi"
 // in the language the app shows.
 //
@@ -4672,6 +4898,34 @@ func (msgs Messages) ChatWorkedFor(duration string) string {
 	return Catalog.Format(msgs.locale, "chatWorkedFor", map[string]any{"duration": duration})
 }
 
+// ChatCompleted says "Completed"
+// in the language the app shows.
+//
+// Success label in a completed assistant turn.
+func ChatCompleted() string { return In(i18n.Locale()).ChatCompleted() }
+
+// ChatCompleted says "Completed"
+// in the language of msgs.
+//
+// Success label in a completed assistant turn.
+func (msgs Messages) ChatCompleted() string {
+	return Catalog.Format(msgs.locale, "chatCompleted", nil)
+}
+
+// ChatCopy says "Copy"
+// in the language the app shows.
+//
+// Accessible label for copying a completed response.
+func ChatCopy() string { return In(i18n.Locale()).ChatCopy() }
+
+// ChatCopy says "Copy"
+// in the language of msgs.
+//
+// Accessible label for copying a completed response.
+func (msgs Messages) ChatCopy() string {
+	return Catalog.Format(msgs.locale, "chatCopy", nil)
+}
+
 // ChatWorkingFor says "Working; {duration}"
 // in the language the app shows.
 //
@@ -4686,6 +4940,34 @@ func (msgs Messages) ChatWorkingFor(duration string) string {
 	return Catalog.Format(msgs.locale, "chatWorkingFor", map[string]any{"duration": duration})
 }
 
+// ModelsGroupTitle says "Models"
+// in the language the app shows.
+//
+// Heading for the model list in the model popover.
+func ModelsGroupTitle() string { return In(i18n.Locale()).ModelsGroupTitle() }
+
+// ModelsGroupTitle says "Models"
+// in the language of msgs.
+//
+// Heading for the model list in the model popover.
+func (msgs Messages) ModelsGroupTitle() string {
+	return Catalog.Format(msgs.locale, "modelsGroupTitle", nil)
+}
+
+// ThinkingStrengthTitle says "Thinking strength"
+// in the language the app shows.
+//
+// Heading for thinking strength in the model popover.
+func ThinkingStrengthTitle() string { return In(i18n.Locale()).ThinkingStrengthTitle() }
+
+// ThinkingStrengthTitle says "Thinking strength"
+// in the language of msgs.
+//
+// Heading for thinking strength in the model popover.
+func (msgs Messages) ThinkingStrengthTitle() string {
+	return Catalog.Format(msgs.locale, "thinkingStrengthTitle", nil)
+}
+
 // ChatRanTools says "{count, plural, =0 {Ran no tools} one {Ran # tool} other {Ran # tools}}"
 // in the language the app shows.
 //
@@ -4698,6 +4980,20 @@ func ChatRanTools(count int) string { return In(i18n.Locale()).ChatRanTools(coun
 // Summary for a group of tool calls.
 func (msgs Messages) ChatRanTools(count int) string {
 	return Catalog.Format(msgs.locale, "chatRanTools", map[string]any{"count": count})
+}
+
+// ChatToolCount says "{count, plural, one {# tool} other {# tools}}"
+// in the language the app shows.
+//
+// Tool count in completed-turn metadata.
+func ChatToolCount(count int) string { return In(i18n.Locale()).ChatToolCount(count) }
+
+// ChatToolCount says "{count, plural, one {# tool} other {# tools}}"
+// in the language of msgs.
+//
+// Tool count in completed-turn metadata.
+func (msgs Messages) ChatToolCount(count int) string {
+	return Catalog.Format(msgs.locale, "chatToolCount", map[string]any{"count": count})
 }
 
 // ChatWaitingForTool says "Waiting for tool output…"
@@ -4786,6 +5082,20 @@ func ChatDuration(minutes int, seconds int) string {
 // Compact assistant turn duration.
 func (msgs Messages) ChatDuration(minutes int, seconds int) string {
 	return Catalog.Format(msgs.locale, "chatDuration", map[string]any{"minutes": minutes, "seconds": seconds})
+}
+
+// ChatDurationSeconds says "{seconds}s"
+// in the language the app shows.
+//
+// Compact assistant turn duration under one minute.
+func ChatDurationSeconds(seconds int) string { return In(i18n.Locale()).ChatDurationSeconds(seconds) }
+
+// ChatDurationSeconds says "{seconds}s"
+// in the language of msgs.
+//
+// Compact assistant turn duration under one minute.
+func (msgs Messages) ChatDurationSeconds(seconds int) string {
+	return Catalog.Format(msgs.locale, "chatDurationSeconds", map[string]any{"seconds": seconds})
 }
 
 // ChatConnectionNotConnected says "Pi CLI is not connected. Reconnect from Settings."
@@ -5094,6 +5404,66 @@ func SettingsAppearanceDescription() string { return In(i18n.Locale()).SettingsA
 // Appearance settings card description.
 func (msgs Messages) SettingsAppearanceDescription() string {
 	return Catalog.Format(msgs.locale, "settingsAppearanceDescription", nil)
+}
+
+// SettingsThemeTitle says "Theme"
+// in the language the app shows.
+//
+// Label for the theme row in appearance settings.
+func SettingsThemeTitle() string { return In(i18n.Locale()).SettingsThemeTitle() }
+
+// SettingsThemeTitle says "Theme"
+// in the language of msgs.
+//
+// Label for the theme row in appearance settings.
+func (msgs Messages) SettingsThemeTitle() string {
+	return Catalog.Format(msgs.locale, "settingsThemeTitle", nil)
+}
+
+// SettingsThemeDescription says "Choose a light, dark, or system appearance."
+// in the language the app shows.
+//
+// Description for the theme row in appearance settings.
+func SettingsThemeDescription() string { return In(i18n.Locale()).SettingsThemeDescription() }
+
+// SettingsThemeDescription says "Choose a light, dark, or system appearance."
+// in the language of msgs.
+//
+// Description for the theme row in appearance settings.
+func (msgs Messages) SettingsThemeDescription() string {
+	return Catalog.Format(msgs.locale, "settingsThemeDescription", nil)
+}
+
+// SettingsReduceTransparencyTitle says "Reduce transparency"
+// in the language the app shows.
+//
+// Label for the system reduce-transparency row.
+func SettingsReduceTransparencyTitle() string {
+	return In(i18n.Locale()).SettingsReduceTransparencyTitle()
+}
+
+// SettingsReduceTransparencyTitle says "Reduce transparency"
+// in the language of msgs.
+//
+// Label for the system reduce-transparency row.
+func (msgs Messages) SettingsReduceTransparencyTitle() string {
+	return Catalog.Format(msgs.locale, "settingsReduceTransparencyTitle", nil)
+}
+
+// SettingsReduceTransparencyDescription says "Follows the system setting; glass becomes solid when enabled."
+// in the language the app shows.
+//
+// Description for the system reduce-transparency row.
+func SettingsReduceTransparencyDescription() string {
+	return In(i18n.Locale()).SettingsReduceTransparencyDescription()
+}
+
+// SettingsReduceTransparencyDescription says "Follows the system setting; glass becomes solid when enabled."
+// in the language of msgs.
+//
+// Description for the system reduce-transparency row.
+func (msgs Messages) SettingsReduceTransparencyDescription() string {
+	return Catalog.Format(msgs.locale, "settingsReduceTransparencyDescription", nil)
 }
 
 // SettingsAppearanceSystem says "System"
@@ -8354,6 +8724,22 @@ func (msgs Messages) SettingsCategoryGeneral() string {
 	return Catalog.Format(msgs.locale, "settingsCategoryGeneral", nil)
 }
 
+// SettingsCategoryGeneralDescription says "Language, shortcuts, and everyday app defaults."
+// in the language the app shows.
+//
+// Description shown above general settings.
+func SettingsCategoryGeneralDescription() string {
+	return In(i18n.Locale()).SettingsCategoryGeneralDescription()
+}
+
+// SettingsCategoryGeneralDescription says "Language, shortcuts, and everyday app defaults."
+// in the language of msgs.
+//
+// Description shown above general settings.
+func (msgs Messages) SettingsCategoryGeneralDescription() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryGeneralDescription", nil)
+}
+
 // SettingsCategoryAppearance says "Appearance"
 // in the language the app shows.
 //
@@ -8366,6 +8752,22 @@ func SettingsCategoryAppearance() string { return In(i18n.Locale()).SettingsCate
 // Settings category for theme, contrast, and motion.
 func (msgs Messages) SettingsCategoryAppearance() string {
 	return Catalog.Format(msgs.locale, "settingsCategoryAppearance", nil)
+}
+
+// SettingsCategoryAppearanceDescription says "Navigation, title bar, and popovers use glass; reading and input areas stay opaque."
+// in the language the app shows.
+//
+// Description shown above appearance settings.
+func SettingsCategoryAppearanceDescription() string {
+	return In(i18n.Locale()).SettingsCategoryAppearanceDescription()
+}
+
+// SettingsCategoryAppearanceDescription says "Navigation, title bar, and popovers use glass; reading and input areas stay opaque."
+// in the language of msgs.
+//
+// Description shown above appearance settings.
+func (msgs Messages) SettingsCategoryAppearanceDescription() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryAppearanceDescription", nil)
 }
 
 // SettingsCategoryModels says "Models and channels"
@@ -8382,6 +8784,22 @@ func (msgs Messages) SettingsCategoryModels() string {
 	return Catalog.Format(msgs.locale, "settingsCategoryModels", nil)
 }
 
+// SettingsCategoryModelsDescription says "Channels and credentials are managed by Pi; BYOP shows status."
+// in the language the app shows.
+//
+// Description shown above model and channel settings.
+func SettingsCategoryModelsDescription() string {
+	return In(i18n.Locale()).SettingsCategoryModelsDescription()
+}
+
+// SettingsCategoryModelsDescription says "Channels and credentials are managed by Pi; BYOP shows status."
+// in the language of msgs.
+//
+// Description shown above model and channel settings.
+func (msgs Messages) SettingsCategoryModelsDescription() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryModelsDescription", nil)
+}
+
 // SettingsCategoryConversation says "Conversation"
 // in the language the app shows.
 //
@@ -8394,6 +8812,22 @@ func SettingsCategoryConversation() string { return In(i18n.Locale()).SettingsCa
 // Settings category for chat behavior.
 func (msgs Messages) SettingsCategoryConversation() string {
 	return Catalog.Format(msgs.locale, "settingsCategoryConversation", nil)
+}
+
+// SettingsCategoryConversationDescription says "Follow-up suggestions and chat interaction preferences."
+// in the language the app shows.
+//
+// Description shown above conversation settings.
+func SettingsCategoryConversationDescription() string {
+	return In(i18n.Locale()).SettingsCategoryConversationDescription()
+}
+
+// SettingsCategoryConversationDescription says "Follow-up suggestions and chat interaction preferences."
+// in the language of msgs.
+//
+// Description shown above conversation settings.
+func (msgs Messages) SettingsCategoryConversationDescription() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryConversationDescription", nil)
 }
 
 // SettingsCategoryWorkspace says "Workspace"
@@ -8410,6 +8844,22 @@ func (msgs Messages) SettingsCategoryWorkspace() string {
 	return Catalog.Format(msgs.locale, "settingsCategoryWorkspace", nil)
 }
 
+// SettingsCategoryWorkspaceDescription says "The working directory used by the current Pi session."
+// in the language the app shows.
+//
+// Description shown above workspace settings.
+func SettingsCategoryWorkspaceDescription() string {
+	return In(i18n.Locale()).SettingsCategoryWorkspaceDescription()
+}
+
+// SettingsCategoryWorkspaceDescription says "The working directory used by the current Pi session."
+// in the language of msgs.
+//
+// Description shown above workspace settings.
+func (msgs Messages) SettingsCategoryWorkspaceDescription() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryWorkspaceDescription", nil)
+}
+
 // SettingsCategoryExtensions says "Extensions"
 // in the language the app shows.
 //
@@ -8422,6 +8872,22 @@ func SettingsCategoryExtensions() string { return In(i18n.Locale()).SettingsCate
 // Settings category for plugin-provided settings.
 func (msgs Messages) SettingsCategoryExtensions() string {
 	return Catalog.Format(msgs.locale, "settingsCategoryExtensions", nil)
+}
+
+// SettingsCategoryExtensionsDescription says "Installed Pi extensions and plugin-provided controls."
+// in the language the app shows.
+//
+// Description shown above extension settings.
+func SettingsCategoryExtensionsDescription() string {
+	return In(i18n.Locale()).SettingsCategoryExtensionsDescription()
+}
+
+// SettingsCategoryExtensionsDescription says "Installed Pi extensions and plugin-provided controls."
+// in the language of msgs.
+//
+// Description shown above extension settings.
+func (msgs Messages) SettingsCategoryExtensionsDescription() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryExtensionsDescription", nil)
 }
 
 // SettingsCategoryData says "Data and diagnostics"
@@ -8438,18 +8904,50 @@ func (msgs Messages) SettingsCategoryData() string {
 	return Catalog.Format(msgs.locale, "settingsCategoryData", nil)
 }
 
-// SettingsCategoryAbout says "About"
+// SettingsCategoryDataDescription says "Runtime, plugin, migration, and connection diagnostics."
+// in the language the app shows.
+//
+// Description shown above data and diagnostics settings.
+func SettingsCategoryDataDescription() string {
+	return In(i18n.Locale()).SettingsCategoryDataDescription()
+}
+
+// SettingsCategoryDataDescription says "Runtime, plugin, migration, and connection diagnostics."
+// in the language of msgs.
+//
+// Description shown above data and diagnostics settings.
+func (msgs Messages) SettingsCategoryDataDescription() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryDataDescription", nil)
+}
+
+// SettingsCategoryAbout says "About BYOP"
 // in the language the app shows.
 //
 // Settings category for product and build information.
 func SettingsCategoryAbout() string { return In(i18n.Locale()).SettingsCategoryAbout() }
 
-// SettingsCategoryAbout says "About"
+// SettingsCategoryAbout says "About BYOP"
 // in the language of msgs.
 //
 // Settings category for product and build information.
 func (msgs Messages) SettingsCategoryAbout() string {
 	return Catalog.Format(msgs.locale, "settingsCategoryAbout", nil)
+}
+
+// SettingsCategoryAboutDescription says "Product, version, and build information."
+// in the language the app shows.
+//
+// Description shown above product information.
+func SettingsCategoryAboutDescription() string {
+	return In(i18n.Locale()).SettingsCategoryAboutDescription()
+}
+
+// SettingsCategoryAboutDescription says "Product, version, and build information."
+// in the language of msgs.
+//
+// Description shown above product information.
+func (msgs Messages) SettingsCategoryAboutDescription() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryAboutDescription", nil)
 }
 
 // SettingsShortcutsTitle says "Keyboard shortcuts"
@@ -8464,6 +8962,20 @@ func SettingsShortcutsTitle() string { return In(i18n.Locale()).SettingsShortcut
 // Heading for keyboard shortcut settings.
 func (msgs Messages) SettingsShortcutsTitle() string {
 	return Catalog.Format(msgs.locale, "settingsShortcutsTitle", nil)
+}
+
+// SettingsAccessibilityTitle says "Display and motion"
+// in the language the app shows.
+//
+// Heading for contrast and motion settings.
+func SettingsAccessibilityTitle() string { return In(i18n.Locale()).SettingsAccessibilityTitle() }
+
+// SettingsAccessibilityTitle says "Display and motion"
+// in the language of msgs.
+//
+// Heading for contrast and motion settings.
+func (msgs Messages) SettingsAccessibilityTitle() string {
+	return Catalog.Format(msgs.locale, "settingsAccessibilityTitle", nil)
 }
 
 // SettingsShortcutNavigationAction says "Toggle navigation"
@@ -10282,4 +10794,448 @@ func ChannelRefreshFailureTranscript() string {
 // Channel configuration and refresh interface.
 func (msgs Messages) ChannelRefreshFailureTranscript() string {
 	return Catalog.Format(msgs.locale, "channelRefreshFailureTranscript", nil)
+}
+
+// NavGlassButton says "Navigation glass"
+// in the language the app shows.
+//
+// Button that opens navigation glass controls.
+func NavGlassButton() string { return In(i18n.Locale()).NavGlassButton() }
+
+// NavGlassButton says "Navigation glass"
+// in the language of msgs.
+//
+// Button that opens navigation glass controls.
+func (msgs Messages) NavGlassButton() string {
+	return Catalog.Format(msgs.locale, "navGlassButton", nil)
+}
+
+// NavGlassTitle says "Navigation glass"
+// in the language the app shows.
+//
+// Title of the navigation glass controls.
+func NavGlassTitle() string { return In(i18n.Locale()).NavGlassTitle() }
+
+// NavGlassTitle says "Navigation glass"
+// in the language of msgs.
+//
+// Title of the navigation glass controls.
+func (msgs Messages) NavGlassTitle() string {
+	return Catalog.Format(msgs.locale, "navGlassTitle", nil)
+}
+
+// NavGlassTransparencyTitle says "Transparency"
+// in the language the app shows.
+//
+// Transparency control label inside the navigation glass popover.
+func NavGlassTransparencyTitle() string { return In(i18n.Locale()).NavGlassTransparencyTitle() }
+
+// NavGlassTransparencyTitle says "Transparency"
+// in the language of msgs.
+//
+// Transparency control label inside the navigation glass popover.
+func (msgs Messages) NavGlassTransparencyTitle() string {
+	return Catalog.Format(msgs.locale, "navGlassTransparencyTitle", nil)
+}
+
+// NavGlassBlurTitle says "Blur"
+// in the language the app shows.
+//
+// Blur control label inside the navigation glass popover.
+func NavGlassBlurTitle() string { return In(i18n.Locale()).NavGlassBlurTitle() }
+
+// NavGlassBlurTitle says "Blur"
+// in the language of msgs.
+//
+// Blur control label inside the navigation glass popover.
+func (msgs Messages) NavGlassBlurTitle() string {
+	return Catalog.Format(msgs.locale, "navGlassBlurTitle", nil)
+}
+
+// NavGlassValuePixels says "{value}px"
+// in the language the app shows.
+//
+// Pixel value inside the navigation glass popover.
+func NavGlassValuePixels(value int) string { return In(i18n.Locale()).NavGlassValuePixels(value) }
+
+// NavGlassValuePixels says "{value}px"
+// in the language of msgs.
+//
+// Pixel value inside the navigation glass popover.
+func (msgs Messages) NavGlassValuePixels(value int) string {
+	return Catalog.Format(msgs.locale, "navGlassValuePixels", map[string]any{"value": value})
+}
+
+// NavGlassMoreSettings says "More appearance settings"
+// in the language the app shows.
+//
+// Action that opens all appearance settings.
+func NavGlassMoreSettings() string { return In(i18n.Locale()).NavGlassMoreSettings() }
+
+// NavGlassMoreSettings says "More appearance settings"
+// in the language of msgs.
+//
+// Action that opens all appearance settings.
+func (msgs Messages) NavGlassMoreSettings() string {
+	return Catalog.Format(msgs.locale, "navGlassMoreSettings", nil)
+}
+
+// SettingsGlassTitle says "Window and glass"
+// in the language the app shows.
+//
+// Settings section for the window wallpaper and glass material.
+func SettingsGlassTitle() string { return In(i18n.Locale()).SettingsGlassTitle() }
+
+// SettingsGlassTitle says "Window and glass"
+// in the language of msgs.
+//
+// Settings section for the window wallpaper and glass material.
+func (msgs Messages) SettingsGlassTitle() string {
+	return Catalog.Format(msgs.locale, "settingsGlassTitle", nil)
+}
+
+// SettingsWallpaperTitle says "Window wallpaper"
+// in the language the app shows.
+//
+// Title of the window wallpaper choices.
+func SettingsWallpaperTitle() string { return In(i18n.Locale()).SettingsWallpaperTitle() }
+
+// SettingsWallpaperTitle says "Window wallpaper"
+// in the language of msgs.
+//
+// Title of the window wallpaper choices.
+func (msgs Messages) SettingsWallpaperTitle() string {
+	return Catalog.Format(msgs.locale, "settingsWallpaperTitle", nil)
+}
+
+// SettingsWallpaperDescription says "Shows only behind glass, never under the reading area."
+// in the language the app shows.
+//
+// Explains that the wallpaper remains behind glass surfaces.
+func SettingsWallpaperDescription() string { return In(i18n.Locale()).SettingsWallpaperDescription() }
+
+// SettingsWallpaperDescription says "Shows only behind glass, never under the reading area."
+// in the language of msgs.
+//
+// Explains that the wallpaper remains behind glass surfaces.
+func (msgs Messages) SettingsWallpaperDescription() string {
+	return Catalog.Format(msgs.locale, "settingsWallpaperDescription", nil)
+}
+
+// SettingsWallpaperEmber says "Ember"
+// in the language the app shows.
+//
+// Name of the ember wallpaper.
+func SettingsWallpaperEmber() string { return In(i18n.Locale()).SettingsWallpaperEmber() }
+
+// SettingsWallpaperEmber says "Ember"
+// in the language of msgs.
+//
+// Name of the ember wallpaper.
+func (msgs Messages) SettingsWallpaperEmber() string {
+	return Catalog.Format(msgs.locale, "settingsWallpaperEmber", nil)
+}
+
+// SettingsWallpaperJade says "Jade"
+// in the language the app shows.
+//
+// Name of the jade wallpaper.
+func SettingsWallpaperJade() string { return In(i18n.Locale()).SettingsWallpaperJade() }
+
+// SettingsWallpaperJade says "Jade"
+// in the language of msgs.
+//
+// Name of the jade wallpaper.
+func (msgs Messages) SettingsWallpaperJade() string {
+	return Catalog.Format(msgs.locale, "settingsWallpaperJade", nil)
+}
+
+// SettingsWallpaperGraphite says "Graphite"
+// in the language the app shows.
+//
+// Name of the graphite wallpaper.
+func SettingsWallpaperGraphite() string { return In(i18n.Locale()).SettingsWallpaperGraphite() }
+
+// SettingsWallpaperGraphite says "Graphite"
+// in the language of msgs.
+//
+// Name of the graphite wallpaper.
+func (msgs Messages) SettingsWallpaperGraphite() string {
+	return Catalog.Format(msgs.locale, "settingsWallpaperGraphite", nil)
+}
+
+// SettingsWallpaperNone says "No wallpaper"
+// in the language the app shows.
+//
+// Choice that removes the window wallpaper.
+func SettingsWallpaperNone() string { return In(i18n.Locale()).SettingsWallpaperNone() }
+
+// SettingsWallpaperNone says "No wallpaper"
+// in the language of msgs.
+//
+// Choice that removes the window wallpaper.
+func (msgs Messages) SettingsWallpaperNone() string {
+	return Catalog.Format(msgs.locale, "settingsWallpaperNone", nil)
+}
+
+// SettingsNavTransparencyTitle says "Navigation transparency"
+// in the language the app shows.
+//
+// Title of the navigation transparency slider.
+func SettingsNavTransparencyTitle() string { return In(i18n.Locale()).SettingsNavTransparencyTitle() }
+
+// SettingsNavTransparencyTitle says "Navigation transparency"
+// in the language of msgs.
+//
+// Title of the navigation transparency slider.
+func (msgs Messages) SettingsNavTransparencyTitle() string {
+	return Catalog.Format(msgs.locale, "settingsNavTransparencyTitle", nil)
+}
+
+// SettingsNavTransparencyDescription says "Higher is clearer; above 75% text gets stronger to stay readable."
+// in the language the app shows.
+//
+// Explains the transparency value and high-transparency text behavior.
+func SettingsNavTransparencyDescription() string {
+	return In(i18n.Locale()).SettingsNavTransparencyDescription()
+}
+
+// SettingsNavTransparencyDescription says "Higher is clearer; above 75% text gets stronger to stay readable."
+// in the language of msgs.
+//
+// Explains the transparency value and high-transparency text behavior.
+func (msgs Messages) SettingsNavTransparencyDescription() string {
+	return Catalog.Format(msgs.locale, "settingsNavTransparencyDescription", nil)
+}
+
+// SettingsGlassBlurTitle says "Glass blur"
+// in the language the app shows.
+//
+// Title of the glass blur slider.
+func SettingsGlassBlurTitle() string { return In(i18n.Locale()).SettingsGlassBlurTitle() }
+
+// SettingsGlassBlurTitle says "Glass blur"
+// in the language of msgs.
+//
+// Title of the glass blur slider.
+func (msgs Messages) SettingsGlassBlurTitle() string {
+	return Catalog.Format(msgs.locale, "settingsGlassBlurTitle", nil)
+}
+
+// SettingsGlassBlurDescription says "0 is nearly clear; higher values soften the background."
+// in the language the app shows.
+//
+// Explains the glass blur range.
+func SettingsGlassBlurDescription() string { return In(i18n.Locale()).SettingsGlassBlurDescription() }
+
+// SettingsGlassBlurDescription says "0 is nearly clear; higher values soften the background."
+// in the language of msgs.
+//
+// Explains the glass blur range.
+func (msgs Messages) SettingsGlassBlurDescription() string {
+	return Catalog.Format(msgs.locale, "settingsGlassBlurDescription", nil)
+}
+
+// SettingsGlassRefractionTitle says "Edge refraction"
+// in the language the app shows.
+//
+// Title of the glass refraction switch.
+func SettingsGlassRefractionTitle() string { return In(i18n.Locale()).SettingsGlassRefractionTitle() }
+
+// SettingsGlassRefractionTitle says "Edge refraction"
+// in the language of msgs.
+//
+// Title of the glass refraction switch.
+func (msgs Messages) SettingsGlassRefractionTitle() string {
+	return Catalog.Format(msgs.locale, "settingsGlassRefractionTitle", nil)
+}
+
+// SettingsGlassRefractionDescription says "The glass edge slightly bends what is behind it."
+// in the language the app shows.
+//
+// Explains the glass edge refraction effect.
+func SettingsGlassRefractionDescription() string {
+	return In(i18n.Locale()).SettingsGlassRefractionDescription()
+}
+
+// SettingsGlassRefractionDescription says "The glass edge slightly bends what is behind it."
+// in the language of msgs.
+//
+// Explains the glass edge refraction effect.
+func (msgs Messages) SettingsGlassRefractionDescription() string {
+	return Catalog.Format(msgs.locale, "settingsGlassRefractionDescription", nil)
+}
+
+// SettingsGlassDarkOnly says "Wallpaper and navigation glass apply in the dark theme."
+// in the language the app shows.
+//
+// Status shown when glass controls do not apply in the light theme.
+func SettingsGlassDarkOnly() string { return In(i18n.Locale()).SettingsGlassDarkOnly() }
+
+// SettingsGlassDarkOnly says "Wallpaper and navigation glass apply in the dark theme."
+// in the language of msgs.
+//
+// Status shown when glass controls do not apply in the light theme.
+func (msgs Messages) SettingsGlassDarkOnly() string {
+	return Catalog.Format(msgs.locale, "settingsGlassDarkOnly", nil)
+}
+
+// SettingsGlassSolidFallback says "Reduce Transparency or High Contrast is on, so solid colors are used."
+// in the language the app shows.
+//
+// Status shown when appearance settings require solid fallback colors.
+func SettingsGlassSolidFallback() string { return In(i18n.Locale()).SettingsGlassSolidFallback() }
+
+// SettingsGlassSolidFallback says "Reduce Transparency or High Contrast is on, so solid colors are used."
+// in the language of msgs.
+//
+// Status shown when appearance settings require solid fallback colors.
+func (msgs Messages) SettingsGlassSolidFallback() string {
+	return Catalog.Format(msgs.locale, "settingsGlassSolidFallback", nil)
+}
+
+// SettingsGlassPreview says "Preview"
+// in the language the app shows.
+//
+// Label for the wallpaper and navigation glass preview.
+func SettingsGlassPreview() string { return In(i18n.Locale()).SettingsGlassPreview() }
+
+// SettingsGlassPreview says "Preview"
+// in the language of msgs.
+//
+// Label for the wallpaper and navigation glass preview.
+func (msgs Messages) SettingsGlassPreview() string {
+	return Catalog.Format(msgs.locale, "settingsGlassPreview", nil)
+}
+
+// SettingsValuePercent says "{value}%"
+// in the language the app shows.
+//
+// Percentage value used by appearance sliders.
+func SettingsValuePercent(value string) string { return In(i18n.Locale()).SettingsValuePercent(value) }
+
+// SettingsValuePercent says "{value}%"
+// in the language of msgs.
+//
+// Percentage value used by appearance sliders.
+func (msgs Messages) SettingsValuePercent(value string) string {
+	return Catalog.Format(msgs.locale, "settingsValuePercent", map[string]any{"value": value})
+}
+
+// SettingsValuePixels says "{value}px"
+// in the language the app shows.
+//
+// Pixel value used by appearance sliders.
+func SettingsValuePixels(value string) string { return In(i18n.Locale()).SettingsValuePixels(value) }
+
+// SettingsValuePixels says "{value}px"
+// in the language of msgs.
+//
+// Pixel value used by appearance sliders.
+func (msgs Messages) SettingsValuePixels(value string) string {
+	return Catalog.Format(msgs.locale, "settingsValuePixels", map[string]any{"value": value})
+}
+
+// NoticePreferenceSaveGlass says "Appearance settings could not be saved."
+// in the language the app shows.
+//
+// Notice shown when appearance preferences cannot be saved.
+func NoticePreferenceSaveGlass() string { return In(i18n.Locale()).NoticePreferenceSaveGlass() }
+
+// NoticePreferenceSaveGlass says "Appearance settings could not be saved."
+// in the language of msgs.
+//
+// Notice shown when appearance preferences cannot be saved.
+func (msgs Messages) NoticePreferenceSaveGlass() string {
+	return Catalog.Format(msgs.locale, "noticePreferenceSaveGlass", nil)
+}
+
+// NavNewChat says "New chat"
+// in the language the app shows.
+//
+// Primary navigation action that starts a new conversation.
+func NavNewChat() string { return In(i18n.Locale()).NavNewChat() }
+
+// NavNewChat says "New chat"
+// in the language of msgs.
+//
+// Primary navigation action that starts a new conversation.
+func (msgs Messages) NavNewChat() string {
+	return Catalog.Format(msgs.locale, "navNewChat", nil)
+}
+
+// NavToday says "Today"
+// in the language the app shows.
+//
+// Session group label for conversations updated today.
+func NavToday() string { return In(i18n.Locale()).NavToday() }
+
+// NavToday says "Today"
+// in the language of msgs.
+//
+// Session group label for conversations updated today.
+func (msgs Messages) NavToday() string {
+	return Catalog.Format(msgs.locale, "navToday", nil)
+}
+
+// NavYesterday says "Yesterday"
+// in the language the app shows.
+//
+// Session group label for conversations updated yesterday.
+func NavYesterday() string { return In(i18n.Locale()).NavYesterday() }
+
+// NavYesterday says "Yesterday"
+// in the language of msgs.
+//
+// Session group label for conversations updated yesterday.
+func (msgs Messages) NavYesterday() string {
+	return Catalog.Format(msgs.locale, "navYesterday", nil)
+}
+
+// NavEarlier says "Earlier"
+// in the language the app shows.
+//
+// Session group label for older conversations.
+func NavEarlier() string { return In(i18n.Locale()).NavEarlier() }
+
+// NavEarlier says "Earlier"
+// in the language of msgs.
+//
+// Session group label for older conversations.
+func (msgs Messages) NavEarlier() string {
+	return Catalog.Format(msgs.locale, "navEarlier", nil)
+}
+
+// NavPiStatus says "Pi {version} · {status}"
+// in the language the app shows.
+//
+// Pi version and connection state in the navigation footer.
+func NavPiStatus(version string, status string) string {
+	return In(i18n.Locale()).NavPiStatus(version, status)
+}
+
+// NavPiStatus says "Pi {version} · {status}"
+// in the language of msgs.
+//
+// Pi version and connection state in the navigation footer.
+func (msgs Messages) NavPiStatus(version string, status string) string {
+	return Catalog.Format(msgs.locale, "navPiStatus", map[string]any{"version": version, "status": status})
+}
+
+// NavPiStatusNoVersion says "Pi · {status}"
+// in the language the app shows.
+//
+// Pi connection state in the navigation footer when the version is
+// unavailable.
+func NavPiStatusNoVersion(status string) string {
+	return In(i18n.Locale()).NavPiStatusNoVersion(status)
+}
+
+// NavPiStatusNoVersion says "Pi · {status}"
+// in the language of msgs.
+//
+// Pi connection state in the navigation footer when the version is
+// unavailable.
+func (msgs Messages) NavPiStatusNoVersion(status string) string {
+	return Catalog.Format(msgs.locale, "navPiStatusNoVersion", map[string]any{"status": status})
 }

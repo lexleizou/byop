@@ -44,8 +44,8 @@ func TestSettingsPageV12SearchFindsLocalizedCategories(t *testing.T) {
 		{
 			name:         "English setting keyword",
 			query:        "contrast",
-			category:     settingsCategoryAppearance,
-			categoryText: "Appearance",
+			category:     settingsCategoryGeneral,
+			categoryText: "General",
 		},
 		{
 			name:         "English category keyword",
@@ -163,7 +163,7 @@ func TestSettingsPageV12SearchResultAndEnterKeepDraft(t *testing.T) {
 		}
 		tt.Type("motion")
 		tt.Key(0, ui.KeyEnter)
-		if page.ActiveCategory != settingsCategoryAppearance || page.Search != "" {
+		if page.ActiveCategory != settingsCategoryGeneral || page.Search != "" {
 			t.Fatalf("Enter selected %q with query %q", page.ActiveCategory, page.Search)
 		}
 		if state.composerDraft != "Keep this draft." {
@@ -231,11 +231,23 @@ func TestSettingsPageV12AppearanceHasNoDurationChoices(t *testing.T) {
 	}
 	for _, label := range []string{
 		text("settingsAppearanceTitle"),
-		text("settingsContrastTitle"),
-		text("settingsMotionTitle"),
+		text("settingsThemeTitle"),
+		text("settingsWallpaperTitle"),
+		text("settingsNavTransparencyTitle"),
+		text("settingsGlassBlurTitle"),
+		text("settingsGlassRefractionTitle"),
+		text("settingsReduceTransparencyTitle"),
 	} {
 		if _, ok := tt.Find(label); !ok {
 			t.Fatalf("appearance did not render %q", label)
+		}
+	}
+	for _, label := range []string{
+		text("settingsContrastTitle"),
+		text("settingsMotionTitle"),
+	} {
+		if _, ok := tt.Find(label); ok {
+			t.Fatalf("appearance rendered moved control %q", label)
 		}
 	}
 }
@@ -455,8 +467,8 @@ func TestSettingsSearchMatchesCurrentLocaleAndAliases(t *testing.T) {
 	}{
 		{"workspace", en, settingsCategoryWorkspace},
 		{"工作区", zh, settingsCategoryWorkspace},
-		{"contrast", en, settingsCategoryAppearance},
-		{"对比度", zh, settingsCategoryAppearance},
+		{"contrast", en, settingsCategoryGeneral},
+		{"对比度", zh, settingsCategoryGeneral},
 		{"plugin", en, settingsCategoryExtensions},
 		{"插件", zh, settingsCategoryExtensions},
 		{"diagnostics", en, settingsCategoryData},

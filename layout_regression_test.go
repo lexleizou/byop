@@ -91,6 +91,7 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 				name: "running queue",
 				setup: func(state *appState) {
 					state.run = runStreaming
+					state.composerDraft = "Keep the current response focused."
 					state.queueSteeringCount = 1
 					state.queueSteering = []string{"Keep the transcript scrollable."}
 				},
@@ -126,12 +127,12 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 				} else {
 					assertNotRendered(t, tt, "pi-hud")
 				}
-				assertInsideViewport(t, tt, text("chatSend"), size.height)
 				assertComposerFooterInsideViewport(t, tt, "composer-footer", size.height)
+				assertInsideViewport(t, tt, text("chatSend"), size.height)
 				if scenario.name == "running queue" {
 					assertInsideViewport(t, tt, text("runningSendQueue"), size.height)
 					assertInsideViewport(t, tt, text("runningSendSteer"), size.height)
-					assertInsideViewport(t, tt, text("chatStopCurrentRun"), size.height)
+					assertNotRendered(t, tt, text("chatStopCurrentRun"))
 				} else {
 					assertNotRendered(t, tt, text("chatStopCurrentRun"))
 				}
@@ -169,11 +170,18 @@ func TestP10cBodyAndTaskPanelLayoutInvariants(t *testing.T) {
 	restoreAppearance := stableTestAppearance(t)
 	defer restoreAppearance()
 
-	state := layoutTestState(t)
-	state.tasksOpen = true
-	tt := ui.NewTester(state.view, 1100, 560)
-	assertInsideViewport(t, tt, text("tasksTitle"), 560)
-	assertInsideViewport(t, tt, text("tasksOwnership"), 560)
+	for _, size := range []struct {
+		width, height int
+	}{
+		{width: 1100, height: 560},
+		{width: 1180, height: 760},
+	} {
+		state := layoutTestState(t)
+		state.tasksOpen = true
+		tt := ui.NewTester(state.view, size.width, size.height)
+		assertInsideViewport(t, tt, text("tasksTitle"), size.height)
+		assertInsideViewport(t, tt, text("tasksOwnership"), size.height)
+	}
 }
 
 func TestP10cHUDSwitchesUsingChatMainAreaWidth(t *testing.T) {
@@ -205,6 +213,7 @@ func TestP10cRunningSendModeControlUpdatesPreference(t *testing.T) {
 
 	state := layoutTestState(t)
 	state.run = runStreaming
+	state.composerDraft = "Keep the current response focused."
 	state.preferences.RunningSendMode = string(runningSendQueue)
 	tt := ui.NewTester(state.view, 1180, 760)
 
@@ -215,7 +224,7 @@ func TestP10cRunningSendModeControlUpdatesPreference(t *testing.T) {
 		t.Fatalf("running-send mode = %q, want %q", got, runningSendSteer)
 	}
 	assertInsideViewport(t, tt, text("chatSend"), 760)
-	assertInsideViewport(t, tt, text("chatStopCurrentRun"), 760)
+	assertNotRendered(t, tt, text("chatStopCurrentRun"))
 }
 
 func TestP10bTitleMenuReceivesClicks(t *testing.T) {
@@ -237,6 +246,66 @@ func TestP10bTitleMenuReceivesClicks(t *testing.T) {
 	}
 	if !state.sessionRenameEditing {
 		t.Fatal("choosing Rename did not enter inline rename mode")
+	}
+}
+
+func TestP13TitleCapsuleMaxWidthFitsStageAt760(t *testing.T) {
+	state := layoutTestState(t)
+	state.navCollapsed = false
+	state.tasksOpen = true
+
+	const windowWidth float32 = 760
+	stageWidth := state.chatMainWidth(windowWidth)
+	maxWidth := state.titleCapsuleMaxWidth(windowWidth)
+	if maxWidth < 0 {
+		t.Fatalf("title capsule max width = %vpx, want >= 0", maxWidth)
+	}
+	if used := maxWidth + 36 + 12; used > stageWidth {
+		t.Fatalf("title bar uses %vpx of the %vpx stage", used, stageWidth)
+	}
+	if want := min(float32(520), stageWidth*.6); maxWidth != want {
+		t.Fatalf("title capsule max width = %vpx at %vpx, want %vpx", maxWidth, windowWidth, want)
+	}
+}
+
+func TestP13NarrowNavigationCollapsesAndTasksOverlayStage(t *testing.T) {
+	restoreAppearance := stableTestAppearance(t)
+	defer restoreAppearance()
+	currentAppearanceDark = func() bool { return true }
+
+	state := layoutTestState(t)
+	state.navCollapsed = false
+	state.tasksOpen = false
+	state.preferences.Wallpaper = "ember"
+	state.preferences.Motion = string(motionStandard)
+
+	tt := ui.NewTester(state.view, 1180, 760)
+	state.navCollapsed = true
+	tt.Frame()
+	tt.Advance(500 * time.Millisecond)
+	state.navCollapsed = false
+	state.tasksOpen = true
+	tt.SetSize(760, 600)
+	tt.Advance(500 * time.Millisecond)
+	navToggle := textArgs("titleToggleNavigationShortcut", map[string]any{
+		"shortcut": panelShortcutModifier() + "B",
+	})
+	rects := make(map[string]ui.Rect)
+	for _, label := range []string{navToggle, text("tasksTitle")} {
+		rect, ok := tt.Find(label)
+		if !ok {
+			t.Fatalf("layout label %q was not rendered", label)
+		}
+		rects[label] = rect
+	}
+	if rect := rects[navToggle]; rect.X > 64 {
+		t.Fatalf("navigation toggle x = %vpx at 760px, want collapsed navigation", rect.X)
+	}
+	if got, want := state.chatMainWidth(760), float32(680); got != want {
+		t.Fatalf("chat main width = %vpx at 760px, want %vpx with tasks overlaying", got, want)
+	}
+	if rect := rects[text("tasksTitle")]; rect.X < 440 || rect.W < 240 {
+		t.Fatalf("task panel title rect = %#v at 760px, want overlay panel", rect)
 	}
 }
 

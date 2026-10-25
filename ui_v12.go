@@ -23,15 +23,15 @@ func popoverV12(c *ui.Context, anchor ui.Element, open *bool, opaque bool, build
 	t := c.Theme()
 	p := themePalette(t.Dark)
 	return ui.PopoverBase(c, anchor, open, func(panel ui.Element) {
-		panel.Column().Padding(8).Gap(8).Margin(4, 0, 0, 0).
-			Radius(runtimeTokens.Dimension.Radius["overlay"].Value).TextColor(t.Text).
+		panel.Column().Width(260).Padding(6).Gap(0).Margin(4, 0, 0, 0).
+			Radius(12).TextColor(t.Text).
 			Shadow(runtimeTokens.Shadow.Overlay.OffsetX.Value, runtimeTokens.Shadow.Overlay.OffsetY.Value,
 				runtimeTokens.Shadow.Overlay.Blur.Value, runtimeTokens.Shadow.Overlay.Spread.Value,
 				p.shadowOverlay)
 		if opaque {
 			panel.Border(runtimeTokens.Dimension.Border.Value, t.Border).Background(t.Surface)
 		} else {
-			panel.Material(productGlassWithTint(p.glassTint))
+			panel.Material(productGlassWithTint(p.surface.Alpha(.94)))
 		}
 		if build != nil {
 			build(panel)
@@ -443,38 +443,47 @@ func iconActionV12(c *ui.Context, label string, iconValue func() *ui.SVG) ui.Ele
 // card opaque and free of Onevra's dependency shadow.
 func opaqueComposerV12(c *ui.Context, draft *string,
 	options chat.ComposerOptions,
+	placeholderOverlays ...func(*ui.Context),
 ) chat.ComposerResult {
 	var result chat.ComposerResult
 	t := c.Theme()
 	empty := strings.TrimSpace(*draft) == ""
 	canSend := !empty && !options.SendDisabled
 	result.Root = ui.Column(c).FillWidth().MinWidth(0).Shrink(0).Children(func() {
-		card := ui.Column(c).FillWidth().MinWidth(0).Padding(10, 0).Radius(v12InputRadius).
+		card := ui.Column(c).FillWidth().MinWidth(0).MinHeight(96).
+			Padding(12, 12, 10, 12).Gap(8).Radius(v12InputRadius).
 			Border(v12BorderWidth, t.Border).Background(t.Surface).Children(func() {
 			if options.Attachments != nil {
-				ui.Row(c).Key("attachments").FillWidth().Wrap().Gap(6).
-					Padding(0, 10, 6, 10).Children(func() { options.Attachments(c) })
+				ui.Row(c).Key("attachments").FillWidth().Wrap().Gap(8).
+					Padding(0, 0, 4, 0).Children(func() { options.Attachments(c) })
 			}
 			result.Input = ui.TextAreaBase(c.Key("input"), draft).FillWidth().Lines(1, 10).
-				MinHeight(40).Label(options.Label).Placeholder(options.Placeholder).
-				Border(0, ui.Color{}).Background(ui.Color{}).Padding(2, 14, 0, 14).
+				MinHeight(36).Label(options.Label).Placeholder(options.Placeholder).
+				Border(0, ui.Color{}).Background(ui.Color{}).Padding(0).
 				FontSize(fontBody).TextColor(t.Text)
+			if empty && len(placeholderOverlays) > 0 {
+				ui.Row(c).Absolute().Top(12).Left(12).Right(12).Height(36).
+					AlignItems(ui.Start).PassThrough().Children(func() {
+					placeholderOverlays[0](c)
+				})
+			}
 			if options.OnPaste != nil {
 				result.Input.OnPaste(options.OnPaste)
 			}
-			ui.Row(c).FillWidth().MinWidth(0).Margin(8, 0, 0, 0).Padding(0, 10).
-				AlignItems(ui.Center).Gap(8).Children(func() {
+			ui.Row(c).FillWidth().MinWidth(0).MinHeight(28).
+				AlignItems(ui.Center).Gap(4).Children(func() {
 				ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Center).Gap(4).Children(func() {
 					if options.Accessory != nil {
 						options.Accessory(c)
 					}
 				})
 				if options.Trailing != nil {
-					ui.Row(c).Key("trailing").Shrink(0).AlignItems(ui.Center).Gap(8).
+					ui.Row(c).Key("trailing").Shrink(0).AlignItems(ui.Center).Gap(4).
 						Children(func() { options.Trailing(c) })
 				}
 				if options.Running && empty {
-					result.Stop = composerPillV12(c, options.StopLabel, t.Danger.Alpha(.12), t.Danger).Clicked()
+					result.Stop = composerIconActionV12(c, "running-stop", options.StopLabel,
+						lu.CircleStop, t.Danger.Alpha(.12), t.Danger).Clicked()
 				}
 				if !options.Running || !empty {
 					background, foreground := t.Accent, t.AccentText
@@ -482,7 +491,8 @@ func opaqueComposerV12(c *ui.Context, draft *string,
 						background, foreground = t.Text.Alpha(.08), t.TextMuted
 					}
 					ui.Box(c).Disabled(!canSend).Children(func() {
-						if composerPillV12(c, options.SendLabel, background, foreground).Clicked() {
+						if composerIconActionV12(c, "chatSend", options.SendLabel,
+							lu.ArrowUp, background, foreground).Clicked() {
 							result.Send = true
 						}
 					})
@@ -520,24 +530,31 @@ func opaqueComposerV12(c *ui.Context, draft *string,
 			card.BorderColor(t.Focus)
 		}
 		if options.Footer != nil {
-			ui.Row(c).Key("composer-footer").Label("composer-footer").FillWidth().MinWidth(0).Height(28).
-				Padding(4, 10, 0, 10).AlignItems(ui.Center).Gap(2).
+			ui.Row(c).Key("composer-footer").Label("composer-footer").FillWidth().MinWidth(0).Height(24).
+				Padding(8, 0, 0, 0).AlignItems(ui.Center).Gap(2).
 				Children(func() { options.Footer(c) })
+		} else {
+			// Keep the layout-test seam present without changing the resting
+			// composer height when there is no status line to show.
+			ui.Row(c).Key("composer-footer").Label("composer-footer").Absolute().
+				Bottom(0).Left(0).Right(0).Height(1).PassThrough()
 		}
 	})
 	return result
 }
 
-func composerPillV12(c *ui.Context, label string, background, foreground ui.Color) ui.Element {
-	b := ui.ButtonBase(c).Label(label).Height(26).Padding(0, 12).Shrink(0).
-		Radius(v12ChipRadius).Center().Background(background).TextColor(foreground)
+func composerIconActionV12(c *ui.Context, key, label string, iconValue func() *ui.SVG,
+	background, foreground ui.Color,
+) ui.Element {
+	b := ui.ButtonBase(c.Key(key)).Label(label).Size(28, 28).Shrink(0).
+		Radius(v12InputRadius).Center().Background(background).TextColor(foreground)
 	if b.Pressed() {
 		b.Opacity(.8)
 	} else if b.Hovered() {
 		b.Opacity(.9)
 	}
 	b.Children(func() {
-		components.Text(c, label).SingleLine().FontSize(fontSmall).FontWeight(600).TextColor(foreground)
+		components.Icon(c, iconValue).Size(16, 16).TextColor(foreground)
 	})
 	return b
 }

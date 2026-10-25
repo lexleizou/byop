@@ -58,18 +58,19 @@ func (s *appState) settingsPageV12(c *ui.Context, p palette, state *SettingsPage
 	active := s.settingsPageActiveCategory(state)
 	narrow := s.settingsPageNarrowV12(c)
 
-	ui.Scroll(c).Fill().Children(func() {
-		ui.Row(c).FillWidth().Justify(ui.Center).Padding(24, 20, 32, 20).Children(func() {
-			ui.Column(c).Grow(1).MaxWidth(1040).Gap(16).Children(func() {
-				s.settingsPageHeaderV12(c, p)
-				s.settingsSearchV12(c, p, state)
-				if narrow {
-					s.settingsNarrowLayoutV12(c, p, state, active)
-				} else {
-					s.settingsWideLayoutV12(c, p, state, active)
-				}
+	if narrow {
+		ui.Scroll(c).Fill().Children(func() {
+			ui.Column(c).FillWidth().Padding(16, 20, 32, 20).Gap(16).Children(func() {
+				s.settingsNavigationV12(c, p, state, active, true)
+				s.settingsContentPaneV12(c, p, state, active)
 			})
 		})
+		return
+	}
+
+	ui.Row(c).Fill().Padding(8, 0, 0, 0).Children(func() {
+		s.settingsNavigationV12(c, p, state, active, false)
+		s.settingsContentPaneV12(c, p, state, active)
 	})
 }
 
@@ -85,40 +86,88 @@ func (s *appState) settingsPageNarrowV12(c *ui.Context) bool {
 }
 
 func (s *appState) settingsContentWidthV12(windowWidth float32) float32 {
-	available := max(0, s.chatMainWidth(windowWidth)-2*settingsPageHorizontalPaddingV12)
+	// Settings keep their own breakpoint semantics: at 900 DIP an expanded
+	// nav still has 200 DIP reserved, while a collapsed nav frees the stage.
+	navigationWidth := float32(navExpandedWidth + shellGap)
+	if s.navCollapsed {
+		navigationWidth = navCollapsedWidth + shellGap
+	}
+	var tasksWidth float32
+	if s.tasksOpen && windowWidth >= narrowShellWidth {
+		tasksWidth = taskPanelWidth + shellGap
+	}
+	available := max(0, windowWidth-2*shellGap-navigationWidth-tasksWidth-
+		2*settingsPageHorizontalPaddingV12)
 	return min(settingsPageMaxWidthV12, available)
 }
 
-func (s *appState) settingsPageHeaderV12(c *ui.Context, p palette) {
-	ui.Row(c).FillWidth().Gap(12).AlignItems(ui.Center).Children(func() {
+func (s *appState) settingsContentPaneV12(
+	c *ui.Context,
+	p palette,
+	state *SettingsPageState,
+	active settingsCategoryID,
+) {
+	ui.Scroll(c).Grow(1).FillHeight().MinHeight(0).MinWidth(0).Padding(8, 32, 32, 32).
+		Children(func() {
+			ui.Column(c).FillWidth().Gap(16).Children(func() {
+				s.settingsContentHeaderV12(c, p, active)
+				s.settingsCategoryContentV12(c, p, active, state)
+			})
+		})
+}
+
+func (s *appState) settingsContentHeaderV12(c *ui.Context, p palette, active settingsCategoryID) {
+	spec, _ := settingsCategory(active)
+	ui.Row(c).FillWidth().Gap(12).AlignItems(ui.Start).Children(func() {
+		ui.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
+			ui.Text(c, text(spec.labelKey)).FontSize(18).FontWeight(650).LineHeight(1.5).
+				TextColor(p.text)
+			ui.Text(c, text(settingsCategoryDescriptionKey(active))).
+				FontSize(fontBody).LineHeight(1.5).TextColor(p.muted)
+		})
 		backLabel := text("settingsBackToChat")
-		back := ui.ButtonBase(c.Key("settings-back-chat")).Padding(7, 10).
-			Radius(runtimeTokens.Dimension.Radius["input"].Value).
-			Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).
+		back := ui.ButtonBase(c.Key("settings-back-chat")).Size(28, 28).Radius(8).
+			Background(ui.Color{}).
 			Cursor(ui.CursorPointer).Label(backLabel)
 		if back.Hovered() {
 			back.Background(p.surfaceHover)
 		}
 		back.Children(func() {
-			ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-				ui.Icon(c, icon("corner-up-left")).Size(14, 14).TextColor(p.muted)
-				ui.Text(c, backLabel).FontSize(fontBody).FontWeight(600).TextColor(p.text)
-			})
+			ui.Icon(c, icon("corner-up-left")).Size(15, 15).TextColor(p.muted)
 		})
 		if back.Clicked() {
 			s.setPage(pageChat)
 		}
-		ui.Text(c, text("settingsTitle")).FontSize(fontTitle).FontWeight(650).
-			TextColor(p.text).Grow(1)
 	})
+}
+
+func settingsCategoryDescriptionKey(id settingsCategoryID) string {
+	switch id {
+	case settingsCategoryAppearance:
+		return "settingsCategoryAppearanceDescription"
+	case settingsCategoryModels:
+		return "settingsCategoryModelsDescription"
+	case settingsCategoryConversation:
+		return "settingsCategoryConversationDescription"
+	case settingsCategoryWorkspace:
+		return "settingsCategoryWorkspaceDescription"
+	case settingsCategoryExtensions:
+		return "settingsCategoryExtensionsDescription"
+	case settingsCategoryData:
+		return "settingsCategoryDataDescription"
+	case settingsCategoryAbout:
+		return "settingsCategoryAboutDescription"
+	default:
+		return "settingsCategoryGeneralDescription"
+	}
 }
 
 func (s *appState) settingsSearchV12(c *ui.Context, p palette, state *SettingsPageState) {
 	placeholder := text("settingsSearchPlaceholder")
-	ui.Row(c).Height(36).Gap(7).Padding(0, 10).
-		Radius(runtimeTokens.Dimension.Radius["input"].Value).
+	ui.Row(c).FillWidth().Height(32).Gap(8).Padding(0, 10).
+		Radius(8).
 		Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.surface).AlignItems(ui.Center).Children(func() {
+		Background(p.surface).AlignItems(ui.Center).Margin(0, 0, 8, 0).Children(func() {
 		ui.Icon(c, icon("search")).Size(15, 15).TextColor(p.muted)
 		input := ui.TextInputBase(c.Key("settings-search"), &state.Search).Grow(1).
 			Placeholder(placeholder).FontSize(fontBody).TextColor(p.text).
@@ -229,12 +278,13 @@ func (s *appState) settingsNavigationV12(
 ) {
 	if narrow {
 		ui.Column(c).FillWidth().Gap(8).Children(func() {
-			ui.Row(c).FillWidth().Wrap().Gap(8).Children(func() {
+			s.settingsSearchV12(c, p, state)
+			ui.Row(c).FillWidth().Wrap().Gap(2).Children(func() {
 				s.settingsCategoryButtonsV12(c, p, state, active, false)
 			})
 			ui.Box(c).FillWidth().Height(runtimeTokens.Dimension.Border.Value).
 				Background(p.border)
-			ui.Row(c).FillWidth().Wrap().Children(func() {
+			ui.Row(c).FillWidth().Wrap().Gap(2).Children(func() {
 				s.settingsCategoryButtonV12(c, p, state, settingsCategoryAbout,
 					active == settingsCategoryAbout, false)
 			})
@@ -242,12 +292,14 @@ func (s *appState) settingsNavigationV12(
 		return
 	}
 
-	ui.Column(c).Width(184).Shrink(0).Gap(8).Children(func() {
-		ui.Column(c).FillWidth().Gap(4).Children(func() {
+	ui.Column(c).Width(200).Shrink(0).FillHeight().Padding(8).Gap(2).
+		BorderWidth(0, runtimeTokens.Dimension.Border.Value, 0, 0).
+		BorderColor(p.border).Children(func() {
+		s.settingsSearchV12(c, p, state)
+		ui.Column(c).FillWidth().Gap(2).Children(func() {
 			s.settingsCategoryButtonsV12(c, p, state, active, true)
 		})
-		ui.Box(c).FillWidth().Height(runtimeTokens.Dimension.Border.Value).
-			Background(p.border)
+		ui.Spacer(c).Grow(1)
 		s.settingsCategoryButtonV12(c, p, state, settingsCategoryAbout,
 			active == settingsCategoryAbout, true)
 	})
@@ -281,29 +333,25 @@ func (s *appState) settingsCategoryButtonV12(
 		return
 	}
 	label := text(spec.labelKey)
-	bg, fg := ui.Color{}, p.muted
+	bg, fg := ui.Color{}, navSecondaryText(p)
 	if selected {
-		bg, fg = p.surfaceHover, p.accentText
+		bg, fg = p.text.Alpha(.10), p.text
 	}
 	button := ui.ButtonBase(c.Key("settings-nav-"+string(id))).
-		Padding(8, 10).Radius(runtimeTokens.Dimension.Radius["input"].Value).
+		Height(32).Padding(0, 8).Radius(8).
 		Justify(ui.Start).Background(bg).Cursor(ui.CursorPointer).Label(label)
 	if fillWidth {
 		button.FillWidth()
 	}
-	if selected {
-		button.Border(runtimeTokens.Dimension.Border.Value, p.border)
-	}
 	if button.Hovered() && !selected {
-		button.Background(p.surfaceHover)
+		button.Background(p.text.Alpha(.09))
 	}
 	button.Children(func() {
-		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-			ui.Row(c).Size(20, 20).Shrink(0).Center().Children(func() {
-				ui.Icon(c, icon(spec.iconName)).Size(17, 17).TextColor(fg)
-			})
-			ui.Text(c, label).FontSize(fontBody).FontWeight(600).TextColor(fg)
-		})
+		ui.Text(c, label).FontSize(fontBody).FontWeight(400).TextColor(fg).Grow(1)
+		if id == settingsCategoryAbout {
+			ui.Text(c, appVersion).FontSize(fontBody).
+				TextColor(p.muted).Shrink(0)
+		}
 	})
 	if button.Clicked() {
 		s.settingsSelectCategory(state, id)
@@ -356,33 +404,163 @@ func (s *appState) settingsGeneralV12(c *ui.Context, p palette) {
 			settingsValueV12(c, p, text("settingsShortcutTasksAction"),
 				settingsTasksShortcut())
 		})
+		settingsCardV12(c, p, text("settingsAccessibilityTitle"), "", func() {
+			ui.Column(c).FillWidth().Children(func() {
+				settingsRowV12(c, p,
+					text("settingsContrastTitle"), text("settingsContrastDescription"),
+					func() { s.settingsContrastSegmentV12(c, p) })
+				settingsRowV12(c, p,
+					text("settingsMotionTitle"), text("settingsMotionDescription"),
+					func() { s.settingsMotionSegmentV12(c, p) })
+			})
+		})
 	})
 }
 
 func (s *appState) settingsAppearanceV12(c *ui.Context, p palette) {
-	settingsCardV12(c, p, locales.SettingsAppearanceTitle(), "", func() {
-		ui.Row(c).Gap(8).Wrap().Children(func() {
-			s.themeButton(c, p, themeSystem, "monitor", locales.SettingsAppearanceSystem())
-			s.themeButton(c, p, themeLight, "sun", locales.SettingsAppearanceLight())
-			s.themeButton(c, p, themeDark, "moon", locales.SettingsAppearanceDark())
+	ui.Column(c).FillWidth().Gap(0).Children(func() {
+		settingsRowV12(c, p,
+			text("settingsThemeTitle"), text("settingsThemeDescription"),
+			func() { s.settingsThemeSegmentV12(c, p) })
+		settingsRowV12(c, p,
+			text("settingsWallpaperTitle"), text("settingsWallpaperDescription"),
+			func() { s.settingsWallpaperChoicesV12(c, p) })
+		settingsRowV12(c, p,
+			text("settingsNavTransparencyTitle"), text("settingsNavTransparencyDescription"),
+			func() { s.navTransparencyInlineV12(c, p) })
+		settingsRowV12(c, p,
+			text("settingsGlassBlurTitle"), text("settingsGlassBlurDescription"),
+			func() { s.glassBlurInlineV12(c, p) })
+		settingsRowV12(c, p,
+			text("settingsGlassRefractionTitle"), text("settingsGlassRefractionDescription"),
+			func() { s.glassRefractionInlineV12(c, p) })
+		settingsRowV12(c, p,
+			text("settingsReduceTransparencyTitle"), text("settingsReduceTransparencyDescription"),
+			func() { s.reduceTransparencyInlineV12(c, p) })
+		if status := s.glassStatusText(); status != "" {
+			ui.Text(c, status).FontSize(fontCaption).LineHeight(1.4).
+				TextColor(p.muted).Padding(8, 0, 8, 0)
+		}
+		ui.Column(c).FillWidth().Padding(16, 0, 0, 0).Children(func() {
+			s.settingsGlassPreviewV12(c, p)
 		})
-		s.settingsChoiceRow(c, p, "contrast",
-			text("settingsContrastTitle"), "",
-			[]settingsChoice{
-				{"system", "monitor", text("settingsContrastSystem"), func() { s.setContrast(contrastSystem) }},
-				{"standard", "sun", text("settingsContrastStandard"), func() { s.setContrast(contrastNormal) }},
-				{"high", "contrast", text("settingsContrastHigh"), func() { s.setContrast(contrastHigh) }},
-			},
-		)
-		s.settingsChoiceRow(c, p, "motion",
-			text("settingsMotionTitle"), "",
-			[]settingsChoice{
-				{"system", "monitor", text("settingsMotionSystem"), func() { s.setMotion(motionSystem) }},
-				{"standard", "activity", text("settingsMotionStandard"), func() { s.setMotion(motionStandard) }},
-				{"reduced", "stop", text("settingsMotionReduced"), func() { s.setMotion(motionReduced) }},
-			},
-		)
 	})
+}
+
+func settingsRowV12(
+	c *ui.Context,
+	p palette,
+	title, description string,
+	control func(),
+) {
+	ui.Row(c).FillWidth().Wrap().AlignItems(ui.Center).Gap(24).
+		Padding(14, 0).BorderWidth(0, 0, runtimeTokens.Dimension.Border.Value, 0).
+		BorderColor(p.border).Children(func() {
+		ui.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+			ui.Text(c, title).FontSize(fontBody).FontWeight(400).LineHeight(1.5).
+				TextColor(p.text)
+			if description != "" {
+				ui.Text(c, description).FontSize(fontCaption).LineHeight(1.5).
+					TextColor(p.muted)
+			}
+		})
+		ui.Row(c).MinWidth(240).Shrink(0).Gap(12).AlignItems(ui.Center).
+			Justify(ui.End).Children(control)
+	})
+}
+
+func (s *appState) settingsThemeSegmentV12(c *ui.Context, p palette) {
+	settingsSegmentV12(c, p, func() {
+		s.settingsThemeSegmentButtonV12(c, p, themeLight,
+			locales.SettingsAppearanceLight())
+		s.settingsThemeSegmentButtonV12(c, p, themeDark,
+			locales.SettingsAppearanceDark())
+		s.settingsThemeSegmentButtonV12(c, p, themeSystem,
+			locales.SettingsAppearanceSystem())
+	})
+}
+
+func (s *appState) settingsThemeSegmentButtonV12(
+	c *ui.Context,
+	p palette,
+	mode themeMode,
+	label string,
+) {
+	selected := s.themeMode == mode
+	bg, fg := ui.Color{}, p.muted
+	if selected {
+		bg, fg = p.text.Alpha(.14), p.text
+	}
+	button := ui.ButtonBase(c.Key("theme-"+mode)).Height(28).Padding(0, 10).
+		Radius(6).Background(bg).Cursor(ui.CursorPointer).Label(label)
+	if button.Hovered() && !selected {
+		button.Background(p.text.Alpha(.09))
+	}
+	button.Children(func() {
+		ui.Text(c, label).FontSize(fontSmall).FontWeight(500).TextColor(fg)
+	})
+	if button.Clicked() {
+		s.setTheme(mode)
+	}
+}
+
+func (s *appState) settingsContrastSegmentV12(c *ui.Context, p palette) {
+	settingsSegmentV12(c, p, func() {
+		for _, choice := range []settingsChoice{
+			{"system", "monitor", text("settingsContrastSystem"), func() { s.setContrast(contrastSystem) }},
+			{"standard", "sun", text("settingsContrastStandard"), func() { s.setContrast(contrastNormal) }},
+			{"high", "contrast", text("settingsContrastHigh"), func() { s.setContrast(contrastHigh) }},
+		} {
+			selected := normalizeContrastMode(s.preferences.Contrast) ==
+				[]contrastMode{contrastSystem, contrastNormal, contrastHigh}[map[string]int{"system": 0, "standard": 1, "high": 2}[choice.id]]
+			s.settingsChoiceSegmentButtonV12(c, p, "contrast-"+choice.id,
+				choice.label, selected, choice.click)
+		}
+	})
+}
+
+func (s *appState) settingsMotionSegmentV12(c *ui.Context, p palette) {
+	settingsSegmentV12(c, p, func() {
+		for index, choice := range []settingsChoice{
+			{"system", "monitor", text("settingsMotionSystem"), func() { s.setMotion(motionSystem) }},
+			{"standard", "activity", text("settingsMotionStandard"), func() { s.setMotion(motionStandard) }},
+			{"reduced", "stop", text("settingsMotionReduced"), func() { s.setMotion(motionReduced) }},
+		} {
+			values := []motionMode{motionSystem, motionStandard, motionReduced}
+			selected := normalizeMotionMode(s.preferences.Motion) == values[index]
+			s.settingsChoiceSegmentButtonV12(c, p, "motion-"+choice.id,
+				choice.label, selected, choice.click)
+		}
+	})
+}
+
+func settingsSegmentV12(c *ui.Context, p palette, body func()) {
+	ui.Row(c).Height(32).Padding(2).Gap(2).Radius(8).
+		Background(p.text.Alpha(.06)).Children(body)
+}
+
+func (s *appState) settingsChoiceSegmentButtonV12(
+	c *ui.Context,
+	p palette,
+	key, label string,
+	selected bool,
+	click func(),
+) {
+	bg, fg := ui.Color{}, p.muted
+	if selected {
+		bg, fg = p.text.Alpha(.14), p.text
+	}
+	button := ui.ButtonBase(c.Key(key)).Height(28).Padding(0, 10).Radius(6).
+		Background(bg).Cursor(ui.CursorPointer).Label(label)
+	if button.Hovered() && !selected {
+		button.Background(p.text.Alpha(.09))
+	}
+	button.Children(func() {
+		ui.Text(c, label).FontSize(fontSmall).FontWeight(500).TextColor(fg)
+	})
+	if button.Clicked() {
+		click()
+	}
 }
 
 func (s *appState) settingsConversationV12(c *ui.Context, p palette) {
@@ -512,7 +690,7 @@ func settingsValueV12(c *ui.Context, p palette, label, value string) {
 		Wrap().AlignItems(ui.Center).Gap(12).Children(func() {
 		ui.Text(c, label).FontSize(fontSmall).TextColor(p.muted).MinWidth(72).
 			MaxWidth(150)
-		ui.Text(c, value).Font("monospace").FontSize(fontBody).FontWeight(600).
+		ui.Text(c, value).FontSize(fontBody).FontWeight(400).
 			TextColor(p.text).Grow(1).MinWidth(0).MaxLines(2).Tooltip(value)
 	})
 }
@@ -589,11 +767,18 @@ func settingsCategorySearchTermsWithText(
 	switch spec.id {
 	case settingsCategoryGeneral:
 		terms = append(terms, localize("settingsLanguageTitle"),
-			localize("settingsShortcutsTitle"), "keyboard", "shortcut")
+			localize("settingsShortcutsTitle"),
+			localize("settingsAccessibilityTitle"),
+			localize("settingsContrastTitle"), localize("settingsMotionTitle"),
+			"keyboard", "shortcut", "contrast", "motion")
 	case settingsCategoryAppearance:
 		terms = append(terms, localize("settingsAppearanceTitle"),
-			localize("settingsContrastTitle"), localize("settingsMotionTitle"),
-			"theme", "contrast", "motion")
+			localize("settingsGlassTitle"), localize("settingsWallpaperTitle"),
+			localize("settingsNavTransparencyTitle"),
+			localize("settingsGlassBlurTitle"),
+			localize("settingsGlassRefractionTitle"),
+			"theme", "wallpaper", "glass",
+			"transparency", "blur", "refraction")
 	case settingsCategoryModels:
 		terms = append(terms, "models.json", "provider", "model", "channel", "API")
 	case settingsCategoryConversation:

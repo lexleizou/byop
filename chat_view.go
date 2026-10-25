@@ -2,12 +2,16 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/egoist/mygo/ui/editor"
 	"github.com/egoist/mygo/ui/markdown"
+	"github.com/egoist/mygo/ui/markdown/parser"
 	"github.com/oneo-me/onevra/source/components"
 	"github.com/oneo-me/onevra/source/components/chat"
 	lu "github.com/oneo-me/onevra/source/icons/lucide"
@@ -25,6 +29,7 @@ type chatPresentation struct {
 	turns         map[int]*chat.TurnState
 	groups        map[string]*chat.GroupState
 	activities    map[string]*activityPresentation
+	toolGroups    map[string]*toolGroupPresentation
 
 	thinkingPending     string
 	thinkingCommitTimer *time.Timer
@@ -34,6 +39,24 @@ type activityPresentation struct {
 	state  chat.ActivityState
 	synced bool
 	last   bool
+}
+
+type toolGroupPresentation struct {
+	choice uint8
+}
+
+func (g *toolGroupPresentation) expanded(live bool) bool {
+	if g.choice == 0 {
+		return live
+	}
+	return g.choice == 1
+}
+
+func (g *toolGroupPresentation) set(open bool) {
+	g.choice = 2
+	if open {
+		g.choice = 1
+	}
 }
 
 func (p *chatPresentation) turn(index int) *chat.TurnState {
@@ -54,6 +77,16 @@ func (p *chatPresentation) group(key string) *chat.GroupState {
 		p.groups[key] = &chat.GroupState{}
 	}
 	return p.groups[key]
+}
+
+func (p *chatPresentation) toolGroup(key string) *toolGroupPresentation {
+	if p.toolGroups == nil {
+		p.toolGroups = map[string]*toolGroupPresentation{}
+	}
+	if p.toolGroups[key] == nil {
+		p.toolGroups[key] = &toolGroupPresentation{}
+	}
+	return p.toolGroups[key]
 }
 
 // activity follows BYOP's lifecycle default (running open, settled closed)
@@ -147,15 +180,64 @@ func (s *appState) chatPage(c *ui.Context, p palette) {
 	if s.runActive() {
 		c.After(time.Second)
 	}
+	s.configureMarkdownV12(c, p)
 	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
 		if s.piConnectionErrorActive() {
 			s.piConnectionAlert(c, p)
 		}
 		s.legacyMigrationPrompt(c, p)
-		chat.FloatingConversation(c, &s.chatView.layout, &s.chatView.conversation, text("chatBackToLatest"),
-			func(c *ui.Context) { s.transcript(c) },
-			func(c *ui.Context) { s.chatComposer(c) })
+		chat.FloatingConversationWith(c, &s.chatView.layout, &s.chatView.conversation, chat.FloatingConversationOptions{
+			JumpLabel: text("chatBackToLatest"),
+			Content:   func(c *ui.Context) { s.transcript(c) },
+			Composer:  func(c *ui.Context) { s.chatComposer(c) },
+		})
 	})
+}
+
+func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
+	theme := markdown.DefaultTheme(c.Theme())
+	theme.FontSize = fontBody
+	theme.LineHeight = 1.5
+	theme.BlockSpacing = 12.0 / fontBody
+	theme.ItemSpacing = 4.0 / fontBody
+	theme.ListIndent = 22.0 / fontBody
+	theme.Code = p.text
+	theme.CodeBackground = p.text.Alpha(.09)
+	theme.CodeSize = 1
+	theme.CodeBlockBackground = p.surface
+	theme.CodeBlockBorder = p.border
+	theme.CodeBlockRadius = 8
+	theme.CodeBlockPadding = 12.0 / fontBody
+	theme.CodeLineHeight = 1.4
+	codeColors := editor.DefaultTheme(c.Theme())
+	codeColors.Background = p.surface
+	codeColors.Text = p.text
+	for i := range codeColors.Tokens {
+		codeColors.Tokens[i] = editor.TokenStyle{Color: p.text}
+	}
+	codeColors.Tokens[editor.TokenKeyword] = editor.TokenStyle{Color: p.accentPressed}
+	codeColors.Tokens[editor.TokenType] = editor.TokenStyle{Color: p.accentPressed}
+	codeColors.Tokens[editor.TokenFunction] = editor.TokenStyle{Color: p.accentText}
+	codeColors.Tokens[editor.TokenString] = editor.TokenStyle{Color: p.successText}
+	codeColors.Tokens[editor.TokenComment] = editor.TokenStyle{Color: p.muted}
+	theme.CodeColors = codeColors
+	s.chatView.markdown.Theme = theme
+	s.chatView.markdown.Block = func(c *ui.Context, doc *parser.Document, index int) bool {
+		if markdownListNeedsItemGapV12(doc, index) {
+			ui.Box(c).FillWidth().Height(4)
+		}
+		return false
+	}
+	s.chatView.markdown.CodeBlock = func(c *ui.Context, block *markdown.CodeBlockView) {
+		ui.Column(c).FillWidth().MinWidth(0).Background(p.surface).
+			Border(v12BorderWidth, p.border).Radius(8).Clip().Children(func() {
+			// Body contributes 3.5px above its first line; this brings the
+			// visual top inset to the prototype's 12px.
+			ui.Row(c).FillWidth().Padding(8, 4, 0, 4).Children(func() {
+				block.Body(c)
+			})
+		})
+	}
 }
 
 func (s *appState) piConnectionAlert(c *ui.Context, p palette) {
@@ -275,31 +357,76 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 	if message != nil {
 		options.Status = assistantTurnStatus(message, live)
 		elapsed := turnElapsed(c, message, live)
-		options.Summary = textArgs("chatWorkedFor", map[string]any{"duration": elapsed})
+		tools := 0
+		for _, block := range message.blocks {
+			if block.kind == chatBlockTool {
+				tools++
+			}
+		}
 		options.Working = textArgs("chatWorkingFor", map[string]any{"duration": elapsed})
 		plan := planAssistantTurn(message, live)
-		for stepIndex, step := range plan.steps {
-			isLast := stepIndex == len(plan.steps)-1
-			options.Steps = append(options.Steps, s.turnStep(options.ID, message, step, live && isLast))
-		}
-		if plan.final >= 0 {
-			text := message.blocks[plan.final].text
-			options.Final = func(c *ui.Context) { markdown.View(c, text, &s.chatView.markdown).FillWidth() }
+		if live {
+			for stepIndex, step := range plan.steps {
+				isLast := stepIndex == len(plan.steps)-1
+				options.Steps = append(options.Steps, s.turnStep(options.ID, message, step, isLast))
+			}
+		} else if len(plan.steps) > 0 || plan.final >= 0 {
+			options.Final = func(c *ui.Context) {
+				s.settledTurnContentV12(c, options.ID, message, plan)
+			}
 		}
 		if options.Status == chat.Failed || options.Status == chat.Cancelled {
 			label, failed := turnEndLabel(message.status), options.Status == chat.Failed
 			options.Footer = func(c *ui.Context) { turnFooter(c, label+" - "+elapsed, failed) }
+		} else if options.Status == chat.Completed {
+			var promptText string
+			if prompt != nil {
+				promptText = messageText(prompt)
+			}
+			options.Footer = func(c *ui.Context) {
+				s.turnCompletionFooter(c, message, elapsed, tools, promptText)
+			}
 		}
 	}
 	chat.Turn(c, s.chatView.turn(index), options)
 }
 
+func (s *appState) settledTurnContentV12(c *ui.Context, turnID string, message *chatMessage, plan turnPlan) {
+	ui.Column(c).FillWidth().MinWidth(0).Gap(12).Children(func() {
+		lastStepWasTools := false
+		for _, step := range plan.steps {
+			view := s.turnStep(turnID, message, step, false)
+			if view.Message != nil {
+				view.Message(c)
+			}
+			lastStepWasTools = step.tools != nil
+		}
+		if plan.final >= 0 {
+			final := markdown.View(c, message.blocks[plan.final].text, &s.chatView.markdown).FillWidth()
+			if lastStepWasTools {
+				final.Margin(2.5, 0, 0, 0)
+			}
+		}
+	})
+}
+
+func markdownListNeedsItemGapV12(doc *parser.Document, index int) bool {
+	block := doc.Block(index)
+	if block.Kind != parser.List {
+		return false
+	}
+	previous := -1
+	for i := block.Parent + 1; i < index; i = doc.Block(i).Next {
+		previous = i
+	}
+	return previous >= 0 && doc.Block(previous).Kind == parser.Paragraph
+}
+
 func (s *appState) turnStep(turnID string, message *chatMessage, step turnPlanStep, live bool) chat.Step {
 	if step.tools == nil {
 		text := message.blocks[step.text].text
-		streaming := live
 		return chat.Step{ID: fmt.Sprintf("text-%d", step.text), Message: func(c *ui.Context) {
-			if streaming {
+			if live {
 				markdown.Stream(c, text, &s.chatView.markdown).FillWidth()
 			} else {
 				markdown.View(c, text, &s.chatView.markdown).FillWidth()
@@ -312,12 +439,42 @@ func (s *appState) turnStep(turnID string, message *chatMessage, step turnPlanSt
 		activities = append(activities, s.toolActivity(turnID, tool))
 	}
 	groupID := fmt.Sprintf("tools-%d", step.tools[0])
-	return chat.Step{
-		ID:         groupID,
-		Title:      activityGroupTitle(activities, live),
-		Activities: activities,
-		Group:      s.chatView.group(turnID + "/" + groupID),
-	}
+	group := s.chatView.toolGroup(turnID + "/" + groupID)
+	title := activityGroupTitle(activities, live)
+	return chat.Step{ID: groupID, Message: func(c *ui.Context) {
+		t := c.Theme()
+		open := group.expanded(live)
+		secondary := t.Text.Mix(t.TextMuted, .45)
+		ui.Column(c).FillWidth().MinWidth(0).Gap(8).Children(func() {
+			button := ui.ButtonBase(c).Label(title).Expanded(open).
+				Height(26).Justify(ui.Start).AlignItems(ui.Center).Gap(6).
+				Padding(0).Background(ui.Color{}).Cursor(ui.CursorPointer)
+			if button.Hovered() || button.Focused() {
+				button.Background(t.Text.Alpha(.04))
+			}
+			button.Children(func() {
+				chevron := lu.ChevronRight
+				if open {
+					chevron = lu.ChevronDown
+				}
+				components.Icon(c, chevron).Size(12, 12).Shrink(0).TextColor(t.TextMuted)
+				components.Text(c, title).FontSize(fontBody).TextColor(secondary).
+					Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
+			})
+			if button.Clicked() {
+				group.set(!open)
+				open = !open
+			}
+			if open {
+				ui.Column(c).FillWidth().MinWidth(0).Gap(8).Padding(18, 0, 0, 0).
+					Children(func() {
+						for _, activity := range activities {
+							chat.ActivityRow(c, activity)
+						}
+					})
+			}
+		})
+	}}
 }
 
 func (s *appState) toolActivity(turnID string, tool *toolCallView) chat.Activity {
@@ -373,13 +530,16 @@ func activityGroupTitle(activities []chat.Activity, live bool) string {
 
 func turnElapsed(c *ui.Context, message *chatMessage, live bool) string {
 	if message.startedAt.IsZero() {
-		return textArgs("chatDuration", map[string]any{"minutes": 0, "seconds": 0})
+		return textArgs("chatDurationSeconds", map[string]any{"seconds": 0})
 	}
 	end := message.endedAt
 	if live || end.IsZero() {
 		end = c.Now()
 	}
 	seconds := max(0, int(end.Sub(message.startedAt).Seconds()))
+	if seconds < 60 {
+		return textArgs("chatDurationSeconds", map[string]any{"seconds": seconds})
+	}
 	return textArgs("chatDuration", map[string]any{
 		"minutes": seconds / 60,
 		"seconds": seconds % 60,
@@ -409,13 +569,37 @@ func turnFooter(c *ui.Context, label string, failed bool) {
 	})
 }
 
+func (s *appState) turnCompletionFooter(c *ui.Context, message *chatMessage,
+	elapsed string, tools int, prompt string,
+) {
+	t := c.Theme()
+	ui.Row(c).Height(26).Margin(1, 0, 0, 0).AlignItems(ui.Center).Gap(4).Children(func() {
+		components.Icon(c, lu.Check).Size(12, 12).TextColor(t.Success)
+		components.Text(c, text("chatCompleted")).FontSize(fontSmall).
+			FontWeight(500).TextColor(t.Success)
+		meta := elapsed
+		if tools > 0 {
+			meta += " · " + textArgs("chatToolCount", map[string]any{"count": tools})
+		}
+		components.Text(c, meta).FontSize(fontSmall).TextColor(t.TextMuted)
+		if iconActionV12(c, text("chatCopy"), lu.Copy).Clicked() {
+			c.WriteClipboard(messageText(message))
+		}
+		if prompt != "" {
+			if iconActionV12(c, text("retry"), lu.RotateCcw).Clicked() {
+				s.composerDraft = prompt
+			}
+		}
+	})
+}
+
 func (s *appState) chatComposer(c *ui.Context) {
 	t := c.Theme()
 	visible := s.followUpSuggestionVisible()
 	style := s.currentFollowUpStyle()
 	placeholder := composerPlaceholder(s.piConn)
 	if visible && style == followUpStyleGhost {
-		placeholder = s.followUpSuggestion
+		placeholder = ""
 	}
 	cardVisible := visible && style == followUpStyleCard
 	running := s.runActive() && s.run != runStopping
@@ -423,15 +607,7 @@ func (s *appState) chatComposer(c *ui.Context) {
 	compactHUD := s.chatMainWidth(width) < chat.ContentWidth
 	hudVisible := s.piHUDLabel() != ""
 	composerFooter := func(c *ui.Context) {
-		if hudVisible && !compactHUD {
-			s.piHUD(c)
-		}
-		if hudVisible && !compactHUD {
-			ui.Spacer(c).Grow(0).Width(8).Shrink(0)
-		}
 		switch {
-		case visible && style == followUpStyleGhost:
-			components.Text(c, text("chatFollowUpHint")).FontSize(fontSmall).TextColor(t.TextMuted)
 		case s.run == runStopping:
 			s.statusShimmer(c, text("chatStoppingPi"), t)
 		case s.retrying:
@@ -442,34 +618,41 @@ func (s *appState) chatComposer(c *ui.Context) {
 			s.statusShimmer(c, text("chatPiWorking"), t)
 		}
 	}
-	ui.Column(c).FillWidth().MinWidth(0).Children(func() {
+	ui.Column(c).FillWidth().MinWidth(0).Padding(24, 0, 4, 0).Gap(8).Children(func() {
 		s.runningQueueBar(c)
 		s.followUpAnimatedCard(c, cardVisible)
+		var placeholderOverlay []func(*ui.Context)
+		if visible && style == followUpStyleGhost {
+			placeholderOverlay = append(placeholderOverlay, func(c *ui.Context) {
+				s.followUpGhostPlaceholder(c)
+			})
+		}
+		footer := composerFooter
+		if !s.runActive() && !s.retrying && !s.compacting {
+			footer = nil
+		}
 		result := opaqueComposerV12(c, &s.composerDraft, chat.ComposerOptions{
 			Label:        text("chatMessageLabel"),
 			Placeholder:  placeholder,
 			SendLabel:    text("chatSend"),
 			StopLabel:    text("chatStop"),
-			Running:      false,
+			Running:      running,
 			SendDisabled: !running && (s.piConn != piConnected || s.piSessionBusy || s.modelStateUnconfirmed),
 			Accessory: func(c *ui.Context) {
 				ui.Row(c).FillWidth().MinWidth(0).Wrap().AlignItems(ui.Start).Gap(8).Children(func() {
-					if running {
-						s.runningSendModeControl(c)
+					if composerAddButtonV12(c).Clicked() {
+						s.showNotice(text("chatAttachmentNotice"))
 					}
 					s.composerChoices(c)
+					s.composerContextChip(c)
+					if running && strings.TrimSpace(s.composerDraft) != "" {
+						ui.Spacer(c).Grow(1)
+						s.runningSendModeControl(c)
+					}
 				})
 			},
-			Trailing: func(c *ui.Context) {
-				if iconActionV12(c, text("chatAttachmentUnavailable"), lu.Paperclip).Clicked() {
-					s.showNotice(text("chatAttachmentNotice"))
-				}
-				if running {
-					s.runningStopButton(c)
-				}
-			},
-			Footer: composerFooter,
-		})
+			Footer: footer,
+		}, placeholderOverlay...)
 		result.Root.Key("chat-composer")
 		result.Input.FontSize(fontBody)
 		if !cardVisible {
@@ -506,21 +689,52 @@ func (s *appState) chatComposer(c *ui.Context) {
 			s.stopPrompt()
 		}
 		if hudVisible && compactHUD {
-			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(24).Padding(0, 10).
-				AlignItems(ui.Center).Children(func() {
-				s.piHUD(c)
-			})
+			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
+				Padding(0).Justify(ui.Center).AlignItems(ui.Center).Children(func() { s.piHUD(c) })
+		}
+		if hudVisible && !compactHUD {
+			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
+				Padding(0).Justify(ui.Center).AlignItems(ui.Center).
+				Children(func() { s.piHUD(c) })
 		}
 	})
 }
 
+func (s *appState) followUpGhostPlaceholder(c *ui.Context) {
+	t := c.Theme()
+	ui.Row(c).MinWidth(0).AlignItems(ui.Center).Gap(8).Children(func() {
+		components.Text(c, s.followUpSuggestion).FontSize(fontBody).
+			TextColor(t.TextMuted).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0)
+		ui.Row(c).Shrink(0).Height(22).Padding(0, 6).Radius(v12ChipRadius).
+			Border(v12BorderWidth, t.Border).Children(func() {
+			components.Text(c, text("chatFollowUpKeyTab")).FontSize(fontCaption).
+				TextColor(t.TextMuted)
+		})
+	})
+}
+
+func composerAddButtonV12(c *ui.Context) ui.Element {
+	label := text("chatAttachmentUnavailable")
+	t := c.Theme()
+	button := ui.ButtonBase(c).Size(26, 26).Shrink(0).Radius(v12ChipRadius).
+		Center().Background(ui.Color{}).TextColor(t.TextMuted).Label(label)
+	if button.Hovered() || button.Focused() {
+		button.Background(t.SurfaceHover).TextColor(t.Text)
+	}
+	button.Children(func() {
+		components.Icon(c, lu.Plus).Size(15, 15).TextColor(t.TextMuted)
+	})
+	components.Tooltip(c, button, label)
+	return button
+}
+
 func (s *appState) chatMainWidth(windowWidth float32) float32 {
 	navigationWidth := float32(navExpandedWidth + shellGap)
-	if s.navCollapsed {
+	if s.navigationCollapsedForWidth(windowWidth) {
 		navigationWidth = navCollapsedWidth + shellGap
 	}
 	var tasksWidth float32
-	if s.tasksOpen {
+	if s.tasksOpen && windowWidth >= narrowShellWidth {
 		tasksWidth = taskPanelWidth + shellGap
 	}
 	return max(0, windowWidth-2*shellGap-navigationWidth-tasksWidth)
@@ -555,8 +769,8 @@ func (s *appState) runningSendModeControl(c *ui.Context) {
 	t := c.Theme()
 	mode := s.currentRunningSendMode()
 	ui.Row(c).Key("running-send-mode").Shrink(0).Height(26).Padding(2).Gap(2).
-		Radius(7).Border(runtimeTokens.Dimension.Border.Value, t.Border).Background(t.Surface).Children(func() {
-		segment := func(value runningSendMode, iconName string) {
+		Radius(8).Background(t.Text.Alpha(.06)).Children(func() {
+		segment := func(value runningSendMode) {
 			selected := mode == value
 			label := runningSendModeLabel(value)
 			background := ui.Color{}
@@ -566,7 +780,7 @@ func (s *appState) runningSendModeControl(c *ui.Context) {
 				foreground = t.Text
 			}
 			button := ui.ButtonBase(c.Key("running-send-mode-"+string(value))).
-				Height(22).Padding(0, 7).Radius(5).Background(background).
+				Height(24).Padding(0, 10).Radius(6).Background(background).
 				Cursor(ui.CursorPointer).Label(label).
 				Tooltip(runningSendModeDescription(value) + " - " +
 					textArgs("runningSendOppositeTooltip", map[string]any{
@@ -578,7 +792,6 @@ func (s *appState) runningSendModeControl(c *ui.Context) {
 			}
 			button.Children(func() {
 				ui.Row(c).AlignItems(ui.Center).Gap(4).Children(func() {
-					ui.Icon(c, icon(iconName)).Size(12, 12).TextColor(foreground)
 					components.Text(c, label).SingleLine().FontSize(fontSmall).FontWeight(600).TextColor(foreground)
 				})
 			})
@@ -586,8 +799,8 @@ func (s *appState) runningSendModeControl(c *ui.Context) {
 				s.setRunningSendMode(value)
 			}
 		}
-		segment(runningSendQueue, "list")
-		segment(runningSendSteer, "corner-up-left")
+		segment(runningSendQueue)
+		segment(runningSendSteer)
 	})
 	if mode == runningSendSteer {
 		components.Text(c, runningSendModeDescription(mode)).SingleLine().FontSize(fontCaption).
@@ -808,6 +1021,13 @@ func (s *appState) statusShimmer(c *ui.Context, label string, t *ui.Theme) {
 }
 
 func (s *appState) composerChoices(c *ui.Context) {
+	ui.Row(c).Key("composer-model-thinking").Shrink(0).Height(26).
+		AlignItems(ui.Center).Gap(4).Children(func() {
+		s.composerChoicesContent(c)
+	})
+}
+
+func (s *appState) composerChoicesContent(c *ui.Context) {
 	readOnly := s.runActive() || s.compacting || s.piSessionBusy || s.modelStateUnconfirmed
 	if (s.runActive() || s.compacting) && !s.piSessionBusy {
 		s.cancelThinkingPending()
@@ -820,51 +1040,57 @@ func (s *appState) composerChoices(c *ui.Context) {
 	contextWindow := piActiveContextWindow(
 		activeFamily, activeFamilyOK, s.piModelID, s.hud.contextWindowFallback,
 	)
-	s.composerModelControl(c, readOnly, families, activeFamily, activeFamilyOK, contextWindow)
-
 	levels := buildPiThinkingOptions(s.piThinkingLevels)
 	if !s.piThinkingLevelsKnown || !reasoningLevelsVisible(s.piThinkingLevels) || len(levels) == 0 {
 		s.chatView.effortPicker.Open = false
 		s.cancelThinkingPending()
-		return
+	} else {
+		s.normalizeThinkingPending(levels)
 	}
-	s.normalizeThinkingPending(levels)
-	selected := s.piThinkingLevel
-	if s.chatView.thinkingPending != "" {
-		selected = s.chatView.thinkingPending
-	} else if s.thinkingCommitInFlight && s.thinkingCommitLevel != "" {
-		selected = s.thinkingCommitLevel
+	s.composerModelControl(c, readOnly, families, activeFamily, activeFamilyOK,
+		contextWindow, composerThinkingLabel(levels, s.piThinkingLevel, s.chatView.thinkingPending))
+}
+
+func composerThinkingLabel(levels []chat.Option, current, pending string) string {
+	if len(levels) == 0 {
+		return ""
+	}
+	selected := current
+	if pending != "" {
+		selected = pending
 	}
 	if selected == "" {
 		selected = levels[0].ID
 	}
-	if readOnly {
-		s.chatView.effortPicker.Open = false
-		label := thinkingLevelLabel(selected)
-		chip := chipV12(c, label, chat.ChipOptions{Icon: lu.Brain, ReadOnly: true})
-		components.Tooltip(c, chip, textArgs("thinkingTooltip", map[string]any{"level": label}))
+	for _, level := range levels {
+		if level.ID == selected {
+			return level.Label
+		}
+	}
+	return levels[0].Label
+}
+
+func (s *appState) composerContextChip(c *ui.Context) {
+	families := piModelFamilies(s.piModels)
+	activeFamily, activeFamilyOK := findPiModelFamilyInFamilies(
+		families, s.piModelProvider, s.piModelID, s.piModelName,
+	)
+	contextWindow := piActiveContextWindow(
+		activeFamily, activeFamilyOK, s.piModelID, s.hud.contextWindowFallback,
+	)
+	capacity := formatContextWindow(contextWindow)
+	if capacity == "" {
 		return
 	}
-
-	wasOpen := s.chatView.effortPicker.Open
-	result := s.effortPickerV12(c.Key("thinking-picker"), &s.chatView.effortPicker, chat.EffortPickerOptions{
-		Label:    text("thinkingTitle"),
-		Tooltip:  textArgs("thinkingTooltip", map[string]any{"level": thinkingLevelLabel(selected)}),
-		Icon:     lu.Brain,
-		Levels:   levels,
-		Selected: selected,
-		Off:      levels[0].ID == "off",
-	}, s.highContrastActive(currentAppearanceHighContrast()) || currentAppearanceReduceTransparency())
-	if result.Chosen != "" {
-		s.setThinkingPending(result.Chosen)
-	}
-	if wasOpen && !s.chatView.effortPicker.Open {
-		s.commitThinkingPending()
-	}
+	t := c.Theme()
+	ui.Row(c).Key("composer-context").Shrink(0).Height(26).Padding(0, 8).
+		AlignItems(ui.Center).Children(func() {
+		components.Text(c, capacity).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
+	})
 }
 
 func (s *appState) composerModelControl(c *ui.Context, readOnly bool, families []piModelFamily,
-	activeFamily piModelFamily, activeFamilyOK bool, contextWindow int,
+	activeFamily piModelFamily, activeFamilyOK bool, contextWindow int, thinkingLabel string,
 ) {
 	modelLabel := piModelDisplayName(s.piModelName, s.piModel)
 	brand := modelBrand(s.piModelProvider, s.piModelID, s.piModelName)
@@ -874,7 +1100,7 @@ func (s *appState) composerModelControl(c *ui.Context, readOnly bool, families [
 		s.chatView.contextPicker.Open = false
 		if s.piModel != "" || s.modelStateUnconfirmed {
 			s.composerModelChip(c, modelLabel, s.piModelProvider, contextWindow, leading, readOnly,
-				activeFamily, activeFamilyOK)
+				activeFamily, activeFamilyOK, thinkingLabel)
 		}
 		return
 	}
@@ -884,7 +1110,12 @@ func (s *appState) composerModelControl(c *ui.Context, readOnly bool, families [
 		ActiveID:       s.piModelID,
 		Remembered:     remembered,
 	})
-	chosen := s.customModelPicker(c, options, choices, activeFamily, activeFamilyOK, contextWindow)
+	wasOpen := s.chatView.modelPicker.Open
+	chosen := s.customModelPicker(c, options, choices, activeFamily, activeFamilyOK,
+		contextWindow, thinkingLabel)
+	if wasOpen && !s.chatView.modelPicker.Open {
+		s.commitThinkingPending()
+	}
 	if chosen != "" {
 		choice, ok := choices[chosen]
 		if ok && (choice.selected.Provider != s.piModelProvider || choice.selected.ID != s.piModelID) {
@@ -902,37 +1133,38 @@ func (s *appState) rememberedModelTuplesForSession() map[string]modelTuple {
 
 func (s *appState) composerModelChip(c *ui.Context, label, provider string, contextWindow int,
 	leading func(c *ui.Context, size float32), readOnly bool, activeFamily piModelFamily,
-	activeFamilyOK bool,
+	activeFamilyOK bool, thinkingLabel string,
 ) {
 	t := c.Theme()
 	retryReadback := readOnly && s.modelStateUnconfirmed
+	accessibleLabel := label
+	if thinkingLabel != "" {
+		accessibleLabel += " · " + thinkingLabel
+	}
 	var chip ui.Element
 	if retryReadback {
-		chip = ui.ButtonBase(c.Key("model-chip")).Label(label).Tooltip(text("retryReadback")).
-			Height(26).MinWidth(0).Padding(0, 7).Radius(6).AlignItems(ui.Center).Gap(6).
+		chip = ui.ButtonBase(c.Key("model-chip")).Label(accessibleLabel).Tooltip(text("retryReadback")).
+			Height(26).MinWidth(0).Padding(0, 8).Radius(6).AlignItems(ui.Center).Gap(4).
 			Background(ui.Color{}).Cursor(ui.CursorPointer)
 		if chip.Hovered() || chip.Focused() {
 			chip.Background(t.SurfaceHover)
 		}
 	} else if readOnly {
-		chip = ui.Row(c).Key("model-chip").Label(label).Height(26).MinWidth(0).Padding(0, 7).
-			Radius(6).AlignItems(ui.Center).Gap(6).Cursor(ui.CursorNotAllowed)
+		chip = ui.Row(c).Key("model-chip").Label(accessibleLabel).Height(26).MinWidth(0).Padding(0, 8).
+			Radius(6).AlignItems(ui.Center).Gap(4).Cursor(ui.CursorNotAllowed)
 	} else {
-		chip = ui.ButtonBase(c.Key("model-chip")).Label(label).Height(26).MinWidth(0).Padding(0, 7).
-			Radius(6).AlignItems(ui.Center).Gap(6).Background(ui.Color{}).
+		chip = ui.ButtonBase(c.Key("model-chip")).Label(accessibleLabel).Height(26).MinWidth(0).Padding(0, 8).
+			Radius(6).AlignItems(ui.Center).Gap(4).Background(ui.Color{}).
 			Cursor(ui.CursorPointer)
 		if chip.Hovered() || chip.Focused() {
 			chip.Background(t.SurfaceHover)
 		}
 	}
 	chip.Children(func() {
-		leading(c, 16)
-		components.Text(c, label).MinWidth(0).Wrap().FontSize(fontBody).TextColor(t.Text)
-		if strings.TrimSpace(provider) != "" {
-			components.Text(c, provider).MinWidth(0).Wrap().FontSize(fontSmall).TextColor(t.TextMuted)
-		}
-		if capacity := formatContextWindow(contextWindow); capacity != "" {
-			components.Text(c, capacity).MinWidth(0).Wrap().FontSize(fontSmall).TextColor(t.TextMuted)
+		components.Text(c, label).MinWidth(0).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
+		if thinkingLabel != "" {
+			components.Text(c, "· "+thinkingLabel).Shrink(0).SingleLine().
+				FontSize(fontSmall).TextColor(t.TextMuted)
 		}
 		if !readOnly {
 			components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).TextColor(t.TextMuted.Alpha(.7))
@@ -950,27 +1182,26 @@ func (s *appState) composerModelChip(c *ui.Context, label, provider string, cont
 
 func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 	choices map[string]piModelChoice, activeFamily piModelFamily, activeFamilyOK bool,
-	contextWindow int,
+	contextWindow int, thinkingLabel string,
 ) string {
 	t := c.Theme()
 	label := piModelDisplayName(s.piModelName, s.piModel)
-	leading := modelBrandLeading(modelBrand(s.piModelProvider, s.piModelID, s.piModelName))
-	chip := ui.ButtonBase(c.Key("model-picker")).Label(label).Height(26).MinWidth(0).Padding(0, 7).
-		Radius(6).AlignItems(ui.Center).Gap(6).Background(ui.Color{}).Cursor(ui.CursorPointer)
+	accessibleLabel := label
+	if thinkingLabel != "" {
+		accessibleLabel += " · " + thinkingLabel
+	}
+	chip := ui.ButtonBase(c.Key("model-picker")).Label(accessibleLabel).Height(26).MinWidth(0).Padding(0, 8).
+		Radius(6).AlignItems(ui.Center).Gap(4).Background(ui.Color{}).Cursor(ui.CursorPointer)
 	if s.chatView.modelPicker.Open {
 		chip.Background(t.SurfaceHover)
 	} else if chip.Hovered() || chip.Focused() {
 		chip.Background(t.SurfaceHover)
 	}
 	chip.Children(func() {
-		leading(c, 16)
-		components.Text(c, label).MinWidth(0).Wrap().FontSize(fontBody).TextColor(t.Text)
-		if strings.TrimSpace(s.piModelProvider) != "" {
-			components.Text(c, s.piModelProvider).MinWidth(0).Wrap().
-				FontSize(fontSmall).TextColor(t.TextMuted)
-		}
-		if capacity := formatContextWindow(contextWindow); capacity != "" {
-			components.Text(c, capacity).MinWidth(0).Wrap().
+		components.Text(c, label).MinWidth(0).SingleLine().
+			FontSize(fontSmall).TextColor(t.TextMuted)
+		if thinkingLabel != "" {
+			components.Text(c, "· "+thinkingLabel).Shrink(0).SingleLine().
 				FontSize(fontSmall).TextColor(t.TextMuted)
 		}
 		components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).
@@ -988,76 +1219,43 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 	popoverV12(c, chip, &s.chatView.modelPicker.Open,
 		s.highContrastActive(currentAppearanceHighContrast()) || currentAppearanceReduceTransparency(),
 		func(panel ui.Element) {
-			windowWidth, _ := c.Size()
-			panel.Label(label).Width(modelPickerWidthV12(s.chatMainWidth(windowWidth))).
-				Padding(0).Gap(0).Children(func() {
-				ui.Row(c).FillWidth().Padding(8, 8, 0, 8).Children(func() {
-					searchFieldV12(c, &s.chatView.modelPicker.Query, text("modelsSearch"), text("modelsSearch"))
-				})
-				query := strings.TrimSpace(s.chatView.modelPicker.Query)
-				visible := make([]chat.Option, 0, len(options))
-				for _, option := range options {
-					choice, ok := choices[option.ID]
-					if ok && piModelChoiceMatches(choice, query) {
-						visible = append(visible, option)
-					}
-				}
-				if len(visible) == 0 {
+			panel.Label(label).Padding(6).Gap(0).Children(func() {
+				components.Text(c, text("modelsGroupTitle")).FontSize(fontCaption).
+					FontWeight(500).TextColor(t.TextMuted).Padding(6, 8, 4, 8)
+				if len(options) == 0 {
 					components.Text(c, text("modelsNone")).FontSize(fontSmall).
-						TextColor(t.TextMuted).Padding(12)
+						TextColor(t.TextMuted).Padding(8)
 				} else {
 					components.ScrollView(c, components.ScrollViewOptions{}).FillWidth().
-						MaxHeight(348).Padding(4).Gap(1).Children(func() {
-						group := ""
-						for i, option := range visible {
-							if option.Group != "" && (i == 0 || option.Group != group) {
-								components.Text(c, option.Group).FontSize(fontSmall).FontWeight(500).
-									TextColor(t.TextMuted).Padding(8, 8, 3, 8)
-							}
-							group = option.Group
+						MaxHeight(260).Padding(0).Gap(0).Children(func() {
+						for _, option := range options {
 							selected := activeFamilyOK &&
 								option.ID == piModelChoiceID(activeFamily.Provider, activeFamily.Key)
-							if s.customModelPickerRow(c, option, selected) {
+							choice := choices[option.ID]
+							if s.customModelPickerRow(c, option, choice, selected) {
 								chosen = option.ID
 								s.chatView.modelPicker.Open = false
 							}
 						}
 					})
 				}
+				s.modelPopoverEffortV12(c, t)
 				if activeFamilyOK && len(variants) > 0 {
-					ui.Box(c).FillWidth().Height(runtimeTokens.Dimension.Border.Value).
-						Shrink(0).Background(t.Border)
-					ui.Row(c).FillWidth().Padding(8, 10).Justify(ui.SpaceBetween).
-						AlignItems(ui.Center).Gap(12).Children(func() {
-						components.Text(c, text("contextLabel")).FontSize(fontBody).TextColor(t.Text)
-						result := pickerV12(c.Key("context-picker"), &s.chatView.contextPicker,
-							chat.PickerOptions{
-								Label:    formatContextWindow(contextWindow),
-								Options:  buildPiContextOptions(variants),
-								Selected: s.piModelID,
-								Width:    140,
-							}, s.highContrastActive(currentAppearanceHighContrast()) ||
-								currentAppearanceReduceTransparency())
-						if result.Chosen != "" && result.Chosen != s.piModelID {
-							s.chatView.modelPicker.Open = false
-							s.selectModel(activeFamily.Provider, result.Chosen)
-						}
-					})
+					s.modelPopoverContextV12(c, t, activeFamily, variants)
 				}
-				ui.Box(c).FillWidth().Height(runtimeTokens.Dimension.Border.Value).
-					Shrink(0).Background(t.Border)
+				s.popoverDividerV12(c, t)
 				manage := ui.ButtonBase(c.Key("manage-models")).Label(text("modelsManage")).
-					FillWidth().Padding(8, 10).Radius(v12ChipRadius).
-					Justify(ui.Start).AlignItems(ui.Center).Gap(8).
+					FillWidth().Height(40).Padding(8).Radius(8).
+					Justify(ui.Start).AlignItems(ui.Center).Gap(12).
 					Background(ui.Color{}).TextColor(t.Text)
 				if manage.Hovered() || manage.Focused() {
 					manage.Background(t.SurfaceHover)
 				}
 				manage.Children(func() {
-					components.Icon(c, lu.Settings).Size(12, 12).
-						Shrink(0).TextColor(t.TextMuted)
 					components.Text(c, text("modelsManage")).MinWidth(0).Wrap().
-						FontSize(fontBody).TextColor(t.Text)
+						FontSize(fontBody).TextColor(t.Text).Grow(1)
+					components.Icon(c, lu.ChevronRight).Size(12, 12).
+						Shrink(0).TextColor(t.TextMuted)
 				})
 				if manage.Clicked() {
 					s.chatView.modelPicker.Open = false
@@ -1069,11 +1267,13 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 	return chosen
 }
 
-func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option, selected bool) bool {
+func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option,
+	choice piModelChoice, selected bool,
+) bool {
 	t := c.Theme()
-	row := ui.ButtonBase(c).Key("model-choice-"+option.ID).Label(option.Label).Selected(selected).
-		FillWidth().MinWidth(0).Padding(6, 8).Radius(6).Justify(ui.Start).
-		AlignItems(ui.Center).Gap(8).Background(ui.Color{}).TextColor(t.Text)
+	row := ui.ButtonBase(c).Key("model-choice-" + option.ID).Label(option.Label).Selected(selected).
+		FillWidth().MinWidth(0).Padding(8).Radius(8).Justify(ui.Start).
+		AlignItems(ui.Center).Gap(12).Background(ui.Color{}).TextColor(t.Text)
 	if row.Hovered() || row.Focused() {
 		row.Background(t.SurfaceHover)
 	}
@@ -1084,7 +1284,7 @@ func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option, selec
 		ui.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
 			components.Text(c, option.Label).MinWidth(0).Wrap().MaxLines(2).
 				FontSize(fontBody).Tooltip(option.Label)
-			components.Text(c, option.Description).MinWidth(0).Wrap().
+			components.Text(c, modelPickerSubtitle(choice)).MinWidth(0).Wrap().
 				FontSize(fontSmall).TextColor(t.TextMuted)
 		})
 		if selected {
@@ -1092,6 +1292,106 @@ func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option, selec
 		}
 	})
 	return row.Clicked()
+}
+
+func modelPickerSubtitle(choice piModelChoice) string {
+	var contexts []int
+	seen := make(map[int]struct{})
+	for _, variant := range choice.family.Variants {
+		if variant.ContextWindow <= 0 {
+			continue
+		}
+		if _, ok := seen[variant.ContextWindow]; ok {
+			continue
+		}
+		seen[variant.ContextWindow] = struct{}{}
+		contexts = append(contexts, variant.ContextWindow)
+	}
+	sort.Ints(contexts)
+	parts := make([]string, 0, 2)
+	if provider := strings.TrimSpace(choice.family.Provider); provider != "" {
+		parts = append(parts, provider)
+	}
+	if len(contexts) > 0 {
+		labels := make([]string, len(contexts))
+		for i, context := range contexts {
+			labels[i] = formatContextWindow(context)
+		}
+		parts = append(parts, strings.Join(labels, " / "))
+	}
+	return strings.Join(parts, " · ")
+}
+
+func (s *appState) modelPopoverEffortV12(c *ui.Context, t *ui.Theme) {
+	levels := buildPiThinkingOptions(s.piThinkingLevels)
+	if !s.piThinkingLevelsKnown || !reasoningLevelsVisible(s.piThinkingLevels) || len(levels) == 0 {
+		return
+	}
+	selected := s.piThinkingLevel
+	if s.chatView.thinkingPending != "" {
+		selected = s.chatView.thinkingPending
+	}
+	selectedIndex := 0
+	for i, level := range levels {
+		if level.ID == selected {
+			selectedIndex = i
+		}
+	}
+	ui.Column(c).FillWidth().Padding(6, 8).Gap(4).Children(func() {
+		components.Text(c, text("thinkingStrengthTitle")).FontSize(fontBody).TextColor(t.Text)
+		value := float64(selectedIndex)
+		slider := ui.Slider(c, &value, 0, float64(len(levels)-1)).Step(1).
+			FillWidth().Label(text("thinkingStrengthTitle"))
+		if slider.Changed() {
+			index := min(max(int(math.Round(value)), 0), len(levels)-1)
+			s.setThinkingPending(levels[index].ID)
+		}
+		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
+			for i, level := range levels {
+				color := t.TextMuted
+				if i == selectedIndex {
+					color = t.Text
+				}
+				components.Text(c, level.Label).Grow(1).FontSize(fontSmall).
+					TextColor(color)
+			}
+		})
+	})
+}
+
+func (s *appState) modelPopoverContextV12(c *ui.Context, t *ui.Theme, family piModelFamily,
+	variants []piModel,
+) {
+	ui.Column(c).FillWidth().Padding(6, 8).Gap(6).Children(func() {
+		components.Text(c, text("contextLabel")).FontSize(fontBody).TextColor(t.Text)
+		ui.Row(c).Gap(4).Children(func() {
+			for _, option := range buildPiContextOptions(variants) {
+				selected := option.ID == s.piModelID
+				background := t.Text.Alpha(.06)
+				color := t.TextMuted
+				if selected {
+					background = t.Text.Alpha(.14)
+					color = t.Text
+				}
+				button := ui.ButtonBase(c.Key("context-segment-"+option.ID)).
+					Height(26).Padding(0, 10).Radius(6).Background(background).
+					Label(option.Label).TextColor(color)
+				button.Children(func() {
+					components.Text(c, option.Label).FontSize(fontSmall).
+						FontWeight(500).TextColor(color)
+				})
+				if button.Clicked() && !selected {
+					s.chatView.modelPicker.Open = false
+					s.selectModel(family.Provider, option.ID)
+				}
+			}
+		})
+	})
+}
+
+func (s *appState) popoverDividerV12(c *ui.Context, t *ui.Theme) {
+	ui.Box(c).FillWidth().Height(runtimeTokens.Dimension.Border.Value).
+		Margin(6, 4).Background(t.Text.Alpha(.12))
 }
 
 func piActiveContextWindow(family piModelFamily, ok bool, modelID string, fallback int) int {

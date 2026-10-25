@@ -1,7 +1,7 @@
 {
   "name": "BYOP",
   "identifier": "io.github.lexleizou.byop",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "icon": "assets/byop-logo-1024.png",
   "i18n": {
     "dir": "locales",

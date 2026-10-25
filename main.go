@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.12.0"
+	appVersion = "0.13.0"
 )
 
 func appBuildVersion() string {
@@ -52,6 +52,7 @@ func appBuildVersion() string {
 var setMygoThemeSource = mygo.Theme.SetSource
 
 func main() {
+	configureFontSmoothing()
 	state := newAppState()
 	mygo.Theme.SetSource(themeSource(state.themeMode))
 	if err := mygo.Protocol.Handle(pluginWebViewScheme, newPluginWebViewSchemeHandler(state)); err != nil {
@@ -79,7 +80,7 @@ func main() {
 				X: 18,
 				Y: int(shellGap) + (int(shellTitleBarHeight)-14)/2,
 			},
-			BackgroundColor: "light-dark(#fcfbf9, #211f1c)",
+			BackgroundColor: "light-dark(#fcfbf9, #111110)",
 			StateKey:        "byop-p2-pi-rpc",
 			Content:         ui.View(state.view),
 		})
@@ -219,6 +220,13 @@ type appState struct {
 	notice                          string
 	noticeActionLabel               string
 	noticeAction                    func()
+	navGlassPopoverOpen             bool
+	navTransparencySlider           float64
+	glassBlurSlider                 float64
+	navTransparencyDragOwner        string
+	navTransparencyDragBase         int
+	glassBlurDragOwner              string
+	glassBlurDragBase               int
 	composerDraft                   string
 	pluginSearch                    string
 	pluginDetailsOpenID             string
@@ -348,22 +356,24 @@ func newAppState() *appState {
 	preferencesStore := newByopPreferencesStore(configDir)
 	preferences, preferencesWarning := preferencesStore.load()
 	s := &appState{
-		page:               configuredPage(),
-		themeMode:          themeMode(preferences.Theme),
-		uiLanguage:         normalizeUILanguage(preferences.UILanguage),
-		navCollapsed:       preferences.NavCollapsed,
-		tasksOpen:          preferences.TasksOpen,
-		configDir:          configDir,
-		preferences:        preferences,
-		preferencesStore:   preferencesStore,
-		preferencesWarning: preferencesWarning,
-		piConn:             piDisconnected,
-		run:                runIdle,
-		pluginSettingForms: make(map[string]*pluginSettingForm),
-		pluginTasks:        make(map[string]pluginTaskUpdate),
-		pluginViewModels:   make(map[string]pluginViewModel),
-		pluginWebViews:     make(map[string]*pluginWebViewState),
-		pluginBridgeSlots:  make(map[string]chan struct{}),
+		page:                  configuredPage(),
+		themeMode:             themeMode(preferences.Theme),
+		uiLanguage:            normalizeUILanguage(preferences.UILanguage),
+		navCollapsed:          preferences.NavCollapsed,
+		tasksOpen:             preferences.TasksOpen,
+		configDir:             configDir,
+		preferences:           preferences,
+		preferencesStore:      preferencesStore,
+		preferencesWarning:    preferencesWarning,
+		piConn:                piDisconnected,
+		run:                   runIdle,
+		pluginSettingForms:    make(map[string]*pluginSettingForm),
+		pluginTasks:           make(map[string]pluginTaskUpdate),
+		pluginViewModels:      make(map[string]pluginViewModel),
+		pluginWebViews:        make(map[string]*pluginWebViewState),
+		pluginBridgeSlots:     make(map[string]chan struct{}),
+		navTransparencySlider: float64(preferences.NavTransparency),
+		glassBlurSlider:       float64(preferences.GlassBlur),
 	}
 	s.storeEffectiveLocale(effectiveUILanguage(preferences.UILanguage))
 	if mode, ok := parsePreferenceTheme(os.Getenv("BYOP_THEME")); ok {
@@ -673,6 +683,10 @@ func (s *appState) persistedPreferences() byopPreferences {
 	persisted.Contrast = current.Contrast
 	persisted.Motion = current.Motion
 	persisted.PanelAnimationMS = current.PanelAnimationMS
+	persisted.Wallpaper = current.Wallpaper
+	persisted.NavTransparency = current.NavTransparency
+	persisted.GlassBlur = current.GlassBlur
+	persisted.GlassRefraction = current.GlassRefraction
 	persisted.UILanguage = current.UILanguage
 	persisted.FollowUpStyle = current.FollowUpStyle
 	persisted.RunningSendMode = current.RunningSendMode
@@ -756,6 +770,41 @@ func (s *appState) setMotion(mode motionMode) {
 			s.window.Invalidate()
 		}
 		s.showNotice(text("noticePreferenceSaveMotion"))
+	}
+}
+
+func (s *appState) setWallpaper(value string) {
+	value = normalizeWallpaper(value)
+	if s.preferences.Wallpaper == value {
+		return
+	}
+	previous := s.preferences.Wallpaper
+	s.preferences.Wallpaper = value
+	s.invalidateUI()
+	if err := s.persistPreferences(); err != nil {
+		s.preferences.Wallpaper = previous
+		s.invalidateUI()
+		s.showNotice(text("noticePreferenceSaveGlass"))
+	}
+}
+
+func (s *appState) setGlassRefraction(value bool) {
+	if s.preferences.GlassRefraction == value {
+		return
+	}
+	previous := s.preferences.GlassRefraction
+	s.preferences.GlassRefraction = value
+	s.invalidateUI()
+	if err := s.persistPreferences(); err != nil {
+		s.preferences.GlassRefraction = previous
+		s.invalidateUI()
+		s.showNotice(text("noticePreferenceSaveGlass"))
+	}
+}
+
+func (s *appState) invalidateUI() {
+	if s.window != nil {
+		s.window.Invalidate()
 	}
 }
 

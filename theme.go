@@ -49,6 +49,7 @@ type palette struct {
 	shadow         ui.Color
 	shadowCard     ui.Color
 	shadowOverlay  ui.Color
+	shadowStage    ui.Color
 }
 
 func themePalette(dark bool) palette {
@@ -88,6 +89,7 @@ func themePaletteWithContrast(dark, high bool) palette {
 		shadow:         ui.Hex(runtimeTokens.Shadow.Overlay.Color),
 		shadowCard:     ui.Color{},
 		shadowOverlay:  ui.Hex(runtimeTokens.Shadow.Overlay.Color),
+		shadowStage:    ui.Hex(runtimeTokens.Shadow.Stage.Color),
 	}
 	if high {
 		contrast := runtimeTokens.Color.Contrast.Light
@@ -138,9 +140,7 @@ func nativeThemeWithContrast(dark, high bool) (*ui.Theme, palette) {
 	return t, p
 }
 
-var currentAppearanceDark = func() bool {
-	return mygo.Theme.IsDark()
-}
+var currentAppearanceDark = appearanceDark
 
 var appearanceReady atomic.Bool
 
@@ -149,6 +149,13 @@ var currentAppearanceHighContrast = appearanceHighContrast
 var currentAppearanceReduceMotion = appearanceReduceMotion
 
 var currentAppearanceReduceTransparency = appearanceReduceTransparency
+
+func appearanceDark() bool {
+	if !appearanceReady.Load() {
+		return false
+	}
+	return mygo.Theme.IsDark()
+}
 
 func appearanceHighContrast() bool {
 	if !appearanceReady.Load() {

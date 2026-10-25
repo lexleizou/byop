@@ -236,13 +236,18 @@ func truncateHUDStatus(value string, limit int) string {
 	return string(runes[:limit-1]) + "…"
 }
 
-func (s *appState) piHUDLabel() string {
+type hudItem struct {
+	label, value string
+	flexible     bool
+}
+
+func (s *appState) piHUDItems() []hudItem {
 	if s.piConn != piConnected || s.piConnectionErrorActive() {
-		return ""
+		return nil
 	}
-	parts := make([]string, 0, 8)
+	items := make([]hudItem, 0, 8)
 	if branch := strings.TrimSpace(s.hud.branch); branch != "" {
-		parts = append(parts, branch)
+		items = append(items, hudItem{value: branch})
 	}
 	if stats := s.hud.stats; stats != nil {
 		tokens := make([]string, 0, 4)
@@ -253,24 +258,42 @@ func (s *appState) piHUDLabel() string {
 			tokens = append(tokens, "↓"+formatPiTokens(value))
 		}
 		if len(tokens) > 0 {
-			parts = append(parts, strings.Join(tokens, " "))
+			items = append(items, hudItem{value: strings.Join(tokens, " ")})
 		}
 		if stats.Cost > 0 || s.hud.usingSubscription {
 			cost := fmt.Sprintf("$%.3f", stats.Cost)
 			if s.hud.usingSubscription {
 				cost += text("hudSubscriptionSuffix")
 			}
-			parts = append(parts, cost)
+			items = append(items, hudItem{value: cost, flexible: true})
 		}
 		if rate, ok := piCacheHitRate(stats); ok {
-			parts = append(parts, textArgs("hudCache", map[string]any{"percent": int64(math.Round(rate))}))
+			value := fmt.Sprintf("%d%%", int64(math.Round(rate)))
+			label := strings.TrimSpace(strings.TrimSuffix(
+				textArgs("hudCache", map[string]any{"percent": int64(math.Round(rate))}),
+				value,
+			))
+			items = append(items, hudItem{label: label, value: value, flexible: true})
 		}
 	}
 	if rate, ok := s.piHUDAverageTokensPerSecond(); ok {
-		parts = append(parts, textArgs("hudAverageSpeed", map[string]any{"speed": int64(math.Round(rate))}))
+		value := fmt.Sprintf("%d tok/s", int64(math.Round(rate)))
+		label := strings.TrimSpace(strings.TrimSuffix(
+			textArgs("hudAverageSpeed", map[string]any{"speed": int64(math.Round(rate))}),
+			value,
+		))
+		items = append(items, hudItem{label: label, value: value, flexible: true})
 	}
-	if context := s.piHUDContextLabel(); context != "" {
-		parts = append(parts, context)
+	if percent, ok := piContextPercent(s.hud.stats); ok {
+		value := fmt.Sprintf("%.1f%%", percent)
+		if s.hud.autoCompact {
+			value += text("hudAutoSuffix")
+		}
+		label := strings.TrimSpace(strings.TrimSuffix(
+			textArgs("hudContext", map[string]any{"percent": fmt.Sprintf("%.1f", percent)}),
+			fmt.Sprintf("%.1f%%", percent),
+		))
+		items = append(items, hudItem{label: label, value: value})
 	}
 	if len(s.hud.extStatus) > 0 {
 		keys := make([]string, 0, len(s.hud.extStatus))
@@ -285,8 +308,23 @@ func (s *appState) piHUDLabel() string {
 			statuses = append(statuses, truncateHUDStatus(s.hud.extStatus[key], 40))
 		}
 		if len(statuses) > 0 {
-			parts = append(parts, strings.Join(statuses, "  "))
+			for _, status := range statuses {
+				items = append(items, hudItem{value: status, flexible: true})
+			}
 		}
+	}
+	return items
+}
+
+func (s *appState) piHUDLabel() string {
+	items := s.piHUDItems()
+	parts := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.label == "" {
+			parts = append(parts, item.value)
+			continue
+		}
+		parts = append(parts, item.label+" "+item.value)
 	}
 	return strings.Join(parts, "  ")
 }
@@ -309,7 +347,7 @@ func (s *appState) piHUD(c *ui.Context) {
 		return
 	}
 	t := c.Theme()
-	color := t.TextMuted
+	color := t.Text.Mix(t.TextMuted, .45)
 	if s.piConnectionErrorActive() || s.piConn == piConnectionErr {
 		color = t.Danger
 	}
@@ -321,8 +359,32 @@ func (s *appState) piHUD(c *ui.Context) {
 			color = t.Warning
 		}
 	}
-	ui.Text(c, label).Key("pi-hud").FontSize(fontCaption).LineHeight(1.2).TextColor(color).
-		Grow(1).MinWidth(0).SingleLine().Ellipsis("…").Tooltip(s.piHUDTooltip())
+	ui.Row(c).Key("pi-hud").Label(label).Grow(1).MinWidth(0).Clip().
+		Justify(ui.Center).AlignItems(ui.Center).Gap(12).
+		Tooltip(s.piHUDTooltip()).Children(func() {
+		for _, item := range s.piHUDItems() {
+			row := ui.Row(c)
+			if item.flexible {
+				row.Shrink(1).MinWidth(0)
+			} else {
+				row.Shrink(0)
+			}
+			row.AlignItems(ui.Center).Gap(4).Children(func() {
+				if item.label != "" {
+					label := ui.Text(c, item.label).FontSize(fontCaption).LineHeight(1.2).
+						FontWeight(400).TextColor(t.TextMuted).SingleLine()
+					if item.flexible {
+						label.MinWidth(0).Ellipsis("…")
+					}
+				}
+				value := ui.Text(c, item.value).FontSize(fontCaption).LineHeight(1.2).
+					FontWeight(500).FontFeatures("tnum").TextColor(color).SingleLine()
+				if item.flexible {
+					value.Grow(1).MinWidth(0).Ellipsis("…")
+				}
+			})
+		}
+	})
 }
 
 func (s *appState) piHUDTooltip() string {

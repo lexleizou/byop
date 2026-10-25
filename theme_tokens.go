@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/egoist/mygo/plugins/glass"
@@ -58,8 +59,17 @@ type productTokens struct {
 		ReducedDuration dimensionToken `json:"reducedDuration"`
 		Easing          string         `json:"easing"`
 	} `json:"motion"`
+	Glass struct {
+		NavTransparencyDefault int
+		NavTintMaxAlpha        float64
+		BlurDefault            int
+		BlurMax                int
+		RefractionDefault      bool
+		WallpaperDefault       string
+	}
 	Shadow struct {
 		Overlay shadowToken `json:"overlay"`
+		Stage   shadowToken `json:"stage"`
 	} `json:"shadow"`
 }
 
@@ -90,10 +100,17 @@ func mustLoadProductTokens() productTokens {
 	tokens.Motion.Duration = loadDimension(raw, "motion", "duration")
 	tokens.Motion.ReducedDuration = loadDimension(raw, "motion", "reducedDuration")
 	tokens.Motion.Easing = nestedString(raw, "motion", "easing")
+	tokens.Glass.NavTransparencyDefault = int(math.Round(nestedNumber(raw, "glass", "navTransparencyDefault")))
+	tokens.Glass.NavTintMaxAlpha = nestedNumber(raw, "glass", "navTintMaxAlpha")
+	tokens.Glass.BlurDefault = int(math.Round(nestedNumber(raw, "glass", "blurDefault")))
+	tokens.Glass.BlurMax = int(math.Round(nestedNumber(raw, "glass", "blurMax")))
+	tokens.Glass.RefractionDefault = nestedBool(raw, "glass", "refractionDefault")
+	tokens.Glass.WallpaperDefault = nestedString(raw, "glass", "wallpaperDefault")
 	if err := validateProductTokens(tokens); err != nil {
 		panic(err.Error())
 	}
 	tokens.Shadow.Overlay = loadShadow(raw, "shadow", "overlay")
+	tokens.Shadow.Stage = loadShadow(raw, "shadow", "stage")
 	return tokens
 }
 
@@ -163,8 +180,27 @@ func nestedString(raw map[string]any, path ...string) string {
 }
 
 func nestedBool(raw map[string]any, path ...string) bool {
-	value, _ := nestedValue(raw, path...).(bool)
-	return value
+	switch value := nestedValue(raw, path...).(type) {
+	case bool:
+		return value
+	case map[string]any:
+		wrapped, _ := value["value"].(bool)
+		return wrapped
+	default:
+		return false
+	}
+}
+
+func nestedNumber(raw map[string]any, path ...string) float64 {
+	switch value := nestedValue(raw, path...).(type) {
+	case float64:
+		return value
+	case map[string]any:
+		wrapped, _ := value["value"].(float64)
+		return wrapped
+	default:
+		return 0
+	}
 }
 
 func loadDimension(raw map[string]any, path ...string) dimensionToken {
