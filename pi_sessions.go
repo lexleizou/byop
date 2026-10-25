@@ -69,7 +69,23 @@ func piWorkspaceCwd(savedWorkspace string) (string, error) {
 			cwd = saved
 		}
 	}
-	return canonicalPiPath(cwd), nil
+	return canonicalPiPath(workspaceRootFallback(cwd)), nil
+}
+
+// workspaceRootFallback maps the filesystem root (the cwd of apps launched
+// from Finder or the Dock) to the user's home folder.
+func workspaceRootFallback(cwd string) string {
+	if cwd == "" || filepath.Dir(cwd) != cwd {
+		return cwd
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return cwd
+	}
+	if info, statErr := os.Stat(home); statErr != nil || !info.IsDir() {
+		return cwd
+	}
+	return home
 }
 
 func piSessionRoot() (string, bool, error) {

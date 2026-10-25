@@ -219,7 +219,7 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 	}
 	if cwd == "" {
 		var err error
-		cwd, err = os.Getwd()
+		cwd, err = piWorkspaceCwd("")
 		if err != nil {
 			return nil, fmt.Errorf("resolve working folder: %w", err)
 		}

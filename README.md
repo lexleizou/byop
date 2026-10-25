@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本 0.13.0：P13 深色液态玻璃主题已加入壁纸、导航透明度、模糊和边缘折射可调，高对比与减少透明度回退规则保持不变；具体证据和限制见 [P13 验证记录](docs/P13-validation.md)。P12 完整界面、BYOP Radix 产品 token、分组设置与模型渠道流程继续保留。产品字号只使用 12/14/18 px，正文与代码为 14 px；可见边框为 0.5 px，必要过渡为 250 ms ease-out。Liquid Glass 只用于 chrome、导航和必要浮层，阅读区与 Composer 背景不透明。主题、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本 0.13.1：从 Finder 或 Dock 启动且未设置工作区时，默认使用用户主目录读取 Pi 历史会话；模型选择行单行省略、思考强度刻度对齐。P13 深色液态玻璃主题已加入壁纸、导航透明度、模糊和边缘折射可调，高对比与减少透明度回退规则保持不变；具体证据和限制见 [P13 验证记录](docs/P13-validation.md)。P12 完整界面、BYOP Radix 产品 token、分组设置与模型渠道流程继续保留。产品字号只使用 12/14/18 px，正文与代码为 14 px；可见边框为 0.5 px，必要过渡为 250 ms ease-out。Liquid Glass 只用于 chrome、导航和必要浮层，阅读区与 Composer 背景不透明。主题、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 

@@ -1271,9 +1271,9 @@ func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option,
 	choice piModelChoice, selected bool,
 ) bool {
 	t := c.Theme()
-	row := ui.ButtonBase(c).Key("model-choice-" + option.ID).Label(option.Label).Selected(selected).
-		FillWidth().MinWidth(0).Padding(8).Radius(8).Justify(ui.Start).
-		AlignItems(ui.Center).Gap(12).Background(ui.Color{}).TextColor(t.Text)
+	row := ui.ButtonBase(c).Key("model-choice-"+option.ID).Label(option.Label).Selected(selected).
+		FillWidth().MinWidth(0).MinHeight(32).Padding(4, 8).Radius(8).Justify(ui.Start).
+		AlignItems(ui.Center).Gap(8).Background(ui.Color{}).TextColor(t.Text)
 	if row.Hovered() || row.Focused() {
 		row.Background(t.SurfaceHover)
 	}
@@ -1282,10 +1282,10 @@ func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option,
 			option.Leading(c, 16)
 		}
 		ui.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
-			components.Text(c, option.Label).MinWidth(0).Wrap().MaxLines(2).
+			components.Text(c, option.Label).MinWidth(0).SingleLine().Ellipsis("…").
 				FontSize(fontBody).Tooltip(option.Label)
-			components.Text(c, modelPickerSubtitle(choice)).MinWidth(0).Wrap().
-				FontSize(fontSmall).TextColor(t.TextMuted)
+			components.Text(c, modelPickerSubtitle(choice)).MinWidth(0).SingleLine().Ellipsis("…").
+				FontSize(fontSmall).LineHeight(1.3).TextColor(t.TextMuted)
 		})
 		if selected {
 			components.Icon(c, lu.Check).Size(12, 12).TextColor(t.Accent)
@@ -1337,7 +1337,7 @@ func (s *appState) modelPopoverEffortV12(c *ui.Context, t *ui.Theme) {
 			selectedIndex = i
 		}
 	}
-	ui.Column(c).FillWidth().Padding(6, 8).Gap(4).Children(func() {
+	ui.Column(c).FillWidth().Padding(4, 8, 8, 8).Gap(4).Children(func() {
 		components.Text(c, text("thinkingStrengthTitle")).FontSize(fontBody).TextColor(t.Text)
 		value := float64(selectedIndex)
 		slider := ui.Slider(c, &value, 0, float64(len(levels)-1)).Step(1).
@@ -1346,13 +1346,14 @@ func (s *appState) modelPopoverEffortV12(c *ui.Context, t *ui.Theme) {
 			index := min(max(int(math.Round(value)), 0), len(levels)-1)
 			s.setThinkingPending(levels[index].ID)
 		}
-		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
+		// Stop labels sit under the slider stops: first flush left, last flush right.
+		ui.Row(c).FillWidth().Margin(4, 0, 0, 0).Justify(ui.SpaceBetween).AlignItems(ui.Center).Children(func() {
 			for i, level := range levels {
 				color := t.TextMuted
 				if i == selectedIndex {
 					color = t.Text
 				}
-				components.Text(c, level.Label).Grow(1).FontSize(fontSmall).
+				components.Text(c, level.Label).SingleLine().FontSize(fontSmall).
 					TextColor(color)
 			}
 		})

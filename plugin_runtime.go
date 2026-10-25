@@ -146,6 +146,7 @@ func newPluginHost(hostVersion string, onChange func(), options ...pluginHostOpt
 	if configured := strings.TrimSpace(os.Getenv("BYOP_WORKSPACE")); configured != "" {
 		workspace = configured
 	}
+	workspace = workspaceRootFallback(workspace)
 	if err == nil {
 		if absolute, absoluteErr := filepath.Abs(workspace); absoluteErr == nil {
 			workspace = absolute

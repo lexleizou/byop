@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.13.0"
+	appVersion = "0.13.1"
 )
 
 func appBuildVersion() string {
@@ -397,6 +397,7 @@ func newAppState() *appState {
 	workspace, workspaceErr := piWorkspaceCwd(preferences.Workspace)
 	if workspaceErr != nil {
 		workspace, _ = os.Getwd()
+		workspace = workspaceRootFallback(workspace)
 	}
 	s.plugins = newPluginHost(pluginHostVersion, func() { s.postUI(func() {}) },
 		pluginHostWorkspace(workspace),

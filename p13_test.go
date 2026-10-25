@@ -85,3 +85,24 @@ func TestP13NavGlassTint(t *testing.T) {
 		}
 	}
 }
+
+func TestP13WorkspaceRootFallsBackToHome(t *testing.T) {
+	original, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(original) })
+	home := t.TempDir()
+	t.Setenv("BYOP_WORKSPACE", "")
+	t.Setenv("HOME", home)
+	if err := os.Chdir("/"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := piWorkspaceCwd("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := canonicalPiPath(home); got != want {
+		t.Fatalf("workspace = %q, want %q", got, want)
+	}
+}
