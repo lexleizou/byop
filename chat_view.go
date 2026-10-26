@@ -729,10 +729,7 @@ func composerAddButtonV12(c *ui.Context) ui.Element {
 }
 
 func (s *appState) chatMainWidth(windowWidth float32) float32 {
-	navigationWidth := float32(navExpandedWidth + shellGap)
-	if s.navigationCollapsedForWidth(windowWidth) {
-		navigationWidth = navCollapsedWidth + shellGap
-	}
+	navigationWidth := s.navigationWidth(windowWidth) + shellGap
 	var tasksWidth float32
 	if s.tasksOpen && windowWidth >= narrowShellWidth {
 		tasksWidth = taskPanelWidth + shellGap
@@ -740,17 +737,37 @@ func (s *appState) chatMainWidth(windowWidth float32) float32 {
 	return max(0, windowWidth-2*shellGap-navigationWidth-tasksWidth)
 }
 
-func modelPickerWidthV12(windowWidth float32) float32 {
-	const (
-		minWidth    float32 = 300
-		maxWidth    float32 = 480
-		sidePadding float32 = 32
-	)
-	available := max(0, windowWidth-sidePadding)
-	if available < minWidth {
+const (
+	modelPopoverMinWidthV12 float32 = 300
+	// modelPopoverChromeV12 is the room a row takes around its model name:
+	// panel padding, row padding, the leading icon, both gaps and the check.
+	modelPopoverChromeV12     float32 = 96
+	modelPopoverSideMarginV12 float32 = 16
+	modelPopoverRowHeightV12  float32 = 56
+)
+
+// modelPopoverWidthV12 sizes the model popover to its longest model name, so
+// the common long names read whole on one line, and keeps it within the
+// window: names longer than that keep their tooltip and ellipsis.
+func modelPopoverWidthV12(c *ui.Context, labels []string, windowWidth float32) float32 {
+	widest := float32(0)
+	for _, label := range labels {
+		if w, _ := c.MeasureText(0, ui.Span{Text: label, Size: fontBody}); w > widest {
+			widest = w
+		}
+	}
+	available := max(0, windowWidth-2*modelPopoverSideMarginV12)
+	if available <= modelPopoverMinWidthV12 {
 		return available
 	}
-	return min(maxWidth, available)
+	return min(max(modelPopoverMinWidthV12, widest+modelPopoverChromeV12), available)
+}
+
+// modelPopoverListHeightV12 is the height the model list may take: it grows
+// with the window and never past the room the popover has, so its last row
+// stays reachable by scrolling.
+func modelPopoverListHeightV12(windowHeight float32) float32 {
+	return max(modelPopoverRowHeightV12, min(windowHeight-300, 520))
 }
 
 func handleRunningComposerInput(ev ui.InputEvent, composing bool, draft string,
@@ -1216,9 +1233,20 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 	if !s.chatView.modelPicker.Open || !activeFamilyOK || len(variants) == 0 {
 		s.chatView.contextPicker.Open = false
 	}
-	popoverV12(c, chip, &s.chatView.modelPicker.Open,
+	windowWidth, windowHeight := c.Size()
+	width := float32(modelPopoverMinWidthV12)
+	if s.chatView.modelPicker.Open {
+		// Measuring every name costs a layout each; the panel only needs it
+		// while it shows.
+		labels := make([]string, 0, len(options))
+		for _, option := range options {
+			labels = append(labels, option.Label)
+		}
+		width = modelPopoverWidthV12(c, labels, windowWidth)
+	}
+	popoverWidthV12(c, chip, &s.chatView.modelPicker.Open,
 		s.highContrastActive(currentAppearanceHighContrast()) || currentAppearanceReduceTransparency(),
-		func(panel ui.Element) {
+		width, func(panel ui.Element) {
 			panel.Label(label).Padding(6).Gap(0).Children(func() {
 				components.Text(c, text("modelsGroupTitle")).FontSize(fontCaption).
 					FontWeight(500).TextColor(t.TextMuted).Padding(6, 8, 4, 8)
@@ -1227,7 +1255,8 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 						TextColor(t.TextMuted).Padding(8)
 				} else {
 					components.ScrollView(c, components.ScrollViewOptions{}).FillWidth().
-						MaxHeight(260).Padding(0).Gap(0).Children(func() {
+						MaxHeight(modelPopoverListHeightV12(windowHeight)).Padding(8, 0).
+						Gap(0).Children(func() {
 						for _, option := range options {
 							selected := activeFamilyOK &&
 								option.ID == piModelChoiceID(activeFamily.Provider, activeFamily.Key)
@@ -1272,8 +1301,9 @@ func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option,
 ) bool {
 	t := c.Theme()
 	row := ui.ButtonBase(c).Key("model-choice-"+option.ID).Label(option.Label).Selected(selected).
-		FillWidth().MinWidth(0).MinHeight(32).Padding(4, 8).Radius(8).Justify(ui.Start).
-		AlignItems(ui.Center).Gap(8).Background(ui.Color{}).TextColor(t.Text)
+		FillWidth().MinWidth(0).MinHeight(modelPopoverRowHeightV12).Padding(8, 8).
+		Radius(8).Justify(ui.Start).AlignItems(ui.Center).Gap(8).
+		Background(ui.Color{}).TextColor(t.Text)
 	if row.Hovered() || row.Focused() {
 		row.Background(t.SurfaceHover)
 	}
@@ -1281,7 +1311,7 @@ func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option,
 		if option.Leading != nil {
 			option.Leading(c, 16)
 		}
-		ui.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
+		ui.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
 			components.Text(c, option.Label).MinWidth(0).SingleLine().Ellipsis("…").
 				FontSize(fontBody).Tooltip(option.Label)
 			components.Text(c, modelPickerSubtitle(choice)).MinWidth(0).SingleLine().Ellipsis("…").

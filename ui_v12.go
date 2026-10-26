@@ -20,10 +20,18 @@ const (
 // popoverV12 replaces Onevra's glass-and-1px popover while preserving MyGo's
 // positioning, focus order and Escape/outside-press dismissal.
 func popoverV12(c *ui.Context, anchor ui.Element, open *bool, opaque bool, build func(panel ui.Element)) ui.Element {
+	return popoverWidthV12(c, anchor, open, opaque, 260, build)
+}
+
+// popoverWidthV12 is popoverV12 with an explicit panel width, for popovers
+// whose content is wider than the shared default.
+func popoverWidthV12(c *ui.Context, anchor ui.Element, open *bool, opaque bool, width float32,
+	build func(panel ui.Element),
+) ui.Element {
 	t := c.Theme()
 	p := themePalette(t.Dark)
 	return ui.PopoverBase(c, anchor, open, func(panel ui.Element) {
-		panel.Column().Width(260).Padding(6).Gap(0).Margin(4, 0, 0, 0).
+		panel.Column().Width(width).Padding(6).Gap(0).Margin(4, 0, 0, 0).
 			Radius(12).TextColor(t.Text).
 			Shadow(runtimeTokens.Shadow.Overlay.OffsetX.Value, runtimeTokens.Shadow.Overlay.OffsetY.Value,
 				runtimeTokens.Shadow.Overlay.Blur.Value, runtimeTokens.Shadow.Overlay.Spread.Value,

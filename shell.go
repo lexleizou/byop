@@ -76,12 +76,18 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 		rightPadding = bar.Right + 12
 	}
 
-	ui.Row(c).Height(height).FillWidth().Padding(0, rightPadding).
+	// The whole bar drags the window; the controls inside it take their own
+	// presses first, and the spacers and capsule are explicit handles for the
+	// areas that would otherwise show no hit box.
+	ui.Row(c).Height(height).FillWidth().Padding(0, rightPadding).DragWindow().
 		AlignItems(ui.Center).Children(func() {
 		ui.Box(c).Width(36).Shrink(0).FillHeight().DragWindow()
-		ui.Spacer(c).Grow(1).DragWindow()
+		ui.Spacer(c).Grow(1).FillHeight().DragWindow()
+		// The capsule drags the window too, so presses on its title text and
+		// other non-interactive content move the window; its buttons take
+		// their own presses first.
 		capsule := ui.Row(c).Height(36).Padding(0, 12).Radius(12).
-			AlignItems(ui.Center)
+			AlignItems(ui.Center).DragWindow()
 		if high || reduceTransparency {
 			capsule.Border(runtimeTokens.Dimension.Border.Value, p.border).
 				Background(p.surface)
@@ -91,7 +97,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 		capsule.Children(func() {
 			s.titleBarHeading(c, p)
 		})
-		ui.Spacer(c).Grow(1).DragWindow()
+		ui.Spacer(c).Grow(1).FillHeight().DragWindow()
 		right := ui.Row(c).Absolute().Top((height-36)/2).Right(12).
 			Height(36).Padding(0, 4).Radius(12)
 		if high || reduceTransparency {
@@ -322,10 +328,60 @@ func panelToggleButton(c *ui.Context, p palette, key, iconName, label string, se
 
 // Shared shell widths. chatMainWidth uses the same values to decide HUD wrapping.
 const (
-	navExpandedWidth  = 200
-	navCollapsedWidth = 56
-	taskPanelWidth    = 320
+	navExpandedWidth    = 200
+	navCollapsedWidth   = 56
+	navMinExpandedWidth = 160
+	navMaxExpandedWidth = 360
+	taskPanelWidth      = 320
+	// chatMinMainWidth is the narrowest the chat stage may become before the
+	// navigation stops growing.
+	chatMinMainWidth = 400
+
+	// Session rows share one height and one gap so the archived panel can size
+	// its animated body without clipping the last row.
+	sessionRowHeight = 34
+	sessionRowGap    = 4
 )
+
+// normalizeNavExpandedWidth clamps a saved navigation width to the widths the
+// resize handle offers, and falls back to the default when none was saved.
+func normalizeNavExpandedWidth(value float32) float32 {
+	if value <= 0 {
+		return navExpandedWidth
+	}
+	return min(max(value, navMinExpandedWidth), navMaxExpandedWidth)
+}
+
+// navExpandedWidthLimit is the widest the navigation may grow in a window: it
+// leaves chatMinMainWidth for the stage once the shell gaps and the docked task
+// panel take their room, and never narrows the navigation past its minimum.
+func (s *appState) navExpandedWidthLimit(windowWidth float32) float32 {
+	var tasksWidth float32
+	if s.tasksOpen && windowWidth >= narrowShellWidth {
+		tasksWidth = taskPanelWidth + shellGap
+	}
+	// The window keeps two outer gaps, the gap after the navigation, and the
+	// stage's own room.
+	room := windowWidth - 3*shellGap - tasksWidth - chatMinMainWidth
+	return max(navMinExpandedWidth, min(navMaxExpandedWidth, room))
+}
+
+// navigationExpandedWidth is the width the user chose, clamped to the widths
+// the handle offers. It is the saved preference, not what a narrow layout
+// shows.
+func (s *appState) navigationExpandedWidth() float32 {
+	return normalizeNavExpandedWidth(s.navWidth)
+}
+
+// navigationWidth is the width of the navigation at a window width, as the
+// shell lays it out and as chatMainWidth accounts for it. A narrow window or a
+// docked task panel can narrow it below the chosen width without changing it.
+func (s *appState) navigationWidth(windowWidth float32) float32 {
+	if s.navigationCollapsedForWidth(windowWidth) {
+		return navCollapsedWidth
+	}
+	return min(s.navigationExpandedWidth(), s.navExpandedWidthLimit(windowWidth))
+}
 
 func brandMark(c *ui.Context, p palette, size float32) ui.Element {
 	if byopLogoMarkBitmap != nil {
@@ -338,10 +394,7 @@ func brandMark(c *ui.Context, p palette, size float32) ui.Element {
 func (s *appState) navigation(c *ui.Context, p palette) {
 	windowWidth, _ := c.Size()
 	collapsed := s.navigationCollapsedForWidth(windowWidth)
-	width := float32(navExpandedWidth)
-	if collapsed {
-		width = navCollapsedWidth
-	}
+	width := s.navigationWidth(windowWidth)
 	dark := currentAppearanceDark()
 	high := s.highContrastActive(currentAppearanceHighContrast())
 	reduceTransparency := currentAppearanceReduceTransparency()
@@ -353,6 +406,18 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 
 	nav := ui.Column(c)
 	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
+	if collapsed && s.navResizeDragging {
+		// A narrow window or a collapse ends a resize in progress: keep the
+		// width it reached before the handle went away.
+		s.navResizeDragging = false
+		if err := s.persistNavigationWidth(); err != nil {
+			s.showNotice(text("noticePreferenceSaveNavigationWidth"))
+		}
+	}
+	if s.navResizeDragging {
+		// Follow the pointer without easing while the handle is dragged.
+		duration = 0
+	}
 	animatedWidth := nav.AnimateWith("navigation-width", width+shellGap, duration, ui.EaseOut)
 	nav.Width(animatedWidth).FillHeight().Shrink(0).Padding(0, shellGap, 0, 0).Children(func() {
 		navGlassCard(c, p, dark, high, reduceTransparency, shellRadius,
@@ -391,6 +456,47 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 					s.navigationFooter(c, navPalette, dark, high, reduceTransparency)
 				})
 			})
+		if !collapsed {
+			s.navigationResizeHandle(c, p, windowWidth)
+		}
+	})
+}
+
+// navigationResizeHandle is the strip in the gap between the navigation and
+// the stage, which the pointer drags to resize the expanded navigation.
+func (s *appState) navigationResizeHandle(c *ui.Context, p palette, windowWidth float32) {
+	handle := ui.Box(c).Key("navigation-resize").Absolute().Top(0).Bottom(0).
+		Right(0).Width(shellGap).Cursor(ui.CursorResizeEW).
+		Label(text("navigationResize"))
+	// Dragged reports the pointer's move in this frame, so each frame steps
+	// the width from the one the previous frame shows.
+	dx, _, held := handle.Dragged()
+	if held && !s.navResizeDragging {
+		s.navResizeDragging = true
+	}
+	if held {
+		shown := s.navigationWidth(windowWidth)
+		next := normalizeNavExpandedWidth(min(shown+dx, s.navExpandedWidthLimit(windowWidth)))
+		if next != shown {
+			s.navWidth = next
+			s.preferences.NavExpandedWidth = next
+		}
+	} else if s.navResizeDragging {
+		s.navResizeDragging = false
+		if err := s.persistNavigationWidth(); err != nil {
+			s.showNotice(text("noticePreferenceSaveNavigationWidth"))
+		}
+	}
+	active := held || handle.Hovered()
+	handle.Draw(func(painter *ui.Painter, r ui.Rect) {
+		if !active || r.H <= 16 {
+			return
+		}
+		line := p.border
+		if held {
+			line = p.accent
+		}
+		painter.Fill(ui.Rect{X: r.X + r.W/2 - .25, Y: r.Y + 8, W: .5, H: r.H - 16}, line, 0)
 	})
 }
 
@@ -402,7 +508,7 @@ func (s *appState) navigationTrafficArea(c *ui.Context, p palette) {
 		row.Padding(0, 14).Justify(ui.Center)
 	}
 	row.Children(func() {
-		ui.Spacer(c).Grow(1).DragWindow()
+		ui.Spacer(c).Grow(1).FillHeight().DragWindow()
 		navigationToggleButton(c, p, collapsed, func() {
 			s.setNavCollapsed(!collapsed)
 		})
@@ -619,7 +725,9 @@ func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
 		if len(s.piSessions) == 0 {
 			return
 		}
-		ui.Scroll(c).Grow(1).MinHeight(0).FillWidth().Gap(3).Children(func() {
+		// Group spacing keeps pinned, recent, later and archived sessions apart
+		// without adding a second heading for the default recent group.
+		ui.Scroll(c).Grow(1).MinHeight(0).FillWidth().Padding(8, 0, 8, 0).Children(func() {
 			dragging := s.draggingSessionKey != ""
 			draggedFromArchived := false
 			if dragging {
@@ -649,6 +757,9 @@ func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
 					sessionStatePinned, false, true)
 			}
 			if len(groups.sessions) > 0 {
+				if len(groups.pinned) > 0 {
+					sessionGroupSeparator(c, p)
+				}
 				s.sessionSection(c, p, "sessions", text("navRecentSessions"), groups.sessions,
 					"", true, true)
 			} else if !dragging {
@@ -660,6 +771,7 @@ func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
 				ui.Box(c).Height(8).FillWidth()
 			}
 			if len(groups.later) > 0 {
+				sessionGroupSeparator(c, p)
 				s.sessionSection(c, p, "later", text("navLater"), groups.later,
 					sessionStateLater, false, true)
 			}
@@ -682,6 +794,17 @@ func (s *appState) sessionsNavigation(c *ui.Context, p palette) {
 			}
 		})
 	})
+}
+
+// sessionGroupSeparator sets one session group apart from the one above it:
+// 12 DIPs of breathing room, a 0.5px rule inset from the card edges, and 8
+// DIPs before the next group's first label.
+func sessionGroupSeparator(c *ui.Context, p palette) {
+	ui.Box(c).Height(12).FillWidth().Shrink(0)
+	ui.Row(c).FillWidth().Shrink(0).Padding(0, 8).Children(func() {
+		ui.Box(c).Height(runtimeTokens.Dimension.Border.Value).FillWidth().Background(p.border)
+	})
+	ui.Box(c).Height(8).FillWidth().Shrink(0)
 }
 
 func (s *appState) sessionSection(c *ui.Context, p palette, key, label string, sessions []piSessionSummary,
@@ -726,13 +849,16 @@ func (s *appState) sessionSection(c *ui.Context, p palette, key, label string, s
 }
 
 func (s *appState) archivedSessionSection(c *ui.Context, p palette, groups sessionGroups) {
+	sessionGroupSeparator(c, p)
 	s.sessionSectionHeader(c, p, "archived", textArgs("navArchived", map[string]any{
 		"count": len(groups.archived),
 	}), sessionStateArchived, len(groups.archived), true)
 	expanded := s.archivedExpanded || s.draggingSessionKey != ""
 	target := float32(0)
 	if expanded {
-		target = float32(len(groups.archived))*34 + 8
+		// Rows, their gaps, and the room a drop highlight adds around them.
+		target = float32(len(groups.archived))*(sessionRowHeight+sessionRowGap) -
+			sessionRowGap + 16
 	}
 	body := ui.Column(c)
 	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
@@ -791,7 +917,7 @@ func (s *appState) sessionSectionHeader(c *ui.Context, p palette, key, label, st
 }
 
 func (s *appState) sessionDropArea(c *ui.Context, p palette, key, state, label string, empty bool, children func()) {
-	area := ui.Column(c).FillWidth().MinHeight(8).Gap(2)
+	area := ui.Column(c).FillWidth().MinHeight(8).Gap(sessionRowGap)
 	_, localOver := ui.DragOver[sessionDragPayload](area)
 	_, nativeOver := ui.DataDragOver(area, sessionDropOptions())
 	over := localOver || nativeOver
@@ -948,8 +1074,8 @@ func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSumm
 		bg = p.text.Alpha(.10)
 		foreground = p.text
 	}
-	btn := ui.ButtonBase(c.Key("session-"+summary.Path)).Height(32).FillWidth().Padding(0, 8).
-		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(title)
+	btn := ui.ButtonBase(c.Key("session-"+summary.Path)).Height(sessionRowHeight).FillWidth().
+		Padding(0, 8).Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(title)
 	btn.Justify(ui.Start)
 	payload := sessionDragPayload{Key: key}
 	btn.Drag(payload).DragDataFrom(func() transfer.Data {

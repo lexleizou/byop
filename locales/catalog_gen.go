@@ -6048,6 +6048,22 @@ func (msgs Messages) NoticePreferenceSaveNavigation() string {
 	return Catalog.Format(msgs.locale, "noticePreferenceSaveNavigation", nil)
 }
 
+// NoticePreferenceSaveNavigationWidth says "Navigation width changed, but preferences could not be saved."
+// in the language the app shows.
+//
+// Notice when the navigation width changed but could not be persisted.
+func NoticePreferenceSaveNavigationWidth() string {
+	return In(i18n.Locale()).NoticePreferenceSaveNavigationWidth()
+}
+
+// NoticePreferenceSaveNavigationWidth says "Navigation width changed, but preferences could not be saved."
+// in the language of msgs.
+//
+// Notice when the navigation width changed but could not be persisted.
+func (msgs Messages) NoticePreferenceSaveNavigationWidth() string {
+	return Catalog.Format(msgs.locale, "noticePreferenceSaveNavigationWidth", nil)
+}
+
 // NoticePreferenceSaveTaskPanel says "Task panel changed, but preferences could not be saved."
 // in the language the app shows.
 //
@@ -11238,4 +11254,18 @@ func NavPiStatusNoVersion(status string) string {
 // unavailable.
 func (msgs Messages) NavPiStatusNoVersion(status string) string {
 	return Catalog.Format(msgs.locale, "navPiStatusNoVersion", map[string]any{"status": status})
+}
+
+// NavigationResize says "Resize navigation"
+// in the language the app shows.
+//
+// Accessible label for the handle that resizes the navigation.
+func NavigationResize() string { return In(i18n.Locale()).NavigationResize() }
+
+// NavigationResize says "Resize navigation"
+// in the language of msgs.
+//
+// Accessible label for the handle that resizes the navigation.
+func (msgs Messages) NavigationResize() string {
+	return Catalog.Format(msgs.locale, "navigationResize", nil)
 }

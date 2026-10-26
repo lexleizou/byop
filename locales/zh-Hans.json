@@ -1700,6 +1700,10 @@
   "@noticePreferenceSaveNavigation": {
     "description": "Notice when navigation visibility changed but could not be persisted."
   },
+  "noticePreferenceSaveNavigationWidth": "导航宽度已更改，但偏好设置无法保存。",
+  "@noticePreferenceSaveNavigationWidth": {
+    "description": "Notice when the navigation width changed but could not be persisted."
+  },
   "noticePreferenceSaveTaskPanel": "任务栏状态已更改，但偏好设置无法保存。",
   "@noticePreferenceSaveTaskPanel": {
     "description": "Notice when task panel visibility changed but could not be persisted."
@@ -3243,5 +3247,9 @@
         "type": "String"
       }
     }
+  },
+  "navigationResize": "调整导航宽度",
+  "@navigationResize": {
+    "description": "Accessible label for the handle that resizes the navigation."
   }
 }

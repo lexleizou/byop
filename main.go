@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.13.1"
+	appVersion = "0.13.2"
 )
 
 func appBuildVersion() string {
@@ -203,6 +203,8 @@ type appState struct {
 	uiLanguage                      string
 	effectiveLocale                 atomic.Pointer[string]
 	navCollapsed                    bool
+	navWidth                        float32
+	navResizeDragging               bool
 	tasksOpen                       bool
 	channelRefresh                  channelRefreshCoordinator
 	configDir                       string
@@ -360,6 +362,7 @@ func newAppState() *appState {
 		themeMode:             themeMode(preferences.Theme),
 		uiLanguage:            normalizeUILanguage(preferences.UILanguage),
 		navCollapsed:          preferences.NavCollapsed,
+		navWidth:              normalizeNavExpandedWidth(preferences.NavExpandedWidth),
 		tasksOpen:             preferences.TasksOpen,
 		configDir:             configDir,
 		preferences:           preferences,
@@ -681,6 +684,7 @@ func (s *appState) persistedPreferences() byopPreferences {
 		persisted.TasksOpen = current.TasksOpen
 	}
 
+	persisted.NavExpandedWidth = normalizeNavExpandedWidth(current.NavExpandedWidth)
 	persisted.Contrast = current.Contrast
 	persisted.Motion = current.Motion
 	persisted.PanelAnimationMS = current.PanelAnimationMS
@@ -703,6 +707,12 @@ func (s *appState) persistedPreferences() byopPreferences {
 func (s *appState) persistTheme(mode themeMode) error {
 	return s.persistPreferencePatch(func(preferences *byopPreferences) {
 		preferences.Theme = string(mode)
+	})
+}
+
+func (s *appState) persistNavigationWidth() error {
+	return s.persistPreferencePatch(func(preferences *byopPreferences) {
+		preferences.NavExpandedWidth = normalizeNavExpandedWidth(s.navWidth)
 	})
 }
 

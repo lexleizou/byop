@@ -29,6 +29,7 @@ type byopPreferences struct {
 	FollowUpStyle                  string                                `json:"followUpStyle,omitempty"`
 	RunningSendMode                string                                `json:"runningSendMode,omitempty"`
 	NavCollapsed                   bool                                  `json:"navCollapsed,omitempty"`
+	NavExpandedWidth               float32                               `json:"navExpandedWidth,omitempty"`
 	TasksOpen                      bool                                  `json:"tasksOpen,omitempty"`
 	Workspace                      string                                `json:"workspace,omitempty"`
 	LegacyMigrationPromptDismissed bool                                  `json:"legacyMigrationPromptDismissed,omitempty"`
@@ -144,6 +145,7 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 	preferences.Motion = string(normalizeMotionMode(preferences.Motion))
 	preferences.PanelAnimationMS = normalizePanelAnimationMS(preferences.PanelAnimationMS)
 	preferences.Wallpaper = normalizeWallpaper(preferences.Wallpaper)
+	preferences.NavExpandedWidth = normalizeNavExpandedWidth(preferences.NavExpandedWidth)
 	preferences.NavTransparency = min(max(preferences.NavTransparency, 0), 100)
 	preferences.GlassBlur = min(max(preferences.GlassBlur, 0), runtimeTokens.Glass.BlurMax)
 	if preferences.LastSessionByWorkspace == nil {

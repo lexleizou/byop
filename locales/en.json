@@ -1791,6 +1791,10 @@
   "@noticePreferenceSaveNavigation": {
     "description": "Notice when navigation visibility changed but could not be persisted."
   },
+  "noticePreferenceSaveNavigationWidth": "Navigation width changed, but preferences could not be saved.",
+  "@noticePreferenceSaveNavigationWidth": {
+    "description": "Notice when the navigation width changed but could not be persisted."
+  },
   "noticePreferenceSaveTaskPanel": "Task panel changed, but preferences could not be saved.",
   "@noticePreferenceSaveTaskPanel": {
     "description": "Notice when task panel visibility changed but could not be persisted."
@@ -3446,5 +3450,9 @@
         "type": "String"
       }
     }
+  },
+  "navigationResize": "Resize navigation",
+  "@navigationResize": {
+    "description": "Accessible label for the handle that resizes the navigation."
   }
 }

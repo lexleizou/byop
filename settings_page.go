@@ -86,9 +86,11 @@ func (s *appState) settingsPageNarrowV12(c *ui.Context) bool {
 }
 
 func (s *appState) settingsContentWidthV12(windowWidth float32) float32 {
-	// Settings keep their own breakpoint semantics: at 900 DIP an expanded
-	// nav still has 200 DIP reserved, while a collapsed nav frees the stage.
-	navigationWidth := float32(navExpandedWidth + shellGap)
+	// Settings keep their own breakpoint semantics: an expanded navigation
+	// reserves its width even below the shell's narrow-window breakpoint, but
+	// the same limit as the shell keeps the content area usable.
+	navigationWidth := min(s.navigationExpandedWidth(), s.navExpandedWidthLimit(windowWidth)) +
+		shellGap
 	if s.navCollapsed {
 		navigationWidth = navCollapsedWidth + shellGap
 	}
