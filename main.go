@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.13.2"
+	appVersion = "0.14.0"
 )
 
 func appBuildVersion() string {

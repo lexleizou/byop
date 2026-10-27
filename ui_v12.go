@@ -32,14 +32,11 @@ func popoverWidthV12(c *ui.Context, anchor ui.Element, open *bool, opaque bool, 
 	p := themePalette(t.Dark)
 	return ui.PopoverBase(c, anchor, open, func(panel ui.Element) {
 		panel.Column().Width(width).Padding(6).Gap(0).Margin(4, 0, 0, 0).
-			Radius(12).TextColor(t.Text).
-			Shadow(runtimeTokens.Shadow.Overlay.OffsetX.Value, runtimeTokens.Shadow.Overlay.OffsetY.Value,
-				runtimeTokens.Shadow.Overlay.Blur.Value, runtimeTokens.Shadow.Overlay.Spread.Value,
-				p.shadowOverlay)
+			Radius(12).TextColor(t.Text)
 		if opaque {
-			panel.Border(runtimeTokens.Dimension.Border.Value, t.Border).Background(t.Surface)
+			panel = stylePopoverOpaque(panel, p, 12, t.Surface, t.Border)
 		} else {
-			panel.Material(productGlassWithTint(p.surface.Alpha(.94)))
+			panel = stylePopoverGlass(panel, p, 12)
 		}
 		if build != nil {
 			build(panel)
@@ -449,7 +446,7 @@ func iconActionV12(c *ui.Context, label string, iconValue func() *ui.SVG) ui.Ele
 // opaqueComposerV12 is the repository-owned composer used by the floating
 // conversation. It mirrors chat.Composer's input contract while keeping the
 // card opaque and free of Onevra's dependency shadow.
-func opaqueComposerV12(c *ui.Context, draft *string,
+func opaqueComposerV12(c *ui.Context, p palette, draft *string,
 	options chat.ComposerOptions,
 	placeholderOverlays ...func(*ui.Context),
 ) chat.ComposerResult {
@@ -459,8 +456,9 @@ func opaqueComposerV12(c *ui.Context, draft *string,
 	canSend := !empty && !options.SendDisabled
 	result.Root = ui.Column(c).FillWidth().MinWidth(0).Shrink(0).Children(func() {
 		card := ui.Column(c).FillWidth().MinWidth(0).MinHeight(96).
-			Padding(12, 12, 10, 12).Gap(8).Radius(v12InputRadius).
-			Border(v12BorderWidth, t.Border).Background(t.Surface).Children(func() {
+			Padding(12, 12, 10, 12).Gap(8)
+		card = styleComposerSurface(card, p, v12InputRadius)
+		card.Children(func() {
 			if options.Attachments != nil {
 				ui.Row(c).Key("attachments").FillWidth().Wrap().Gap(8).
 					Padding(0, 0, 4, 0).Children(func() { options.Attachments(c) })

@@ -373,15 +373,9 @@ func (s *appState) settingsGlassPreviewV12(c *ui.Context, p palette) {
 	reduceTransparency := currentAppearanceReduceTransparency()
 	preview := ui.Row(c).Height(120).FillWidth().Radius(shellRadius).
 		Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.background).Clip()
+		Background(p.readingSurface).Clip()
 	preview.Children(func() {
-		if deepLiquidGlassActive(dark, high, reduceTransparency) &&
-			s.preferences.Wallpaper != "none" {
-			if bitmap := wallpaperBitmap(s.preferences.Wallpaper); bitmap != nil {
-				ui.Image(c, bitmap).Absolute().Top(0).Right(0).Bottom(0).Left(0).
-					Fit(ui.Cover).PassThrough()
-			}
-		}
+		s.wallpaperBackdrop(c, dark, high, reduceTransparency)
 		ui.Row(c).Absolute().Top(0).Right(0).Bottom(0).Left(0).
 			Padding(8).Gap(8).Children(func() {
 			navGlassCard(c, p, dark, high, reduceTransparency, shellRadius,
@@ -397,7 +391,7 @@ func (s *appState) settingsGlassPreviewV12(c *ui.Context, p palette) {
 				}).Width(120)
 			ui.Column(c).Grow(1).FillHeight().Radius(8).
 				Border(runtimeTokens.Dimension.Border.Value, p.border).
-				Background(p.background)
+				Background(p.readingSurface)
 		})
 	})
 }

@@ -97,6 +97,79 @@ func TestP12aRuntimeTokensMatchFoundation(t *testing.T) {
 	}
 }
 
+func TestP14MaterialRolesKeepDarkHierarchy(t *testing.T) {
+	dark := themePalette(true)
+	if dark.readingSurface != ui.Hex("#111110") {
+		t.Fatalf("dark reading surface = %#v, want #111110", dark.readingSurface)
+	}
+	if dark.composerSurface != ui.Hex("#191918") {
+		t.Fatalf("dark composer surface = %#v, want #191918", dark.composerSurface)
+	}
+	if dark.raisedSurface != ui.Hex("#222221") {
+		t.Fatalf("dark raised surface = %#v, want #222221", dark.raisedSurface)
+	}
+	if dark.popoverTint.R != 0x22 || dark.popoverTint.G != 0x22 ||
+		dark.popoverTint.B != 0x21 || dark.popoverTint.A != 0xb8 {
+		t.Fatalf("dark popover tint = %#v, want #222221b8", dark.popoverTint)
+	}
+	if dark.popoverBorder != ui.Hex("#62605b") {
+		t.Fatalf("dark popover border = %#v, want #62605b", dark.popoverBorder)
+	}
+
+	light := themePalette(false)
+	if light.readingSurface != light.background ||
+		light.raisedSurface != light.surface ||
+		light.composerSurface != light.surface {
+		t.Fatal("light material roles changed the existing surface appearance")
+	}
+}
+
+func TestP14MainStagePreservesLightBaseline(t *testing.T) {
+	for _, high := range []bool{false, true} {
+		p := themePaletteWithContrast(false, high)
+		if got := mainStageBackground(p, false); got != p.surface {
+			t.Fatalf("high=%t light stage = %#v, want original surface %#v", high, got, p.surface)
+		}
+	}
+	dark := themePalette(true)
+	if got := mainStageBackground(dark, true); got != dark.readingSurface {
+		t.Fatalf("dark stage = %#v, want reading surface %#v", got, dark.readingSurface)
+	}
+}
+
+func TestP14PluginDetailsPreserveLightBaseline(t *testing.T) {
+	for _, high := range []bool{false, true} {
+		p := themePaletteWithContrast(false, high)
+		img := ui.Render(func(c *ui.Context) {
+			c.Root().Background(ui.RGB(255, 0, 255))
+			panel := ui.Box(c).Absolute().Top(10).Left(10).Size(80, 80)
+			stylePluginDetailsLight(panel, p)
+		}, 100, 100, 1)
+		got := img.RGBAAt(50, 50)
+		if got.R != p.surface.R || got.G != p.surface.G || got.B != p.surface.B {
+			t.Fatalf("high=%t light details center = %#v, want surface %#v", high, got, p.surface)
+		}
+		if pluginDetailsUsesGlass(false, high, false) ||
+			pluginDetailsUsesGlass(false, high, true) {
+			t.Fatalf("high=%t light details selected glass", high)
+		}
+	}
+	if !pluginDetailsUsesGlass(true, false, false) {
+		t.Fatal("normal dark details did not select glass")
+	}
+	for _, test := range []struct {
+		high, reduce bool
+	}{
+		{high: true},
+		{reduce: true},
+	} {
+		if pluginDetailsUsesGlass(true, test.high, test.reduce) {
+			t.Fatalf("dark high=%t reduce=%t details did not use the opaque fallback",
+				test.high, test.reduce)
+		}
+	}
+}
+
 func TestP12aRuntimeTokenValidationRejectsFoundationDrift(t *testing.T) {
 	tests := []struct {
 		name   string

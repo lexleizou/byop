@@ -221,10 +221,9 @@ func (s *appState) pluginViewUnavailable(
 }
 
 func (s *appState) pluginViewLoadingState(c *ui.Context, p palette) {
-	ui.Row(c).FillWidth().Padding(16).Radius(
-		runtimeTokens.Dimension.Radius["overlay"].Value,
-	).Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.surface).AlignItems(ui.Center).Gap(12).Children(func() {
+	card := ui.Row(c).FillWidth().Padding(16)
+	card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["overlay"].Value)
+	card.AlignItems(ui.Center).Gap(12).Children(func() {
 		ui.Icon(c, icon("clock")).Size(16, 16).TextColor(p.accent)
 		ui.Text(c, text("pluginsViewRendering")).FontSize(fontBody).TextColor(p.muted)
 	})
@@ -236,10 +235,9 @@ func (s *appState) pluginViewErrorState(
 	entry pluginRegistryEntry,
 	view pluginViewContribution,
 ) {
-	ui.Column(c).FillWidth().Gap(12).Padding(16).Radius(
-		runtimeTokens.Dimension.Radius["overlay"].Value,
-	).Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(12).Padding(16)
+	card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["overlay"].Value)
+	card.Children(func() {
 		ui.Row(c).AlignItems(ui.Center).Gap(8).Children(func() {
 			ui.Icon(c, icon("info")).Size(16, 16).TextColor(p.danger)
 			ui.Text(c, text("pluginsViewFailed")).FontSize(fontBody).FontWeight(650).
@@ -264,10 +262,9 @@ func (s *appState) pluginViewBlocks(
 	blocks []pluginViewBlock,
 ) {
 	if len(blocks) == 0 {
-		ui.Row(c).FillWidth().Padding(16).Radius(
-			runtimeTokens.Dimension.Radius["overlay"].Value,
-		).Border(runtimeTokens.Dimension.Border.Value, p.border).
-			Background(p.surface).Children(func() {
+		card := ui.Row(c).FillWidth().Padding(16)
+		card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["overlay"].Value)
+		card.Children(func() {
 			ui.Text(c, text("pluginsViewEmpty")).FontSize(fontBody).TextColor(p.muted)
 		})
 		return
@@ -283,10 +280,9 @@ func (s *appState) pluginViewBlocks(
 					TextColor(p.text)
 			case "notice":
 				tone := pluginBlockTone(p, block.Tone)
-				ui.Row(c).FillWidth().AlignItems(ui.Start).Gap(12).Padding(12).Radius(
-					runtimeTokens.Dimension.Radius["input"].Value,
-				).Border(runtimeTokens.Dimension.Border.Value, p.border).
-					Background(p.surface).Children(func() {
+				card := ui.Row(c).FillWidth().AlignItems(ui.Start).Gap(12).Padding(12)
+				card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["input"].Value)
+				card.Children(func() {
 					ui.Icon(c, icon("info")).Size(16, 16).TextColor(tone).Shrink(0)
 					ui.Text(c, block.Text).FontSize(fontBody).LineHeight(1.45).
 						TextColor(p.text).Grow(1)
@@ -304,10 +300,9 @@ func (s *appState) pluginViewBlocks(
 					for _, item := range block.Items {
 						item.Title = pluginLocalizedText(entry.Manifest, item.Title)
 						item.Detail = pluginLocalizedText(entry.Manifest, item.Detail)
-						ui.Column(c).FillWidth().Gap(4).Padding(12).Radius(
-							runtimeTokens.Dimension.Radius["input"].Value,
-						).Border(runtimeTokens.Dimension.Border.Value, p.border).
-							Background(p.surface).Children(func() {
+						card := ui.Column(c).FillWidth().Gap(4).Padding(12)
+						card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["input"].Value)
+						card.Children(func() {
 							if item.Title != "" {
 								ui.Text(c, item.Title).FontSize(fontBody).FontWeight(600).
 									TextColor(p.text)
@@ -320,10 +315,9 @@ func (s *appState) pluginViewBlocks(
 					}
 				})
 			case "code":
-				ui.Column(c).FillWidth().Padding(12).Radius(
-					runtimeTokens.Dimension.Radius["input"].Value,
-				).Border(runtimeTokens.Dimension.Border.Value, p.border).
-					Background(p.surface).Children(func() {
+				card := ui.Column(c).FillWidth().Padding(12)
+				card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["input"].Value)
+				card.Children(func() {
 					ui.Text(c, block.Text).Selectable().Font("monospace").FontSize(fontBody).
 						LineHeight(1.45).TextColor(p.text)
 				})

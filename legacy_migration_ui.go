@@ -137,9 +137,10 @@ func (s *appState) legacyMigrationPrompt(c *ui.Context, p palette) {
 		return
 	}
 	ui.Row(c).FillWidth().Justify(ui.Center).MarginY(8).Children(func() {
-		ui.Row(c).FillWidth().MaxWidth(chat.ContentWidth).MinWidth(0).Padding(9, 12).Gap(10).
-			Radius(12).Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).
-			AlignItems(ui.Center).Children(func() {
+		card := ui.Row(c).FillWidth().MaxWidth(chat.ContentWidth).MinWidth(0).
+			Padding(9, 12).Gap(10)
+		card = styleRaisedSurface(card, p, 12)
+		card.AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icon("info")).Size(16, 16).Shrink(0).TextColor(p.accent)
 			ui.Text(c, text("legacyPromptDiscovered")).FontSize(fontBody).LineHeight(1.4).
 				TextColor(p.text).Grow(1).MinWidth(0).MaxLines(2).
@@ -217,8 +218,9 @@ func (s *appState) diagnosticsSettingsCard(
 	p palette,
 	registry pluginRegistry,
 ) {
-	ui.Column(c).FillWidth().Gap(13).Padding(16).Radius(12).
-		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(13).Padding(16)
+	card = styleRaisedSurface(card, p, 12)
+	card.Children(func() {
 		header := ui.ButtonBase(c.Key("settings-diagnostics-toggle")).FillWidth().Padding(0).
 			Background(ui.Color{}).Cursor(ui.CursorPointer).
 			Label(text("settingsDiagnosticsTitle")).Tooltip(text("settingsDiagnosticsToggle"))

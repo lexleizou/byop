@@ -189,7 +189,7 @@ func (s *appState) chatPage(c *ui.Context, p palette) {
 		chat.FloatingConversationWith(c, &s.chatView.layout, &s.chatView.conversation, chat.FloatingConversationOptions{
 			JumpLabel: text("chatBackToLatest"),
 			Content:   func(c *ui.Context) { s.transcript(c) },
-			Composer:  func(c *ui.Context) { s.chatComposer(c) },
+			Composer:  func(c *ui.Context) { s.chatComposer(c, p) },
 		})
 	})
 }
@@ -204,13 +204,13 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	theme.Code = p.text
 	theme.CodeBackground = p.text.Alpha(.09)
 	theme.CodeSize = 1
-	theme.CodeBlockBackground = p.surface
+	theme.CodeBlockBackground = p.raisedSurface
 	theme.CodeBlockBorder = p.border
 	theme.CodeBlockRadius = 8
 	theme.CodeBlockPadding = 12.0 / fontBody
 	theme.CodeLineHeight = 1.4
 	codeColors := editor.DefaultTheme(c.Theme())
-	codeColors.Background = p.surface
+	codeColors.Background = p.raisedSurface
 	codeColors.Text = p.text
 	for i := range codeColors.Tokens {
 		codeColors.Tokens[i] = editor.TokenStyle{Color: p.text}
@@ -229,8 +229,9 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 		return false
 	}
 	s.chatView.markdown.CodeBlock = func(c *ui.Context, block *markdown.CodeBlockView) {
-		ui.Column(c).FillWidth().MinWidth(0).Background(p.surface).
-			Border(v12BorderWidth, p.border).Radius(8).Clip().Children(func() {
+		card := ui.Column(c).FillWidth().MinWidth(0)
+		card = styleRaisedSurface(card, p, 8).Clip()
+		card.Children(func() {
 			// Body contributes 3.5px above its first line; this brings the
 			// visual top inset to the prototype's 12px.
 			ui.Row(c).FillWidth().Padding(8, 4, 0, 4).Children(func() {
@@ -593,7 +594,7 @@ func (s *appState) turnCompletionFooter(c *ui.Context, message *chatMessage,
 	})
 }
 
-func (s *appState) chatComposer(c *ui.Context) {
+func (s *appState) chatComposer(c *ui.Context, p palette) {
 	t := c.Theme()
 	visible := s.followUpSuggestionVisible()
 	style := s.currentFollowUpStyle()
@@ -631,7 +632,7 @@ func (s *appState) chatComposer(c *ui.Context) {
 		if !s.runActive() && !s.retrying && !s.compacting {
 			footer = nil
 		}
-		result := opaqueComposerV12(c, &s.composerDraft, chat.ComposerOptions{
+		result := opaqueComposerV12(c, p, &s.composerDraft, chat.ComposerOptions{
 			Label:        text("chatMessageLabel"),
 			Placeholder:  placeholder,
 			SendLabel:    text("chatSend"),

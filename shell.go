@@ -127,16 +127,7 @@ func opaqueContent(card ui.Element, p palette) ui.Element {
 }
 
 func (s *appState) wallpaperLayer(c *ui.Context, p palette, dark, high, reduceTransparency bool) {
-	if !deepLiquidGlassActive(dark, high, reduceTransparency) ||
-		s.preferences.Wallpaper == "none" {
-		return
-	}
-	bitmap := wallpaperBitmap(s.preferences.Wallpaper)
-	if bitmap == nil {
-		return
-	}
-	ui.Image(c, bitmap).Absolute().Top(0).Right(0).Bottom(0).Left(0).
-		Fit(ui.Cover).PassThrough()
+	s.wallpaperBackdrop(c, dark, high, reduceTransparency)
 }
 
 func (s *appState) titleBarHeading(c *ui.Context, p palette) {
@@ -539,7 +530,7 @@ func (s *appState) navigationFooter(c *ui.Context, p palette, dark, high, reduce
 	ui.Column(c).FillWidth().Shrink(0).Children(func() {
 		if glass && !collapsed {
 			ui.Box(c).Height(runtimeTokens.Dimension.Border.Value).FillWidth().
-				Background(navFooterBorder)
+				Background(p.border.Alpha(.45))
 		}
 		collapsedPadding := float32(8)
 		footer := ui.Column(c).FillWidth().Shrink(0).
@@ -1376,10 +1367,7 @@ func (s *appState) main(c *ui.Context, p palette) {
 	dark := currentAppearanceDark()
 	high := s.highContrastActive(currentAppearanceHighContrast())
 	reduceTransparency := currentAppearanceReduceTransparency()
-	stageBackground := p.surface
-	if dark {
-		stageBackground = p.background
-	}
+	stageBackground := mainStageBackground(p, dark)
 	card := ui.Column(c).Grow(1).MinWidth(0).MinHeight(0).FillHeight().
 		Radius(shellRadius).Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(stageBackground)
@@ -1422,6 +1410,13 @@ func (s *appState) main(c *ui.Context, p palette) {
 	})
 }
 
+func mainStageBackground(p palette, dark bool) ui.Color {
+	if dark {
+		return p.readingSurface
+	}
+	return p.surface
+}
+
 func (s *appState) noticeBanner(c *ui.Context, p palette) {
 	ui.Row(c).FillWidth().Padding(9, 14).Gap(10).AlignItems(ui.Center).
 		Background(p.surfaceHover).BorderWidth(0, 0, 1, 0).BorderColor(p.border).
@@ -1458,9 +1453,14 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 		panel.Absolute().Top(8).Right(8).Bottom(8)
 	}
 	panel.Children(func() {
-		card := ui.Column(c).FillWidth().FillHeight().MinWidth(0).
-			Radius(shellRadius).Border(runtimeTokens.Dimension.Border.Value, p.text.Alpha(.10)).
-			Background(p.surface)
+		card := styleRaisedSurface(
+			ui.Column(c).FillWidth().FillHeight().MinWidth(0),
+			p,
+			shellRadius,
+		)
+		if !p.dark {
+			card.BorderColor(p.text.Alpha(.10))
+		}
 		card.Children(func() {
 			ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius - .5).Clip().
 				Children(func() {

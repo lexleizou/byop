@@ -94,10 +94,9 @@ func (s *appState) pluginSettingsSection(c *ui.Context, p palette) {
 	if hasSettings {
 		return
 	}
-	ui.Column(c).FillWidth().Gap(8).Padding(16).Radius(
-		runtimeTokens.Dimension.Radius["overlay"].Value,
-	).Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(8).Padding(16)
+	card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["overlay"].Value)
+	card.Children(func() {
 		ui.Text(c, text("pluginsSettingsEmptyTitle")).FontSize(fontBody).
 			FontWeight(650).TextColor(p.text)
 		ui.Text(c, text("pluginsSettingsEmptyDescription")).FontSize(fontCaption).
@@ -177,7 +176,7 @@ func (s *appState) pluginSettingField(
 			ui.Row(c).Height(36).Padding(0, 10).Radius(
 				runtimeTokens.Dimension.Radius["input"].Value,
 			).Border(runtimeTokens.Dimension.Border.Value, p.border).
-				Background(p.surface).AlignItems(ui.Center).Children(func() {
+				Background(p.composerSurface).AlignItems(ui.Center).Children(func() {
 				ui.TextInputBase(c.Key("plugin-setting-"+entryKey+"-"+field.Key), input).
 					Grow(1).Placeholder(field.Placeholder).FontSize(fontBody).
 					TextColor(p.text).Background(ui.Color{}).Border(0, ui.Color{}).
@@ -193,7 +192,7 @@ func (s *appState) pluginSettingField(
 			ui.Row(c).FillWidth().Padding(8, 10).Radius(
 				runtimeTokens.Dimension.Radius["input"].Value,
 			).Border(runtimeTokens.Dimension.Border.Value, p.border).
-				Background(p.surface).AlignItems(ui.Center).Children(func() {
+				Background(p.composerSurface).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, field.Label).FontSize(fontBody).TextColor(p.text).Grow(1)
 				if input := form.booleans[field.Key]; input != nil {
 					ui.Switch(c, input).Label(field.Label)
@@ -221,10 +220,9 @@ func pluginSettingsCard(
 	description string,
 	body func(),
 ) {
-	ui.Column(c).FillWidth().Gap(12).Padding(16).Radius(
-		runtimeTokens.Dimension.Radius["overlay"].Value,
-	).Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(12).Padding(16)
+	card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["overlay"].Value)
+	card.Children(func() {
 		ui.Column(c).Gap(4).Children(func() {
 			ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
 			ui.Text(c, description).FontSize(fontCaption).LineHeight(1.4).

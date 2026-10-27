@@ -7,17 +7,14 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-var navGlassBorder = ui.Hex("#eeeeec1a")
-var navFooterBorder = ui.Hex("#eeeeec14")
-
 func deepLiquidGlassActive(dark, high, reduceTransparency bool) bool {
 	return dark && !high && !reduceTransparency
 }
 
-func navGlassTint(transparency int) ui.Color {
+func navGlassTint(base ui.Color, transparency int) ui.Color {
 	transparency = min(max(transparency, 0), 100)
 	alpha := float64(100-transparency) / 100 * runtimeTokens.Glass.NavTintMaxAlpha
-	return ui.RGBA(25, 25, 24, float32(math.Round(alpha*255))/255)
+	return ui.RGBA(base.R, base.G, base.B, float32(math.Round(alpha*255))/255)
 }
 
 func navGlassCard(
@@ -40,12 +37,12 @@ func navGlassCard(
 			if refraction {
 				material := productGlass()
 				material.Style = glass.Clear
-				material.Tint = navGlassTint(transparency)
+				material.Tint = navGlassTint(p.surface, transparency)
 				inner.Material(material)
 			} else {
-				inner.Background(navGlassTint(transparency)).
-					Border(runtimeTokens.Dimension.Border.Value, navGlassBorder)
+				inner.Background(navGlassTint(p.surface, transparency))
 			}
+			inner = styleGlassEdge(inner, p)
 			inner.Clip().PassThrough()
 
 			ui.Column(c).Absolute().Top(0).Right(0).Bottom(0).Left(0).MinHeight(0).

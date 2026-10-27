@@ -147,8 +147,9 @@ func pluginContributionSearchText(manifest *pluginManifest) string {
 }
 
 func (s *appState) pluginRegistryIssues(c *ui.Context, p palette, issues []pluginRegistryIssue) {
-	ui.Column(c).FillWidth().Gap(8).Padding(14).Radius(12).
-		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(8).Padding(14)
+	card = styleRaisedSurface(card, p, 12)
+	card.Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icon("x")).Size(14, 14).TextColor(p.danger)
 			ui.Text(c, text("pluginsRegistryScanIssues")).FontSize(fontBody).FontWeight(650).TextColor(p.text)
@@ -165,8 +166,9 @@ func (s *appState) emptyPluginRegistry(c *ui.Context, p palette) {
 	if strings.TrimSpace(s.pluginSearch) != "" {
 		message = textArgs("pluginsNoMatch", map[string]any{"query": s.pluginSearch})
 	}
-	ui.Column(c).FillWidth().Gap(10).Padding(18).Radius(12).
-		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(10).Padding(18)
+	card = styleRaisedSurface(card, p, 12)
+	card.Children(func() {
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Row(c).Size(34, 34).Radius(8).Background(p.surfaceHover).Center().Children(func() {
 				ui.Icon(c, icon("package")).Size(17, 17).TextColor(p.muted)
@@ -300,11 +302,12 @@ func (s *appState) pluginCard(
 	action := pluginCardPrimaryAction(entry)
 	entryKey := pluginEntryKey(entry, index)
 
-	card := ui.Column(c).Key("plugin-card-"+entryKey).
+	card := ui.Column(c).Key("plugin-card-" + entryKey).
 		Label(textArgs("pluginsCardLabel", map[string]any{"name": title})).
 		Height(pluginCardDefaultHeight).MinHeight(pluginCardDefaultHeight).
 		MaxHeight(pluginCardDefaultHeight).AlignItems(ui.Start).Gap(6).Padding(16).
-		Radius(12).Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Clip()
+		Radius(12)
+	card = styleRaisedSurface(card, p, 12).Clip()
 	if narrow {
 		card.FillWidth()
 	} else {
@@ -436,9 +439,18 @@ func (s *appState) pluginDetailsPanel(
 	if maxHeight < 240 {
 		maxHeight = 240
 	}
-	panel.Width(420).MinWidth(360).MaxWidth(420).MaxHeight(maxHeight).
-		Padding(16).Radius(12).Border(runtimeTokens.Dimension.Border.Value, p.muted).Background(p.surface).
-		Shadow(0, 8, 24, 0, p.shadowOverlay).Children(func() {
+	panel.Width(420).MinWidth(360).MaxWidth(420).MaxHeight(maxHeight).Padding(16)
+	high := s.highContrastActive(currentAppearanceHighContrast())
+	reduceTransparency := currentAppearanceReduceTransparency()
+	switch {
+	case !p.dark:
+		panel = stylePluginDetailsLight(panel, p)
+	case pluginDetailsUsesGlass(p.dark, high, reduceTransparency):
+		panel = stylePopoverGlass(panel, p, 12)
+	default:
+		panel = stylePopoverOpaque(panel, p, 12, p.raisedSurface, p.border)
+	}
+	panel.Children(func() {
 		ui.Scroll(c).Fill().Children(func() {
 			ui.Column(c).FillWidth().Gap(12).Children(func() {
 				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(10).Children(func() {
@@ -646,6 +658,16 @@ func pluginCommandButton(c *ui.Context, p palette, key string, command pluginCom
 	if btn.Clicked() && !busy {
 		click()
 	}
+}
+
+func pluginDetailsUsesGlass(dark, high, reduceTransparency bool) bool {
+	return dark && !high && !reduceTransparency
+}
+
+func stylePluginDetailsLight(element ui.Element, p palette) ui.Element {
+	return element.Radius(12).Border(runtimeTokens.Dimension.Border.Value, p.muted).
+		Background(p.surface).
+		Shadow(0, 8, 24, 0, p.shadowOverlay)
 }
 
 func (s *appState) runPluginCommand(entry pluginRegistryEntry, command pluginCommandContribution) {
@@ -858,8 +880,9 @@ func (s *appState) automationsPage(c *ui.Context, p palette) {
 
 				sectionLabel(c, p, text("automationsRegisteredSection"))
 				if len(items) == 0 {
-					ui.Column(c).FillWidth().Gap(7).Padding(18).Radius(12).
-						Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
+					card := ui.Column(c).FillWidth().Gap(7).Padding(18)
+					card = styleRaisedSurface(card, p, 12)
+					card.Children(func() {
 						ui.Text(c, text("automationsEmptyTitle")).FontSize(fontBody).
 							FontWeight(650).TextColor(p.text)
 						ui.Row(c).AlignItems(ui.Center).Children(func() {
@@ -895,8 +918,9 @@ func (s *appState) automationContributionCard(
 	title := fallback(contribution.Title, contribution.ID)
 	description := fallback(contribution.Description, text("pluginsNoDescription"))
 	status, tone := automationStatusLabel(p, state, running)
-	ui.Column(c).FillWidth().Gap(12).Padding(16).Radius(12).
-		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(12).Padding(16)
+	card = styleRaisedSurface(card, p, 12)
+	card.Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Gap(2).Grow(1).Children(func() {
 				ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
@@ -1317,8 +1341,9 @@ func (s *appState) setAutomationPaused(key string, paused bool) {
 }
 
 func settingsCard(c *ui.Context, p palette, title, description string, body func()) {
-	ui.Column(c).FillWidth().Gap(13).Padding(16).Radius(12).
-		Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(13).Padding(16)
+	card = styleRaisedSurface(card, p, 12)
+	card.Children(func() {
 		ui.Column(c).Gap(4).Children(func() {
 			ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
 			ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)

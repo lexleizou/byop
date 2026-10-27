@@ -161,7 +161,8 @@ func TestP9cRunningComposerEnterQueuesWithoutSend(t *testing.T) {
 	sends := 0
 	stops := 0
 	tt := ui.NewTester(func(c *ui.Context) {
-		result := opaqueComposerV12(c, &draft, chat.ComposerOptions{
+		palette := themePalette(c.Theme().Dark)
+		result := opaqueComposerV12(c, palette, &draft, chat.ComposerOptions{
 			Label:       "Message",
 			Placeholder: "Message",
 			SendLabel:   "Stop",

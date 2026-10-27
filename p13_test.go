@@ -66,6 +66,7 @@ func TestP13GlassPreferencesRoundTripAndDefaults(t *testing.T) {
 }
 
 func TestP13NavGlassTint(t *testing.T) {
+	base := themePalette(true).surface
 	for _, test := range []struct {
 		transparency int
 		alpha        uint8
@@ -74,7 +75,7 @@ func TestP13NavGlassTint(t *testing.T) {
 		{transparency: 55, alpha: 106},
 		{transparency: 100, alpha: 0},
 	} {
-		color := navGlassTint(test.transparency)
+		color := navGlassTint(base, test.transparency)
 		if color.R != 25 || color.G != 25 || color.B != 24 {
 			t.Errorf("navGlassTint(%d) RGB = (%d,%d,%d), want (25,25,24)",
 				test.transparency, color.R, color.G, color.B)

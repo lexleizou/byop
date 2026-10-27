@@ -22,34 +22,40 @@ const (
 // palette is the semantic view consumed by native views. Its values come from
 // the canonical design tokens; views should not introduce another palette.
 type palette struct {
-	background     ui.Color
-	surface        ui.Color
-	surfaceSubtle  ui.Color
-	surfaceHover   ui.Color
-	surfacePressed ui.Color
-	border         ui.Color
-	borderStrong   ui.Color
-	text           ui.Color
-	muted          ui.Color
-	accent         ui.Color
-	accentHover    ui.Color
-	accentPressed  ui.Color
-	accentText     ui.Color
-	onAccent       ui.Color
-	danger         ui.Color
-	warning        ui.Color
-	success        ui.Color
-	dangerText     ui.Color
-	warningText    ui.Color
-	successText    ui.Color
-	selection      ui.Color
-	focus          ui.Color
-	scrollbar      ui.Color
-	glassTint      ui.Color
-	shadow         ui.Color
-	shadowCard     ui.Color
-	shadowOverlay  ui.Color
-	shadowStage    ui.Color
+	dark            bool
+	background      ui.Color
+	surface         ui.Color
+	surfaceSubtle   ui.Color
+	surfaceHover    ui.Color
+	surfacePressed  ui.Color
+	border          ui.Color
+	borderStrong    ui.Color
+	text            ui.Color
+	muted           ui.Color
+	accent          ui.Color
+	accentHover     ui.Color
+	accentPressed   ui.Color
+	accentText      ui.Color
+	onAccent        ui.Color
+	danger          ui.Color
+	warning         ui.Color
+	success         ui.Color
+	dangerText      ui.Color
+	warningText     ui.Color
+	successText     ui.Color
+	selection       ui.Color
+	focus           ui.Color
+	scrollbar       ui.Color
+	glassTint       ui.Color
+	readingSurface  ui.Color
+	raisedSurface   ui.Color
+	composerSurface ui.Color
+	popoverTint     ui.Color
+	popoverBorder   ui.Color
+	shadow          ui.Color
+	shadowCard      ui.Color
+	shadowOverlay   ui.Color
+	shadowStage     ui.Color
 }
 
 func themePalette(dark bool) palette {
@@ -62,34 +68,40 @@ func themePaletteWithContrast(dark, high bool) palette {
 		colors = runtimeTokens.Color.Dark
 	}
 	p := palette{
-		background:     tokenColor(colors, "background"),
-		surface:        tokenColor(colors, "surface"),
-		surfaceSubtle:  tokenColor(colors, "surfaceSubtle"),
-		surfaceHover:   tokenColor(colors, "controlHover"),
-		surfacePressed: tokenColor(colors, "controlPressed"),
-		border:         tokenColor(colors, "border"),
-		borderStrong:   tokenColor(colors, "borderStrong"),
-		text:           tokenColor(colors, "text"),
-		muted:          tokenColor(colors, "textMuted"),
-		accent:         tokenColor(colors, "accent"),
-		accentHover:    tokenColor(colors, "accentHover"),
-		accentPressed:  tokenColor(colors, "accentPressed"),
-		accentText:     tokenColor(colors, "accentText"),
-		onAccent:       tokenColor(colors, "onAccent"),
-		danger:         tokenColor(colors, "danger"),
-		warning:        tokenColor(colors, "warning"),
-		success:        tokenColor(colors, "success"),
-		dangerText:     tokenColor(colors, "dangerText"),
-		warningText:    tokenColor(colors, "warningText"),
-		successText:    tokenColor(colors, "successText"),
-		selection:      tokenColor(colors, "selection"),
-		focus:          tokenColor(colors, "focus"),
-		scrollbar:      tokenColor(colors, "scrollbar"),
-		glassTint:      tokenColor(colors, "glassTint"),
-		shadow:         ui.Hex(runtimeTokens.Shadow.Overlay.Color),
-		shadowCard:     ui.Color{},
-		shadowOverlay:  ui.Hex(runtimeTokens.Shadow.Overlay.Color),
-		shadowStage:    ui.Hex(runtimeTokens.Shadow.Stage.Color),
+		dark:            dark,
+		background:      tokenColor(colors, "background"),
+		surface:         tokenColor(colors, "surface"),
+		surfaceSubtle:   tokenColor(colors, "surfaceSubtle"),
+		surfaceHover:    tokenColor(colors, "controlHover"),
+		surfacePressed:  tokenColor(colors, "controlPressed"),
+		border:          tokenColor(colors, "border"),
+		borderStrong:    tokenColor(colors, "borderStrong"),
+		text:            tokenColor(colors, "text"),
+		muted:           tokenColor(colors, "textMuted"),
+		accent:          tokenColor(colors, "accent"),
+		accentHover:     tokenColor(colors, "accentHover"),
+		accentPressed:   tokenColor(colors, "accentPressed"),
+		accentText:      tokenColor(colors, "accentText"),
+		onAccent:        tokenColor(colors, "onAccent"),
+		danger:          tokenColor(colors, "danger"),
+		warning:         tokenColor(colors, "warning"),
+		success:         tokenColor(colors, "success"),
+		dangerText:      tokenColor(colors, "dangerText"),
+		warningText:     tokenColor(colors, "warningText"),
+		successText:     tokenColor(colors, "successText"),
+		selection:       tokenColor(colors, "selection"),
+		focus:           tokenColor(colors, "focus"),
+		scrollbar:       tokenColor(colors, "scrollbar"),
+		glassTint:       tokenColor(colors, "glassTint"),
+		readingSurface:  tokenColor(colors, "readingSurface"),
+		raisedSurface:   tokenColor(colors, "raisedSurface"),
+		composerSurface: tokenColor(colors, "composerSurface"),
+		popoverTint:     tokenColor(colors, "popoverTint"),
+		popoverBorder:   tokenColor(colors, "popoverBorder"),
+		shadow:          ui.Hex(runtimeTokens.Shadow.Overlay.Color),
+		shadowCard:      ui.Color{},
+		shadowOverlay:   ui.Hex(runtimeTokens.Shadow.Overlay.Color),
+		shadowStage:     ui.Hex(runtimeTokens.Shadow.Stage.Color),
 	}
 	if high {
 		contrast := runtimeTokens.Color.Contrast.Light
@@ -102,6 +114,11 @@ func themePaletteWithContrast(dark, high bool) palette {
 		p.border = ui.Hex(contrast["border"])
 		p.muted = ui.Hex(contrast["muted"])
 		p.focus = ui.Hex(contrast["focus"])
+		p.readingSurface = p.background
+		p.raisedSurface = p.surface
+		p.composerSurface = p.surface
+		p.popoverTint = p.surface
+		p.popoverBorder = p.border
 	}
 	return p
 }

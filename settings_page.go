@@ -169,7 +169,7 @@ func (s *appState) settingsSearchV12(c *ui.Context, p palette, state *SettingsPa
 	ui.Row(c).FillWidth().Height(32).Gap(8).Padding(0, 10).
 		Radius(8).
 		Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.surface).AlignItems(ui.Center).Margin(0, 0, 8, 0).Children(func() {
+		Background(p.composerSurface).AlignItems(ui.Center).Margin(0, 0, 8, 0).Children(func() {
 		ui.Icon(c, icon("search")).Size(15, 15).TextColor(p.muted)
 		input := ui.TextInputBase(c.Key("settings-search"), &state.Search).Grow(1).
 			Placeholder(placeholder).FontSize(fontBody).TextColor(p.text).
@@ -194,10 +194,9 @@ func (s *appState) settingsSearchV12(c *ui.Context, p palette, state *SettingsPa
 		return
 	}
 	matches := s.settingsSearchMatches(query)
-	ui.Column(c).FillWidth().Gap(6).Padding(10).
-		Radius(runtimeTokens.Dimension.Radius["overlay"].Value).
-		Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(6).Padding(10)
+	card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["overlay"].Value)
+	card.Children(func() {
 		ui.Text(c, text("settingsSearchResults")).FontSize(fontSmall).
 			FontWeight(650).TextColor(p.muted)
 		if len(matches) == 0 {
@@ -420,33 +419,40 @@ func (s *appState) settingsGeneralV12(c *ui.Context, p palette) {
 }
 
 func (s *appState) settingsAppearanceV12(c *ui.Context, p palette) {
-	ui.Column(c).FillWidth().Gap(0).Children(func() {
-		settingsRowV12(c, p,
-			text("settingsThemeTitle"), text("settingsThemeDescription"),
-			func() { s.settingsThemeSegmentV12(c, p) })
-		settingsRowV12(c, p,
-			text("settingsWallpaperTitle"), text("settingsWallpaperDescription"),
-			func() { s.settingsWallpaperChoicesV12(c, p) })
-		settingsRowV12(c, p,
-			text("settingsNavTransparencyTitle"), text("settingsNavTransparencyDescription"),
-			func() { s.navTransparencyInlineV12(c, p) })
-		settingsRowV12(c, p,
-			text("settingsGlassBlurTitle"), text("settingsGlassBlurDescription"),
-			func() { s.glassBlurInlineV12(c, p) })
-		settingsRowV12(c, p,
-			text("settingsGlassRefractionTitle"), text("settingsGlassRefractionDescription"),
-			func() { s.glassRefractionInlineV12(c, p) })
-		settingsRowV12(c, p,
-			text("settingsReduceTransparencyTitle"), text("settingsReduceTransparencyDescription"),
-			func() { s.reduceTransparencyInlineV12(c, p) })
-		if status := s.glassStatusText(); status != "" {
-			ui.Text(c, status).FontSize(fontCaption).LineHeight(1.4).
-				TextColor(p.muted).Padding(8, 0, 8, 0)
-		}
-		ui.Column(c).FillWidth().Padding(16, 0, 0, 0).Children(func() {
-			s.settingsGlassPreviewV12(c, p)
+	appearanceBody := func() {
+		ui.Column(c).FillWidth().Gap(0).Children(func() {
+			settingsRowV12(c, p,
+				text("settingsThemeTitle"), text("settingsThemeDescription"),
+				func() { s.settingsThemeSegmentV12(c, p) })
+			settingsRowV12(c, p,
+				text("settingsWallpaperTitle"), text("settingsWallpaperDescription"),
+				func() { s.settingsWallpaperChoicesV12(c, p) })
+			settingsRowV12(c, p,
+				text("settingsNavTransparencyTitle"), text("settingsNavTransparencyDescription"),
+				func() { s.navTransparencyInlineV12(c, p) })
+			settingsRowV12(c, p,
+				text("settingsGlassBlurTitle"), text("settingsGlassBlurDescription"),
+				func() { s.glassBlurInlineV12(c, p) })
+			settingsRowV12(c, p,
+				text("settingsGlassRefractionTitle"), text("settingsGlassRefractionDescription"),
+				func() { s.glassRefractionInlineV12(c, p) })
+			settingsRowV12(c, p,
+				text("settingsReduceTransparencyTitle"), text("settingsReduceTransparencyDescription"),
+				func() { s.reduceTransparencyInlineV12(c, p) })
+			if status := s.glassStatusText(); status != "" {
+				ui.Text(c, status).FontSize(fontCaption).LineHeight(1.4).
+					TextColor(p.muted).Padding(8, 0, 8, 0)
+			}
+			ui.Column(c).FillWidth().Padding(16, 0, 0, 0).Children(func() {
+				s.settingsGlassPreviewV12(c, p)
+			})
 		})
-	})
+	}
+	if p.dark {
+		settingsCardV12(c, p, "", "", appearanceBody)
+		return
+	}
+	appearanceBody()
 }
 
 func settingsRowV12(
@@ -671,10 +677,9 @@ func (s *appState) settingsAboutV12(c *ui.Context, p palette) {
 }
 
 func settingsCardV12(c *ui.Context, p palette, title, description string, body func()) {
-	ui.Column(c).FillWidth().Gap(12).Padding(16).
-		Radius(runtimeTokens.Dimension.Radius["overlay"].Value).
-		Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.surface).Children(func() {
+	card := ui.Column(c).FillWidth().Gap(12).Padding(16)
+	card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["overlay"].Value)
+	card.Children(func() {
 		if title != "" {
 			ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
 		}
@@ -688,7 +693,7 @@ func settingsCardV12(c *ui.Context, p palette, title, description string, body f
 
 func settingsValueV12(c *ui.Context, p palette, label, value string) {
 	ui.Row(c).FillWidth().Padding(8, 10).
-		Radius(runtimeTokens.Dimension.Radius["input"].Value).Background(p.background).
+		Radius(runtimeTokens.Dimension.Radius["input"].Value).Background(p.readingSurface).
 		Wrap().AlignItems(ui.Center).Gap(12).Children(func() {
 		ui.Text(c, label).FontSize(fontSmall).TextColor(p.muted).MinWidth(72).
 			MaxWidth(150)
