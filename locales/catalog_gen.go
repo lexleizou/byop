@@ -8032,6 +8032,34 @@ func (msgs Messages) QueueFollowUpLabel() string {
 	return Catalog.Format(msgs.locale, "queueFollowUpLabel", nil)
 }
 
+// QueueGuideLabel says "Steer"
+// in the language the app shows.
+//
+// Compact mode affordance shown on running queue items.
+func QueueGuideLabel() string { return In(i18n.Locale()).QueueGuideLabel() }
+
+// QueueGuideLabel says "Steer"
+// in the language of msgs.
+//
+// Compact mode affordance shown on running queue items.
+func (msgs Messages) QueueGuideLabel() string {
+	return Catalog.Format(msgs.locale, "queueGuideLabel", nil)
+}
+
+// QueueItemActionsUnavailable says "Individual queue actions aren't available. Clear the whole queue instead."
+// in the language the app shows.
+//
+// Tooltip for unsupported per-item queue actions.
+func QueueItemActionsUnavailable() string { return In(i18n.Locale()).QueueItemActionsUnavailable() }
+
+// QueueItemActionsUnavailable says "Individual queue actions aren't available. Clear the whole queue instead."
+// in the language of msgs.
+//
+// Tooltip for unsupported per-item queue actions.
+func (msgs Messages) QueueItemActionsUnavailable() string {
+	return Catalog.Format(msgs.locale, "queueItemActionsUnavailable", nil)
+}
+
 // QueueMore says "{count, plural, one {# more message} other {# more messages}}"
 // in the language the app shows.
 //
@@ -8044,6 +8072,36 @@ func QueueMore(count int) string { return In(i18n.Locale()).QueueMore(count) }
 // Overflow count for hidden queued messages.
 func (msgs Messages) QueueMore(count int) string {
 	return Catalog.Format(msgs.locale, "queueMore", map[string]any{"count": count})
+}
+
+// QueueMoreActions says "More actions"
+// in the language the app shows.
+//
+// Accessible label for the unavailable per-item more menu.
+func QueueMoreActions() string { return In(i18n.Locale()).QueueMoreActions() }
+
+// QueueMoreActions says "More actions"
+// in the language of msgs.
+//
+// Accessible label for the unavailable per-item more menu.
+func (msgs Messages) QueueMoreActions() string {
+	return Catalog.Format(msgs.locale, "queueMoreActions", nil)
+}
+
+// QueueRemove says "Remove message"
+// in the language the app shows.
+//
+// Disabled per-item remove control; Pi only supports clearing the whole
+// queue.
+func QueueRemove() string { return In(i18n.Locale()).QueueRemove() }
+
+// QueueRemove says "Remove message"
+// in the language of msgs.
+//
+// Disabled per-item remove control; Pi only supports clearing the whole
+// queue.
+func (msgs Messages) QueueRemove() string {
+	return Catalog.Format(msgs.locale, "queueRemove", nil)
 }
 
 // QueueSteerLabel says "Steer"

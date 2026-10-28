@@ -2257,9 +2257,25 @@
   "@queueFollowUpLabel": {
     "description": "Label for queued follow-up messages in the running queue strip."
   },
+  "queueGuideLabel": "引导",
+  "@queueGuideLabel": {
+    "description": "Compact mode affordance shown on running queue items."
+  },
+  "queueItemActionsUnavailable": "不支持单条队列操作，只能清空整个队列。",
+  "@queueItemActionsUnavailable": {
+    "description": "Tooltip for unsupported per-item queue actions."
+  },
   "queueMore": "另有 {count} 条",
   "@queueMore": {
     "description": "Overflow count for hidden queued messages."
+  },
+  "queueMoreActions": "更多操作",
+  "@queueMoreActions": {
+    "description": "Accessible label for the unavailable per-item more menu."
+  },
+  "queueRemove": "移除消息",
+  "@queueRemove": {
+    "description": "不可用的单条移除控件；Pi 只支持清空整个队列。"
   },
   "queueSteerLabel": "插话",
   "@queueSteerLabel": {

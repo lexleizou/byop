@@ -1000,8 +1000,9 @@ func oppositeShortcutText() string {
 }
 
 type queueDisplayItem struct {
-	label string
-	text  string
+	label    string
+	text     string
+	steering bool
 }
 
 func queueDisplayItems(steering, followUp []string, limit int) ([]queueDisplayItem, int) {
@@ -1021,15 +1022,19 @@ func queueDisplayItems(steering, followUp []string, limit int) ([]queueDisplayIt
 		return nil, total
 	}
 	items := make([]queueDisplayItem, 0, min(limit, total))
-	appendItems := func(values []string, key string) {
+	appendItems := func(values []string, key string, steering bool) {
 		for _, value := range values {
 			if len(items) < limit {
-				items = append(items, queueDisplayItem{label: text(key), text: value})
+				items = append(items, queueDisplayItem{
+					label:    text(key),
+					text:     value,
+					steering: steering,
+				})
 			}
 		}
 	}
-	appendItems(steering, "queueSteerLabel")
-	appendItems(followUp, "queueFollowUpLabel")
+	appendItems(steering, "queueSteerLabel", true)
+	appendItems(followUp, "queueFollowUpLabel", false)
 	return items, max(0, total-len(items))
 }
 
@@ -1051,22 +1056,27 @@ func (s *appState) runningQueueBar(c *ui.Context) {
 	} else {
 		height = bar.AnimateWith("running-queue-height", target, duration, ui.EaseOut)
 	}
-	bar.FillWidth().MinWidth(0).MaxHeight(88 * height).Clip()
+	bar.FillWidth().MinWidth(0).MaxHeight(160 * height).Clip()
 	if height == 0 {
 		return
 	}
-	bar.Margin(8, 0).Padding(8, 10).Radius(9).
-		Border(runtimeTokens.Dimension.Border.Value, t.Border).Background(t.Surface).
-		Gap(5).Children(func() {
-		ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(8).Children(func() {
-			ui.Icon(c, icon("list")).Size(13, 13).TextColor(t.TextMuted)
-			ui.Text(c, text("queueTitle")).FontSize(fontSmall).FontWeight(650).TextColor(t.Text).Grow(1)
+	bar.Margin(6, 0, -4, 0).Padding(4).Radius(12).
+		Border(runtimeTokens.Dimension.Border.Value, t.Border).
+		Background(t.Surface.Mix(t.Text, .04)).
+		Shadow(0, 4, 16, 0, ui.RGBA(0, 0, 0, .16)).
+		Gap(1).Children(func() {
+		ui.Row(c).FillWidth().MinWidth(0).Height(24).Padding(2, 4).
+			AlignItems(ui.Center).Gap(6).Children(func() {
+			ui.Icon(c, icon("list")).Size(12, 12).Shrink(0).TextColor(t.TextMuted)
+			ui.Text(c, text("queueTitle")).FontSize(fontCaption).FontWeight(600).
+				TextColor(t.TextMuted).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 			label := text("queueClear")
 			if s.queueClearPending {
 				label = text("queueClearPending")
 			}
-			action := ui.ButtonBase(c.Key("queue-clear")).Padding(3, 7).Radius(6).
-				Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
+			action := ui.ButtonBase(c.Key("queue-clear")).Height(22).Padding(0, 6).
+				Radius(v12ChipRadius).Background(ui.Color{}).
+				Cursor(ui.CursorPointer).Label(label).Tooltip(label)
 			if action.Hovered() && !s.queueClearPending {
 				action.Background(t.SurfaceHover)
 			}
@@ -1079,17 +1089,81 @@ func (s *appState) runningQueueBar(c *ui.Context) {
 		})
 		items, overflow := queueDisplayItems(s.queueSteering, s.queueFollowUp, 3)
 		for index, item := range items {
+			if index > 0 {
+				ui.Box(c).FillWidth().Height(runtimeTokens.Dimension.Border.Value).
+					Background(t.Border.Alpha(.7))
+			}
 			ui.Row(c).Key(fmt.Sprintf("queue-item-%d", index)).FillWidth().MinWidth(0).
-				Gap(7).AlignItems(ui.Center).Children(func() {
-				ui.Text(c, item.label).FontSize(fontMicro).FontWeight(700).TextColor(t.Accent)
-				ui.Text(c, item.text).FontSize(fontSmall).TextColor(t.TextMuted).SingleLine().Grow(1)
+				Height(30).Padding(2, 4).Gap(6).AlignItems(ui.Center).Children(func() {
+				ui.Icon(c, icon("git-branch")).Size(13, 13).Shrink(0).TextColor(t.TextMuted)
+				ui.Text(c, item.text).FontSize(fontSmall).TextColor(t.TextMuted).
+					Grow(1).Shrink(1).MinWidth(0).SingleLine().Ellipsis("…").Tooltip(item.text)
+				mode := ui.Row(c).Shrink(0).Height(22).Padding(0, 7).Radius(v12ChipRadius).
+					Border(runtimeTokens.Dimension.Border.Value, t.Border).
+					Background(t.Text.Alpha(.04)).AlignItems(ui.Center).Gap(4)
+				mode.Children(func() {
+					if item.steering {
+						ui.Box(c).Size(5, 5).Shrink(0).Radius(3).Background(t.Accent)
+					}
+					modeLabel := text("queueFollowUpLabel")
+					if item.steering {
+						modeLabel = text("queueGuideLabel")
+					}
+					components.Text(c, modeLabel).FontSize(fontCaption).
+						FontWeight(600).TextColor(t.TextMuted)
+				})
+				components.Tooltip(c, mode, item.label)
+				removeTip := text("queueItemActionsUnavailable")
+				s.queueItemIconAction(c, fmt.Sprintf("queue-item-remove-%d", index),
+					text("queueRemove"), removeTip, "trash-2", false, nil)
+				s.queueItemIconAction(c, fmt.Sprintf("queue-item-more-%d", index),
+					text("queueMoreActions"), text("queueItemActionsUnavailable"),
+					"ellipsis", false, nil)
 			})
 		}
 		if overflow > 0 {
-			ui.Text(c, textArgs("queueMore", map[string]any{"count": overflow})).
-				FontSize(fontCaption).TextColor(t.TextMuted)
+			ui.Row(c).FillWidth().Height(24).Padding(2, 26, 2, 4).
+				AlignItems(ui.Center).Children(func() {
+				ui.Text(c, textArgs("queueMore", map[string]any{"count": overflow})).
+					FontSize(fontCaption).TextColor(t.TextMuted).SingleLine().
+					Ellipsis("…")
+			})
 		}
 	})
+}
+
+func (s *appState) queueItemIconAction(
+	c *ui.Context,
+	key, label, tooltip, iconName string,
+	enabled bool,
+	click func(),
+) {
+	t := c.Theme()
+	cursor := ui.CursorNotAllowed
+	if enabled {
+		cursor = ui.CursorPointer
+	}
+	// The native tooltip ignores disabled controls, so the enabled wrapper
+	// carries the explanation while the inner button keeps disabled semantics.
+	anchor := ui.Box(c).Shrink(0).Cursor(cursor)
+	var button ui.Element
+	anchor.Children(func() {
+		button = ui.ButtonBase(c.Key(key)).Size(24, 24).Shrink(0).
+			Radius(v12ChipRadius).Center().Background(ui.Color{}).
+			TextColor(t.TextMuted).Label(label)
+		if !enabled {
+			button.Disabled(true)
+		} else if button.Hovered() {
+			button.Background(t.SurfaceHover).TextColor(t.Text)
+		}
+		button.Children(func() {
+			components.Icon(c, icon(iconName)).Size(13, 13).TextColor(t.TextMuted)
+		})
+	})
+	components.Tooltip(c, anchor, tooltip)
+	if enabled && button.Clicked() && click != nil {
+		click()
+	}
 }
 
 func (s *appState) followUpAnimatedCard(c *ui.Context, visible bool) {

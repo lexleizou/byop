@@ -194,6 +194,9 @@ func TestP9cQueueDisplayItems(t *testing.T) {
 	if items[0].text != "steer one" || items[2].text != "follow one" {
 		t.Fatalf("item order/content = %#v", items)
 	}
+	if !items[0].steering || items[2].steering {
+		t.Fatalf("item mode semantics = %#v", items)
+	}
 }
 
 func TestP9cRunningComposerEnterQueuesWithoutSend(t *testing.T) {

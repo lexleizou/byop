@@ -2454,9 +2454,25 @@
   "@queueFollowUpLabel": {
     "description": "Label for queued follow-up messages in the running queue strip."
   },
+  "queueGuideLabel": "Steer",
+  "@queueGuideLabel": {
+    "description": "Compact mode affordance shown on running queue items."
+  },
+  "queueItemActionsUnavailable": "Individual queue actions aren't available. Clear the whole queue instead.",
+  "@queueItemActionsUnavailable": {
+    "description": "Tooltip for unsupported per-item queue actions."
+  },
   "queueMore": "{count, plural, one {# more message} other {# more messages}}",
   "@queueMore": {
     "description": "Overflow count for hidden queued messages."
+  },
+  "queueMoreActions": "More actions",
+  "@queueMoreActions": {
+    "description": "Accessible label for the unavailable per-item more menu."
+  },
+  "queueRemove": "Remove message",
+  "@queueRemove": {
+    "description": "Disabled per-item remove control; Pi only supports clearing the whole queue."
   },
   "queueSteerLabel": "Steer",
   "@queueSteerLabel": {

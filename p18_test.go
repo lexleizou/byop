@@ -51,6 +51,56 @@ func TestP18ThinkingDeltaStreamsSeparatelyFromAssistantText(t *testing.T) {
 	}
 }
 
+func TestP18_1RunningQueueUsesCompactRowContractWithoutOverflow(t *testing.T) {
+	restoreAppearance := stableTestAppearance(t)
+	defer restoreAppearance()
+
+	state := &appState{
+		preferences: byopPreferences{
+			Motion: string(motionReduced),
+		},
+		run:                runStreaming,
+		queueSteering:      []string{"Keep the current answer focused.", "Check the second source."},
+		queueFollowUp:      []string{"Then summarize the result.", "Finally list the remaining risks."},
+		queueSteeringCount: 2,
+		queueFollowUpCount: 2,
+	}
+	const width, height = 360, 180
+	tt := ui.NewTester(func(c *ui.Context) {
+		ui.Column(c).FillWidth().Padding(16).Children(func() {
+			state.runningQueueBar(c)
+		})
+	}, width, height)
+	tt.Advance(300 * time.Millisecond)
+
+	for _, label := range []string{
+		text("queueTitle"),
+		state.queueSteering[0],
+		state.queueFollowUp[0],
+		text("queueGuideLabel"),
+		text("queueFollowUpLabel"),
+		text("queueRemove"),
+		text("queueMoreActions"),
+		text("queueClear"),
+		textArgs("queueMore", map[string]any{"count": 1}),
+	} {
+		rect, ok := tt.Find(label)
+		if !ok || rect.W <= 0 || rect.H <= 0 {
+			t.Fatalf("queue did not render %q: %#v", label, rect)
+		}
+		if rect.X < 0 || rect.X+rect.W > width {
+			t.Fatalf("queue label %q escaped %dpx width: %#v", label, width, rect)
+		}
+	}
+
+	remove, _ := tt.Find(text("queueRemove"))
+	tt.Move(remove.X+remove.W/2, remove.Y+remove.H/2)
+	tt.Advance(700 * time.Millisecond)
+	if !tt.HasText(text("queueItemActionsUnavailable")) {
+		t.Fatal("disabled per-item control did not expose the whole-queue-only explanation")
+	}
+}
+
 func TestP18ThinkingNeverBecomesAssistantMessageText(t *testing.T) {
 	state := &appState{
 		piConn: piConnected,
