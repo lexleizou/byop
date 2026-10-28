@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/egoist/mygo/ui"
 )
@@ -26,6 +27,13 @@ type hudState struct {
 	avgOutputTokens       int64
 	avgGenerationSeconds  float64
 	statsRequest          uint64
+	statsRequestedAt      time.Time
+	statsLoading          bool
+	currentTPS            float64
+	currentTPSKnown       bool
+	currentTPSUpdatedAt   time.Time
+	streamStartedAt       time.Time
+	streamTokens          float64
 }
 
 func (s *appState) beginPiHUD(cwd string, state *piSessionState) {
@@ -34,10 +42,12 @@ func (s *appState) beginPiHUD(cwd string, state *piSessionState) {
 	s.hud.cwd = strings.TrimSpace(cwd)
 	s.hud.branch = ""
 	s.hud.stats = nil
+	s.hud.statsLoading = false
 	s.hud.extStatus = make(map[string]string)
 	s.hud.usingSubscription = false
 	s.hud.avgOutputTokens = 0
 	s.hud.avgGenerationSeconds = 0
+	s.resetPiHUDSpeed()
 	s.applyPiHUDState(state)
 	s.refreshPiHUDBranch()
 	s.refreshPiHUD()
@@ -46,9 +56,12 @@ func (s *appState) beginPiHUD(cwd string, state *piSessionState) {
 func (s *appState) resetPiHUDData() {
 	s.hud.generation++
 	s.hud.stats = nil
+	s.hud.statsRequestedAt = time.Time{}
+	s.hud.statsLoading = false
 	s.hud.extStatus = make(map[string]string)
 	s.hud.avgOutputTokens = 0
 	s.hud.avgGenerationSeconds = 0
+	s.resetPiHUDSpeed()
 }
 
 func (s *appState) clearPiHUD() {
@@ -57,12 +70,15 @@ func (s *appState) clearPiHUD() {
 	s.hud.cwd = ""
 	s.hud.branch = ""
 	s.hud.stats = nil
+	s.hud.statsRequestedAt = time.Time{}
+	s.hud.statsLoading = false
 	s.hud.autoCompact = false
 	s.hud.contextWindowFallback = 0
 	s.hud.usingSubscription = false
 	s.hud.extStatus = nil
 	s.hud.avgOutputTokens = 0
 	s.hud.avgGenerationSeconds = 0
+	s.resetPiHUDSpeed()
 }
 
 func (s *appState) applyPiHUDState(state *piSessionState) {
@@ -125,6 +141,8 @@ func (s *appState) refreshPiHUD() {
 	generation := s.hud.generation
 	s.hud.statsRequest++
 	request := s.hud.statsRequest
+	s.hud.statsRequestedAt = time.Now()
+	s.hud.statsLoading = true
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -142,6 +160,7 @@ func (s *appState) applyPiHUDStats(generation, epoch, request uint64, client *pi
 		client != s.pi {
 		return
 	}
+	s.hud.statsLoading = false
 	if err != nil || stats == nil {
 		return
 	}
@@ -154,6 +173,11 @@ func (s *appState) recordPiHUDSample(outputTokens int64, seconds float64) {
 	}
 	s.hud.avgOutputTokens += outputTokens
 	s.hud.avgGenerationSeconds += seconds
+	s.hud.currentTPS = float64(outputTokens) / seconds
+	s.hud.currentTPSKnown = true
+	s.hud.currentTPSUpdatedAt = time.Now()
+	s.hud.streamStartedAt = time.Time{}
+	s.hud.streamTokens = 0
 }
 
 func (s *appState) piHUDAverageTokensPerSecond() (float64, bool) {
@@ -161,6 +185,69 @@ func (s *appState) piHUDAverageTokensPerSecond() (float64, bool) {
 		return 0, false
 	}
 	return float64(s.hud.avgOutputTokens) / s.hud.avgGenerationSeconds, true
+}
+
+func (s *appState) beginPiHUDSpeed() {
+	s.hud.currentTPS = 0
+	s.hud.currentTPSKnown = false
+	s.hud.currentTPSUpdatedAt = time.Time{}
+	s.hud.streamStartedAt = time.Time{}
+	s.hud.streamTokens = 0
+}
+
+func (s *appState) resetPiHUDSpeed() {
+	s.hud.currentTPS = 0
+	s.hud.currentTPSKnown = false
+	s.hud.currentTPSUpdatedAt = time.Time{}
+	s.hud.streamStartedAt = time.Time{}
+	s.hud.streamTokens = 0
+}
+
+func (s *appState) observePiHUDSpeed(delta string) {
+	s.observePiHUDSpeedAt(delta, time.Now())
+}
+
+func piHUDEstimatedTokens(value string) float64 {
+	var wide, narrow int
+	for _, r := range value {
+		if unicode.Is(unicode.Han, r) || unicode.Is(unicode.Hiragana, r) ||
+			unicode.Is(unicode.Katakana, r) || unicode.Is(unicode.Hangul, r) {
+			wide++
+		} else {
+			narrow++
+		}
+	}
+	return max(1, float64(wide)+float64(narrow)/4)
+}
+
+func (s *appState) observePiHUDSpeedAt(delta string, now time.Time) {
+	delta = strings.TrimSpace(delta)
+	if delta == "" {
+		return
+	}
+	if s.hud.streamStartedAt.IsZero() {
+		s.hud.streamStartedAt = now
+	}
+	s.hud.streamTokens += piHUDEstimatedTokens(delta)
+	elapsed := now.Sub(s.hud.streamStartedAt)
+	if elapsed < 250*time.Millisecond || s.hud.streamTokens <= 0 {
+		return
+	}
+	s.hud.currentTPS = s.hud.streamTokens / elapsed.Seconds()
+	s.hud.currentTPSKnown = true
+	s.hud.currentTPSUpdatedAt = now
+	s.hud.streamStartedAt = now
+	s.hud.streamTokens = 0
+}
+
+func (s *appState) refreshPiHUDIfStale(now time.Time) {
+	if s.hud.statsLoading {
+		return
+	}
+	if !s.hud.statsRequestedAt.IsZero() && now.Sub(s.hud.statsRequestedAt) < 2*time.Second {
+		return
+	}
+	s.refreshPiHUD()
 }
 
 func formatPiTokens(count int64) string {
@@ -236,18 +323,161 @@ func truncateHUDStatus(value string, limit int) string {
 	return string(runes[:limit-1]) + "…"
 }
 
+func formatHUDContextTokens(count int64) string {
+	if count < 0 {
+		count = 0
+	}
+	switch {
+	case count < 1000:
+		return strconv.FormatInt(count, 10)
+	case count < 1000000:
+		return compactContextWindow(int(count), 1000) + "K"
+	default:
+		return compactContextWindow(int(count), 1000000) + "M"
+	}
+}
+
+func piHUDContextSummary(stats *piSessionStats, fallbackWindow int, autoCompact bool) string {
+	percent, hasPercent := piContextPercent(stats)
+	window := piContextWindow(stats, fallbackWindow)
+	var used *int64
+	if stats != nil && stats.ContextUsage != nil {
+		used = stats.ContextUsage.Tokens
+	}
+
+	body := ""
+	switch {
+	case used != nil && window > 0 && hasPercent:
+		body = fmt.Sprintf("%.1f%% · %s / %s",
+			percent, formatHUDContextTokens(*used), formatContextWindow(window))
+	case used != nil && window > 0:
+		body = formatHUDContextTokens(*used) + " / " + formatContextWindow(window)
+	case hasPercent && window > 0:
+		body = fmt.Sprintf("%.1f%% · %s", percent, formatContextWindow(window))
+	case used != nil:
+		body = formatHUDContextTokens(*used)
+	case hasPercent:
+		body = fmt.Sprintf("%.1f%%", percent)
+	default:
+		return ""
+	}
+	if autoCompact {
+		body += text("hudAutoSuffix")
+	}
+	return textArgs("hudContextUsage", map[string]any{"usage": body})
+}
+
+func (s *appState) piHUDModelName() string {
+	if name := strings.TrimSpace(s.piModelName); name != "" {
+		return name
+	}
+	for _, model := range s.piModels {
+		if model.Provider == s.piModelProvider && model.ID == s.piModelID {
+			return fallback(strings.TrimSpace(model.Name), s.piModelID)
+		}
+	}
+	if model := strings.TrimSpace(s.piModel); model != "" {
+		return model
+	}
+	return ""
+}
+
+const (
+	piTPSExcellentThreshold = 80.0
+	piTPSFastThreshold      = 40.0
+	piTPSModerateThreshold  = 20.0
+	piTPSLowThreshold       = 5.0
+	piTPSStaleAfter         = 30 * time.Second
+)
+
+type piTPSTier uint8
+
+const (
+	piTPSExcellent piTPSTier = iota
+	piTPSFast
+	piTPSModerate
+	piTPSLow
+	piTPSPoor
+)
+
+func piTPSTierFor(rate float64) piTPSTier {
+	switch {
+	case rate >= piTPSExcellentThreshold:
+		return piTPSExcellent
+	case rate >= piTPSFastThreshold:
+		return piTPSFast
+	case rate >= piTPSModerateThreshold:
+		return piTPSModerate
+	case rate >= piTPSLowThreshold:
+		return piTPSLow
+	default:
+		return piTPSPoor
+	}
+}
+
+func piTPSStyle(t *ui.Theme, rate float64) (foreground, background, border ui.Color) {
+	switch piTPSTierFor(rate) {
+	case piTPSExcellent:
+		foreground = t.Success
+	case piTPSFast:
+		foreground = t.Success.Mix(t.TextMuted, .30)
+	case piTPSModerate:
+		foreground = t.Warning
+	case piTPSLow:
+		foreground = t.TextMuted
+	default:
+		foreground = t.Danger
+	}
+	return foreground, foreground.Alpha(.10), foreground.Alpha(.30)
+}
+
+func (s *appState) piHUDCurrentTPS() (float64, bool) {
+	if !s.hud.currentTPSKnown {
+		return 0, false
+	}
+	if !s.hud.currentTPSUpdatedAt.IsZero() &&
+		time.Since(s.hud.currentTPSUpdatedAt) > piTPSStaleAfter {
+		return 0, false
+	}
+	return s.hud.currentTPS, true
+}
+
+type hudItemKind uint8
+
+const (
+	hudItemMeta hudItemKind = iota
+	hudItemModel
+	hudItemContext
+	hudItemTPS
+)
+
 type hudItem struct {
 	label, value string
 	flexible     bool
+	kind         hudItemKind
 }
 
 func (s *appState) piHUDItems() []hudItem {
 	if s.piConn != piConnected || s.piConnectionErrorActive() {
 		return nil
 	}
-	items := make([]hudItem, 0, 8)
+	items := make([]hudItem, 0, 9)
+	if model := s.piHUDModelName(); model != "" {
+		items = append(items, hudItem{value: model, flexible: true, kind: hudItemModel})
+	}
+	if context := piHUDContextSummary(s.hud.stats, s.hud.contextWindowFallback, s.hud.autoCompact); context != "" {
+		items = append(items, hudItem{value: context, kind: hudItemContext})
+	}
+	if rate, ok := s.piHUDCurrentTPS(); ok {
+		items = append(items, hudItem{
+			value: textArgs("hudTokensPerSecond", map[string]any{
+				"speed": fmt.Sprintf("%.1f", rate),
+			}),
+			kind: hudItemTPS,
+		})
+	}
 	if branch := strings.TrimSpace(s.hud.branch); branch != "" {
-		items = append(items, hudItem{value: branch})
+		items = append(items, hudItem{value: branch, flexible: true})
 	}
 	if stats := s.hud.stats; stats != nil {
 		tokens := make([]string, 0, 4)
@@ -275,25 +505,6 @@ func (s *appState) piHUDItems() []hudItem {
 			))
 			items = append(items, hudItem{label: label, value: value, flexible: true})
 		}
-	}
-	if rate, ok := s.piHUDAverageTokensPerSecond(); ok {
-		value := fmt.Sprintf("%d tok/s", int64(math.Round(rate)))
-		label := strings.TrimSpace(strings.TrimSuffix(
-			textArgs("hudAverageSpeed", map[string]any{"speed": int64(math.Round(rate))}),
-			value,
-		))
-		items = append(items, hudItem{label: label, value: value, flexible: true})
-	}
-	if percent, ok := piContextPercent(s.hud.stats); ok {
-		value := fmt.Sprintf("%.1f%%", percent)
-		if s.hud.autoCompact {
-			value += text("hudAutoSuffix")
-		}
-		label := strings.TrimSpace(strings.TrimSuffix(
-			textArgs("hudContext", map[string]any{"percent": fmt.Sprintf("%.1f", percent)}),
-			fmt.Sprintf("%.1f%%", percent),
-		))
-		items = append(items, hudItem{label: label, value: value})
 	}
 	if len(s.hud.extStatus) > 0 {
 		keys := make([]string, 0, len(s.hud.extStatus))
@@ -330,15 +541,7 @@ func (s *appState) piHUDLabel() string {
 }
 
 func (s *appState) piHUDContextLabel() string {
-	percent, hasPercent := piContextPercent(s.hud.stats)
-	if !hasPercent {
-		return ""
-	}
-	context := textArgs("hudContext", map[string]any{"percent": fmt.Sprintf("%.1f", percent)})
-	if s.hud.autoCompact {
-		context += text("hudAutoSuffix")
-	}
-	return context
+	return piHUDContextSummary(s.hud.stats, s.hud.contextWindowFallback, s.hud.autoCompact)
 }
 
 func (s *appState) piHUD(c *ui.Context) {
@@ -347,29 +550,37 @@ func (s *appState) piHUD(c *ui.Context) {
 		return
 	}
 	t := c.Theme()
-	color := t.Text.Mix(t.TextMuted, .45)
-	if s.piConnectionErrorActive() || s.piConn == piConnectionErr {
-		color = t.Danger
-	}
-	if percent, ok := piContextPercent(s.hud.stats); ok {
-		switch hudContextSeverity(percent, ok) {
-		case 2:
-			color = t.Danger
-		case 1:
-			color = t.Warning
-		}
-	}
 	ui.Row(c).Key("pi-hud").Label(label).Grow(1).MinWidth(0).Clip().
 		Justify(ui.Center).AlignItems(ui.Center).Gap(12).
 		Tooltip(s.piHUDTooltip()).Children(func() {
 		for _, item := range s.piHUDItems() {
 			row := ui.Row(c)
-			if item.flexible {
+			if item.flexible && item.kind != hudItemTPS {
 				row.Shrink(1).MinWidth(0)
 			} else {
 				row.Shrink(0)
 			}
 			row.AlignItems(ui.Center).Gap(4).Children(func() {
+				color := t.Text.Mix(t.TextMuted, .45)
+				var background, border ui.Color
+				switch item.kind {
+				case hudItemModel:
+					color = t.Text
+				case hudItemContext:
+					if percent, ok := piContextPercent(s.hud.stats); ok {
+						switch hudContextSeverity(percent, ok) {
+						case 2:
+							color = t.Danger
+						case 1:
+							color = t.Warning
+						}
+					}
+				case hudItemTPS:
+					rate, _ := s.piHUDCurrentTPS()
+					color, background, border = piTPSStyle(t, rate)
+					row.Height(18).Padding(0, 7).Radius(9).
+						Background(background).Border(v12BorderWidth, border)
+				}
 				if item.label != "" {
 					label := ui.Text(c, item.label).FontSize(fontCaption).LineHeight(1.2).
 						FontWeight(400).TextColor(t.TextMuted).SingleLine()
@@ -403,6 +614,11 @@ func (s *appState) piHUDTooltip() string {
 	if speed, ok := s.piHUDAverageTokensPerSecond(); ok {
 		label += "\n" + textArgs("hudAverageSpeedTooltip", map[string]any{
 			"speed": fmt.Sprintf("%.1f", speed),
+		})
+	}
+	if rate, ok := s.piHUDCurrentTPS(); ok {
+		label += "\n" + textArgs("hudCurrentSpeedTooltip", map[string]any{
+			"speed": fmt.Sprintf("%.1f", rate),
 		})
 	}
 	return label

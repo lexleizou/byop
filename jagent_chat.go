@@ -420,6 +420,9 @@ func (s *appState) jAgentAssistantTurn(
 			s.pauseJAgentConversation(c)
 		})
 	}
+	if strings.TrimSpace(message.thinking) != "" {
+		s.thinkingStreamLine(c, message, live)
+	}
 
 	hasCard := (hasSteps && open) || plan.final >= 0 ||
 		status == chat.Failed || status == chat.Cancelled

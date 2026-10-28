@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.17.0"
+	appVersion = "0.18.0"
 )
 
 func appBuildVersion() string {
@@ -190,11 +190,14 @@ type chatBlock struct {
 }
 
 type chatMessage struct {
-	role      chatRole
-	status    string
-	blocks    []chatBlock
-	startedAt time.Time
-	endedAt   time.Time
+	role              chatRole
+	status            string
+	blocks            []chatBlock
+	thinking          string
+	thinkingStartedAt time.Time
+	thinkingEndedAt   time.Time
+	startedAt         time.Time
+	endedAt           time.Time
 }
 
 type appState struct {
@@ -1018,6 +1021,7 @@ func (s *appState) applyPiSessionState(state *piSessionState) {
 	if state == nil {
 		return
 	}
+	modelChanged := s.piModelProvider != state.Model.Provider || s.piModelID != state.Model.ID
 	s.modelStateUnconfirmed = false
 	oldFile := s.piSessionFile
 	oldID := s.piSessionID
@@ -1042,6 +1046,10 @@ func (s *appState) applyPiSessionState(state *piSessionState) {
 	s.piModelID = state.Model.ID
 	s.piModelName = state.Model.Name
 	s.piModel = strings.TrimSpace(strings.Join(nonEmpty(state.Model.Provider, state.Model.Name), " / "))
+	if modelChanged {
+		s.hud.stats = nil
+		s.resetPiHUDSpeed()
+	}
 	s.applyPiHUDState(state)
 	s.migrateModelTuples(oldKey, s.piSessionKey())
 	if state.SessionID != "" {
@@ -1117,6 +1125,7 @@ func (s *appState) applyConfirmedThinkingStateWithRecord(
 	if state == nil {
 		return false
 	}
+	modelChanged := s.piModelProvider != state.Model.Provider || s.piModelID != state.Model.ID
 	s.modelStateUnconfirmed = false
 	oldPath := s.piSessionFile
 	oldID := s.piSessionID
@@ -1124,6 +1133,10 @@ func (s *appState) applyConfirmedThinkingStateWithRecord(
 	s.piModelID = state.Model.ID
 	s.piModelName = state.Model.Name
 	s.piModel = strings.TrimSpace(strings.Join(nonEmpty(state.Model.Provider, state.Model.Name), " / "))
+	if modelChanged {
+		s.hud.stats = nil
+		s.resetPiHUDSpeed()
+	}
 	s.applyPiHUDState(state)
 	if preserveSession {
 		s.piSessionFile = oldPath
@@ -2504,6 +2517,7 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 
 func (s *appState) startAssistantPrompt(prompt string) {
 	displayPrompt := displayTableContextPrompt(prompt)
+	s.beginPiHUDSpeed()
 	s.chat = append(s.chat,
 		chatMessage{
 			role: chatUser,
@@ -2766,16 +2780,28 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 	case piEventRunStarted:
 		s.resetFollowUpSuggestion()
 		s.run = runStreaming
+		s.beginPiHUDSpeed()
+		s.refreshPiHUDIfStale(time.Now())
 	case piEventUserMessage:
 		s.run = runStreaming
 		s.appendRunningUserMessage(event.Text)
 	case piEventText:
 		s.run = runStreaming
+		s.observePiHUDSpeed(event.Delta)
 		s.setAssistantText(event.Text, "Streaming")
+		s.refreshPiHUDIfStale(time.Now())
+	case piEventThinking:
+		s.run = runStreaming
+		s.observePiHUDSpeed(event.Delta)
+		s.setAssistantThinking(event.Text, event.ThinkingStarted, event.ThinkingEnded)
+		s.refreshPiHUDIfStale(time.Now())
 	case piEventMessage:
 		s.run = runStreaming
 		if event.OutputTokens > 0 && event.GenerationTime > 0 {
 			s.recordPiHUDSample(event.OutputTokens, event.GenerationTime.Seconds())
+		}
+		if event.Thinking != "" {
+			s.setAssistantThinkingFallback(event.Thinking)
 		}
 		if event.Text != "" {
 			s.setAssistantText(event.Text, "Received")
@@ -3025,6 +3051,58 @@ func (s *appState) setAssistantText(value, status string) {
 		}
 	}
 	message.blocks = append(message.blocks, chatBlock{kind: chatBlockText, text: value})
+}
+
+func (s *appState) setAssistantThinking(value string, started, ended bool) {
+	value = strings.TrimSpace(value)
+	if value == "" && !started && !ended {
+		return
+	}
+	message := s.currentAssistant()
+	if !message.endedAt.IsZero() {
+		s.chat = append(s.chat, chatMessage{
+			role:      chatAssistant,
+			status:    text("assistantWaiting"),
+			startedAt: time.Now(),
+		})
+		message = &s.chat[len(s.chat)-1]
+	}
+	if started {
+		message.thinkingStartedAt = time.Now()
+		message.thinkingEndedAt = time.Time{}
+	}
+	if value != "" {
+		message.thinking = value
+		message.status = "Streaming"
+	}
+	if ended {
+		if message.thinkingStartedAt.IsZero() {
+			message.thinkingStartedAt = message.startedAt
+		}
+		message.thinkingEndedAt = time.Now()
+	}
+}
+
+func (s *appState) setAssistantThinkingFallback(value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return
+	}
+	message := s.currentAssistant()
+	current := strings.TrimSpace(message.thinking)
+	switch {
+	case current == "":
+		message.thinking = value
+	case strings.HasPrefix(value, current):
+		message.thinking = value
+	}
+	if !message.thinkingEndedAt.IsZero() {
+		return
+	}
+	if message.thinkingStartedAt.IsZero() {
+		message.thinkingStartedAt = message.startedAt
+	}
+	message.thinkingEndedAt = time.Now()
 }
 
 func (s *appState) setAssistantStatus(status string) {

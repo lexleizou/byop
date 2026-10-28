@@ -234,7 +234,7 @@ func TestP11AverageTokensPerSecond(t *testing.T) {
 }
 
 func TestP11AssistantMessageTiming(t *testing.T) {
-	events := make(chan piEvent, 2)
+	events := make(chan piEvent, 8)
 	client := &piClient{
 		events:      func(event piEvent) { events <- event },
 		streamParts: make(map[int]string),
@@ -281,7 +281,7 @@ func TestP11AssistantMessageTiming(t *testing.T) {
 	}
 }
 
-func TestP11HUDLabelHasNoMiddleDot(t *testing.T) {
+func TestP11HUDLabelIncludesContextAndStatus(t *testing.T) {
 	percent := 3.7
 	state := &appState{
 		piConn: piConnected,
@@ -298,11 +298,8 @@ func TestP11HUDLabelHasNoMiddleDot(t *testing.T) {
 		},
 	}
 	label := state.piHUDLabel()
-	if strings.Contains(label, "·") {
-		t.Fatalf("HUD label contains a middle dot: %q", label)
-	}
-	if !strings.HasPrefix(label, "main  ↑12k ↓3.0k  $0.020  ") ||
-		!strings.Contains(label, "  Context 3.7%  checking") {
+	if !strings.HasPrefix(label, "Context 3.7%  main  ↑12k ↓3.0k  $0.020  ") ||
+		!strings.HasSuffix(label, "  checking") {
 		t.Fatalf("HUD label order or spacing = %q", label)
 	}
 }

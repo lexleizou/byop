@@ -1430,6 +1430,19 @@
   "@thinkingStrengthTitle": {
     "description": "Heading for thinking strength in the model popover."
   },
+  "thinkingStatusLive": "思考中",
+  "@thinkingStatusLive": {
+    "description": "Single-line label shown while Pi streams reasoning."
+  },
+  "thinkingStatusDone": "已思考 {duration}",
+  "@thinkingStatusDone": {
+    "description": "Collapsed single-line label after Pi finishes reasoning.",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "chatWaitingForTool": "等待工具输出…",
   "@chatWaitingForTool": {
     "description": "Tool status while output is pending."
@@ -2504,6 +2517,33 @@
       }
     }
   },
+  "hudContextUsage": "上下文 {usage}",
+  "@hudContextUsage": {
+    "description": "HUD label for compact context tokens, window, and percentage.",
+    "placeholders": {
+      "usage": {
+        "type": "String"
+      }
+    }
+  },
+  "hudTokensPerSecond": "{speed} t/s",
+  "@hudTokensPerSecond": {
+    "description": "HUD capsule for the current measured output speed.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "hudCurrentSpeedTooltip": "当前输出速度：{speed} t/s",
+  "@hudCurrentSpeedTooltip": {
+    "description": "HUD tooltip detail for the current measured output speed.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
   "hudAverageSpeed": "平均 {speed} tok/s",
   "@hudAverageSpeed": {
     "description": "HUD label for client-estimated average output speed.",
@@ -3335,5 +3375,9 @@
   "navigationResize": "调整导航宽度",
   "@navigationResize": {
     "description": "Accessible label for the handle that resizes the navigation."
+  },
+  "thinkingStatusComplete": "思考完成",
+  "@thinkingStatusComplete": {
+    "description": "Collapsed single-line label when reasoning finished without a measurable duration."
   }
 }

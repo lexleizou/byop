@@ -1479,6 +1479,19 @@
   "@thinkingStrengthTitle": {
     "description": "Heading for thinking strength in the model popover."
   },
+  "thinkingStatusLive": "Thinking",
+  "@thinkingStatusLive": {
+    "description": "Single-line label shown while Pi streams reasoning."
+  },
+  "thinkingStatusDone": "Thought for {duration}",
+  "@thinkingStatusDone": {
+    "description": "Collapsed single-line label after Pi finishes reasoning.",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "chatRanTools": "{count, plural, =0 {Ran no tools} one {Ran # tool} other {Ran # tools}}",
   "@chatRanTools": {
     "description": "Summary for a group of tool calls.",
@@ -2701,6 +2714,33 @@
       }
     }
   },
+  "hudContextUsage": "Context {usage}",
+  "@hudContextUsage": {
+    "description": "HUD label for compact context tokens, window, and percentage.",
+    "placeholders": {
+      "usage": {
+        "type": "String"
+      }
+    }
+  },
+  "hudTokensPerSecond": "{speed} t/s",
+  "@hudTokensPerSecond": {
+    "description": "HUD capsule for the current measured output speed.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "hudCurrentSpeedTooltip": "Current output speed: {speed} t/s",
+  "@hudCurrentSpeedTooltip": {
+    "description": "HUD tooltip detail for the current measured output speed.",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
   "hudAverageSpeed": "Avg {speed} tok/s",
   "@hudAverageSpeed": {
     "description": "HUD label for client-estimated average output speed.",
@@ -3538,5 +3578,9 @@
   "navigationResize": "Resize navigation",
   "@navigationResize": {
     "description": "Accessible label for the handle that resizes the navigation."
+  },
+  "thinkingStatusComplete": "Thought complete",
+  "@thinkingStatusComplete": {
+    "description": "Collapsed single-line label when reasoning finished without a measurable duration."
   }
 }

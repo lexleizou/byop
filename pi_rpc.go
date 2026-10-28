@@ -28,6 +28,7 @@ const (
 	piEventRunStarted      piEventKind = "run_started"
 	piEventUserMessage     piEventKind = "user_message"
 	piEventText            piEventKind = "text"
+	piEventThinking        piEventKind = "thinking"
 	piEventMessage         piEventKind = "message"
 	piEventToolStart       piEventKind = "tool_start"
 	piEventToolUpdate      piEventKind = "tool_update"
@@ -125,24 +126,28 @@ func (m piModelWire) model() piModel {
 }
 
 type piEvent struct {
-	Kind           piEventKind
-	Source         *piClient
-	RequestID      string
-	Command        string
-	Success        bool
-	Error          string
-	Disposition    string
-	Text           string
-	ToolName       string
-	ToolCallID     string
-	ToolArgs       json.RawMessage
-	ToolResult     json.RawMessage
-	ToolPartial    json.RawMessage
-	ToolIsError    bool
-	ToolDurationMS int64
-	Aborted        bool
-	Session        *piSessionState
-	StderrTail     string
+	Kind            piEventKind
+	Source          *piClient
+	RequestID       string
+	Command         string
+	Success         bool
+	Error           string
+	Disposition     string
+	Text            string
+	Thinking        string
+	Delta           string
+	ThinkingStarted bool
+	ThinkingEnded   bool
+	ToolName        string
+	ToolCallID      string
+	ToolArgs        json.RawMessage
+	ToolResult      json.RawMessage
+	ToolPartial     json.RawMessage
+	ToolIsError     bool
+	ToolDurationMS  int64
+	Aborted         bool
+	Session         *piSessionState
+	StderrTail      string
 
 	QueueSteering  []string
 	QueueFollowUp  []string
@@ -209,6 +214,8 @@ type piClient struct {
 	streamMu            sync.Mutex
 	streamParts         map[int]string
 	streamOrder         []int
+	thinkingParts       map[int]string
+	thinkingOrder       []int
 	generationStartedAt time.Time
 	generationEndedAt   time.Time
 }
@@ -267,14 +274,15 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 	}
 
 	client := &piClient{
-		path:        path,
-		cwd:         cwd,
-		cmd:         cmd,
-		stdin:       stdin,
-		events:      events,
-		pending:     make(map[string]chan piRPCResponse),
-		waitDone:    make(chan struct{}),
-		streamParts: make(map[int]string),
+		path:          path,
+		cwd:           cwd,
+		cmd:           cmd,
+		stdin:         stdin,
+		events:        events,
+		pending:       make(map[string]chan piRPCResponse),
+		waitDone:      make(chan struct{}),
+		streamParts:   make(map[int]string),
+		thinkingParts: make(map[int]string),
 	}
 
 	var readers sync.WaitGroup
@@ -1121,9 +1129,15 @@ func (p *piClient) handleMessageUpdate(line []byte) {
 	}
 	update := event.AssistantMessageEvent
 	switch update.Type {
+	case "thinking_start":
+		p.setThinkingPart(update.ContentIndex, "")
 	case "thinking_delta":
 		p.startGenerationTiming()
-		return
+		p.appendThinkingPart(update.ContentIndex, update.Delta)
+	case "thinking_end":
+		if strings.TrimSpace(update.Content) != "" {
+			p.setThinkingPart(update.ContentIndex, update.Content)
+		}
 	case "text_start":
 		p.setStreamPart(update.ContentIndex, "")
 	case "text_delta":
@@ -1134,7 +1148,17 @@ func (p *piClient) handleMessageUpdate(line []byte) {
 	default:
 		return
 	}
-	p.emit(piEvent{Kind: piEventText, Text: p.streamSnapshot()})
+	if strings.HasPrefix(update.Type, "thinking_") {
+		p.emit(piEvent{
+			Kind:            piEventThinking,
+			Text:            p.thinkingSnapshot(),
+			Delta:           update.Delta,
+			ThinkingStarted: update.Type == "thinking_start",
+			ThinkingEnded:   update.Type == "thinking_end",
+		})
+		return
+	}
+	p.emit(piEvent{Kind: piEventText, Text: p.streamSnapshot(), Delta: update.Delta})
 }
 
 func (p *piClient) handleMessageEnd(line []byte) {
@@ -1153,6 +1177,7 @@ func (p *piClient) handleMessageEnd(line []byte) {
 		return
 	}
 	text := contentText(event.Message.Content)
+	thinking := contentThinking(event.Message.Content)
 	switch event.Message.Role {
 	case "user":
 		if text == "" {
@@ -1164,7 +1189,7 @@ func (p *piClient) handleMessageEnd(line []byte) {
 	default:
 		return
 	}
-	if text == "" && event.Message.ErrorMessage == "" {
+	if text == "" && thinking == "" && event.Message.ErrorMessage == "" {
 		p.resetGenerationTiming()
 		p.resetStream()
 		return
@@ -1173,6 +1198,7 @@ func (p *piClient) handleMessageEnd(line []byte) {
 	p.emit(piEvent{
 		Kind:           piEventMessage,
 		Text:           text,
+		Thinking:       thinking,
 		Error:          event.Message.ErrorMessage,
 		GenerationTime: generationTime,
 		OutputTokens:   event.Message.Usage.Output,
@@ -1221,6 +1247,8 @@ func (p *piClient) resetStream() {
 	p.streamMu.Lock()
 	p.streamParts = make(map[int]string)
 	p.streamOrder = nil
+	p.thinkingParts = make(map[int]string)
+	p.thinkingOrder = nil
 	p.streamMu.Unlock()
 }
 
@@ -1282,6 +1310,43 @@ func (p *piClient) streamSnapshot() string {
 	return b.String()
 }
 
+func (p *piClient) setThinkingPart(index int, value string) {
+	p.streamMu.Lock()
+	defer p.streamMu.Unlock()
+	if p.thinkingParts == nil {
+		p.thinkingParts = make(map[int]string)
+	}
+	if _, exists := p.thinkingParts[index]; !exists {
+		p.thinkingOrder = append(p.thinkingOrder, index)
+	}
+	p.thinkingParts[index] = value
+}
+
+func (p *piClient) appendThinkingPart(index int, delta string) {
+	p.streamMu.Lock()
+	defer p.streamMu.Unlock()
+	if p.thinkingParts == nil {
+		p.thinkingParts = make(map[int]string)
+	}
+	if _, exists := p.thinkingParts[index]; !exists {
+		p.thinkingOrder = append(p.thinkingOrder, index)
+	}
+	p.thinkingParts[index] += delta
+}
+
+func (p *piClient) thinkingSnapshot() string {
+	p.streamMu.Lock()
+	defer p.streamMu.Unlock()
+	var b strings.Builder
+	for i, index := range p.thinkingOrder {
+		if i > 0 && b.Len() > 0 {
+			b.WriteString("\n\n")
+		}
+		b.WriteString(p.thinkingParts[index])
+	}
+	return b.String()
+}
+
 func contentText(raw json.RawMessage) string {
 	var text string
 	if json.Unmarshal(raw, &text) == nil {
@@ -1298,6 +1363,28 @@ func contentText(raw json.RawMessage) string {
 	for _, block := range blocks {
 		if block.Type == "text" && block.Text != "" {
 			parts = append(parts, block.Text)
+		}
+	}
+	return strings.Join(parts, "\n\n")
+}
+
+func contentThinking(raw json.RawMessage) string {
+	var blocks []struct {
+		Type      string `json:"type"`
+		Text      string `json:"text"`
+		Thinking  string `json:"thinking"`
+		Reasoning string `json:"reasoning"`
+	}
+	if json.Unmarshal(raw, &blocks) != nil {
+		return ""
+	}
+	parts := make([]string, 0, len(blocks))
+	for _, block := range blocks {
+		if block.Type != "thinking" && block.Type != "reasoning" {
+			continue
+		}
+		if value := firstNonEmpty(block.Thinking, block.Text, block.Reasoning); value != "" {
+			parts = append(parts, value)
 		}
 	}
 	return strings.Join(parts, "\n\n")

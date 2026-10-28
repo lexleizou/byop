@@ -5104,6 +5104,36 @@ func (msgs Messages) ThinkingStrengthTitle() string {
 	return Catalog.Format(msgs.locale, "thinkingStrengthTitle", nil)
 }
 
+// ThinkingStatusLive says "Thinking"
+// in the language the app shows.
+//
+// Single-line label shown while Pi streams reasoning.
+func ThinkingStatusLive() string { return In(i18n.Locale()).ThinkingStatusLive() }
+
+// ThinkingStatusLive says "Thinking"
+// in the language of msgs.
+//
+// Single-line label shown while Pi streams reasoning.
+func (msgs Messages) ThinkingStatusLive() string {
+	return Catalog.Format(msgs.locale, "thinkingStatusLive", nil)
+}
+
+// ThinkingStatusDone says "Thought for {duration}"
+// in the language the app shows.
+//
+// Collapsed single-line label after Pi finishes reasoning.
+func ThinkingStatusDone(duration string) string {
+	return In(i18n.Locale()).ThinkingStatusDone(duration)
+}
+
+// ThinkingStatusDone says "Thought for {duration}"
+// in the language of msgs.
+//
+// Collapsed single-line label after Pi finishes reasoning.
+func (msgs Messages) ThinkingStatusDone(duration string) string {
+	return Catalog.Format(msgs.locale, "thinkingStatusDone", map[string]any{"duration": duration})
+}
+
 // ChatRanTools says "{count, plural, =0 {Ran no tools} one {Ran # tool} other {Ran # tools}}"
 // in the language the app shows.
 //
@@ -8866,6 +8896,50 @@ func (msgs Messages) HudContext(percent string) string {
 	return Catalog.Format(msgs.locale, "hudContext", map[string]any{"percent": percent})
 }
 
+// HudContextUsage says "Context {usage}"
+// in the language the app shows.
+//
+// HUD label for compact context tokens, window, and percentage.
+func HudContextUsage(usage string) string { return In(i18n.Locale()).HudContextUsage(usage) }
+
+// HudContextUsage says "Context {usage}"
+// in the language of msgs.
+//
+// HUD label for compact context tokens, window, and percentage.
+func (msgs Messages) HudContextUsage(usage string) string {
+	return Catalog.Format(msgs.locale, "hudContextUsage", map[string]any{"usage": usage})
+}
+
+// HudTokensPerSecond says "{speed} t/s"
+// in the language the app shows.
+//
+// HUD capsule for the current measured output speed.
+func HudTokensPerSecond(speed string) string { return In(i18n.Locale()).HudTokensPerSecond(speed) }
+
+// HudTokensPerSecond says "{speed} t/s"
+// in the language of msgs.
+//
+// HUD capsule for the current measured output speed.
+func (msgs Messages) HudTokensPerSecond(speed string) string {
+	return Catalog.Format(msgs.locale, "hudTokensPerSecond", map[string]any{"speed": speed})
+}
+
+// HudCurrentSpeedTooltip says "Current output speed: {speed} t/s"
+// in the language the app shows.
+//
+// HUD tooltip detail for the current measured output speed.
+func HudCurrentSpeedTooltip(speed string) string {
+	return In(i18n.Locale()).HudCurrentSpeedTooltip(speed)
+}
+
+// HudCurrentSpeedTooltip says "Current output speed: {speed} t/s"
+// in the language of msgs.
+//
+// HUD tooltip detail for the current measured output speed.
+func (msgs Messages) HudCurrentSpeedTooltip(speed string) string {
+	return Catalog.Format(msgs.locale, "hudCurrentSpeedTooltip", map[string]any{"speed": speed})
+}
+
 // HudAverageSpeed says "Avg {speed} tok/s"
 // in the language the app shows.
 //
@@ -11586,4 +11660,20 @@ func NavigationResize() string { return In(i18n.Locale()).NavigationResize() }
 // Accessible label for the handle that resizes the navigation.
 func (msgs Messages) NavigationResize() string {
 	return Catalog.Format(msgs.locale, "navigationResize", nil)
+}
+
+// ThinkingStatusComplete says "Thought complete"
+// in the language the app shows.
+//
+// Collapsed single-line label when reasoning finished without a measurable
+// duration.
+func ThinkingStatusComplete() string { return In(i18n.Locale()).ThinkingStatusComplete() }
+
+// ThinkingStatusComplete says "Thought complete"
+// in the language of msgs.
+//
+// Collapsed single-line label when reasoning finished without a measurable
+// duration.
+func (msgs Messages) ThinkingStatusComplete() string {
+	return Catalog.Format(msgs.locale, "thinkingStatusComplete", nil)
 }

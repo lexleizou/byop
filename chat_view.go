@@ -407,11 +407,19 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 		options.Working = textArgs("chatWorkingFor", map[string]any{"duration": elapsed})
 		plan := planAssistantTurn(message, live)
 		if live {
+			if strings.TrimSpace(message.thinking) != "" {
+				options.Steps = append(options.Steps, chat.Step{
+					ID: "thinking",
+					Message: func(c *ui.Context) {
+						s.thinkingStreamLine(c, message, true)
+					},
+				})
+			}
 			for stepIndex, step := range plan.steps {
 				isLast := stepIndex == len(plan.steps)-1
 				options.Steps = append(options.Steps, s.turnStep(options.ID, message, step, isLast))
 			}
-		} else if len(plan.steps) > 0 || plan.final >= 0 {
+		} else if len(plan.steps) > 0 || plan.final >= 0 || strings.TrimSpace(message.thinking) != "" {
 			options.Final = func(c *ui.Context) {
 				s.settledTurnContentV12(c, options.ID, message, plan)
 			}
@@ -434,6 +442,9 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 
 func (s *appState) settledTurnContentV12(c *ui.Context, turnID string, message *chatMessage, plan turnPlan) {
 	ui.Column(c).FillWidth().MinWidth(0).Gap(12).Children(func() {
+		if strings.TrimSpace(message.thinking) != "" {
+			s.thinkingStreamLine(c, message, false)
+		}
 		lastStepWasTools := false
 		for _, step := range plan.steps {
 			view := s.turnStep(turnID, message, step, false)
@@ -448,6 +459,89 @@ func (s *appState) settledTurnContentV12(c *ui.Context, turnID string, message *
 				final.Margin(2.5, 0, 0, 0)
 			}
 		}
+	})
+}
+
+func thinkingDisplayLine(value string) string {
+	lines := strings.Split(value, "\n")
+	line := ""
+	for i := len(lines) - 1; i >= 0; i-- {
+		if candidate := strings.TrimSpace(lines[i]); candidate != "" {
+			line = singleLineText(candidate)
+			break
+		}
+	}
+	if line == "" {
+		line = singleLineText(value)
+	}
+	const limit = 140
+	runes := []rune(line)
+	if len(runes) <= limit {
+		return line
+	}
+	return "…" + string(runes[len(runes)-(limit-1):])
+}
+
+func (s *appState) thinkingStreamLine(c *ui.Context, message *chatMessage, live bool) {
+	if message == nil || strings.TrimSpace(message.thinking) == "" {
+		return
+	}
+	t := c.Theme()
+	reduced := s.reducedMotionActive(currentAppearanceReduceMotion())
+	thinkingLive := live && message.thinkingEndedAt.IsZero()
+	if thinkingLive {
+		c.After(350 * time.Millisecond)
+	}
+	status := text("thinkingStatusLive")
+	if thinkingLive && !reduced {
+		dots := int(c.Now().UnixMilli()/350)%3 + 1
+		status += strings.Repeat(".", dots)
+	}
+	if !thinkingLive {
+		status = text("thinkingStatusComplete")
+		if !message.thinkingStartedAt.IsZero() && !message.thinkingEndedAt.IsZero() {
+			seconds := max(1, int(math.Round(message.thinkingEndedAt.Sub(message.thinkingStartedAt).Seconds())))
+			status = textArgs("thinkingStatusDone", map[string]any{
+				"duration": textArgs("chatDurationSeconds", map[string]any{"seconds": seconds}),
+			})
+		}
+	}
+	thought := thinkingDisplayLine(message.thinking)
+	accessibleLabel := status + " · " + singleLineText(message.thinking)
+	foreground, iconBackground := t.TextMuted, t.Accent.Alpha(.08)
+	jAgentWallpaper := s.jAgentPresetActive() && s.activeWallpaper() == "jagent-misty-mountains"
+	if jAgentWallpaper {
+		p := themePaletteForAppearance(
+			appearancePresetJAgent,
+			true,
+			s.highContrastActive(currentAppearanceHighContrast()),
+			currentAppearanceReduceTransparency(),
+		)
+		foreground, iconBackground = p.muted, p.text.Alpha(.08)
+	}
+	ui.Row(c).Key("thinking-stream").FillWidth().MinWidth(0).Height(24).
+		AlignItems(ui.Center).Label(accessibleLabel).Tooltip(message.thinking).Children(func() {
+		content := ui.Row(c).Height(24).MinWidth(0).Shrink(1).Padding(0, 8).
+			AlignItems(ui.Center).Gap(7)
+		if jAgentWallpaper {
+			p := themePaletteForAppearance(
+				appearancePresetJAgent,
+				true,
+				s.highContrastActive(currentAppearanceHighContrast()),
+				currentAppearanceReduceTransparency(),
+			)
+			content = jAgentGlassSurface(content, p, 12, 14, p.raisedSurface)
+		}
+		content.Children(func() {
+			ui.Row(c).Size(16, 16).Center().Radius(8).Shrink(0).
+				Background(iconBackground).Children(func() {
+				components.Icon(c, lu.Lightbulb).Size(10.5, 10.5).TextColor(foreground)
+			})
+			components.Text(c, status).Shrink(0).SingleLine().FontSize(fontSmall).
+				FontWeight(500).TextColor(foreground)
+			components.Text(c, thought).Grow(1).MinWidth(0).SingleLine().Ellipsis("…").
+				Selectable().FontSize(fontSmall).TextColor(foreground)
+		})
 	})
 }
 
@@ -1111,7 +1205,8 @@ func (s *appState) composerChoicesContent(c *ui.Context) {
 		s.normalizeThinkingPending(levels)
 	}
 	s.composerModelControl(c, readOnly, families, activeFamily, activeFamilyOK,
-		contextWindow, composerThinkingLabel(levels, s.piThinkingLevel, s.chatView.thinkingPending))
+		contextWindow)
+	s.composerThinkingControl(c, readOnly, levels)
 }
 
 func composerThinkingLabel(levels []chat.Option, current, pending string) string {
@@ -1131,6 +1226,179 @@ func composerThinkingLabel(levels []chat.Option, current, pending string) string
 		}
 	}
 	return levels[0].Label
+}
+
+func (s *appState) composerThinkingControl(c *ui.Context, readOnly bool, levels []chat.Option) {
+	if len(levels) == 0 {
+		s.chatView.effortPicker.Open = false
+		return
+	}
+	if readOnly {
+		s.chatView.effortPicker.Open = false
+	}
+	t := c.Theme()
+	label := composerThinkingLabel(levels, s.piThinkingLevel, s.chatView.thinkingPending)
+	accessibleLabel := text("thinkingStrengthTitle") + " · " + label
+	wasOpen := s.chatView.effortPicker.Open
+	var chip ui.Element
+	if readOnly {
+		chip = ui.Row(c).Key("thinking-chip").Label(accessibleLabel).Height(26).Shrink(0).
+			Padding(0, 8).Radius(v12ChipRadius).AlignItems(ui.Center).Gap(5).
+			Cursor(ui.CursorNotAllowed)
+	} else {
+		chip = ui.ButtonBase(c.Key("thinking-chip")).Label(accessibleLabel).Height(26).Shrink(0).
+			Padding(0, 8).Radius(v12ChipRadius).AlignItems(ui.Center).Gap(5).
+			Background(ui.Color{}).Cursor(ui.CursorPointer)
+		if s.chatView.effortPicker.Open {
+			chip.Background(t.SurfaceHover)
+		} else if chip.Hovered() || chip.Focused() {
+			chip.Background(t.SurfaceHover)
+		}
+		if s.chatView.thinkingPending != "" {
+			chip.Border(v12BorderWidth, t.Accent.Alpha(.35))
+		}
+	}
+	chip.Children(func() {
+		ui.Row(c).Size(18, 18).Center().Radius(9).Shrink(0).
+			Background(t.Accent.Alpha(.10)).Children(func() {
+			components.Icon(c, lu.Brain).Size(11, 11).TextColor(t.Accent)
+		})
+		components.Text(c, label).Shrink(0).SingleLine().FontSize(fontSmall).
+			FontWeight(500).TextColor(t.TextMuted)
+		if !readOnly {
+			components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).
+				TextColor(t.TextMuted.Alpha(.7))
+		}
+	})
+	components.Tooltip(c, chip, accessibleLabel)
+	if !readOnly && chip.Clicked() {
+		s.chatView.effortPicker.Open = !s.chatView.effortPicker.Open
+		s.chatView.modelPicker.Open = false
+		s.chatView.contextPicker.Open = false
+	}
+
+	p := themePaletteForAppearance(
+		s.currentAppearancePreset(),
+		t.Dark,
+		s.highContrastActive(currentAppearanceHighContrast()),
+		currentAppearanceReduceTransparency(),
+	)
+	popoverWidthV12(c, p, chip, &s.chatView.effortPicker.Open,
+		s.highContrastActive(currentAppearanceHighContrast()) || currentAppearanceReduceTransparency(),
+		300, func(panel ui.Element) {
+			panel.Label(accessibleLabel).Padding(10, 12, 12, 12).Gap(8).Children(func() {
+				s.thinkingEffortSlider(c, t, levels, label)
+			})
+		})
+	if wasOpen && !s.chatView.effortPicker.Open {
+		s.commitThinkingPending()
+	}
+}
+
+func effortSliderFillColor(t *ui.Theme, preset appearancePreset) ui.Color {
+	if normalizeAppearancePreset(string(preset)) == appearancePresetJAgent {
+		return t.Focus
+	}
+	return t.Accent
+}
+
+func (s *appState) thinkingEffortSlider(c *ui.Context, t *ui.Theme, levels []chat.Option,
+	currentLabel string,
+) {
+	selected := s.piThinkingLevel
+	if s.chatView.thinkingPending != "" {
+		selected = s.chatView.thinkingPending
+	}
+	selectedIndex := 0
+	for i, level := range levels {
+		if level.ID == selected {
+			selectedIndex = i
+		}
+	}
+
+	ui.Row(c).FillWidth().MinWidth(0).AlignItems(ui.Center).Gap(8).Children(func() {
+		components.Text(c, text("thinkingStrengthTitle")).Grow(1).MinWidth(0).
+			SingleLine().Ellipsis("…").FontSize(fontBody).FontWeight(500).TextColor(t.Text)
+		components.Text(c, currentLabel).Shrink(0).SingleLine().FontSize(fontBody).
+			FontWeight(600).TextColor(t.Accent)
+	})
+
+	value := float64(selectedIndex)
+	slider := ui.SliderBase(c, &value, 0, float64(len(levels)-1)).Step(1).FillWidth().
+		Height(28).Padding(0, 9).FocusRing(false).Cursor(ui.CursorPointer).
+		Label(text("thinkingStrengthTitle")).Value(currentLabel)
+	if slider.Changed() {
+		index := min(max(int(math.Round(value)), 0), len(levels)-1)
+		s.setThinkingPending(levels[index].ID)
+	}
+	slider.Draw(func(painter *ui.Painter, r ui.Rect) {
+		trackX := r.X + 9
+		trackW := max(float32(0), r.W-18)
+		trackH := float32(5)
+		trackY := r.Y + (r.H-trackH)/2
+		track := ui.Rect{X: trackX, Y: trackY, W: trackW, H: trackH}
+		trackColor := t.Text.Alpha(.08).Mix(t.SurfaceHover, .20)
+		if slider.Hovered() {
+			trackColor = t.SurfaceHover
+		}
+		painter.Fill(track, trackColor, trackH/2)
+
+		fraction := float32(0)
+		if len(levels) > 1 {
+			fraction = float32(selectedIndex) / float32(len(levels)-1)
+		}
+		if c.Direction() == ui.RightToLeft {
+			fraction = 1 - fraction
+		}
+		thumbX := trackX + trackW*fraction
+		startX := trackX
+		endX := thumbX
+		if c.Direction() == ui.RightToLeft {
+			startX, endX = thumbX, trackX+trackW
+		}
+		if width := endX - startX; width > 0 {
+			fillColor := effortSliderFillColor(t, s.currentAppearancePreset())
+			painter.Fill(ui.Rect{X: startX, Y: trackY, W: width, H: trackH},
+				fillColor, min(trackH/2, width/2))
+		}
+		for i := 1; i < len(levels); i++ {
+			x := trackX + trackW*float32(i)/float32(len(levels)-1)
+			painter.Fill(ui.Rect{X: x - v12BorderWidth/2, Y: trackY - 1,
+				W: v12BorderWidth, H: trackH + 2}, t.Background.Alpha(.85), 0)
+		}
+		thumbColor := effortSliderFillColor(t, s.currentAppearancePreset())
+		painter.Fill(ui.Rect{X: thumbX - 5, Y: r.Y + (r.H-10)/2, W: 10, H: 10},
+			thumbColor, 5)
+		painter.Stroke(ui.Rect{X: thumbX - 4, Y: r.Y + (r.H-8)/2, W: 8, H: 8},
+			t.Background, 4, 1)
+		if slider.FocusVisible() {
+			painter.FocusRing(track, [4]float32{trackH / 2, trackH / 2, trackH / 2, trackH / 2})
+		}
+	})
+
+	ui.Row(c).FillWidth().MinWidth(0).AlignItems(ui.Center).Children(func() {
+		for i, level := range levels {
+			align := ui.Center
+			if i == 0 {
+				align = ui.Start
+			} else if i == len(levels)-1 {
+				align = ui.End
+			}
+			color := t.TextMuted
+			if i == selectedIndex {
+				color = t.Text
+			}
+			ui.Column(c).Grow(1).MinWidth(0).AlignItems(align).Children(func() {
+				components.Text(c, level.Label).Shrink(0).SingleLine().FontSize(fontSmall).
+					FontWeight(func() int {
+						if i == selectedIndex {
+							return 600
+						}
+						return 400
+					}()).TextColor(color)
+			})
+		}
+	})
 }
 
 func (s *appState) composerContextChip(c *ui.Context) {
@@ -1181,7 +1449,7 @@ func (s *appState) composerTableContextChip(c *ui.Context) {
 }
 
 func (s *appState) composerModelControl(c *ui.Context, readOnly bool, families []piModelFamily,
-	activeFamily piModelFamily, activeFamilyOK bool, contextWindow int, thinkingLabel string,
+	activeFamily piModelFamily, activeFamilyOK bool, contextWindow int,
 ) {
 	modelLabel := piModelDisplayName(s.piModelName, s.piModel)
 	brand := modelBrand(s.piModelProvider, s.piModelID, s.piModelName)
@@ -1191,7 +1459,7 @@ func (s *appState) composerModelControl(c *ui.Context, readOnly bool, families [
 		s.chatView.contextPicker.Open = false
 		if s.piModel != "" || s.modelStateUnconfirmed {
 			s.composerModelChip(c, modelLabel, s.piModelProvider, contextWindow, leading, readOnly,
-				activeFamily, activeFamilyOK, thinkingLabel)
+				activeFamily, activeFamilyOK)
 		}
 		return
 	}
@@ -1203,7 +1471,7 @@ func (s *appState) composerModelControl(c *ui.Context, readOnly bool, families [
 	})
 	wasOpen := s.chatView.modelPicker.Open
 	chosen := s.customModelPicker(c, options, choices, activeFamily, activeFamilyOK,
-		contextWindow, thinkingLabel)
+		contextWindow)
 	if wasOpen && !s.chatView.modelPicker.Open {
 		s.commitThinkingPending()
 	}
@@ -1224,14 +1492,11 @@ func (s *appState) rememberedModelTuplesForSession() map[string]modelTuple {
 
 func (s *appState) composerModelChip(c *ui.Context, label, provider string, contextWindow int,
 	leading func(c *ui.Context, size float32), readOnly bool, activeFamily piModelFamily,
-	activeFamilyOK bool, thinkingLabel string,
+	activeFamilyOK bool,
 ) {
 	t := c.Theme()
 	retryReadback := readOnly && s.modelStateUnconfirmed
 	accessibleLabel := label
-	if thinkingLabel != "" {
-		accessibleLabel += " · " + thinkingLabel
-	}
 	var chip ui.Element
 	if retryReadback {
 		chip = ui.ButtonBase(c.Key("model-chip")).Label(accessibleLabel).Tooltip(text("retryReadback")).
@@ -1253,10 +1518,6 @@ func (s *appState) composerModelChip(c *ui.Context, label, provider string, cont
 	}
 	chip.Children(func() {
 		components.Text(c, label).MinWidth(0).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
-		if thinkingLabel != "" {
-			components.Text(c, "· "+thinkingLabel).Shrink(0).SingleLine().
-				FontSize(fontSmall).TextColor(t.TextMuted)
-		}
 		if !readOnly {
 			components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).TextColor(t.TextMuted.Alpha(.7))
 		}
@@ -1273,14 +1534,11 @@ func (s *appState) composerModelChip(c *ui.Context, label, provider string, cont
 
 func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 	choices map[string]piModelChoice, activeFamily piModelFamily, activeFamilyOK bool,
-	contextWindow int, thinkingLabel string,
+	contextWindow int,
 ) string {
 	t := c.Theme()
 	label := piModelDisplayName(s.piModelName, s.piModel)
 	accessibleLabel := label
-	if thinkingLabel != "" {
-		accessibleLabel += " · " + thinkingLabel
-	}
 	chip := ui.ButtonBase(c.Key("model-picker")).Label(accessibleLabel).Height(26).MinWidth(0).Padding(0, 8).
 		Radius(6).AlignItems(ui.Center).Gap(4).Background(ui.Color{}).Cursor(ui.CursorPointer)
 	if s.chatView.modelPicker.Open {
@@ -1291,16 +1549,13 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 	chip.Children(func() {
 		components.Text(c, label).MinWidth(0).SingleLine().
 			FontSize(fontSmall).TextColor(t.TextMuted)
-		if thinkingLabel != "" {
-			components.Text(c, "· "+thinkingLabel).Shrink(0).SingleLine().
-				FontSize(fontSmall).TextColor(t.TextMuted)
-		}
 		components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).
 			TextColor(t.TextMuted.Alpha(.7))
 	})
 	if chip.Clicked() {
 		s.chatView.modelPicker.Open = !s.chatView.modelPicker.Open
 		s.chatView.modelPicker.Query = ""
+		s.chatView.effortPicker.Open = false
 	}
 	chosen := ""
 	variants := piContextVariants(activeFamily)
@@ -1348,7 +1603,6 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 						}
 					})
 				}
-				s.modelPopoverEffortV12(c, t)
 				if activeFamilyOK && len(variants) > 0 {
 					s.modelPopoverContextV12(c, t, activeFamily, variants)
 				}
@@ -1430,44 +1684,6 @@ func modelPickerSubtitle(choice piModelChoice) string {
 		parts = append(parts, strings.Join(labels, " / "))
 	}
 	return strings.Join(parts, " · ")
-}
-
-func (s *appState) modelPopoverEffortV12(c *ui.Context, t *ui.Theme) {
-	levels := buildPiThinkingOptions(s.piThinkingLevels)
-	if !s.piThinkingLevelsKnown || !reasoningLevelsVisible(s.piThinkingLevels) || len(levels) == 0 {
-		return
-	}
-	selected := s.piThinkingLevel
-	if s.chatView.thinkingPending != "" {
-		selected = s.chatView.thinkingPending
-	}
-	selectedIndex := 0
-	for i, level := range levels {
-		if level.ID == selected {
-			selectedIndex = i
-		}
-	}
-	ui.Column(c).FillWidth().Padding(4, 8, 8, 8).Gap(4).Children(func() {
-		components.Text(c, text("thinkingStrengthTitle")).FontSize(fontBody).TextColor(t.Text)
-		value := float64(selectedIndex)
-		slider := ui.Slider(c, &value, 0, float64(len(levels)-1)).Step(1).
-			FillWidth().Label(text("thinkingStrengthTitle"))
-		if slider.Changed() {
-			index := min(max(int(math.Round(value)), 0), len(levels)-1)
-			s.setThinkingPending(levels[index].ID)
-		}
-		// Stop labels sit under the slider stops: first flush left, last flush right.
-		ui.Row(c).FillWidth().Margin(4, 0, 0, 0).Justify(ui.SpaceBetween).AlignItems(ui.Center).Children(func() {
-			for i, level := range levels {
-				color := t.TextMuted
-				if i == selectedIndex {
-					color = t.Text
-				}
-				components.Text(c, level.Label).SingleLine().FontSize(fontSmall).
-					TextColor(color)
-			}
-		})
-	})
 }
 
 func (s *appState) modelPopoverContextV12(c *ui.Context, t *ui.Theme, family piModelFamily,
