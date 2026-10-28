@@ -1,145 +1,181 @@
 # BYOP Lightweight Table
 
-P15a is the smallest executable link from BYOP's existing Pi RPC client to an
-explicitly loaded Pi extension, a local stdio MCP server, and an independent
-`node:sqlite` database. It does not include a table UI, import/export, column
-management, contexts, or undo.
+P15b adds a normal BYOP Tables WebView on top of the P15a Node data layer.
+The plugin uses native HTML and JavaScript, `window.byop.postMessage`, the
+existing theme tokens, and an independent SQLite file. It has no build step,
+grid dependency, network access, approval flow, clear-all action, CSV, or
+XLSX support.
 
-All files in `test/fixtures/` are synthetic. Do not place a real bank export in
-the repository. Real validation data and databases must stay under
-`~/AgentScratch/`.
+## Included flow
 
-## Seed JSON
+- Compact business table with horizontal scrolling and a narrow-window layout.
+- Server-side search, one typed filter, sorting, 100-row pages, and an exact
+  principal total for every matching row.
+- IME-safe inline cell editing with Enter, Tab, and Escape handling.
+- Add and delete rows.
+- Select records or use every filtered record, then set one field in a single
+  version-checked operation.
+- Create an immutable row-ID/version context and call `host.openChat` with
+  `{text, contextId, label}`. The host appends the machine-readable context
+  marker and renders its removable chip.
+- History drawer with explicit undo. An undo is one inverse transaction and
+  fails if any target changed after the original operation.
+- One-second version polling only while the page is visible. Active drafts are
+  never replaced by a poll refresh.
 
-The seed format is already normalized. It does not read a source database and
-does not derive an outstanding balance or repayment date.
+All data in `test/fixtures/` is synthetic. Real records, private databases, QA
+databases, screenshots, and logs must stay outside the repository.
+
+## Plugin files
+
+| Path | Purpose |
+|---|---|
+| `plugin.json` | Navigation, WebView, locale, and `contributes.agentExtension` |
+| `plugin.mjs` | Long-lived plugin worker and page API |
+| `pi-extension.mjs` | Pi MCP registration and plugin-data path resolution |
+| `web/` | Native HTML, CSS, and JavaScript WebView |
+| `l10n/` | Complete `en` and `zh-Hans` copy |
+| `src/` | Shared SQLite, context, MCP, and validation modules |
+| `test/` | Direct Node tests using synthetic fixtures only |
+
+The manifest declares:
 
 ```json
-{
-  "workbook_name": "Synthetic bank fixture - not a real ledger",
-  "timezone": "Asia/Singapore",
-  "rows": [
-    {
-      "name": "Synthetic product",
-      "institution": "Synthetic institution",
-      "category": "financial",
-      "funding_source": "bank",
-      "principal": "1234.56",
-      "amount_due": null,
-      "due_date": null,
-      "repayment_status": "not_started"
-    }
-  ]
+"contributes": {
+  "agentExtension": "pi-extension.mjs"
 }
 ```
 
-Rules:
+BYOP discovery supplies `BYOP_PLUGIN_DATA_DIR` to `plugin.mjs`. The worker uses:
 
-- `principal` and `amount_due` are decimal strings. They are parsed directly to
-  safe integer cents without using floating point.
-- When no direct source field exists, `amount_due` and `due_date` stay `null`.
-- `category`, `funding_source`, and `repayment_status` are retained as source
-  strings.
-- Unknown row fields are rejected so an export cannot silently map inferred
-  financial fields.
-
-Seed a new independent local database:
-
-```sh
-node plugins/lightweight-table/cli.mjs seed \
-  --db /path/under/AgentScratch/tables.sqlite \
-  --input /path/to/seed.json
+```text
+<BYOP_PLUGIN_DATA_DIR>/tables.sqlite
 ```
 
-Use `--if-empty` for validation against an existing copy. It returns a count
-and IDs without replacing the workbook:
+Pi receives `BYOP_PLUGIN_DATA_DIRS` as a JSON map. Unless the test override
+`BYOP_LIGHTWEIGHT_TABLE_DB` is set, the extension reads:
 
-```sh
-node plugins/lightweight-table/cli.mjs seed \
-  --db /path/under/AgentScratch/tables.sqlite \
-  --input /path/to/seed.json \
-  --if-empty
+```text
+BYOP_PLUGIN_DATA_DIRS["local.lightweight-table"]/tables.sqlite
 ```
 
-## BYOP and Pi startup
+The MCP child is launched with Node permissions scoped to the package directory
+for reads and its own data directory for reads and writes. It does not receive
+network or child-process permission.
 
-The product integration is opt-in. Without these environment variables,
-`startPiClient` keeps its existing `--mode rpc` arguments.
+## WebView bridge
 
-```sh
-BYOP_PI_PATH=/path/to/pi \
-BYOP_PI_EXTENSIONS="$PWD/plugins/lightweight-table/pi-extension.mjs" \
-BYOP_LIGHTWEIGHT_TABLE_DB=/path/under/AgentScratch/tables.sqlite \
-go run .
+The page only uses:
+
+```js
+window.byop.postMessage({ action, ...payload })
 ```
 
-`BYOP_PI_EXTENSIONS` is a platform path list; each entry is appended as an
-explicit Pi `--extension` argument. The bridge registers the session-scoped
-`lightweight_table` MCP server. It does not edit the global Pi `mcp.json`.
+There is no product-test RPC. The page API covers locale, bootstrap, query,
+version, change, context capture, history, undo, and opening chat with a fixed
+context.
 
-For the controlled validation wrapper:
+For automated real-WebView QA:
 
-```sh
-BYOP_P15A_E2E=1 \
-BYOP_PI_PATH=/Users/lexleizou/AgentScratch/20261028-byop-table-link/pi-link-wrapper.sh \
-BYOP_P15A_SEED_INPUT=/Users/lexleizou/AgentScratch/20261028-byop-table-link/bank-seed.json \
-BYOP_LIGHTWEIGHT_TABLE_DB=/Users/lexleizou/AgentScratch/20261028-byop-table-link/bank-copy.sqlite \
-go test . -run '^TestP15aLightweightTableBridgeE2E$' -count=1 -v
+- wait for `document.body.dataset.ready === "true"`;
+- use the stable element IDs documented in `web/index.html`;
+- use the stable `data-action` value on each interactive control;
+- drive the actual MyGo `Page.Eval` bridge and capture the actual page;
+- use only a synthetic fixture database.
+
+The page loads locale copy through `table.locale`. The Node worker reads only
+these fixed package paths:
+
+```text
+../l10n/en.json
+../l10n/zh-Hans.json
 ```
 
-The E2E runs `seed --if-empty`, so an already seeded database is not reset. It
-then uses the real BYOP `startPiClient` with the controlled Pi wrapper:
+The WebView does not use `fetch` for locale files. The `byop-plugin` custom
+scheme does not support query strings or URL fragments, and this bridge keeps
+locale loading independent of those parameters.
 
-1. the direct MCP prompt sends the same insert twice in one Pi user turn and
-   checks that intent dedupe leaves one receipt;
-2. the nested test probe queries one existing seed row by stable ID, changes
-   only its `repayment_status`, restores the original value with the next
-   expected revision, and checks that the row revision advanced by two.
+## Data and write identity
 
-History must contain two distinct Pi user message groups. The probe returns no
-name, institution, principal, or amount-due values, and the test logs counts and
-IDs only.
+Agent writes keep the P15a source object and Pi session/message IDs. Page writes
+use:
 
-## MCP surface
+```json
+{
+  "version": 1,
+  "source_kind": "page",
+  "view_instance_id": "stable page instance UUID",
+  "client_command_id": "stable command UUID"
+}
+```
 
-The model-visible schemas omit `_byop`. The bridge injects that source object in
-Pi's `tool_call` hook after Pi validates model arguments.
+The command UUID is created before the first submit and reused if the response
+is unknown. A successful retry returns the original receipt. Reusing the same
+page command ID for different values returns `command_id_conflict`.
+
+Contexts store sorted row IDs, their captured revisions, schema/data revisions,
+and the query description. `table_query(context_id)` reads current values and
+marks changed or missing targets. `table_change(context_id)` expands the fixed
+IDs and captured versions; it never re-runs the original filter to discover a
+new target set.
+
+Undo checks the post-operation revision of every target. If any row changed,
+the whole undo rolls back. The `undo_of` unique index permits one inverse
+operation per original operation, including across processes.
+
+## MCP tools
+
+The model-visible schemas do not expose `_byop`; the Pi extension injects it at
+the tool-call hook.
 
 | Tool | Purpose |
 |---|---|
-| `table_describe` | Workbook/table revisions, timezone, and stable column IDs |
-| `table_query` | Row-ID/filter/projection query and exact numeric sum |
-| `table_change` | Insert, versioned update/delete, or dry-run preview |
-| `table_history` | Successful receipts and Pi source attribution |
+| `table_describe` | Workbook, columns, revisions, timezone, and filter options |
+| `table_query` | Search/filter/sort/page, exact sum, capture/read a fixed context |
+| `table_change` | Insert, versioned update/delete, batch field update, dry run |
+| `table_undo` | One atomic inverse operation with later-edit conflict checks |
+| `table_history` | Successful operations, source, undo status, and pagination |
 
-Updates and deletes require an expected table revision and an expected revision
-for every target row. An insert is deduplicated by intent within one Pi user
-message group. Update and delete commands include the expected versions. A
-replay checks the successful receipt before checking current row versions.
+When a normal BYOP user prompt ends with:
 
-## SQLite contract
-
-- one business row change and its successful receipt commit in the same
-  `BEGIN IMMEDIATE` transaction;
-- WAL, `synchronous=FULL`, `foreign_keys=ON`, and `busy_timeout=3000` are checked
-  on every connection;
-- failures, version conflicts, and busy errors do not create receipts;
-- `dry_run` never writes rows or receipts;
-- row and column IDs are stable, and deleted rows are soft deleted.
-
-## Focused tests
-
-```sh
-node --test \
-  plugins/lightweight-table/test/database.test.mjs \
-  plugins/lightweight-table/test/source-tracker.test.mjs \
-  plugins/lightweight-table/test/mcp.test.mjs
-
-node --test plugins/lightweight-table/test/concurrency.test.mjs
-
-go test . -run 'TestPiClientArgsAddsOnlyExplicitExtensions|TestP15aLightweightTableBridgeE2E' -count=1
+```text
+[byop-table-context:<contextId>]
 ```
 
-Runtime test databases are created below
-`~/AgentScratch/20261028-byop-table-link/`; set `BYOP_P15A_SCRATCH` to use a
-different local scratch root.
+the model should pass that value as `table_query.context_id`. The host hides the
+machine-readable line in the product UI and shows the preceding label as a
+removable chip.
+
+## Seed and local checks
+
+Seed a private database only when it is empty:
+
+```sh
+node plugins/lightweight-table/cli.mjs seed \
+  --db "$BYOP_PLUGIN_DATA_DIR/tables.sqlite" \
+  --input /path/to/synthetic-seed.json \
+  --if-empty
+```
+
+Run all directly related plugin tests:
+
+```sh
+cd plugins/lightweight-table
+npm run check
+```
+
+The check covers:
+
+- syntax for the plugin worker, Pi extension, and WebView JavaScript;
+- page command replay and command-ID conflict;
+- immutable context targets and version conflicts;
+- exact search/filter/sort/total behavior;
+- insert, update, and delete undo, unique `undo_of`, and later-edit conflicts;
+- MCP `table_query`, context reading, and `table_undo`;
+- plugin-data path resolution and scoped MCP Node permissions;
+- worker-to-host `host.openChat` shape;
+- `en`/`zh-Hans` key parity, stable QA selectors, ready flag, and query-free
+  local resource paths.
+
+These tests do not replace the coordinator's real MyGo WebView acceptance run,
+real private seed, or screenshot verification.

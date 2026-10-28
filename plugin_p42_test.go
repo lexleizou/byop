@@ -13,6 +13,7 @@ import (
 
 func newTestPluginHost(t *testing.T) *pluginHost {
 	t.Helper()
+	t.Setenv("BYOP_CONFIG_DIR", t.TempDir())
 	return newPluginHost(
 		pluginHostVersion,
 		nil,
@@ -324,6 +325,7 @@ func TestPluginHostCallEnforcement(t *testing.T) {
 }
 
 func TestNodePluginP42RuntimeEndToEnd(t *testing.T) {
+	t.Setenv("BYOP_CONFIG_DIR", t.TempDir())
 	pluginDirectory := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "outside.txt")
 	if err := os.WriteFile(outside, []byte("outside"), 0o600); err != nil {
@@ -332,6 +334,7 @@ func TestNodePluginP42RuntimeEndToEnd(t *testing.T) {
 
 	script := `
 import fs from "node:fs";
+import path from "node:path";
 import readline from "node:readline";
 
 const outside = ` + string(mustJSON(t, outside)) + `;
@@ -352,14 +355,22 @@ for await (const line of lines) {
       break;
     case "invokeCommand": {
       let denied = false;
+      let dataOK = false;
       try {
         fs.readFileSync(outside, "utf8");
       } catch (error) {
         denied = error?.code === "ERR_ACCESS_DENIED";
       }
+      try {
+        const dataDir = process.env.BYOP_PLUGIN_DATA_DIR;
+        const probe = path.join(dataDir, "probe.txt");
+        fs.writeFileSync(probe, "ok");
+        dataOK = fs.readFileSync(probe, "utf8") === "ok";
+      } catch {}
       response.result = {
-        message: denied ? "outside denied" : "outside allowed",
+        message: denied && dataOK ? "outside denied, data ok" : "permission mismatch",
         denied,
+        dataOK,
       };
       break;
     }
@@ -420,7 +431,7 @@ for await (const line of lines) {
 	if err != nil {
 		t.Fatalf("invoke Node command: %v", err)
 	}
-	if got := pluginResultSummary(result); got != "outside denied" {
+	if got := pluginResultSummary(result); got != "outside denied, data ok" {
 		t.Fatalf("Node permission result = %q", got)
 	}
 	if host.status(entry.ID).State != pluginStateActive {

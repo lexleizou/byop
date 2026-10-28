@@ -42,6 +42,18 @@ export function agentSource(messageID = "message-1", sessionID = "session-1") {
   };
 }
 
+export function pageSource(
+  commandID = "page-command-1",
+  viewInstanceID = "view-instance-1",
+) {
+  return {
+    version: 1,
+    source_kind: "page",
+    view_instance_id: viewInstanceID,
+    client_command_id: commandID,
+  };
+}
+
 export class McpProcess {
   constructor(databasePath) {
     this.databasePath = databasePath;

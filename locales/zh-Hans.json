@@ -1342,6 +1342,10 @@
   "@chatAttachmentNotice": {
     "description": "Notice shown when attachment support is requested."
   },
+  "chatRemoveTableContext": "移除表格上下文",
+  "@chatRemoveTableContext": {
+    "description": "Accessible label and tooltip for removing a table context attached to the next message."
+  },
   "chatFollowUpHint": "Tab 使用；Esc 关闭",
   "@chatFollowUpHint": {
     "description": "Keyboard hint for the follow-up suggestion."

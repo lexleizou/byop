@@ -19,7 +19,7 @@ import (
 const (
 	pluginManifestSchemaVersion = 1
 	pluginAPIVersion            = "1"
-	pluginHostVersion           = "0.9.0"
+	pluginHostVersion           = appVersion
 	pluginManifestFilename      = "plugin.json"
 	maxPluginManifestBytes      = 1 << 20
 	maxPluginSettingFields      = 50
@@ -61,13 +61,14 @@ type pluginCompatibility struct {
 }
 
 type pluginContributions struct {
-	Navigation  []pluginNavigationContribution `json:"navigation,omitempty"`
-	Commands    []pluginCommandContribution    `json:"commands,omitempty"`
-	Views       []pluginViewContribution       `json:"views,omitempty"`
-	TaskPanels  []pluginTaskPanelContribution  `json:"taskPanels,omitempty"`
-	Settings    []pluginSettingContribution    `json:"settings,omitempty"`
-	WebViews    []pluginWebViewContribution    `json:"webviews,omitempty"`
-	Automations []pluginAutomationContribution `json:"automations,omitempty"`
+	Navigation     []pluginNavigationContribution `json:"navigation,omitempty"`
+	Commands       []pluginCommandContribution    `json:"commands,omitempty"`
+	Views          []pluginViewContribution       `json:"views,omitempty"`
+	TaskPanels     []pluginTaskPanelContribution  `json:"taskPanels,omitempty"`
+	Settings       []pluginSettingContribution    `json:"settings,omitempty"`
+	WebViews       []pluginWebViewContribution    `json:"webviews,omitempty"`
+	Automations    []pluginAutomationContribution `json:"automations,omitempty"`
+	AgentExtension string                         `json:"agentExtension,omitempty"`
 }
 
 type pluginNavigationContribution struct {
@@ -212,6 +213,10 @@ func validatePluginManifest(manifest *pluginManifest) error {
 	add(pluginTextInvalid(manifest.Description, 500), "description must contain at most 500 printable characters")
 	add(manifest.L10n != "" && !safePluginRelativePath(manifest.L10n),
 		"l10n must be a safe relative directory inside the plugin folder")
+	add(manifest.Contributes.AgentExtension != "" &&
+		(!safePluginRelativePath(manifest.Contributes.AgentExtension) ||
+			path.Clean(manifest.Contributes.AgentExtension) != manifest.Contributes.AgentExtension),
+		"contributes.agentExtension must be a safe relative path inside the plugin folder")
 	add(!pluginVersionPattern.MatchString(manifest.Version), "version must be semantic versioning such as 0.1.0")
 	add(manifest.Runtime != "node" && manifest.Runtime != "native",
 		"runtime must be node or native")

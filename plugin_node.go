@@ -11,9 +11,22 @@ import (
 )
 
 func nodePermissionArgs(manifest *pluginManifest, pluginRoot, workspaceRoot, entryPath string) []string {
+	return nodePermissionArgsWithData(manifest, pluginRoot, workspaceRoot, entryPath, "")
+}
+
+func nodePermissionArgsWithData(
+	manifest *pluginManifest,
+	pluginRoot, workspaceRoot, entryPath, dataDir string,
+) []string {
 	args := []string{
 		"--permission",
 		"--allow-fs-read=" + pluginRoot,
+	}
+	if dataDir != "" {
+		args = append(args,
+			"--allow-fs-read="+dataDir,
+			"--allow-fs-write="+dataDir,
+		)
 	}
 	if pluginFilesReadable(manifest) {
 		args = append(args, "--allow-fs-read="+workspaceRoot)

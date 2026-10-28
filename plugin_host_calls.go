@@ -113,6 +113,27 @@ func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, pa
 			h.onNotice(entry.ID, entry.Name, text, tone)
 		}
 		return pluginHandleResult{Value: map[string]any{}}
+	case "host.openChat":
+		var request pluginOpenChatRequest
+		if err := decodePluginHostParams(params, &request); err != nil {
+			return pluginHostFailure(pluginRPCInvalidParams, err.Error())
+		}
+		request.Text = strings.TrimSpace(request.Text)
+		request.ContextID = strings.TrimSpace(request.ContextID)
+		request.Label = strings.TrimSpace(request.Label)
+		if !validPluginChatText(request.Text) || request.Text == "" {
+			return pluginHostFailure(pluginRPCInvalidParams, "text must be non-empty valid UTF-8 up to 64 KiB")
+		}
+		if !validPluginChatContextID(request.ContextID) {
+			return pluginHostFailure(pluginRPCInvalidParams, "contextId must be a printable string")
+		}
+		if !validPluginChatLabel(request.Label) {
+			return pluginHostFailure(pluginRPCInvalidParams, "label must be a printable string")
+		}
+		if h.onOpenChat != nil {
+			h.onOpenChat(entry.ID, request)
+		}
+		return pluginHandleResult{Value: map[string]any{}}
 	case "host.updateTask":
 		var request struct {
 			ID     string `json:"id"`

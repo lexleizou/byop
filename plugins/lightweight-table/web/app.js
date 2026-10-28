@@ -1,0 +1,1518 @@
+const bridge = window.byop;
+const PAGE_SIZE = 100;
+const SUPPORTED_LOCALES = new Set(["en", "zh-Hans"]);
+
+const dom = {
+  body: document.body,
+  title: document.querySelector("#page-title"),
+  searchInput: document.querySelector("#search-input"),
+  filterColumn: document.querySelector("#filter-column-select"),
+  filterOperatorField: document.querySelector("#filter-operator-field"),
+  filterOperator: document.querySelector("#filter-operator-select"),
+  filterValueField: document.querySelector("#filter-value-field"),
+  filterValue: document.querySelector("#filter-value-input"),
+  clearFilter: document.querySelector("#filter-clear-button"),
+  sortColumn: document.querySelector("#sort-column-select"),
+  sortDirection: document.querySelector("#sort-direction-select"),
+  loading: document.querySelector("#loading-indicator"),
+  table: document.querySelector("#records-table"),
+  head: document.querySelector("#records-head"),
+  bodyRows: document.querySelector("#records-body"),
+  empty: document.querySelector("#empty-state"),
+  emptyTitle: document.querySelector("#empty-title"),
+  emptyBody: document.querySelector("#empty-body"),
+  recordCount: document.querySelector("#record-count"),
+  selectedCount: document.querySelector("#selected-count"),
+  filteredCount: document.querySelector("#filtered-count"),
+  sumLabel: document.querySelector("#sum-label"),
+  previous: document.querySelector("#page-previous"),
+  next: document.querySelector("#page-next"),
+  pageStatus: document.querySelector("#page-status"),
+  backdrop: document.querySelector("#drawer-backdrop"),
+  historyDrawer: document.querySelector("#history-drawer"),
+  historyList: document.querySelector("#history-list"),
+  rowDrawer: document.querySelector("#row-editor-drawer"),
+  rowForm: document.querySelector("#row-editor-form"),
+  rowFields: document.querySelector("#row-editor-fields"),
+  rowSave: document.querySelector("#row-editor-save-button"),
+  bulkDrawer: document.querySelector("#bulk-drawer"),
+  bulkForm: document.querySelector("#bulk-form"),
+  bulkTargetSelected: document.querySelector("#bulk-target-selected"),
+  bulkTargetFiltered: document.querySelector("#bulk-target-filtered"),
+  bulkTargetSelectedLabel: document.querySelector("#bulk-target-selected-label"),
+  bulkTargetFilteredLabel: document.querySelector("#bulk-target-filtered-label"),
+  bulkField: document.querySelector("#bulk-field-select"),
+  bulkValue: document.querySelector("#bulk-value-input"),
+  bulkClear: document.querySelector("#bulk-clear-value"),
+  bulkApply: document.querySelector("#bulk-apply-button"),
+  toast: document.querySelector("#toast"),
+};
+
+const state = {
+  locale: "en",
+  messages: {},
+  localeCache: new Map(),
+  description: null,
+  summary: null,
+  result: null,
+  dataRevision: null,
+  selected: new Set(),
+  editors: new Map(),
+  page: 1,
+  loadingCount: 0,
+  toastTimer: null,
+  lastToastKey: "",
+  lastToastAt: 0,
+  pollTimer: null,
+  pollInFlight: false,
+  pendingRefresh: false,
+  viewInstanceId:
+    globalThis.crypto?.randomUUID?.() ??
+    `view-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  rowCommandId: null,
+  rowAttemptedValue: null,
+  bulkCommandId: null,
+  bulkContextId: null,
+  bulkFilteredCount: 0,
+  bulkSelectedTargets: [],
+  bulkOpening: false,
+  historyCommandIds: new Map(),
+  openDrawer: null,
+};
+
+function newCommandId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `command-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  );
+}
+
+function message(key, variables = {}) {
+  const template = state.messages[key] ?? key;
+  return template.replace(/\{(\w+)\}/g, (_match, name) =>
+    Object.hasOwn(variables, name) ? String(variables[name]) : `{${name}}`,
+  );
+}
+
+function parseBridgeError(error) {
+  let payload = {
+    code: "generic",
+    message: error?.message || String(error),
+  };
+  const raw = error?.message;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        payload = {
+          code: parsed.code || "generic",
+          message: parsed.message || raw,
+          details: parsed.details,
+        };
+      }
+    } catch {
+      // Keep the bridge error as-is.
+    }
+  }
+  return payload;
+}
+
+function localizedError(error) {
+  const payload = parseBridgeError(error);
+  return message(`error.${payload.code}`) === `error.${payload.code}`
+    ? message("error.generic")
+    : message(`error.${payload.code}`);
+}
+
+async function callPlugin(action, payload = {}) {
+  if (!bridge || typeof bridge.postMessage !== "function") {
+    throw Object.assign(new Error(message("previewMode")), {
+      code: "preview",
+    });
+  }
+  return bridge.postMessage({ action, ...payload });
+}
+
+function setLoading(active) {
+  state.loadingCount = Math.max(0, state.loadingCount + (active ? 1 : -1));
+  dom.loading.hidden = state.loadingCount === 0;
+}
+
+function showToast(text, tone = "info", dedupeKey = text) {
+  const now = Date.now();
+  if (
+    state.lastToastKey === dedupeKey &&
+    now - state.lastToastAt < 1800 &&
+    tone !== "error"
+  ) {
+    return;
+  }
+  state.lastToastKey = dedupeKey;
+  state.lastToastAt = now;
+  clearTimeout(state.toastTimer);
+  dom.toast.textContent = text;
+  dom.toast.dataset.tone = tone;
+  dom.toast.hidden = false;
+  state.toastTimer = setTimeout(() => {
+    dom.toast.hidden = true;
+  }, tone === "error" ? 5200 : 2600);
+}
+
+function showError(error) {
+  const text = localizedError(error);
+  showToast(text, "error", text);
+  return parseBridgeError(error);
+}
+
+async function loadLocale(locale) {
+  const selected = SUPPORTED_LOCALES.has(locale) ? locale : "en";
+  if (state.localeCache.has(selected)) {
+    return state.localeCache.get(selected);
+  }
+  const result = await callPlugin("table.locale", { locale: selected });
+  if (
+    !result ||
+    result.locale !== selected ||
+    !result.messages ||
+    typeof result.messages !== "object"
+  ) {
+    throw new Error("Locale package is invalid.");
+  }
+  const messages = result.messages;
+  state.localeCache.set(selected, messages);
+  return messages;
+}
+
+function setOption(select, value, label, selected = false) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  option.selected = selected;
+  select.append(option);
+}
+
+function columnByID(columnID) {
+  return state.description?.columns.find(
+    (column) => column.column_id === columnID,
+  );
+}
+
+function columnLabel(columnID) {
+  return message(`column.${columnID}`);
+}
+
+function localizedValue(columnID, value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+  if (columnID === "repayment_status") {
+    const key = `status.${value}`;
+    return message(key) === key ? String(value) : message(key);
+  }
+  if (columnID === "category") {
+    const key = `category.${value}`;
+    return message(key) === key ? String(value) : message(key);
+  }
+  if (columnID === "funding_source") {
+    const key = `funding.${value}`;
+    return message(key) === key ? String(value) : message(key);
+  }
+  return String(value);
+}
+
+function formatDecimal(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+  const raw = String(value);
+  const negative = raw.startsWith("-");
+  const unsigned = negative ? raw.slice(1) : raw;
+  const [whole, fraction] = unsigned.split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${negative ? "-" : ""}${grouped}${fraction ? `.${fraction}` : ""}`;
+}
+
+function cellText(column, value) {
+  if (column.type === "number") {
+    const formatted = formatDecimal(value);
+    return formatted === "—"
+      ? formatted
+      : `${formatted}${column.config?.currency ? ` ${column.config.currency}` : ""}`;
+  }
+  if (column.type === "date") {
+    return value || "—";
+  }
+  return localizedValue(column.column_id, value);
+}
+
+function operatorOptions(column) {
+  if (!column) {
+    return [];
+  }
+  if (column.type === "number") {
+    return [
+      ["gte", "opGreaterThanOrEqual"],
+      ["lte", "opLessThanOrEqual"],
+      ["eq", "opEquals"],
+      ["is_null", "opIsEmpty"],
+      ["not_null", "opNotEmpty"],
+    ];
+  }
+  if (column.type === "date") {
+    return [
+      ["eq", "opEquals"],
+      ["lt", "opBefore"],
+      ["gt", "opAfter"],
+      ["is_null", "opIsEmpty"],
+      ["not_null", "opNotEmpty"],
+    ];
+  }
+  return [
+    ["contains", "opContains"],
+    ["eq", "opEquals"],
+    ["neq", "opNotEquals"],
+    ["is_null", "opIsEmpty"],
+    ["not_null", "opNotEmpty"],
+  ];
+}
+
+function applyStaticLocale() {
+  document.documentElement.lang = state.locale;
+  document.title = message("pageTitle");
+  for (const element of document.querySelectorAll("[data-i18n]")) {
+    element.textContent = message(element.dataset.i18n);
+  }
+  dom.searchInput.placeholder = message("searchPlaceholder");
+  dom.filterValue.placeholder = message("filterValue");
+  dom.searchInput.setAttribute("aria-label", message("searchLabel"));
+  dom.filterColumn.setAttribute("aria-label", message("filterLabel"));
+  dom.filterOperator.setAttribute("aria-label", message("filterLabel"));
+  dom.filterValue.setAttribute("aria-label", message("filterValue"));
+  dom.sortColumn.setAttribute("aria-label", message("sortLabel"));
+  dom.sortDirection.setAttribute("aria-label", message("sortLabel"));
+  dom.table.setAttribute("aria-label", message("pageTitle"));
+  document.querySelector(".query-bar").setAttribute(
+    "aria-label",
+    message("filterLabel"),
+  );
+  document.querySelector("#refresh-button").setAttribute(
+    "aria-label",
+    message("refresh"),
+  );
+  document.querySelector("#refresh-button").title = message("refresh");
+  renderControls();
+  if (state.description && state.editors.size === 0) {
+    renderTable();
+  }
+}
+
+function renderControls() {
+  const previousFilterColumn = dom.filterColumn.value;
+  const previousFilterOperator = dom.filterOperator.value;
+  const previousSortColumn = dom.sortColumn.value;
+  const previousSortDirection = dom.sortDirection.value || "asc";
+
+  dom.filterColumn.replaceChildren();
+  setOption(dom.filterColumn, "", message("filterAll"), !previousFilterColumn);
+  for (const column of state.description?.columns ?? []) {
+    setOption(
+      dom.filterColumn,
+      column.column_id,
+      columnLabel(column.column_id),
+      previousFilterColumn === column.column_id,
+    );
+  }
+
+  const selectedColumn = columnByID(dom.filterColumn.value);
+  dom.filterOperator.replaceChildren();
+  for (const [value, key] of operatorOptions(selectedColumn)) {
+    setOption(
+      dom.filterOperator,
+      value,
+      message(key),
+      previousFilterOperator === value,
+    );
+  }
+  const operator = dom.filterOperator.value;
+  const noValue = operator === "is_null" || operator === "not_null";
+  dom.filterOperatorField.hidden = !selectedColumn;
+  dom.filterValueField.hidden = !selectedColumn || noValue;
+  dom.filterValue.type =
+    selectedColumn?.type === "date"
+      ? "date"
+      : selectedColumn?.type === "number"
+        ? "number"
+        : "text";
+  if (selectedColumn?.type === "number") {
+    dom.filterValue.step = "0.01";
+  } else {
+    dom.filterValue.removeAttribute("step");
+  }
+
+  dom.sortColumn.replaceChildren();
+  setOption(dom.sortColumn, "", message("sortDefault"), !previousSortColumn);
+  for (const column of state.description?.columns ?? []) {
+    setOption(
+      dom.sortColumn,
+      column.column_id,
+      columnLabel(column.column_id),
+      previousSortColumn === column.column_id,
+    );
+  }
+  dom.sortDirection.replaceChildren();
+  setOption(dom.sortDirection, "asc", message("ascending"), previousSortDirection === "asc");
+  setOption(dom.sortDirection, "desc", message("descending"), previousSortDirection === "desc");
+  dom.sortDirection.disabled = !dom.sortColumn.value;
+
+  const selectedField = dom.bulkField.value;
+  dom.bulkField.replaceChildren();
+  for (const column of state.description?.columns ?? []) {
+    setOption(
+      dom.bulkField,
+      column.column_id,
+      columnLabel(column.column_id),
+      selectedField === column.column_id,
+    );
+  }
+}
+
+function currentQuery() {
+  const query = {
+    search: dom.searchInput.value.trim() || undefined,
+    limit: PAGE_SIZE,
+    offset: (state.page - 1) * PAGE_SIZE,
+    sum_column_id: "principal",
+  };
+  const filterColumn = dom.filterColumn.value;
+  const filterOperator = dom.filterOperator.value;
+  if (filterColumn && filterOperator) {
+    const noValue =
+      filterOperator === "is_null" || filterOperator === "not_null";
+    if (noValue || dom.filterValue.value !== "") {
+      query.filters = [
+        {
+          column_id: filterColumn,
+          op: filterOperator,
+          value: noValue ? null : dom.filterValue.value,
+        },
+      ];
+    }
+  }
+  if (dom.sortColumn.value) {
+    query.sort = [
+      {
+        column_id: dom.sortColumn.value,
+        direction: dom.sortDirection.value,
+      },
+    ];
+  }
+  return query;
+}
+
+async function loadQuery({
+  clearSelection = true,
+  showRefreshed = false,
+  preserveDrafts = false,
+} = {}) {
+  if (state.editors.size > 0 && !preserveDrafts) {
+    state.pendingRefresh = true;
+    return;
+  }
+  if (clearSelection) {
+    state.selected.clear();
+  }
+  setLoading(true);
+  try {
+    state.result = await callPlugin("table.query", { query: currentQuery() });
+    if (!clearSelection) {
+      const visibleRowIDs = new Set(state.result.rows.map((row) => row.row_id));
+      for (const rowID of state.selected) {
+        if (!visibleRowIDs.has(rowID)) {
+          state.selected.delete(rowID);
+        }
+      }
+    }
+    state.dataRevision = state.result.data_revision;
+    state.pendingRefresh = false;
+    renderTable({ rebaseDrafts: preserveDrafts });
+    if (showRefreshed) {
+      showToast(message("refreshed"));
+    }
+  } catch (error) {
+    showError(error);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function headerCell(label, className = "") {
+  const th = document.createElement("th");
+  th.scope = "col";
+  th.textContent = label;
+  if (className) {
+    th.className = className;
+  }
+  return th;
+}
+
+function renderTable({ rebaseDrafts = false } = {}) {
+  if (!state.description || !state.result) {
+    return;
+  }
+  for (const draft of state.editors.values()) {
+    draft.value = draft.input?.value ?? draft.value ?? draft.original;
+    draft.wasFocused = draft.input === document.activeElement;
+    draft.selectionStart = draft.input?.selectionStart ?? null;
+    draft.selectionEnd = draft.input?.selectionEnd ?? null;
+    draft.input = null;
+  }
+  const renderedDraftKeys = new Set();
+  dom.head.replaceChildren();
+  const headerRow = document.createElement("tr");
+  const selectHeader = document.createElement("th");
+  selectHeader.className = "checkbox-cell";
+  const selectPage = document.createElement("input");
+  selectPage.id = "select-page-checkbox";
+  selectPage.type = "checkbox";
+  selectPage.dataset.action = "select-page";
+  selectPage.setAttribute("aria-label", message("selectPage"));
+  const pageRowIDs = state.result.rows.map((row) => row.row_id);
+  selectPage.checked =
+    pageRowIDs.length > 0 && pageRowIDs.every((rowID) => state.selected.has(rowID));
+  selectPage.indeterminate =
+    !selectPage.checked && pageRowIDs.some((rowID) => state.selected.has(rowID));
+  selectHeader.append(selectPage);
+  headerRow.append(selectHeader);
+
+  for (const column of state.description.columns) {
+    headerRow.append(
+      headerCell(
+        columnLabel(column.column_id),
+        `${column.column_id === "name" ? "name-cell" : ""}`,
+      ),
+    );
+  }
+  headerRow.append(headerCell(message("column.actions"), "actions-cell"));
+  dom.head.append(headerRow);
+
+  dom.bodyRows.replaceChildren();
+  for (const row of state.result.rows) {
+    const tr = document.createElement("tr");
+    tr.dataset.rowId = row.row_id;
+    tr.dataset.selected = state.selected.has(row.row_id) ? "true" : "false";
+
+    const selectCell = document.createElement("td");
+    selectCell.className = "checkbox-cell";
+    const checkbox = document.createElement("input");
+    checkbox.id = `row-select-${row.row_id}`;
+    checkbox.type = "checkbox";
+    checkbox.checked = state.selected.has(row.row_id);
+    checkbox.dataset.action = "select-row";
+    checkbox.dataset.rowId = row.row_id;
+    checkbox.setAttribute("aria-label", message("selectRow"));
+    selectCell.append(checkbox);
+    tr.append(selectCell);
+
+    for (const column of state.description.columns) {
+      const td = document.createElement("td");
+      td.id = `cell-${row.row_id}-${column.column_id}`;
+      td.dataset.action = "edit-cell";
+      td.dataset.rowId = row.row_id;
+      td.dataset.columnId = column.column_id;
+      td.dataset.editable = "true";
+      td.dataset.contextChanged = row.context_changed ? "true" : "false";
+      td.classList.add(`${column.column_id.replaceAll("_", "-")}-cell`);
+      td.setAttribute(
+        "aria-label",
+        message("editCellAria", { column: columnLabel(column.column_id) }),
+      );
+      const draftKey = `${row.row_id}:${column.column_id}`;
+      const draft = state.editors.get(draftKey);
+      if (draft) {
+        renderedDraftKeys.add(draftKey);
+        draft.row = row;
+        draft.original = row.values[column.column_id] ?? "";
+        if (rebaseDrafts) {
+          draft.commandId = newCommandId();
+          draft.submitted = false;
+          draft.lastSubmittedValue = null;
+        }
+        draft.column = column;
+        mountCellEditor(td, draft);
+        tr.append(td);
+        continue;
+      }
+      const value = row.values[column.column_id];
+      if (column.column_id === "repayment_status" && value) {
+        const badge = document.createElement("span");
+        badge.className = "status-badge";
+        badge.textContent = localizedValue(column.column_id, value);
+        td.append(badge);
+      } else {
+        td.textContent = cellText(column, value);
+      }
+      td.title = value === null || value === undefined ? "" : String(value);
+      tr.append(td);
+    }
+
+    const actions = document.createElement("td");
+    actions.className = "actions-cell";
+    const deleteButton = document.createElement("button");
+    deleteButton.id = `delete-${row.row_id}`;
+    deleteButton.className = "row-delete";
+    deleteButton.type = "button";
+    deleteButton.dataset.action = "delete-row";
+    deleteButton.dataset.rowId = row.row_id;
+    deleteButton.textContent = "×";
+    deleteButton.title = message("deleteRowAria");
+    deleteButton.setAttribute("aria-label", message("deleteRowAria"));
+    actions.append(deleteButton);
+    tr.append(actions);
+    dom.bodyRows.append(tr);
+  }
+  let staleDraft = false;
+  for (const key of state.editors.keys()) {
+    if (!renderedDraftKeys.has(key)) {
+      state.editors.delete(key);
+      staleDraft = true;
+    }
+  }
+  if (staleDraft) {
+    state.pendingRefresh = true;
+    showToast(message("draftConflict"), "error", "stale-draft");
+  }
+
+  const hasRows = state.result.rows.length > 0;
+  dom.table.hidden = !hasRows;
+  dom.empty.hidden = hasRows;
+  dom.emptyTitle.textContent =
+    state.result.matched_count === 0 && (dom.searchInput.value || dom.filterColumn.value)
+      ? message("noMatches")
+      : message("emptyTitle");
+  dom.emptyBody.textContent =
+    state.result.matched_count === 0 && (dom.searchInput.value || dom.filterColumn.value)
+      ? ""
+      : message("emptyBody");
+
+  const pageCount = Math.max(1, Math.ceil(state.result.matched_count / PAGE_SIZE));
+  dom.recordCount.textContent = message("recordCount", {
+    count: state.summary?.row_count ?? state.result.matched_count,
+  });
+  dom.selectedCount.textContent = message("selectedCount", {
+    count: state.selected.size,
+  });
+  dom.filteredCount.textContent = message("filteredCount", {
+    count: state.result.matched_count,
+  });
+  dom.sumLabel.textContent = `${message("sumLabel")}: ${formatDecimal(
+    state.result.sum?.value ?? "0.00",
+  )} ${state.result.sum?.currency ?? "CNY"}`;
+  dom.pageStatus.textContent = message("pageStatus", {
+    page: Math.min(state.page, pageCount),
+    pages: pageCount,
+  });
+  dom.previous.disabled = state.page <= 1;
+  dom.next.disabled = state.page >= pageCount;
+  const bulkOpen = state.openDrawer === dom.bulkDrawer;
+  dom.bulkTargetSelectedLabel.textContent = message("selectedCount", {
+    count: bulkOpen ? state.bulkSelectedTargets.length : state.selected.size,
+  });
+  dom.bulkTargetFilteredLabel.textContent = message("filteredCount", {
+    count: bulkOpen ? state.bulkFilteredCount : state.result.matched_count,
+  });
+}
+
+function resetFilterInputs() {
+  dom.searchInput.value = "";
+  dom.filterColumn.value = "";
+  dom.filterOperator.replaceChildren();
+  dom.filterValue.value = "";
+  dom.sortColumn.value = "";
+  dom.sortDirection.value = "asc";
+  state.page = 1;
+  renderControls();
+  void loadQuery();
+}
+
+function rowByID(rowID) {
+  return state.result?.rows.find((row) => row.row_id === rowID);
+}
+
+function mountCellEditor(cell, draft, { focus = false } = {}) {
+  const input = document.createElement("input");
+  input.id = `cell-editor-${draft.row.row_id}-${draft.column.column_id}`;
+  input.className = "cell-editor";
+  input.type = draft.column.type === "date" ? "date" : "text";
+  if (draft.column.type === "number") {
+    input.inputMode = "decimal";
+  }
+  input.value = draft.value ?? draft.original;
+  input.dataset.action = "edit-cell-input";
+  input.disabled = draft.saving;
+  draft.input = input;
+  cell.replaceChildren(input);
+
+  input.addEventListener("compositionstart", () => {
+    draft.composing = true;
+  });
+  input.addEventListener("compositionend", () => {
+    draft.composing = false;
+  });
+  input.addEventListener("input", () => {
+    draft.value = input.value;
+    if (
+      draft.submitted &&
+      input.value !== draft.lastSubmittedValue &&
+      !draft.saving
+    ) {
+      draft.commandId = newCommandId();
+      draft.submitted = false;
+    }
+    input.removeAttribute("aria-invalid");
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.isComposing || draft.composing || event.keyCode === 229) {
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelCellEdit(draft);
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void commitCellEdit(draft, false);
+      return;
+    }
+    if (event.key === "Tab") {
+      event.preventDefault();
+      void commitCellEdit(draft, true, event.shiftKey);
+    }
+  });
+
+  if (focus) {
+    input.focus();
+    input.select();
+  } else if (draft.wasFocused) {
+    queueMicrotask(() => {
+      if (!input.isConnected) {
+        return;
+      }
+      input.focus();
+      if (draft.selectionStart !== null && draft.selectionEnd !== null) {
+        input.setSelectionRange(draft.selectionStart, draft.selectionEnd);
+      }
+    });
+  }
+  draft.wasFocused = false;
+}
+
+function beginCellEdit(cell) {
+  if (cell.querySelector("input")) {
+    return;
+  }
+  const row = rowByID(cell.dataset.rowId);
+  const column = columnByID(cell.dataset.columnId);
+  if (!row || !column) {
+    return;
+  }
+  const original = row.values[column.column_id] ?? "";
+  const draft = {
+    row,
+    column,
+    input: null,
+    value: original,
+    original,
+    commandId: newCommandId(),
+    submitted: false,
+    lastSubmittedValue: null,
+    composing: false,
+    saving: false,
+    wasFocused: false,
+    selectionStart: null,
+    selectionEnd: null,
+  };
+  state.editors.set(`${row.row_id}:${column.column_id}`, draft);
+  mountCellEditor(cell, draft, { focus: true });
+}
+
+function closeCellEdit(draft, { triggerRefresh = true } = {}) {
+  state.editors.delete(`${draft.row.row_id}:${draft.column.column_id}`);
+  const column = draft.column;
+  const value = draft.row.values[column.column_id];
+  const td = document.querySelector(
+    `#cell-${CSS.escape(draft.row.row_id)}-${CSS.escape(column.column_id)}`,
+  );
+  if (td) {
+    if (column.column_id === "repayment_status" && value) {
+      const badge = document.createElement("span");
+      badge.className = "status-badge";
+      badge.textContent = localizedValue(column.column_id, value);
+      td.replaceChildren(badge);
+    } else {
+      td.textContent = cellText(column, value);
+    }
+  }
+  if (
+    triggerRefresh &&
+    state.editors.size === 0 &&
+    state.pendingRefresh
+  ) {
+    void loadQuery({ clearSelection: false });
+  }
+}
+
+function cancelCellEdit(draft) {
+  closeCellEdit(draft);
+}
+
+function adjacentCellTarget(draft, backwards) {
+  const rows = state.result?.rows ?? [];
+  const columns = state.description?.columns ?? [];
+  const rowIndex = rows.findIndex((row) => row.row_id === draft.row.row_id);
+  const columnIndex = columns.findIndex(
+    (column) => column.column_id === draft.column.column_id,
+  );
+  if (rowIndex < 0 || columnIndex < 0) {
+    return null;
+  }
+  let flatIndex = rowIndex * columns.length + columnIndex + (backwards ? -1 : 1);
+  const total = rows.length * columns.length;
+  if (flatIndex < 0 || flatIndex >= total) {
+    return null;
+  }
+  const targetRow = rows[Math.floor(flatIndex / columns.length)];
+  const targetColumn = columns[flatIndex % columns.length];
+  return {
+    rowID: targetRow.row_id,
+    columnID: targetColumn.column_id,
+  };
+}
+
+function focusCellTarget(target) {
+  if (!target) {
+    return;
+  }
+  const cell = document.querySelector(
+    `#cell-${CSS.escape(target.rowID)}-${CSS.escape(target.columnID)}`,
+  );
+  if (cell) {
+    beginCellEdit(cell);
+  }
+}
+
+async function commitCellEdit(draft, moveFocus, backwards = false) {
+  if (draft.saving) {
+    return;
+  }
+  const rawValue = draft.input.value;
+  const value = rawValue === "" ? null : rawValue;
+  const focusTarget = moveFocus ? adjacentCellTarget(draft, backwards) : null;
+  if (value === (draft.row.values[draft.column.column_id] ?? null)) {
+    const refreshPending = state.pendingRefresh;
+    closeCellEdit(draft, { triggerRefresh: false });
+    if (refreshPending) {
+      await loadQuery({ clearSelection: false });
+    } else if (moveFocus) {
+      focusCellTarget(focusTarget);
+    }
+    return;
+  }
+  draft.saving = true;
+  draft.submitted = true;
+  draft.lastSubmittedValue = rawValue;
+  draft.input.disabled = true;
+  try {
+    await callPlugin("table.change", {
+      viewInstanceId: state.viewInstanceId,
+      commandId: draft.commandId,
+      change: {
+        action: "update",
+        expected_schema_revision: state.description.table.schema_revision,
+        targets: [
+          {
+            row_id: draft.row.row_id,
+            expected_revision: draft.row.revision,
+          },
+        ],
+        values: { [draft.column.column_id]: value },
+      },
+    });
+    closeCellEdit(draft, { triggerRefresh: false });
+    showToast(message("saved"));
+    await loadQuery({ clearSelection: false });
+    if (moveFocus) {
+      focusCellTarget(focusTarget);
+    }
+  } catch (error) {
+    const payload = showError(error);
+    draft.input.disabled = false;
+    draft.input.focus();
+    if (
+      payload.code === "version_conflict" ||
+      payload.code === "command_id_conflict"
+    ) {
+      draft.input.setAttribute("aria-invalid", "true");
+      showToast(message("draftConflict"), "error", "draft-conflict");
+    }
+  } finally {
+    draft.saving = false;
+  }
+}
+
+function selectPage(checked) {
+  for (const row of state.result?.rows ?? []) {
+    if (checked) {
+      state.selected.add(row.row_id);
+    } else {
+      state.selected.delete(row.row_id);
+    }
+  }
+  updateSelectionUI();
+}
+
+function selectRow(rowID, checked) {
+  if (checked) {
+    state.selected.add(rowID);
+  } else {
+    state.selected.delete(rowID);
+  }
+  const row = dom.bodyRows.querySelector(
+    `tr[data-row-id="${CSS.escape(rowID)}"]`,
+  );
+  if (row) {
+    row.dataset.selected = checked ? "true" : "false";
+  }
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  const rows = state.result?.rows ?? [];
+  const pageRowIDs = rows.map((row) => row.row_id);
+  const selectedOnPage = pageRowIDs.filter((rowID) => state.selected.has(rowID));
+  const header = document.querySelector("#select-page-checkbox");
+  if (header) {
+    header.checked =
+      pageRowIDs.length > 0 && selectedOnPage.length === pageRowIDs.length;
+    header.indeterminate =
+      !header.checked && selectedOnPage.length > 0;
+  }
+  for (const row of rows) {
+    const selected = state.selected.has(row.row_id);
+    const checkbox = document.querySelector(
+      `#row-select-${CSS.escape(row.row_id)}`,
+    );
+    const tableRow = dom.bodyRows.querySelector(
+      `tr[data-row-id="${CSS.escape(row.row_id)}"]`,
+    );
+    if (checkbox) {
+      checkbox.checked = selected;
+    }
+    if (tableRow) {
+      tableRow.dataset.selected = selected ? "true" : "false";
+    }
+  }
+  dom.selectedCount.textContent = message("selectedCount", {
+    count: state.selected.size,
+  });
+  if (state.openDrawer === dom.bulkDrawer) {
+    dom.bulkTargetSelectedLabel.textContent = message("selectedCount", {
+      count: state.bulkSelectedTargets.length,
+    });
+  }
+}
+
+async function deleteRow(rowID) {
+  const row = rowByID(rowID);
+  if (!row || !state.description) {
+    return;
+  }
+  setLoading(true);
+  try {
+    await callPlugin("table.change", {
+      viewInstanceId: state.viewInstanceId,
+      commandId: newCommandId(),
+      change: {
+        action: "delete",
+        expected_schema_revision: state.description.table.schema_revision,
+        targets: [{ row_id: row.row_id, expected_revision: row.revision }],
+      },
+    });
+    state.selected.delete(rowID);
+    showToast(message("deleted"));
+    await loadQuery({ clearSelection: false });
+  } catch (error) {
+    showError(error);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function openDrawer(name) {
+  for (const drawer of [dom.historyDrawer, dom.rowDrawer, dom.bulkDrawer]) {
+    drawer.hidden = drawer !== name;
+    drawer.setAttribute("aria-hidden", drawer === name ? "false" : "true");
+  }
+  dom.backdrop.hidden = false;
+  state.openDrawer = name;
+}
+
+function closeDrawer() {
+  for (const drawer of [dom.historyDrawer, dom.rowDrawer, dom.bulkDrawer]) {
+    drawer.hidden = true;
+    drawer.setAttribute("aria-hidden", "true");
+  }
+  dom.backdrop.hidden = true;
+  state.openDrawer = null;
+  state.rowCommandId = null;
+  state.rowAttemptedValue = null;
+  state.bulkCommandId = null;
+  state.bulkContextId = null;
+  state.bulkFilteredCount = 0;
+  state.bulkSelectedTargets = [];
+  if (state.pendingRefresh && state.editors.size === 0) {
+    void loadQuery({ clearSelection: true });
+  }
+}
+
+function inputForColumn(column, prefix) {
+  const input = document.createElement("input");
+  input.id = `${prefix}-${column.column_id}`;
+  input.dataset.action = `${prefix}-field`;
+  input.dataset.columnId = column.column_id;
+  input.type = column.type === "date" ? "date" : "text";
+  if (column.type === "number") {
+    input.inputMode = "decimal";
+  }
+  if (column.required) {
+    input.required = true;
+  }
+  return input;
+}
+
+function openRowEditor() {
+  dom.rowFields.replaceChildren();
+  state.rowCommandId = newCommandId();
+  state.rowAttemptedValue = null;
+  for (const column of state.description?.columns ?? []) {
+    const label = document.createElement("label");
+    const caption = document.createElement("span");
+    caption.textContent = columnLabel(column.column_id);
+    label.append(caption, inputForColumn(column, "new-row"));
+    dom.rowFields.append(label);
+  }
+  dom.rowForm.reset();
+  openDrawer(dom.rowDrawer);
+  dom.rowFields.querySelector("input")?.focus();
+}
+
+function rowFormValues() {
+  const values = {};
+  for (const column of state.description?.columns ?? []) {
+    const input = dom.rowFields.querySelector(
+      `[data-column-id="${CSS.escape(column.column_id)}"]`,
+    );
+    values[column.column_id] = input?.value === "" ? null : input?.value ?? null;
+  }
+  return values;
+}
+
+async function saveNewRow(event) {
+  event.preventDefault();
+  if (!state.description || !state.rowCommandId) {
+    return;
+  }
+  const values = rowFormValues();
+  const serialized = JSON.stringify(values);
+  if (state.rowAttemptedValue !== null && state.rowAttemptedValue !== serialized) {
+    state.rowCommandId = newCommandId();
+  }
+  state.rowAttemptedValue = serialized;
+  dom.rowSave.disabled = true;
+  try {
+    await callPlugin("table.change", {
+      viewInstanceId: state.viewInstanceId,
+      commandId: state.rowCommandId,
+      change: {
+        action: "insert",
+        expected_schema_revision: state.description.table.schema_revision,
+        rows: [values],
+      },
+    });
+    closeDrawer();
+    showToast(message("added"));
+    await loadQuery();
+  } catch (error) {
+    showError(error);
+  } finally {
+    dom.rowSave.disabled = false;
+  }
+}
+
+async function openBulkEditor() {
+  if (!state.result || state.bulkOpening) {
+    return;
+  }
+  const selectedTargets = state.result.rows
+    .filter((row) => state.selected.has(row.row_id))
+    .map((row) => ({
+      row_id: row.row_id,
+      expected_revision: row.revision,
+    }));
+  state.bulkOpening = true;
+  setLoading(true);
+  try {
+    const context = await callPlugin("table.capture_context", {
+      query: currentQuery(),
+    });
+    if (!context.context_id) {
+      throw new Error("Context capture did not return an ID.");
+    }
+    if (selectedTargets.length === 0 && context.context.captured_count === 0) {
+      throw Object.assign(new Error(message("error.empty_context")), {
+        message: JSON.stringify({ code: "empty_context" }),
+      });
+    }
+    state.bulkCommandId = newCommandId();
+    state.bulkContextId = context.context_id;
+    state.bulkFilteredCount = context.context.captured_count;
+    state.bulkSelectedTargets = selectedTargets;
+    dom.bulkForm.reset();
+    dom.bulkTargetSelected.disabled = selectedTargets.length === 0;
+    dom.bulkTargetSelected.checked = selectedTargets.length > 0;
+    dom.bulkTargetFiltered.checked = selectedTargets.length === 0;
+    dom.bulkValue.value = "";
+    dom.bulkClear.checked = false;
+    renderControls();
+    openDrawer(dom.bulkDrawer);
+    renderTable();
+    dom.bulkField.focus();
+  } catch (error) {
+    showError(error);
+  } finally {
+    state.bulkOpening = false;
+    setLoading(false);
+  }
+}
+
+async function applyBulk(event) {
+  event.preventDefault();
+  if (
+    !state.description ||
+    !state.result ||
+    !state.bulkCommandId ||
+    !state.bulkContextId
+  ) {
+    return;
+  }
+  const field = dom.bulkField.value;
+  if (!field) {
+    return;
+  }
+  const value = dom.bulkClear.checked
+    ? null
+    : dom.bulkValue.value === ""
+      ? null
+      : dom.bulkValue.value;
+  const selectedMode = dom.bulkTargetSelected.checked;
+  const change = {
+    action: "update",
+    expected_schema_revision: state.description.table.schema_revision,
+    values: { [field]: value },
+  };
+  if (selectedMode) {
+    const targets = state.bulkSelectedTargets;
+    if (targets.length === 0) {
+      showToast(message("error.empty_context"), "error");
+      return;
+    }
+    change.targets = targets;
+  } else {
+    if (state.bulkFilteredCount === 0) {
+      showToast(message("error.empty_context"), "error");
+      return;
+    }
+    change.context_id = state.bulkContextId;
+  }
+  dom.bulkApply.disabled = true;
+  setLoading(true);
+  try {
+    await callPlugin("table.change", {
+      viewInstanceId: state.viewInstanceId,
+      commandId: state.bulkCommandId,
+      change,
+    });
+    closeDrawer();
+    showToast(message("bulkSaved"));
+    await loadQuery();
+  } catch (error) {
+    showError(error);
+  } finally {
+    dom.bulkApply.disabled = false;
+    setLoading(false);
+  }
+}
+
+async function sendToChat() {
+  if (!state.result) {
+    return;
+  }
+  const selected = state.selected.size > 0;
+  const count = selected ? state.selected.size : state.result.matched_count;
+  if (count === 0) {
+    showToast(message("error.empty_context"), "error");
+    return;
+  }
+  setLoading(true);
+  try {
+    await callPlugin("selection.open_chat", {
+      query: currentQuery(),
+      selectedRowIds: selected ? [...state.selected] : undefined,
+      text: message("chatPrompt"),
+      label: message("chatLabel", { count }),
+    });
+    showToast(message("contextOpened"));
+  } catch (error) {
+    showError(error);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function historyTime(value) {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(state.locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function historyAction(action) {
+  const keys = {
+    insert: "historyActionInsert",
+    update: "historyActionUpdate",
+    delete: "historyActionDelete",
+    undo: "historyActionUndo",
+  };
+  return message(keys[action] ?? "historyActionUpdate");
+}
+
+function historySource(sourceKind) {
+  return message(sourceKind === "page" ? "historySourcePage" : "historySourceAgent");
+}
+
+function renderHistory(operations) {
+  dom.historyList.replaceChildren();
+  if (operations.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "history-meta";
+    empty.textContent = message("historyEmpty");
+    dom.historyList.append(empty);
+    return;
+  }
+  for (const operation of operations) {
+    const item = document.createElement("article");
+    item.className = "history-item";
+    const title = document.createElement("strong");
+    title.textContent = historyAction(operation.receipt?.action);
+    const meta = document.createElement("div");
+    meta.className = "history-meta";
+    meta.textContent = [
+      historySource(operation.source_kind),
+      message("historyAffected", {
+        count: operation.receipt?.affected_count ?? 0,
+      }),
+      historyTime(operation.created_at),
+    ].join(" · ");
+    item.append(title, meta);
+    if (operation.undoable) {
+      const actions = document.createElement("div");
+      actions.className = "history-actions";
+      const undo = document.createElement("button");
+      undo.id = `undo-${operation.operation_id}`;
+      undo.className = "button quiet";
+      undo.type = "button";
+      undo.dataset.action = "undo-operation";
+      undo.dataset.operationId = operation.operation_id;
+      undo.textContent = message("undo");
+      actions.append(undo);
+      item.append(actions);
+    }
+    dom.historyList.append(item);
+  }
+}
+
+async function openHistory() {
+  openDrawer(dom.historyDrawer);
+  dom.historyList.replaceChildren();
+  setLoading(true);
+  try {
+    const history = await callPlugin("table.history", {
+      query: { limit: 50, offset: 0 },
+    });
+    renderHistory(history.operations ?? []);
+  } catch (error) {
+    showError(error);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function undoOperation(operationID) {
+  const commandId =
+    state.historyCommandIds.get(operationID) ?? newCommandId();
+  state.historyCommandIds.set(operationID, commandId);
+  setLoading(true);
+  try {
+    await callPlugin("table.undo", {
+      operationId: operationID,
+      commandId,
+      viewInstanceId: state.viewInstanceId,
+    });
+    state.historyCommandIds.delete(operationID);
+    showToast(message("undoDone"));
+    await loadQuery({ clearSelection: true });
+    const history = await callPlugin("table.history", {
+      query: { limit: 50, offset: 0 },
+    });
+    renderHistory(history.operations ?? []);
+  } catch (error) {
+    showError(error);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function dirtyDraftExists() {
+  return (
+    state.editors.size > 0 ||
+    (state.openDrawer === dom.rowDrawer &&
+      [...dom.rowFields.querySelectorAll("input")].some((input) => input.value)) ||
+    (state.openDrawer === dom.bulkDrawer &&
+      (dom.bulkValue.value !== "" || dom.bulkClear.checked))
+  );
+}
+
+async function pollVersion() {
+  if (
+    document.visibilityState !== "visible" ||
+    state.pollInFlight ||
+    !state.description
+  ) {
+    return;
+  }
+  state.pollInFlight = true;
+  try {
+    const summary = await callPlugin("table.version");
+    if (
+      state.dataRevision !== null &&
+      summary.data_revision !== state.dataRevision
+    ) {
+      state.dataRevision = summary.data_revision;
+      state.summary = summary;
+      if (dirtyDraftExists()) {
+        state.pendingRefresh = true;
+        showToast(message("dataChanged"), "error", "remote-data-change");
+      } else {
+        await loadQuery({ clearSelection: true });
+      }
+    }
+  } catch (error) {
+    if (document.visibilityState === "visible") {
+      showError(error);
+    }
+  } finally {
+    state.pollInFlight = false;
+  }
+}
+
+function startPolling() {
+  if (state.pollTimer) {
+    clearInterval(state.pollTimer);
+  }
+  if (document.visibilityState === "visible") {
+    state.pollTimer = setInterval(() => {
+      void pollVersion();
+    }, 1000);
+  }
+}
+
+function stopPolling() {
+  if (state.pollTimer) {
+    clearInterval(state.pollTimer);
+    state.pollTimer = null;
+  }
+}
+
+async function bootstrap() {
+  setLoading(true);
+  try {
+    const boot = await callPlugin("table.bootstrap");
+    state.description = boot.description;
+    state.summary = boot.summary;
+    state.dataRevision = boot.summary.data_revision;
+    renderControls();
+    await loadQuery();
+  } catch (error) {
+    showError(error);
+    dom.table.hidden = true;
+    dom.empty.hidden = false;
+    dom.emptyTitle.textContent = message("emptyTitle");
+    dom.emptyBody.textContent = localizedError(error);
+  } finally {
+    setLoading(false);
+    dom.body.dataset.ready = "true";
+    startPolling();
+  }
+}
+
+async function applyLocale(locale) {
+  const selected = SUPPORTED_LOCALES.has(locale) ? locale : "en";
+  try {
+    state.locale = selected;
+    state.messages = await loadLocale(selected);
+  } catch (error) {
+    if (selected !== "en") {
+      state.locale = "en";
+      state.messages = await loadLocale("en");
+    } else {
+      throw error;
+    }
+  }
+  applyStaticLocale();
+}
+
+document.addEventListener("click", (event) => {
+  const actionElement = event.target.closest("[data-action]");
+  if (!actionElement) {
+    return;
+  }
+  const action = actionElement.dataset.action;
+  if (action === "add-row") {
+    openRowEditor();
+  } else if (action === "send-chat") {
+    void sendToChat();
+  } else if (action === "bulk-set") {
+    void openBulkEditor();
+  } else if (action === "open-history") {
+    void openHistory();
+  } else if (action === "refresh") {
+    void loadQuery({
+      clearSelection: false,
+      showRefreshed: true,
+      preserveDrafts: true,
+    });
+  } else if (action === "clear-filter") {
+    resetFilterInputs();
+  } else if (action === "page-previous") {
+    if (state.page > 1) {
+      state.page -= 1;
+      void loadQuery();
+    }
+  } else if (action === "page-next") {
+    state.page += 1;
+    void loadQuery();
+  } else if (action === "edit-cell") {
+    beginCellEdit(actionElement);
+  } else if (action === "delete-row") {
+    void deleteRow(actionElement.dataset.rowId);
+  } else if (action === "close-drawer") {
+    closeDrawer();
+  } else if (action === "undo-operation") {
+    void undoOperation(actionElement.dataset.operationId);
+  }
+});
+
+document.addEventListener("change", (event) => {
+  const target = event.target;
+  if (target.dataset.action === "select-page") {
+    selectPage(target.checked);
+  } else if (target.dataset.action === "select-row") {
+    selectRow(target.dataset.rowId, target.checked);
+  } else if (target === dom.filterColumn) {
+    renderControls();
+    state.page = 1;
+    void loadQuery();
+  } else if (target === dom.filterOperator) {
+    renderControls();
+    state.page = 1;
+    void loadQuery();
+  } else if (target === dom.filterValue) {
+    state.page = 1;
+    void loadQuery();
+  } else if (target === dom.sortColumn || target === dom.sortDirection) {
+    renderControls();
+    state.page = 1;
+    void loadQuery();
+  } else if (target === dom.bulkClear) {
+    dom.bulkValue.disabled = target.checked;
+  }
+});
+
+let searchTimer = null;
+dom.searchInput.addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.page = 1;
+    void loadQuery();
+  }, 220);
+});
+
+dom.rowForm.addEventListener("submit", (event) => {
+  void saveNewRow(event);
+});
+
+function bulkInputChanged() {
+  if (state.openDrawer === dom.bulkDrawer && state.bulkCommandId) {
+    state.bulkCommandId = newCommandId();
+  }
+}
+
+dom.bulkForm.addEventListener("input", bulkInputChanged);
+dom.bulkForm.addEventListener("change", bulkInputChanged);
+
+dom.bulkForm.addEventListener("submit", (event) => {
+  void applyBulk(event);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.openDrawer && !event.target.matches("input")) {
+    closeDrawer();
+  }
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    startPolling();
+    void pollVersion();
+  } else {
+    stopPolling();
+  }
+});
+
+if (bridge && typeof bridge.onLocale === "function") {
+  bridge.onLocale((locale) => {
+    void applyLocale(locale).catch((error) => {
+      console.error(error);
+    });
+  });
+}
+
+const initialLocale =
+  typeof bridge?.locale === "string"
+    ? bridge.locale
+    : navigator.language.toLowerCase().startsWith("zh")
+      ? "zh-Hans"
+      : "en";
+
+void applyLocale(initialLocale)
+  .catch((error) => {
+    console.error(error);
+  })
+  .then(() => bootstrap());

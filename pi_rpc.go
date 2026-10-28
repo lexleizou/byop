@@ -231,10 +231,24 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 		cwd = resolved
 	}
 
-	args := piClientArgs()
+	registry := scanPluginRegistry(defaultPluginRoots())
+	args := piClientArgsForRegistry(registry, os.Getenv("BYOP_PI_EXTENSIONS"))
+	configDir, err := pluginConfigDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolve plugin config: %w", err)
+	}
+	dataDirectories, err := registeredPluginDataDirs(registry, configDir)
+	if err != nil {
+		return nil, err
+	}
+	dataDirectoriesJSON, err := pluginDataDirsJSON(dataDirectories)
+	if err != nil {
+		return nil, err
+	}
 	cmd := exec.Command(path, args...)
 	cmd.Dir = cwd
-	cmd.Env = piProcessEnv(path, os.Environ())
+	cmd.Env = mergeProcessEnv(piProcessEnv(path, os.Environ()),
+		"BYOP_PLUGIN_DATA_DIRS", dataDirectoriesJSON)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -289,14 +303,49 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 }
 
 func piClientArgs() []string {
+	return piClientArgsForRegistry(
+		scanPluginRegistry(defaultPluginRoots()),
+		os.Getenv("BYOP_PI_EXTENSIONS"),
+	)
+}
+
+func piClientArgsForRegistry(registry pluginRegistry, explicit string) []string {
 	args := []string{"--mode", "rpc"}
 	if piEphemeralSessions() {
 		args = append(args, "--no-session")
 	}
-	for _, extension := range piExtensionPaths(os.Getenv("BYOP_PI_EXTENSIONS")) {
+	extensions := piExtensionPaths(explicit)
+	for _, entry := range registry.Entries {
+		if entry.Status != pluginRegistered || entry.Manifest == nil ||
+			entry.Manifest.Contributes.AgentExtension == "" {
+			continue
+		}
+		extension, _, err := resolvePluginPath(entry.SourceDirectory, entry.Manifest.Contributes.AgentExtension)
+		if err == nil {
+			extensions = append(extensions, extension)
+		}
+	}
+	seen := make(map[string]struct{}, len(extensions))
+	for _, extension := range extensions {
+		cleaned := filepath.Clean(extension)
+		if _, exists := seen[cleaned]; exists {
+			continue
+		}
+		seen[cleaned] = struct{}{}
 		args = append(args, "--extension", extension)
 	}
 	return args
+}
+
+func mergeProcessEnv(env []string, key, value string) []string {
+	prefix := key + "="
+	merged := make([]string, 0, len(env)+1)
+	for _, entry := range env {
+		if !strings.HasPrefix(entry, prefix) {
+			merged = append(merged, entry)
+		}
+	}
+	return append(merged, prefix+value)
 }
 
 func piExtensionPaths(value string) []string {

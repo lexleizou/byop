@@ -62,6 +62,7 @@ type pluginHost struct {
 	onNotice                func(pluginID, pluginName, text, tone string)
 	onTaskUpdate            func(update pluginTaskUpdate)
 	onRefreshView           func(pluginID, viewID string)
+	onOpenChat              func(pluginID string, request pluginOpenChatRequest)
 	themeDark               func() bool
 	themeHighContrast       func() bool
 	themeReduceTransparency func() bool
@@ -69,6 +70,7 @@ type pluginHost struct {
 	locale                  func() string
 
 	workspaceRoot string
+	configDir     string
 	settings      *pluginSettingsStore
 
 	mu               sync.Mutex
@@ -114,6 +116,12 @@ func pluginHostTaskHandler(handler func(update pluginTaskUpdate)) pluginHostOpti
 func pluginHostRefreshHandler(handler func(pluginID, viewID string)) pluginHostOption {
 	return func(host *pluginHost) {
 		host.onRefreshView = handler
+	}
+}
+
+func pluginHostOpenChatHandler(handler func(pluginID string, request pluginOpenChatRequest)) pluginHostOption {
+	return func(host *pluginHost) {
+		host.onOpenChat = handler
 	}
 }
 
@@ -166,6 +174,7 @@ func newPluginHost(hostVersion string, onChange func(), options ...pluginHostOpt
 		statuses:                make(map[string]pluginRuntimeStatus),
 		starting:                make(map[string]*sync.Mutex),
 		workspaceRoot:           workspace,
+		configDir:               configDir,
 		settings:                newPluginSettingsStore(configDir),
 		settingsByPlugin:        make(map[string]map[string]any),
 		themeDark:               func() bool { return false },
@@ -632,6 +641,10 @@ func startPluginProcess(entry pluginRegistryEntry, host *pluginHost) (*pluginPro
 	if err != nil {
 		return nil, err
 	}
+	dataDir, err := pluginDataDir(host.configDir, entry.ID)
+	if err != nil {
+		return nil, err
+	}
 	var cmd *exec.Cmd
 	switch entry.Manifest.Runtime {
 	case "native":
@@ -645,7 +658,9 @@ func startPluginProcess(entry pluginRegistryEntry, host *pluginHost) (*pluginPro
 		if rootErr != nil {
 			return nil, fmt.Errorf("resolve plugin folder: %w", rootErr)
 		}
-		args := nodePermissionArgs(entry.Manifest, pluginRoot, host.workspaceRoot, executable)
+		args := nodePermissionArgsWithData(
+			entry.Manifest, pluginRoot, host.workspaceRoot, executable, dataDir,
+		)
 		cmd = exec.Command(nodePath, args...)
 	default:
 		return nil, fmt.Errorf("runtime %s is not supported", entry.Manifest.Runtime)
@@ -655,6 +670,7 @@ func startPluginProcess(entry pluginRegistryEntry, host *pluginHost) (*pluginPro
 		"BYOP_PLUGIN_ID="+entry.ID,
 		"BYOP_PLUGIN_API="+pluginAPIVersion,
 		"BYOP_PLUGIN_RUNTIME="+entry.Manifest.Runtime,
+		"BYOP_PLUGIN_DATA_DIR="+dataDir,
 	)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

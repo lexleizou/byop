@@ -17,11 +17,21 @@ test("MCP publishes business schemas without _byop and injects source only at ca
     });
     assert.deepEqual(
       list.result.tools.map((tool) => tool.name),
-      ["table_describe", "table_query", "table_change", "table_history"],
+      [
+        "table_describe",
+        "table_query",
+        "table_change",
+        "table_undo",
+        "table_history",
+      ],
     );
     assert.equal(
       JSON.stringify(list.result.tools).includes("_byop"),
       false,
+    );
+    assert.match(
+      list.result.tools.find((tool) => tool.name === "table_query").description,
+      /\[byop-table-context:<contextId>\]/,
     );
 
     const unavailable = handler.handle({
@@ -71,6 +81,58 @@ test("MCP publishes business schemas without _byop and injects source only at ca
     assert.deepEqual(
       history.result.structuredContent.operations[0].source_message_ids,
       ["mcp-message"],
+    );
+
+    const undone = handler.handle({
+      jsonrpc: "2.0",
+      id: 5,
+      method: "tools/call",
+      params: {
+        name: "table_undo",
+        arguments: {
+          operation_id: changed.result.structuredContent.operation_id,
+          _byop: agentSource("mcp-undo-message"),
+        },
+      },
+    });
+    assert.equal(undone.result.isError, false);
+    assert.equal(
+      undone.result.structuredContent.undo_of,
+      changed.result.structuredContent.operation_id,
+    );
+
+    const captured = handler.handle({
+      jsonrpc: "2.0",
+      id: 6,
+      method: "tools/call",
+      params: {
+        name: "table_query",
+        arguments: {
+          capture_targets: true,
+          limit: 100,
+          _byop: agentSource("mcp-context-message"),
+        },
+      },
+    });
+    assert.equal(captured.result.isError, false);
+    assert.ok(captured.result.structuredContent.context_id);
+
+    const contextQuery = handler.handle({
+      jsonrpc: "2.0",
+      id: 7,
+      method: "tools/call",
+      params: {
+        name: "table_query",
+        arguments: {
+          context_id: captured.result.structuredContent.context_id,
+          limit: 100,
+        },
+      },
+    });
+    assert.equal(contextQuery.result.isError, false);
+    assert.equal(
+      contextQuery.result.structuredContent.context.captured_count,
+      3,
     );
   } finally {
     handler.close();

@@ -139,6 +139,12 @@ func scanPluginRegistry(rootSpecs []pluginRootSpec) pluginRegistry {
 			entry.Description = manifest.Description
 			entry.Manifest = manifest
 			entry.ContributionCount = manifest.contributionCount()
+			if extensionError := validatePluginAgentExtension(entry); extensionError != "" {
+				entry.Status = pluginInvalidManifest
+				entry.Error = extensionError
+				registry.Entries = append(registry.Entries, entry)
+				continue
+			}
 			if webViewError := validatePluginWebViewEntries(entry); webViewError != "" {
 				entry.Status = pluginInvalidManifest
 				entry.Error = webViewError
@@ -165,6 +171,16 @@ func scanPluginRegistry(rootSpecs []pluginRootSpec) pluginRegistry {
 		return left.SourceDirectory < right.SourceDirectory
 	})
 	return registry
+}
+
+func validatePluginAgentExtension(entry pluginRegistryEntry) string {
+	if entry.Manifest == nil || entry.Manifest.Contributes.AgentExtension == "" {
+		return ""
+	}
+	if _, _, err := resolvePluginPath(entry.SourceDirectory, entry.Manifest.Contributes.AgentExtension); err != nil {
+		return fmt.Sprintf("agent extension: %v", err)
+	}
+	return ""
 }
 
 func validatePluginWebViewEntries(entry pluginRegistryEntry) string {

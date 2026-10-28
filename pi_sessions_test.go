@@ -70,6 +70,13 @@ func TestDiscoverPiSessionsTitlesOrderingAndLongLines(t *testing.T) {
 		sessions[1].MessageCount != 2 {
 		t.Fatalf("unexpected second session: %#v", sessions[1])
 	}
+
+	contextTitle := piUserMessageTitle(json.RawMessage(
+		`{"role":"user","content":"Short prompt\n\nSelected rows\n[byop-table-context:ctx_123]"}`,
+	))
+	if contextTitle != "Short prompt Selected rows" {
+		t.Fatalf("context title = %q, marker must not be shown", contextTitle)
+	}
 }
 
 func TestDiscoverPiSessionsSkipsSymlinkedFile(t *testing.T) {

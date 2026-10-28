@@ -645,6 +645,7 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 						s.showNotice(text("chatAttachmentNotice"))
 					}
 					s.composerChoices(c)
+					s.composerTableContextChip(c)
 					s.composerContextChip(c)
 					if running && strings.TrimSpace(s.composerDraft) != "" {
 						ui.Spacer(c).Grow(1)
@@ -1104,6 +1105,34 @@ func (s *appState) composerContextChip(c *ui.Context) {
 	ui.Row(c).Key("composer-context").Shrink(0).Height(26).Padding(0, 8).
 		AlignItems(ui.Center).Children(func() {
 		components.Text(c, capacity).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
+	})
+}
+
+func (s *appState) composerTableContextChip(c *ui.Context) {
+	attachment := s.composerTableContext
+	if attachment == nil {
+		return
+	}
+	t := c.Theme()
+	removeLabel := text("chatRemoveTableContext")
+	ui.Row(c).Key("composer-table-context").Label(attachment.Label).Shrink(0).
+		MaxWidth(260).Height(26).Padding(0, 4, 0, 8).Radius(v12ChipRadius).
+		Border(v12BorderWidth, t.Border).AlignItems(ui.Center).Gap(4).Children(func() {
+		components.Text(c, attachment.Label).SingleLine().Ellipsis("…").
+			FontSize(fontSmall).TextColor(t.TextMuted).MinWidth(0).Shrink(1)
+		remove := ui.ButtonBase(c.Key("remove-table-context")).Size(18, 18).
+			Center().Radius(v12ChipRadius).Background(ui.Color{}).
+			TextColor(t.TextMuted).Label(removeLabel)
+		if remove.Hovered() || remove.Focused() {
+			remove.Background(t.SurfaceHover).TextColor(t.Text)
+		}
+		remove.Children(func() {
+			components.Icon(c, lu.X).Size(11, 11).TextColor(t.TextMuted)
+		})
+		components.Tooltip(c, remove, removeLabel)
+		if remove.Clicked() {
+			s.composerTableContext = nil
+		}
 	})
 }
 

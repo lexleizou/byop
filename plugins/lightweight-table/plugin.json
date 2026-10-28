@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "local.lightweight-table",
+  "name": "%manifestName%",
+  "version": "0.2.0",
+  "description": "%manifestDescription%",
+  "l10n": "l10n",
+  "runtime": "node",
+  "entry": "plugin.mjs",
+  "icon": "plugins",
+  "compatibility": {
+    "host": ">=0.15.0 <1.0.0",
+    "pluginApi": "1"
+  },
+  "contributes": {
+    "agentExtension": "pi-extension.mjs",
+    "navigation": [
+      {
+        "id": "table",
+        "title": "%navigationTitle%",
+        "icon": "plugins",
+        "view": "table.main"
+      }
+    ],
+    "webviews": [
+      {
+        "id": "table.main",
+        "title": "%webviewTitle%",
+        "location": "main",
+        "entry": "web/index.html"
+      }
+    ]
+  },
+  "activation": {
+    "events": [
+      "onWebView:table.main"
+    ]
+  },
+  "capabilities": {
+    "files": "none",
+    "network": false,
+    "process": "none"
+  }
+}

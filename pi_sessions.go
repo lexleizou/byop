@@ -372,7 +372,7 @@ func piUserMessageTitle(raw json.RawMessage) string {
 	if json.Unmarshal(raw, &message) != nil || message.Role != "user" {
 		return ""
 	}
-	text := contentText(message.Content)
+	text := displayTableContextPrompt(contentText(message.Content))
 	if strings.TrimSpace(text) == "" {
 		return ""
 	}
@@ -432,7 +432,7 @@ func rebuildChatFromPiMessages(rawMessages []json.RawMessage) ([]chatMessage, er
 		timestamp := piMessageTime(message.Timestamp)
 		switch message.Role {
 		case "user":
-			userText := contentText(message.Content)
+			userText := displayTableContextPrompt(contentText(message.Content))
 			if strings.TrimSpace(userText) == "" {
 				continue
 			}

@@ -47,7 +47,7 @@ const tools = [
   {
     name: "table_query",
     description:
-      "Read rows from the local bank table. Use stable row IDs and column IDs; no arbitrary SQL.",
+      "Read rows from the local bank table by filters or a fixed context. Use stable row and column IDs; no arbitrary SQL. When a user prompt ends with [byop-table-context:<contextId>], pass that value as context_id.",
     inputSchema: {
       type: "object",
       properties: {
@@ -57,6 +57,11 @@ const tools = [
           items: { type: "string" },
           minItems: 1,
         },
+        context_id: {
+          type: "string",
+          description:
+            "Fixed context ID, including the value from [byop-table-context:<contextId>].",
+        },
         filters: {
           type: "array",
           items: {
@@ -65,11 +70,36 @@ const tools = [
               column_id: { type: "string" },
               op: {
                 type: "string",
-                enum: ["eq", "contains", "is_null", "not_null"],
+                enum: [
+                  "eq",
+                  "neq",
+                  "contains",
+                  "not_contains",
+                  "is_null",
+                  "not_null",
+                  "gt",
+                  "gte",
+                  "lt",
+                  "lte",
+                  "between",
+                ],
               },
               value: {},
             },
             required: ["column_id", "op"],
+            additionalProperties: false,
+          },
+        },
+        search: { type: "string" },
+        sort: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              column_id: { type: "string" },
+              direction: { type: "string", enum: ["asc", "desc"] },
+            },
+            required: ["column_id", "direction"],
             additionalProperties: false,
           },
         },
@@ -78,9 +108,10 @@ const tools = [
           items: { type: "string" },
           minItems: 1,
         },
-        limit: { type: "integer", minimum: 1, maximum: 200 },
+        limit: { type: "integer", minimum: 1, maximum: 100 },
         offset: { type: "integer", minimum: 0 },
         sum_column_id: { type: "string" },
+        capture_targets: { type: "boolean" },
       },
       additionalProperties: false,
     },
@@ -117,6 +148,7 @@ const tools = [
           },
           minItems: 1,
         },
+        context_id: { type: "string" },
         values: {
           type: "object",
           properties: columnProperties,
@@ -126,6 +158,20 @@ const tools = [
         dry_run: { type: "boolean" },
       },
       required: ["action", "expected_schema_revision"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "table_undo",
+    description:
+      "Undo one committed data operation. Later changes to any target cause a version conflict.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        operation_id: { type: "string" },
+        dry_run: { type: "boolean" },
+      },
+      required: ["operation_id"],
       additionalProperties: false,
     },
   },
@@ -217,7 +263,7 @@ export function createMcpHandler(databasePath) {
           return response(message.id, {
             protocolVersion,
             capabilities: { tools: { listChanged: false } },
-            serverInfo: { name: "lightweight_table", version: "0.1.0" },
+            serverInfo: { name: "lightweight_table", version: "0.2.0" },
           });
         }
         case "ping":
@@ -235,6 +281,8 @@ export function createMcpHandler(databasePath) {
                 return response(message.id, toolResult(store.query(business, source)));
               case "table_change":
                 return response(message.id, toolResult(store.change(business, source)));
+              case "table_undo":
+                return response(message.id, toolResult(store.undo(business, source)));
               case "table_history":
                 return response(message.id, toolResult(store.history(business)));
               default:

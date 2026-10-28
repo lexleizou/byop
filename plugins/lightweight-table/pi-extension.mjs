@@ -1,4 +1,4 @@
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { SourceTracker } from "./src/source-tracker.mjs";
@@ -6,15 +6,46 @@ import { SourceTracker } from "./src/source-tracker.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "cli.mjs");
 const MCP_SERVER_NAME = "lightweight_table";
+const PLUGIN_ID = "local.lightweight-table";
 
-function configuredDatabasePath() {
-  const databasePath = process.env.BYOP_LIGHTWEIGHT_TABLE_DB;
-  if (!databasePath || databasePath.trim() === "") {
+export function configuredDatabasePath(env = process.env) {
+  const override = env.BYOP_LIGHTWEIGHT_TABLE_DB;
+  if (typeof override === "string" && override.trim() !== "") {
+    return resolve(override);
+  }
+  const rawDirectories = env.BYOP_PLUGIN_DATA_DIRS;
+  if (typeof rawDirectories !== "string" || rawDirectories.trim() === "") {
     throw new Error(
-      "BYOP_LIGHTWEIGHT_TABLE_DB must point to an independent lightweight-table SQLite file.",
+      "BYOP_PLUGIN_DATA_DIRS must include local.lightweight-table.",
     );
   }
-  return databasePath;
+  let directories;
+  try {
+    directories = JSON.parse(rawDirectories);
+  } catch (error) {
+    throw new Error(`BYOP_PLUGIN_DATA_DIRS is not valid JSON: ${error.message}`);
+  }
+  const dataDirectory = directories?.[PLUGIN_ID];
+  if (typeof dataDirectory !== "string" || dataDirectory.trim() === "") {
+    throw new Error(
+      "BYOP_PLUGIN_DATA_DIRS must include local.lightweight-table.",
+    );
+  }
+  return join(resolve(dataDirectory), "tables.sqlite");
+}
+
+export function mcpLaunchArgs(databasePath) {
+  const dataDirectory = dirname(resolve(databasePath));
+  return [
+    "--permission",
+    `--allow-fs-read=${HERE}`,
+    `--allow-fs-read=${dataDirectory}`,
+    `--allow-fs-write=${dataDirectory}`,
+    CLI,
+    "serve-mcp",
+    "--db",
+    resolve(databasePath),
+  ];
 }
 
 export default function lightweightTableExtension(pi) {
@@ -24,11 +55,11 @@ export default function lightweightTableExtension(pi) {
   pi.registerMcpServer(MCP_SERVER_NAME, {
     type: "stdio",
     command: process.execPath,
-    args: [CLI, "serve-mcp", "--db", databasePath],
+    args: mcpLaunchArgs(databasePath),
     cwd: HERE,
     exposure: "direct",
     description:
-      "Query and change the local BYOP lightweight table using stable row and column IDs.",
+      "Query, change, review, and undo the local BYOP lightweight table using stable row and column IDs.",
     timeout: 15,
   });
 

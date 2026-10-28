@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.14.0"
+	appVersion = "0.15.0"
 )
 
 func appBuildVersion() string {
@@ -230,6 +230,7 @@ type appState struct {
 	glassBlurDragOwner              string
 	glassBlurDragBase               int
 	composerDraft                   string
+	composerTableContext            *tableContextAttachment
 	pluginSearch                    string
 	pluginDetailsOpenID             string
 	pluginRegistry                  pluginRegistry
@@ -323,6 +324,8 @@ type appState struct {
 	queueClearPending   bool
 	runningSendPending  bool
 	runningSendPrompt   string
+	runningSendDisplay  string
+	runningSendContext  *tableContextAttachment
 	runningSendEchoSeen bool
 	pendingPiUserEcho   string
 	compacting          bool
@@ -430,6 +433,11 @@ func newAppState() *appState {
 				}
 			})
 		}),
+		pluginHostOpenChatHandler(func(pluginID string, request pluginOpenChatRequest) {
+			s.postUI(func() {
+				s.openPluginChat(request)
+			})
+		}),
 	)
 	s.setPluginRegistry(scanPluginRegistry(defaultPluginRoots()))
 	s.automations = newAutomationStore(configDir, registeredSessionLoopKeys(s.pluginRegistrySnapshot()))
@@ -481,7 +489,9 @@ func (s *appState) scanPlugins(announce bool) {
 		}()
 		return
 	}
+	pluginRuntimeBefore := registeredPiPluginSignature(s.pluginRegistrySnapshot())
 	s.setPluginRegistry(scanPluginRegistry(defaultPluginRoots()))
+	pluginRuntimeAfter := registeredPiPluginSignature(s.pluginRegistrySnapshot())
 	s.reconcilePluginWebViews()
 	s.prunePluginState()
 	s.plugins.invalidateSettingsCache()
@@ -498,6 +508,7 @@ func (s *appState) scanPlugins(announce bool) {
 	if s.automations != nil {
 		s.automations.refreshSessionLoopKeys(registeredSessionLoopKeys(s.pluginRegistrySnapshot()))
 	}
+	s.refreshPiPluginRuntimeAfterScan(pluginRuntimeBefore, pluginRuntimeAfter)
 	if !announce {
 		return
 	}
@@ -2400,12 +2411,14 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 		return
 	}
 
+	attachment := cloneTableContext(s.composerTableContext)
+	wirePrompt := tableContextPrompt(prompt, attachment)
 	s.resetFollowUpSuggestion()
 	s.cancelThinkingPending()
 	s.sessionGen++
 	gen := s.sessionGen
 	s.piSessionBusy = true
-	requestID, err := s.pi.Prompt(prompt, "")
+	requestID, err := s.pi.Prompt(wirePrompt, "")
 	if err != nil {
 		if gen == s.sessionGen {
 			s.piSessionBusy = false
@@ -2417,6 +2430,7 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 	}
 	s.resetRuntimeDiagnostics()
 	s.composerDraft = ""
+	s.clearTableContextIfMatches(attachment)
 	s.clearPiConnectingNotice()
 	if s.piSessionName == "" && s.localSessionTitle == "" {
 		s.localSessionTitle = localTemporarySessionTitle(prompt)
@@ -2427,16 +2441,17 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 	s.activeRequest = requestID
 	s.activePrompt = prompt
 	s.piSessionBusy = false
-	s.startAssistantPrompt(prompt)
+	s.startAssistantPrompt(wirePrompt)
 }
 
 func (s *appState) startAssistantPrompt(prompt string) {
+	displayPrompt := displayTableContextPrompt(prompt)
 	s.chat = append(s.chat,
 		chatMessage{
 			role: chatUser,
 			blocks: []chatBlock{{
 				kind: chatBlockText,
-				text: prompt,
+				text: displayPrompt,
 			}},
 			status: text("chatStatusSent"),
 		},
@@ -2474,6 +2489,8 @@ func (s *appState) sendRunningPrompt(prompt string, mode runningSendMode) {
 	if s.runningSendPending {
 		return
 	}
+	attachment := cloneTableContext(s.composerTableContext)
+	wirePrompt := tableContextPrompt(prompt, attachment)
 	mode = normalizeRunningSendMode(string(mode))
 	behavior := runningSendBehavior(mode)
 	client := s.pi
@@ -2483,15 +2500,17 @@ func (s *appState) sendRunningPrompt(prompt string, mode runningSendMode) {
 	runBefore := s.runID
 	runStateBefore := s.run
 	s.runningSendPending = true
-	s.runningSendPrompt = prompt
+	s.runningSendPrompt = wirePrompt
+	s.runningSendDisplay = prompt
+	s.runningSendContext = attachment
 	s.runningSendEchoSeen = false
 	s.composerDraft = ""
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		result, err := client.PromptRequest(ctx, prompt, behavior)
+		result, err := client.PromptRequest(ctx, wirePrompt, behavior)
 		s.postUI(func() {
-			s.completeRunningSend(client, prompt, mode, epoch, gen,
+			s.completeRunningSend(client, wirePrompt, mode, epoch, gen,
 				requestBefore, runBefore, runStateBefore, result, err)
 		})
 	}()
@@ -2504,13 +2523,20 @@ func (s *appState) completeRunningSend(client *piClient, prompt string, mode run
 	if !s.runningSendPending {
 		return false
 	}
+	displayPrompt := s.runningSendDisplay
+	if displayPrompt == "" {
+		displayPrompt = displayTableContextPrompt(prompt)
+	}
+	attachment := cloneTableContext(s.runningSendContext)
 	s.runningSendPending = false
 	echoSeen := s.runningSendEchoSeen
 	s.runningSendPrompt = ""
+	s.runningSendDisplay = ""
+	s.runningSendContext = nil
 	s.runningSendEchoSeen = false
 	if err != nil {
 		if strings.TrimSpace(s.composerDraft) == "" {
-			s.composerDraft = prompt
+			s.composerDraft = displayPrompt
 		}
 		if epoch == s.piEpoch && s.pi == client && gen == s.sessionGen &&
 			s.runActive() && s.activeRequest == requestBefore && s.runID == runBefore {
@@ -2533,15 +2559,16 @@ func (s *appState) completeRunningSend(client *piClient, prompt string, mode run
 		s.run = runStreaming
 		s.runID = result.RequestID
 		s.activeRequest = result.RequestID
-		s.activePrompt = prompt
+		s.activePrompt = displayPrompt
 	case "queued", "handled":
 	default:
-		s.composerDraft = prompt
+		s.composerDraft = displayPrompt
 		s.showNotice(textArgs("noticeRunningSendFailed", map[string]any{
 			"error": text("errorRunningSendUnavailable"),
 		}))
 		return false
 	}
+	s.clearTableContextIfMatches(attachment)
 	s.notice = textArgs("noticeRunningSendAccepted", map[string]any{
 		"mode": runningSendModeLabel(mode),
 	})
@@ -2606,6 +2633,8 @@ func (s *appState) resetRuntimeDiagnostics() {
 	s.queueClearPending = false
 	s.runningSendPending = false
 	s.runningSendPrompt = ""
+	s.runningSendDisplay = ""
+	s.runningSendContext = nil
 	s.runningSendEchoSeen = false
 	s.pendingPiUserEcho = ""
 	s.compacting = false
@@ -2697,8 +2726,8 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 			s.piError = uiErrorFromText(event.Error, text("errorPiMessageFailed"))
 		}
 	case piEventQueueUpdate:
-		s.queueSteering = append([]string(nil), event.QueueSteering...)
-		s.queueFollowUp = append([]string(nil), event.QueueFollowUp...)
+		s.queueSteering = displayTableContextPrompts(event.QueueSteering)
+		s.queueFollowUp = displayTableContextPrompts(event.QueueFollowUp)
 		s.queueSteeringCount = len(event.QueueSteering)
 		s.queueFollowUpCount = len(event.QueueFollowUp)
 	case piEventCompactStart:
@@ -2999,6 +3028,7 @@ func (s *appState) appendRunningUserMessage(value string) {
 	if s.runningSendPending && s.runningSendPrompt == value {
 		s.runningSendEchoSeen = true
 	}
+	value = displayTableContextPrompt(value)
 	if len(s.chat) > 0 && s.chat[len(s.chat)-1].role == chatAssistant {
 		s.markAssistantEnded()
 	}

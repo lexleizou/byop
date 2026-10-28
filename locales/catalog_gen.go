@@ -4814,6 +4814,22 @@ func (msgs Messages) ChatAttachmentNotice() string {
 	return Catalog.Format(msgs.locale, "chatAttachmentNotice", nil)
 }
 
+// ChatRemoveTableContext says "Remove table context"
+// in the language the app shows.
+//
+// Accessible label and tooltip for removing a table context attached to the
+// next message.
+func ChatRemoveTableContext() string { return In(i18n.Locale()).ChatRemoveTableContext() }
+
+// ChatRemoveTableContext says "Remove table context"
+// in the language of msgs.
+//
+// Accessible label and tooltip for removing a table context attached to the
+// next message.
+func (msgs Messages) ChatRemoveTableContext() string {
+	return Catalog.Format(msgs.locale, "chatRemoveTableContext", nil)
+}
+
 // ChatFollowUpHint says "Tab to use; Esc to dismiss"
 // in the language the app shows.
 //

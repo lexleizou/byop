@@ -8,6 +8,7 @@ import (
 )
 
 func TestPiClientArgsAddsOnlyExplicitExtensions(t *testing.T) {
+	t.Setenv("BYOP_PLUGINS_DIR", t.TempDir())
 	t.Setenv("BYOP_PI_EPHEMERAL", "")
 	t.Setenv("BYOP_PI_EXTENSIONS", "")
 	if got, want := piClientArgs(), []string{"--mode", "rpc"}; !reflect.DeepEqual(got, want) {

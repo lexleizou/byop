@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本 0.14.0：统一深色材质层级，壁纸作为根背景，导航玻璃继续直接采样壁纸；阅读区保持不透明深底，Composer、卡片、任务栏和浮层使用分层表面与一致的玻璃边缘。见 [P14 验证记录](docs/P14-validation.md)。P13b 的窗口拖动、侧栏调宽和列表间距继续保留，见 [P13b 验证记录](docs/P13b-validation.md)。P13 深色液态玻璃主题已加入壁纸、导航透明度、模糊和边缘折射可调，高对比与减少透明度回退规则保持不变；具体证据和限制见 [P13 验证记录](docs/P13-validation.md)。P12 完整界面、BYOP Radix 产品 token、分组设置与模型渠道流程继续保留。产品字号只使用 12/14/18 px，正文与代码为 14 px；可见边框为 0.5 px，必要过渡为 250 ms ease-out。Liquid Glass 只用于 chrome、导航和必要浮层，阅读区与 Composer 背景不透明。主题、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。插件平台继续遵守功能插件暂停约束；BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本 0.15.0：新增可安装的轻量表格插件，支持本地记录编辑、筛选、固定上下文发送到 Agent 和历史撤销；Pi 会话自动加载插件扩展，使用插件独立 SQLite 数据目录。见 [P15b 验证记录](docs/P15b-validation.md) 和 [插件说明](plugins/lightweight-table/README.md)。P14 已完成统一深色材质层级，壁纸作为根背景，导航玻璃继续直接采样壁纸；阅读区保持不透明深底，Composer、卡片、任务栏和浮层使用分层表面与一致的玻璃边缘。见 [P14 验证记录](docs/P14-validation.md)。P13b 的窗口拖动、侧栏调宽和列表间距继续保留，见 [P13b 验证记录](docs/P13b-validation.md)。P13 深色液态玻璃主题已加入壁纸、导航透明度、模糊和边缘折射可调，高对比与减少透明度回退规则保持不变；具体证据和限制见 [P13 验证记录](docs/P13-validation.md)。P12 完整界面、BYOP Radix 产品 token、分组设置与模型渠道流程继续保留。产品字号只使用 12/14/18 px，正文与代码为 14 px；可见边框为 0.5 px，必要过渡为 250 ms ease-out。Liquid Glass 只用于 chrome、导航和必要浮层，阅读区与 Composer 背景不透明。主题、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。轻量表格已按明确授权进入实施；其他功能插件继续暂停。BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -152,7 +152,9 @@ go run .
 BYOP_PI_PATH=/absolute/path/to/pi go run .
 ```
 
-P15a 轻量表格链路默认关闭。显式加载会话桥时，使用独立本地数据库和扩展路径：
+P15b 将 `plugins/lightweight-table` 发布文件安装到 `~/.byop/plugins/local.lightweight-table` 后，普通启动会自动显示“表格”入口并加载会话 MCP，无需配置环境变量。数据独立保存在 `~/.byop/plugin-data/local.lightweight-table/tables.sqlite`；设置 `BYOP_CONFIG_DIR` 时则使用该目录下的 `plugin-data/`。它不连接原扶摇数据库。
+
+开发和 P15a 独立链路验证仍可显式指定扩展与数据库：
 
 ```sh
 BYOP_PI_EXTENSIONS="$PWD/plugins/lightweight-table/pi-extension.mjs" \
@@ -160,10 +162,7 @@ BYOP_LIGHTWEIGHT_TABLE_DB=/path/under/AgentScratch/tables.sqlite \
 go run .
 ```
 
-`BYOP_PI_EXTENSIONS` 使用当前系统的路径列表分隔符，每个路径追加为 Pi
-`--extension`。该桥只注册当前会话的本地 stdio MCP，不修改全局 Pi
-`mcp.json`。seed JSON、四个 MCP 工具、SQLite 约束和真实 E2E 入口见
-[Lightweight Table](plugins/lightweight-table/README.md)。
+`BYOP_PI_EXTENSIONS` 使用当前系统的路径列表分隔符，每个路径追加为 Pi `--extension`。表格桥只注册当前会话的本地 stdio MCP，不修改全局 Pi `mcp.json`。五个 MCP 工具、数据目录、初始化和操作说明见 [Lightweight Table](plugins/lightweight-table/README.md)。
 
 macOS 上查找登录 shell PATH 使用非交互的 `/bin/zsh -lc`，不会读取 `.zshrc`。若 Pi 仅由 `.zshrc` 中的 nvm 配置提供，请设置 `BYOP_PI_PATH`，或把 Pi 安装到 `/opt/homebrew/bin`、`/usr/local/bin`、`~/.local/bin`、`~/.npm-global/bin` 等常见目录。
 

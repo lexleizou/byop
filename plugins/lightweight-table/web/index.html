@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body data-ready="false">
+    <main id="table-page" class="table-page">
+      <header class="page-header">
+        <div class="page-heading">
+          <h1 id="page-title" data-i18n="pageTitle"></h1>
+          <p id="page-subtitle" data-i18n="pageSubtitle"></p>
+        </div>
+        <div class="header-actions" role="toolbar">
+          <button id="add-row-button" class="button primary" type="button" data-action="add-row" data-i18n="addRow"></button>
+          <button id="send-chat-button" class="button" type="button" data-action="send-chat" data-i18n="sendToChat"></button>
+          <button id="bulk-set-button" class="button" type="button" data-action="bulk-set" data-i18n="setField"></button>
+          <button id="history-button" class="button" type="button" data-action="open-history" data-i18n="history"></button>
+          <button id="refresh-button" class="button icon-button" type="button" data-action="refresh" aria-label="" title="" data-i18n="refresh"></button>
+        </div>
+      </header>
+
+      <section class="query-bar" aria-label="">
+        <label class="field search-field">
+          <span data-i18n="searchLabel"></span>
+          <input id="search-input" type="search" autocomplete="off" data-action="set-search">
+        </label>
+        <label class="field">
+          <span data-i18n="filterLabel"></span>
+          <select id="filter-column-select" data-action="set-filter-column"></select>
+        </label>
+        <label id="filter-operator-field" class="field compact-field">
+          <span class="sr-only" data-i18n="filterLabel"></span>
+          <select id="filter-operator-select" data-action="set-filter-operator"></select>
+        </label>
+        <label id="filter-value-field" class="field">
+          <span class="sr-only" data-i18n="filterValue"></span>
+          <input id="filter-value-input" type="text" autocomplete="off" data-action="set-filter-value">
+        </label>
+        <button id="filter-clear-button" class="button quiet" type="button" data-action="clear-filter" data-i18n="clearFilters"></button>
+        <label class="field">
+          <span data-i18n="sortLabel"></span>
+          <select id="sort-column-select" data-action="set-sort-column"></select>
+        </label>
+        <label class="field compact-field">
+          <span class="sr-only" data-i18n="sortLabel"></span>
+          <select id="sort-direction-select" data-action="set-sort-direction">
+            <option value="asc"></option>
+            <option value="desc"></option>
+          </select>
+        </label>
+      </section>
+
+      <section class="table-shell" aria-live="polite">
+        <div id="loading-indicator" class="loading-indicator" role="status" data-i18n="loading"></div>
+        <div id="table-scroll" class="table-scroll" tabindex="0">
+          <table id="records-table">
+            <thead id="records-head"></thead>
+            <tbody id="records-body"></tbody>
+          </table>
+        </div>
+        <div id="empty-state" class="empty-state" hidden>
+          <strong id="empty-title" data-i18n="emptyTitle"></strong>
+          <span id="empty-body" data-i18n="emptyBody"></span>
+        </div>
+      </section>
+
+      <footer class="table-footer">
+        <div class="counts" aria-live="polite">
+          <span id="record-count"></span>
+          <span id="selected-count"></span>
+          <span id="filtered-count"></span>
+          <span id="sum-label"></span>
+        </div>
+        <div class="pagination" role="group">
+          <button id="page-previous" class="button quiet" type="button" data-action="page-previous" data-i18n="pagePrevious"></button>
+          <span id="page-status"></span>
+          <button id="page-next" class="button quiet" type="button" data-action="page-next" data-i18n="pageNext"></button>
+        </div>
+      </footer>
+      <p id="save-edit-hint" class="save-edit-hint" data-i18n="saveEditHint"></p>
+    </main>
+
+    <div id="drawer-backdrop" class="drawer-backdrop" data-action="close-drawer" hidden></div>
+
+    <aside id="history-drawer" class="drawer" aria-hidden="true" hidden>
+      <header class="drawer-header">
+        <div>
+          <h2 id="history-title" data-i18n="historyTitle"></h2>
+          <p id="history-description" data-i18n="historyDescription"></p>
+        </div>
+        <button id="history-close-button" class="button icon-button" type="button" data-action="close-drawer" data-i18n="close"></button>
+      </header>
+      <div id="history-list" class="history-list"></div>
+    </aside>
+
+    <aside id="row-editor-drawer" class="drawer" aria-hidden="true" hidden>
+      <header class="drawer-header">
+        <div>
+          <h2 id="row-editor-title" data-i18n="addTitle"></h2>
+          <p id="row-editor-description" data-i18n="addDescription"></p>
+        </div>
+        <button id="row-editor-close-button" class="button icon-button" type="button" data-action="close-drawer" data-i18n="close"></button>
+      </header>
+      <form id="row-editor-form" class="drawer-form">
+        <div id="row-editor-fields" class="form-fields"></div>
+        <footer class="drawer-actions">
+          <button id="row-editor-cancel-button" class="button quiet" type="button" data-action="close-drawer" data-i18n="cancel"></button>
+          <button id="row-editor-save-button" class="button primary" type="submit" data-action="save-new-row" data-i18n="save"></button>
+        </footer>
+      </form>
+    </aside>
+
+    <aside id="bulk-drawer" class="drawer" aria-hidden="true" hidden>
+      <header class="drawer-header">
+        <div>
+          <h2 id="bulk-title" data-i18n="bulkTitle"></h2>
+          <p id="bulk-description" data-i18n="bulkDescription"></p>
+        </div>
+        <button id="bulk-close-button" class="button icon-button" type="button" data-action="close-drawer" data-i18n="close"></button>
+      </header>
+      <form id="bulk-form" class="drawer-form">
+        <fieldset class="target-options">
+          <legend class="sr-only" data-i18n="bulkTitle"></legend>
+          <label><input id="bulk-target-selected" type="radio" name="bulk-target" value="selected" data-action="set-bulk-target"> <span id="bulk-target-selected-label"></span></label>
+          <label><input id="bulk-target-filtered" type="radio" name="bulk-target" value="filtered" data-action="set-bulk-target"> <span id="bulk-target-filtered-label"></span></label>
+        </fieldset>
+        <label class="field">
+          <span data-i18n="fieldLabel"></span>
+          <select id="bulk-field-select" data-action="set-bulk-field"></select>
+        </label>
+        <label class="field">
+          <span data-i18n="valueLabel"></span>
+          <input id="bulk-value-input" type="text" autocomplete="off" data-action="set-bulk-value">
+        </label>
+        <label class="checkbox-field">
+          <input id="bulk-clear-value" type="checkbox" data-action="set-bulk-blank">
+          <span data-i18n="blankValue"></span>
+        </label>
+        <footer class="drawer-actions">
+          <button id="bulk-cancel-button" class="button quiet" type="button" data-action="close-drawer" data-i18n="cancel"></button>
+          <button id="bulk-apply-button" class="button primary" type="submit" data-action="apply-bulk" data-i18n="apply"></button>
+        </footer>
+      </form>
+    </aside>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
