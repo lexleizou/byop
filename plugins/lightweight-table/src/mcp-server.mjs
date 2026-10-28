@@ -263,7 +263,7 @@ export function createMcpHandler(databasePath) {
           return response(message.id, {
             protocolVersion,
             capabilities: { tools: { listChanged: false } },
-            serverInfo: { name: "lightweight_table", version: "0.2.0" },
+            serverInfo: { name: "lightweight_table", version: "0.2.1" },
           });
         }
         case "ping":

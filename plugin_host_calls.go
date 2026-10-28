@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -52,6 +53,8 @@ type pluginTaskUpdate struct {
 	Tone     string
 }
 
+var pluginThemePresetCache sync.Map
+
 func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, params json.RawMessage) pluginHandleResult {
 	if entry.Manifest == nil {
 		return pluginHostFailure(pluginRPCOtherHostError, "plugin manifest is unavailable")
@@ -74,7 +77,13 @@ func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, pa
 			reduceTransparency = h.themeReduceTransparency()
 		}
 		reduceMotion := h.reducedMotion.Load()
-		return pluginHandleResult{Value: currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion)}
+		return pluginHandleResult{Value: currentPluginThemePayload(
+			dark,
+			high,
+			reduceTransparency,
+			reduceMotion,
+			currentCachedPluginThemePreset(h),
+		)}
 	case "host.getLocale":
 		if err := requireEmptyPluginParams(params); err != nil {
 			return pluginHostFailure(pluginRPCInvalidParams, err.Error())
@@ -421,16 +430,35 @@ func atomicWritePluginFile(filename string, content []byte) error {
 	return nil
 }
 
-func currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion bool) map[string]any {
-	palette := themePaletteWithContrast(dark, high)
-	statusColors := runtimeTokens.Color.Light
-	mode := "light"
-	if dark {
-		mode = "dark"
-		statusColors = runtimeTokens.Color.Dark
+func cachePluginThemePreset(host *pluginHost, preset appearancePreset) {
+	if host == nil {
+		return
 	}
-	statusText := func(tone string) string {
-		return pluginColorHex(tokenColor(statusColors, tone+"Text"))
+	pluginThemePresetCache.Store(host, normalizeAppearancePreset(string(preset)))
+}
+
+func currentCachedPluginThemePreset(host *pluginHost) appearancePreset {
+	if host != nil {
+		if preset, ok := pluginThemePresetCache.Load(host); ok {
+			return normalizeAppearancePreset(string(preset.(appearancePreset)))
+		}
+	}
+	return appearancePresetBYOP
+}
+
+func currentPluginThemePayload(
+	dark, high, reduceTransparency, reduceMotion bool,
+	presets ...appearancePreset,
+) map[string]any {
+	preset := appearancePresetBYOP
+	if len(presets) > 0 {
+		preset = normalizeAppearancePreset(string(presets[0]))
+	}
+	palette := themePaletteForAppearance(preset, dark, high, reduceTransparency)
+	metrics := metricsForAppearancePreset(preset)
+	mode := "light"
+	if palette.dark {
+		mode = "dark"
 	}
 	return map[string]any{
 		"mode":               mode,
@@ -448,38 +476,44 @@ func currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion bool
 			"success":      pluginColorHex(palette.success),
 			"warning":      pluginColorHex(palette.warning),
 			"danger":       pluginColorHex(palette.danger),
-			"successText":  statusText("success"),
-			"warningText":  statusText("warning"),
-			"dangerText":   statusText("danger"),
+			"successText":  pluginColorHex(palette.successText),
+			"warningText":  pluginColorHex(palette.warningText),
+			"dangerText":   pluginColorHex(palette.dangerText),
 			"focus":        pluginColorHex(palette.focus),
 		},
 		"fontSize": map[string]float32{
-			"caption": runtimeTokens.Font.Caption.Value,
-			"body":    runtimeTokens.Font.Body.Value,
-			"title":   runtimeTokens.Font.Title.Value,
-			"code":    runtimeTokens.Font.Code.Value,
+			"caption": metrics.captionFont,
+			"body":    metrics.bodyFont,
+			"title":   metrics.titleFont,
+			"code":    metrics.codeFont,
 		},
 		"borderWidth": tokenDimensionCSS(runtimeTokens.Dimension.Border),
 		"radius": map[string]float32{
 			"chip":    runtimeTokens.Dimension.Radius["chip"].Value,
-			"input":   runtimeTokens.Dimension.Radius["input"].Value,
+			"input":   metrics.inputRadius,
 			"overlay": runtimeTokens.Dimension.Radius["overlay"].Value,
 		},
 		"motion": map[string]any{
-			"duration": pluginMotionDuration(reduceMotion),
+			"duration": pluginMotionDuration(reduceMotion, preset),
 			"easing":   runtimeTokens.Motion.Easing,
 		},
 	}
 }
 
-func pluginMotionDuration(systemReduceMotion bool) float32 {
+func pluginMotionDuration(systemReduceMotion bool, presets ...appearancePreset) float32 {
 	if systemReduceMotion {
 		return runtimeTokens.Motion.ReducedDuration.Value
+	}
+	if len(presets) > 0 {
+		return float32(metricsForAppearancePreset(presets[0]).transitionMS)
 	}
 	return runtimeTokens.Motion.Duration.Value
 }
 
 func pluginColorHex(color ui.Color) string {
+	if color.A < 255 {
+		return fmt.Sprintf("#%02X%02X%02X%02X", color.R, color.G, color.B, color.A)
+	}
 	return fmt.Sprintf("#%02X%02X%02X", color.R, color.G, color.B)
 }
 

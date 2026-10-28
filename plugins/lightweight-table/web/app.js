@@ -1,6 +1,21 @@
 const bridge = window.byop;
 const PAGE_SIZE = 100;
 const SUPPORTED_LOCALES = new Set(["en", "zh-Hans"]);
+const MAIN_COLUMNS = Object.freeze([
+  { column_id: "institution", type: "text" },
+  { column_id: "category", type: "text" },
+  { column_id: "name", type: "text" },
+  { column_id: "principal", type: "number" },
+  { column_id: "actual_received", type: "number", missing: true },
+  { column_id: "remaining_due", type: "number", missing: true },
+  { column_id: "annualized_rate", type: "number", missing: true },
+  { column_id: "repayment_status", type: "text" },
+  { column_id: "plan_status", type: "text", missing: true },
+  { column_id: "next_due", type: "date", missing: true },
+]);
+const MAIN_COLUMN_BY_ID = new Map(
+  MAIN_COLUMNS.map((column) => [column.column_id, column]),
+);
 
 const dom = {
   body: document.body,
@@ -23,6 +38,7 @@ const dom = {
   emptyBody: document.querySelector("#empty-body"),
   recordCount: document.querySelector("#record-count"),
   selectedCount: document.querySelector("#selected-count"),
+  clearSelection: document.querySelector("#clear-selection-button"),
   filteredCount: document.querySelector("#filtered-count"),
   sumLabel: document.querySelector("#sum-label"),
   previous: document.querySelector("#page-previous"),
@@ -71,6 +87,7 @@ const state = {
     `view-${Date.now()}-${Math.random().toString(16).slice(2)}`,
   rowCommandId: null,
   rowAttemptedValue: null,
+  pendingCellClick: null,
   bulkCommandId: null,
   bulkContextId: null,
   bulkFilteredCount: 0,
@@ -234,10 +251,7 @@ function formatDecimal(value) {
 
 function cellText(column, value) {
   if (column.type === "number") {
-    const formatted = formatDecimal(value);
-    return formatted === "—"
-      ? formatted
-      : `${formatted}${column.config?.currency ? ` ${column.config.currency}` : ""}`;
+    return formatDecimal(value);
   }
   if (column.type === "date") {
     return value || "—";
@@ -455,16 +469,42 @@ function headerCell(label, className = "") {
   return th;
 }
 
+function mainColumnClass(column) {
+  return [
+    `${column.column_id.replaceAll("_", "-")}-cell`,
+    column.type === "number" ? "number-cell" : "",
+    column.missing ? "missing-cell" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function renderDraftValue(cell, draft) {
+  const value = document.createElement("span");
+  value.className = "cell-draft";
+  value.textContent =
+    draft.column.type === "number"
+      ? formatDecimal(draft.value)
+      : String(draft.value ?? "");
+  cell.replaceChildren(value);
+}
+
 function renderTable({ rebaseDrafts = false } = {}) {
   if (!state.description || !state.result) {
     return;
   }
+  const activeDraft = [...state.editors.values()].find(
+    (draft) => draft.editing,
+  );
   for (const draft of state.editors.values()) {
     draft.value = draft.input?.value ?? draft.value ?? draft.original;
     draft.wasFocused = draft.input === document.activeElement;
     draft.selectionStart = draft.input?.selectionStart ?? null;
     draft.selectionEnd = draft.input?.selectionEnd ?? null;
     draft.input = null;
+    if (draft !== activeDraft) {
+      draft.editing = false;
+    }
   }
   const renderedDraftKeys = new Set();
   dom.head.replaceChildren();
@@ -484,12 +524,9 @@ function renderTable({ rebaseDrafts = false } = {}) {
   selectHeader.append(selectPage);
   headerRow.append(selectHeader);
 
-  for (const column of state.description.columns) {
+  for (const column of MAIN_COLUMNS) {
     headerRow.append(
-      headerCell(
-        columnLabel(column.column_id),
-        `${column.column_id === "name" ? "name-cell" : ""}`,
-      ),
+      headerCell(columnLabel(column.column_id), mainColumnClass(column)),
     );
   }
   headerRow.append(headerCell(message("column.actions"), "actions-cell"));
@@ -513,18 +550,21 @@ function renderTable({ rebaseDrafts = false } = {}) {
     selectCell.append(checkbox);
     tr.append(selectCell);
 
-    for (const column of state.description.columns) {
+    for (const column of MAIN_COLUMNS) {
       const td = document.createElement("td");
       td.id = `cell-${row.row_id}-${column.column_id}`;
       td.dataset.action = "edit-cell";
       td.dataset.rowId = row.row_id;
       td.dataset.columnId = column.column_id;
-      td.dataset.editable = "true";
+      td.dataset.editable = column.missing ? "false" : "true";
       td.dataset.contextChanged = row.context_changed ? "true" : "false";
-      td.classList.add(`${column.column_id.replaceAll("_", "-")}-cell`);
+      td.classList.add(...mainColumnClass(column).split(" "));
+      td.tabIndex = 0;
       td.setAttribute(
         "aria-label",
-        message("editCellAria", { column: columnLabel(column.column_id) }),
+        message(column.missing ? "readOnlyCellAria" : "editCellAria", {
+          column: columnLabel(column.column_id),
+        }),
       );
       const draftKey = `${row.row_id}:${column.column_id}`;
       const draft = state.editors.get(draftKey);
@@ -538,12 +578,19 @@ function renderTable({ rebaseDrafts = false } = {}) {
           draft.lastSubmittedValue = null;
         }
         draft.column = column;
-        mountCellEditor(td, draft);
+        if (draft.editing) {
+          mountCellEditor(td, draft);
+        } else {
+          renderDraftValue(td, draft);
+        }
         tr.append(td);
         continue;
       }
-      const value = row.values[column.column_id];
-      if (column.column_id === "repayment_status" && value) {
+      const value = column.missing ? null : row.values[column.column_id];
+      if (column.missing) {
+        td.textContent = message("notImported");
+        td.title = message("missingFieldHint");
+      } else if (column.column_id === "repayment_status" && value) {
         const badge = document.createElement("span");
         badge.className = "status-badge";
         badge.textContent = localizedValue(column.column_id, value);
@@ -551,7 +598,9 @@ function renderTable({ rebaseDrafts = false } = {}) {
       } else {
         td.textContent = cellText(column, value);
       }
-      td.title = value === null || value === undefined ? "" : String(value);
+      if (!column.missing) {
+        td.title = value === null || value === undefined ? "" : String(value);
+      }
       tr.append(td);
     }
 
@@ -601,12 +650,13 @@ function renderTable({ rebaseDrafts = false } = {}) {
   dom.selectedCount.textContent = message("selectedCount", {
     count: state.selected.size,
   });
+  dom.clearSelection.disabled = state.selected.size === 0;
   dom.filteredCount.textContent = message("filteredCount", {
     count: state.result.matched_count,
   });
   dom.sumLabel.textContent = `${message("sumLabel")}: ${formatDecimal(
     state.result.sum?.value ?? "0.00",
-  )} ${state.result.sum?.currency ?? "CNY"}`;
+  )}`;
   dom.pageStatus.textContent = message("pageStatus", {
     page: Math.min(state.page, pageCount),
     pages: pageCount,
@@ -642,6 +692,9 @@ function mountCellEditor(cell, draft, { focus = false } = {}) {
   const input = document.createElement("input");
   input.id = `cell-editor-${draft.row.row_id}-${draft.column.column_id}`;
   input.className = "cell-editor";
+  if (draft.column.type === "number") {
+    input.classList.add("number-cell");
+  }
   input.type = draft.column.type === "date" ? "date" : "text";
   if (draft.column.type === "number") {
     input.inputMode = "decimal";
@@ -650,6 +703,7 @@ function mountCellEditor(cell, draft, { focus = false } = {}) {
   input.dataset.action = "edit-cell-input";
   input.disabled = draft.saving;
   draft.input = input;
+  draft.editing = true;
   cell.replaceChildren(input);
 
   input.addEventListener("compositionstart", () => {
@@ -708,12 +762,35 @@ function mountCellEditor(cell, draft, { focus = false } = {}) {
 }
 
 function beginCellEdit(cell) {
-  if (cell.querySelector("input")) {
+  const displayColumn = MAIN_COLUMN_BY_ID.get(cell.dataset.columnId);
+  if (!displayColumn || displayColumn.missing) {
     return;
   }
+  const activeDraft = state.editors.values().next().value;
+  if (activeDraft) {
+    const value =
+      activeDraft.input?.value ??
+      activeDraft.value ??
+      activeDraft.original;
+    activeDraft.value = value;
+    if (value !== activeDraft.original) {
+      if (activeDraft.editing && activeDraft.input?.isConnected) {
+        activeDraft.input.focus();
+        activeDraft.input.select();
+      } else {
+        const draftCell = document.querySelector(
+          `#cell-${CSS.escape(activeDraft.row.row_id)}-${CSS.escape(activeDraft.column.column_id)}`,
+        );
+        mountCellEditor(draftCell, activeDraft, { focus: true });
+      }
+      return;
+    }
+    closeCellEdit(activeDraft);
+  }
   const row = rowByID(cell.dataset.rowId);
-  const column = columnByID(cell.dataset.columnId);
-  if (!row || !column) {
+  const schemaColumn = columnByID(cell.dataset.columnId);
+  const column = { ...displayColumn, schemaColumn };
+  if (!row || !schemaColumn) {
     return;
   }
   const original = row.values[column.column_id] ?? "";
@@ -728,6 +805,7 @@ function beginCellEdit(cell) {
     lastSubmittedValue: null,
     composing: false,
     saving: false,
+    editing: true,
     wasFocused: false,
     selectionStart: null,
     selectionEnd: null,
@@ -752,6 +830,7 @@ function closeCellEdit(draft, { triggerRefresh = true } = {}) {
     } else {
       td.textContent = cellText(column, value);
     }
+    td.title = value === null || value === undefined ? "" : String(value);
   }
   if (
     triggerRefresh &&
@@ -766,9 +845,32 @@ function cancelCellEdit(draft) {
   closeCellEdit(draft);
 }
 
+function settleCellDraft() {
+  const draft = state.editors.values().next().value;
+  if (!draft) {
+    return;
+  }
+  const value = draft.input?.value ?? draft.value ?? draft.original;
+  draft.value = value;
+  if (value !== draft.original) {
+    const cell = document.querySelector(
+      `#cell-${CSS.escape(draft.row.row_id)}-${CSS.escape(draft.column.column_id)}`,
+    );
+    if (cell) {
+      draft.editing = false;
+      draft.input = null;
+      renderDraftValue(cell, draft);
+    }
+    return;
+  }
+  closeCellEdit(draft);
+}
+
 function adjacentCellTarget(draft, backwards) {
   const rows = state.result?.rows ?? [];
-  const columns = state.description?.columns ?? [];
+  const columns = MAIN_COLUMNS.filter(
+    (column) => !column.missing && columnByID(column.column_id),
+  );
   const rowIndex = rows.findIndex((row) => row.row_id === draft.row.row_id);
   const columnIndex = columns.findIndex(
     (column) => column.column_id === draft.column.column_id,
@@ -861,6 +963,7 @@ async function commitCellEdit(draft, moveFocus, backwards = false) {
 }
 
 function selectPage(checked) {
+  cancelPendingCellClick();
   for (const row of state.result?.rows ?? []) {
     if (checked) {
       state.selected.add(row.row_id);
@@ -872,6 +975,7 @@ function selectPage(checked) {
 }
 
 function selectRow(rowID, checked) {
+  cancelPendingCellClick();
   if (checked) {
     state.selected.add(rowID);
   } else {
@@ -915,11 +1019,60 @@ function updateSelectionUI() {
   dom.selectedCount.textContent = message("selectedCount", {
     count: state.selected.size,
   });
+  dom.clearSelection.disabled = state.selected.size === 0;
   if (state.openDrawer === dom.bulkDrawer) {
     dom.bulkTargetSelectedLabel.textContent = message("selectedCount", {
       count: state.bulkSelectedTargets.length,
     });
   }
+}
+
+function toggleRowSelection(rowID) {
+  selectRow(rowID, !state.selected.has(rowID));
+}
+
+function clearSelection() {
+  cancelPendingCellClick();
+  state.selected.clear();
+  updateSelectionUI();
+}
+
+function scheduleRowSelectionToggle(cell) {
+  const rowID = cell.dataset.rowId;
+  const columnID = cell.dataset.columnId;
+  settlePendingCellClick();
+  const timer = setTimeout(() => {
+    if (state.pendingCellClick?.timer !== timer) {
+      return;
+    }
+    state.pendingCellClick = null;
+    toggleRowSelection(rowID);
+  }, 180);
+  state.pendingCellClick = { rowID, columnID, timer };
+}
+
+function settlePendingCellClick() {
+  const pending = state.pendingCellClick;
+  if (!pending) {
+    return;
+  }
+  state.pendingCellClick = null;
+  clearTimeout(pending.timer);
+  toggleRowSelection(pending.rowID);
+}
+
+function cancelPendingCellClick(cell = null) {
+  const pending = state.pendingCellClick;
+  if (
+    !pending ||
+    (cell &&
+      (pending.rowID !== cell.dataset.rowId ||
+        pending.columnID !== cell.dataset.columnId))
+  ) {
+    return;
+  }
+  state.pendingCellClick = null;
+  clearTimeout(pending.timer);
 }
 
 async function deleteRow(rowID) {
@@ -949,6 +1102,7 @@ async function deleteRow(rowID) {
 }
 
 function openDrawer(name) {
+  settleCellDraft();
   for (const drawer of [dom.historyDrawer, dom.rowDrawer, dom.bulkDrawer]) {
     drawer.hidden = drawer !== name;
     drawer.setAttribute("aria-hidden", drawer === name ? "false" : "true");
@@ -1389,6 +1543,29 @@ async function applyLocale(locale) {
 }
 
 document.addEventListener("click", (event) => {
+  const cell = event.target.closest("input")
+    ? null
+    : event.target.closest("td[data-action='edit-cell']");
+  if (cell) {
+    cell.focus({ preventScroll: true });
+    const draft = state.editors.values().next().value;
+    const sameDraft =
+      draft &&
+      draft.row.row_id === cell.dataset.rowId &&
+      draft.column.column_id === cell.dataset.columnId;
+    if (!sameDraft) {
+      settleCellDraft();
+    }
+    if (event.detail > 1) {
+      cancelPendingCellClick(cell);
+    } else {
+      scheduleRowSelectionToggle(cell);
+    }
+  } else if (
+    !event.target.closest("button, input, select, label, aside, [role='toolbar']")
+  ) {
+    settleCellDraft();
+  }
   const actionElement = event.target.closest("[data-action]");
   if (!actionElement) {
     return;
@@ -1410,6 +1587,8 @@ document.addEventListener("click", (event) => {
     });
   } else if (action === "clear-filter") {
     resetFilterInputs();
+  } else if (action === "clear-selection") {
+    clearSelection();
   } else if (action === "page-previous") {
     if (state.page > 1) {
       state.page -= 1;
@@ -1418,8 +1597,6 @@ document.addEventListener("click", (event) => {
   } else if (action === "page-next") {
     state.page += 1;
     void loadQuery();
-  } else if (action === "edit-cell") {
-    beginCellEdit(actionElement);
   } else if (action === "delete-row") {
     void deleteRow(actionElement.dataset.rowId);
   } else if (action === "close-drawer") {
@@ -1427,6 +1604,15 @@ document.addEventListener("click", (event) => {
   } else if (action === "undo-operation") {
     void undoOperation(actionElement.dataset.operationId);
   }
+});
+
+dom.table.addEventListener("dblclick", (event) => {
+  const cell = event.target.closest("td[data-action='edit-cell']");
+  if (!cell) {
+    return;
+  }
+  cancelPendingCellClick(cell);
+  beginCellEdit(cell);
 });
 
 document.addEventListener("change", (event) => {
@@ -1482,8 +1668,21 @@ dom.bulkForm.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && state.openDrawer && !event.target.matches("input")) {
-    closeDrawer();
+  if (event.key === "Escape") {
+    const draft = state.editors.values().next().value;
+    if (!event.target.matches("input") && draft) {
+      event.preventDefault();
+      cancelCellEdit(draft);
+    } else if (!event.target.matches("input") && state.openDrawer) {
+      closeDrawer();
+    } else if (!event.target.matches("input")) {
+      clearSelection();
+    }
+    return;
+  }
+  if (event.key === "Enter" && event.target.matches("td[data-action='edit-cell']")) {
+    event.preventDefault();
+    beginCellEdit(event.target);
   }
 });
 

@@ -97,13 +97,13 @@ test("plugin worker serves the WebView API and calls host.openChat with a fixed 
       locale: "en",
     });
     assert.equal(english.locale, "en");
-    assert.equal(english.messages.pageTitle, "Lightweight Table");
+    assert.equal(english.messages.pageTitle, "Fuyao");
     const chinese = await plugin.message({
       action: "table.locale",
       locale: "zh-Hans",
     });
     assert.equal(chinese.locale, "zh-Hans");
-    assert.equal(chinese.messages.pageTitle, "轻量表格");
+    assert.equal(chinese.messages.pageTitle, "扶摇");
 
     const boot = await plugin.message({ action: "table.bootstrap" });
     assert.equal(boot.summary.row_count, 3);

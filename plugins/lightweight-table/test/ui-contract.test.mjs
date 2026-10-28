@@ -32,8 +32,16 @@ test("en and zh-Hans expose the same complete UI locale keys", async () => {
     "sendToChat",
     "setField",
     "history",
+    "clearSelection",
+    "notImported",
+    "readOnlyCellAria",
     "column.name",
     "column.repayment_status",
+    "column.actual_received",
+    "column.remaining_due",
+    "column.annualized_rate",
+    "column.plan_status",
+    "column.next_due",
   ]) {
     assert.equal(typeof en[key], "string");
     assert.equal(typeof zh[key], "string");
@@ -51,6 +59,7 @@ test("WebView uses the worker locale action and sets its ready flag", async () =
     "add-row-button",
     "send-chat-button",
     "bulk-set-button",
+    "clear-selection-button",
     "history-button",
     "refresh-button",
     "search-input",
@@ -116,18 +125,28 @@ test("bulk editor captures one fixed context and selected revisions before apply
   assert.match(app, /bulkForm\.addEventListener\("change", bulkInputChanged\)/);
 });
 
-test("table redraw remounts drafts and refreshes after the last draft closes", async () => {
+test("table redraw remounts the active draft and refreshes after it closes", async () => {
   const app = await readFile(join(PLUGIN_DIR, "web", "app.js"), "utf8");
   const render = functionSource(app, "renderTable");
+  const settle = functionSource(app, "settleCellDraft");
   const close = functionSource(app, "closeCellEdit");
   const load = functionSource(app, "loadQuery");
   const selectPage = functionSource(app, "selectPage");
   const selectRow = functionSource(app, "selectRow");
 
   assert.match(render, /draft\.value = draft\.input\?\.value/);
+  assert.match(render, /const activeDraft = \[\.\.\.state\.editors\.values\(\)\]\.find/);
+  assert.match(render, /draft !== activeDraft[\s\S]*draft\.editing = false/);
   assert.match(render, /draft\.row = row/);
   assert.match(render, /draft\.commandId = newCommandId\(\)/);
   assert.match(render, /mountCellEditor\(td, draft\)/);
+  assert.match(settle, /draft\.editing = false/);
+  assert.match(settle, /renderDraftValue\(cell, draft\)/);
+  assert.match(
+    app,
+    /draft\.column\.type === "number"[\s\S]*formatDecimal\(draft\.value\)[\s\S]*String\(draft\.value \?\? ""\)/,
+  );
+  assert.match(app, /input\.classList\.add\("number-cell"\)/);
   assert.match(load, /state\.editors\.size > 0/);
   assert.match(load, /!preserveDrafts/);
   assert.match(load, /state\.pendingRefresh = true/);
@@ -138,4 +157,182 @@ test("table redraw remounts drafts and refreshes after the last draft closes", a
   assert.doesNotMatch(selectPage, /renderTable\(/);
   assert.doesNotMatch(selectRow, /renderTable\(/);
   assert.match(app, /preserveDrafts: true/);
+});
+
+test("P15b.1 row selection and cell editing have separate lifecycles", async () => {
+  const app = await readFile(join(PLUGIN_DIR, "web", "app.js"), "utf8");
+  const html = await readFile(join(PLUGIN_DIR, "web", "index.html"), "utf8");
+  const css = await readFile(join(PLUGIN_DIR, "web", "style.css"), "utf8");
+  const begin = functionSource(app, "beginCellEdit");
+  const settle = functionSource(app, "settleCellDraft");
+  const clear = functionSource(app, "clearSelection");
+  const sumMatch = app.match(
+    /dom\.sumLabel\.textContent = `\$\{message\("sumLabel"\)\}: \$\{formatDecimal\(([\s\S]*?)\)\}`;/,
+  );
+
+  assert.match(app, /globalThis\.crypto\?\.randomUUID/);
+  assert.doesNotMatch(begin, /if \(cell\.querySelector\("input"\)\)/);
+  assert.match(begin, /const activeDraft = state\.editors\.values\(\)\.next\(\)\.value/);
+  assert.match(begin, /mountCellEditor\(draftCell, activeDraft, \{ focus: true \}\)/);
+  assert.match(settle, /draft\.editing = false/);
+  assert.match(settle, /renderDraftValue\(cell, draft\)/);
+  assert.match(clear, /state\.selected\.clear\(\)/);
+  assert.match(app, /dom\.table\.addEventListener\("dblclick"/);
+  assert.match(app, /event\.target\.closest\("input"\)[\s\S]*\? null/);
+  assert.match(app, /event\.target\.closest\("td\[data-action='edit-cell'\]"\)/);
+  assert.match(app, /event\.key === "Enter"[\s\S]*beginCellEdit\(event\.target\)/);
+  assert.match(app, /event\.key === "Escape"[\s\S]*cancelCellEdit\(draft\)/);
+  assert.match(app, /event\.key === "Escape"[\s\S]*clearSelection\(\)/);
+  assert.match(html, /data-action="clear-selection"/);
+  assert.match(app, /"institution"[\s\S]*"category"[\s\S]*"name"[\s\S]*"principal"/);
+  assert.match(app, /"actual_received"[\s\S]*"remaining_due"[\s\S]*"annualized_rate"/);
+  assert.match(app, /"plan_status"[\s\S]*"next_due"/);
+  assert.doesNotMatch(app, /sumLabel[\s\S]{0,200}CNY/);
+  assert.ok(sumMatch, "principal total must render without a currency suffix");
+  assert.match(css, /\.number-cell,[\s\S]*text-align: right/);
+  assert.match(css, /table \{[\s\S]*min-width: 1640px/);
+  assert.match(css, /\.number-cell,[\s\S]*min-width: 150px[\s\S]*max-width: 150px/);
+  assert.match(css, /\.plan-status-cell \{[\s\S]*width: 150px/);
+  assert.match(css, /\.next-due-cell \{[\s\S]*width: 140px/);
+  assert.match(css, /text-align: right/);
+});
+
+test("P15b.1 pending single-click cannot override clear or explicit selection", async () => {
+  const app = await readFile(join(PLUGIN_DIR, "web", "app.js"), "utf8");
+  const names = [
+    "scheduleRowSelectionToggle",
+    "settlePendingCellClick",
+    "cancelPendingCellClick",
+    "clearSelection",
+    "selectRow",
+    "selectPage",
+  ];
+  const source = names.map((name) => functionSource(app, name)).join("\n");
+  let nextTimer = 0;
+  const timers = new Map();
+  const setTimeoutFake = (callback, delay) => {
+    const id = ++nextTimer;
+    timers.set(id, { callback, delay });
+    return id;
+  };
+  const clearTimeoutFake = (id) => {
+    timers.delete(id);
+  };
+  const runDue = (delay) => {
+    for (const [id, timer] of [...timers]) {
+      if (timer.delay <= delay) {
+        timers.delete(id);
+        timer.callback();
+      }
+    }
+  };
+  const lifecycle = new Function(
+    "state",
+    "toggleRowSelection",
+    "updateSelectionUI",
+    "dom",
+    "CSS",
+    "setTimeout",
+    "clearTimeout",
+    `${source}
+    return {
+      scheduleRowSelectionToggle,
+      cancelPendingCellClick,
+      clearSelection,
+      selectRow,
+      selectPage,
+    };`,
+  );
+  const makeCell = (rowID, columnID = "name") => ({
+    dataset: { rowId: rowID, columnId: columnID },
+  });
+  const createState = () => ({
+    selected: new Set(),
+    pendingCellClick: null,
+    result: { rows: [{ row_id: "row-a" }, { row_id: "row-b" }] },
+  });
+
+  {
+    const state = createState();
+    const clearSelection = () =>
+      state.selected.clear();
+    const api = lifecycle(
+      state,
+      (rowID) => {
+        if (state.selected.has(rowID)) {
+          state.selected.delete(rowID);
+        } else {
+          state.selected.add(rowID);
+        }
+      },
+      () => {},
+      {
+        bodyRows: { querySelector: () => null },
+        selectedCount: { textContent: "" },
+        clearSelection: { disabled: false },
+      },
+      { escape: (value) => value },
+      setTimeoutFake,
+      clearTimeoutFake,
+    );
+    api.scheduleRowSelectionToggle(makeCell("row-a"));
+    clearSelection();
+    api.clearSelection();
+    runDue(250);
+    assert.equal(state.selected.size, 0);
+  }
+
+  {
+    const state = createState();
+    const api = lifecycle(
+      state,
+      (rowID) => {
+        if (state.selected.has(rowID)) {
+          state.selected.delete(rowID);
+        } else {
+          state.selected.add(rowID);
+        }
+      },
+      () => {},
+      {
+        bodyRows: { querySelector: () => null },
+        selectedCount: { textContent: "" },
+        clearSelection: { disabled: false },
+      },
+      { escape: (value) => value },
+      setTimeoutFake,
+      clearTimeoutFake,
+    );
+    api.scheduleRowSelectionToggle(makeCell("row-a"));
+    api.selectRow("row-b", true);
+    runDue(250);
+    assert.deepEqual([...state.selected], ["row-b"]);
+  }
+
+  {
+    const state = createState();
+    const api = lifecycle(
+      state,
+      (rowID) => {
+        if (state.selected.has(rowID)) {
+          state.selected.delete(rowID);
+        } else {
+          state.selected.add(rowID);
+        }
+      },
+      () => {},
+      {
+        bodyRows: { querySelector: () => null },
+        selectedCount: { textContent: "" },
+        clearSelection: { disabled: false },
+      },
+      { escape: (value) => value },
+      setTimeoutFake,
+      clearTimeoutFake,
+    );
+    api.scheduleRowSelectionToggle(makeCell("row-a"));
+    api.scheduleRowSelectionToggle(makeCell("row-b"));
+    runDue(250);
+    assert.deepEqual([...state.selected], ["row-a", "row-b"]);
+  }
 });

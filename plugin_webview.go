@@ -153,7 +153,14 @@ func (s *appState) ensurePluginWebView(
 			preset, dark, high, reduceTransparency,
 		).background),
 		Page: mygo.PageOptions{
-			PreloadScript: pluginWebViewBridgeScript(dark, high, reduceTransparency, reduceMotion, locale),
+			PreloadScript: pluginWebViewBridgeScript(
+				dark,
+				high,
+				reduceTransparency,
+				reduceMotion,
+				locale,
+				preset,
+			),
 		},
 	})
 	if err != nil {
@@ -209,9 +216,16 @@ func (s *appState) ensurePluginWebView(
 		dark := s.pluginWebViewDark
 		high := s.pluginWebViewHighContrast
 		reduceTransparency := s.pluginWebViewReduceTransparency
+		preset := s.pluginWebViewPreset
 		reduceMotion := s.reducedMotionActive(currentAppearanceReduceMotion())
 		s.pluginWebViewsMu.RUnlock()
-		_ = pluginWebViewThemeEvent.EmitPage(page, currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion))
+		_ = pluginWebViewThemeEvent.EmitPage(page, currentPluginThemePayload(
+			dark,
+			high,
+			reduceTransparency,
+			reduceMotion,
+			preset,
+		))
 		_ = pluginWebViewLocaleEvent.EmitPage(page, currentPluginLocalePayload(s.locale()))
 	})
 	page.OnDidFailLoad(func(loadErr *mygo.LoadError) {
@@ -446,6 +460,7 @@ func (s *appState) syncPluginWebViewTheme(dark, high, reduceTransparency bool, e
 	}
 	s.pluginWebViewsMu.Lock()
 	preset := s.currentAppearancePreset()
+	cachePluginThemePreset(s.plugins, preset)
 	if s.pluginWebViewDark == dark && s.pluginWebViewHighContrast == high &&
 		s.pluginWebViewReduceTransparency == reduceTransparency &&
 		s.pluginWebViewPreset == preset {
@@ -462,7 +477,7 @@ func (s *appState) syncPluginWebViewTheme(dark, high, reduceTransparency bool, e
 	}
 	s.pluginWebViewsMu.Unlock()
 
-	payload := currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion)
+	payload := currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion, preset)
 	background := pluginColorHex(themePaletteForAppearance(
 		preset, dark, high, reduceTransparency,
 	).background)
@@ -656,8 +671,18 @@ func currentPluginLocalePayload(locale string) map[string]any {
 	return map[string]any{"locale": fallback(strings.TrimSpace(locale), "en")}
 }
 
-func pluginWebViewBridgeScript(dark, high, reduceTransparency, reduceMotion bool, locale string) string {
-	initialTheme, _ := json.Marshal(currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion))
+func pluginWebViewBridgeScript(
+	dark, high, reduceTransparency, reduceMotion bool,
+	locale string,
+	presets ...appearancePreset,
+) string {
+	initialTheme, _ := json.Marshal(currentPluginThemePayload(
+		dark,
+		high,
+		reduceTransparency,
+		reduceMotion,
+		presets...,
+	))
 	initialLocale, _ := json.Marshal(currentPluginLocalePayload(locale))
 	return fmt.Sprintf(`(() => {
   "use strict";

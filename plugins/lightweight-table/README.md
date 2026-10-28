@@ -1,6 +1,6 @@
-# BYOP Lightweight Table
+# BYOP Fuyao
 
-P15b adds a normal BYOP Tables WebView on top of the P15a Node data layer.
+Fuyao adds a normal BYOP WebView on top of the P15a Node data layer.
 The plugin uses native HTML and JavaScript, `window.byop.postMessage`, the
 existing theme tokens, and an independent SQLite file. It has no build step,
 grid dependency, network access, approval flow, clear-all action, CSV, or
@@ -8,6 +8,10 @@ XLSX support.
 
 ## Included flow
 
+- V4 debt columns in display order, with unavailable fields marked read-only
+  and not imported.
+- A single cell click toggles the row selection; double-click or Enter starts
+  one inline editor. Escape cancels an editor or clears the row selection.
 - Compact business table with horizontal scrolling and a narrow-window layout.
 - Server-side search, one typed filter, sorting, 100-row pages, and an exact
   principal total for every matching row.

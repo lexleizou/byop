@@ -207,7 +207,7 @@ select[hidden],
 
 table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 1640px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -300,6 +300,37 @@ td.checkbox-cell {
   font-variant-numeric: tabular-nums;
 }
 
+.number-cell,
+th.number-cell,
+td.number-cell {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-status-cell {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+}
+
+.repayment-status-cell {
+  width: 128px;
+}
+
+.next-due-cell {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+  font-variant-numeric: tabular-nums;
+}
+
+.missing-cell {
+  color: var(--byop-muted, GrayText);
+}
+
 .date-cell {
   width: 112px;
   font-variant-numeric: tabular-nums;
@@ -321,6 +352,23 @@ td[data-context-changed="true"] {
   border: 1px solid var(--byop-focus, Highlight);
   border-radius: 4px;
   background: var(--byop-background, Canvas);
+}
+
+.cell-editor.number-cell {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-draft {
+  display: inline-block;
+  min-width: 4ch;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--byop-warning, Mark) 12%, transparent);
+  font-variant-numeric: tabular-nums;
 }
 
 .row-delete {
@@ -408,8 +456,11 @@ td[data-context-changed="true"] {
 }
 
 #sum-label {
+  min-width: 112px;
+  margin-left: auto;
   color: var(--byop-text, CanvasText);
   font-weight: 650;
+  text-align: right;
 }
 
 #page-status {
