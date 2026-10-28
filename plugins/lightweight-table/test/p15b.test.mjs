@@ -63,7 +63,7 @@ test("P15b page command IDs replay once and fixed context versions reject later 
     const rowID = summary.row_ids[0];
     const command = {
       action: "update",
-      expected_schema_revision: 1,
+      expected_schema_revision: 2,
       targets: [{ row_id: rowID, expected_revision: 1 }],
       values: { repayment_status: "repaying" },
     };
@@ -93,7 +93,7 @@ test("P15b page command IDs replay once and fixed context versions reject later 
     store.change(
       {
         action: "update",
-        expected_schema_revision: 1,
+        expected_schema_revision: 2,
         targets: [{ row_id: secondRowID, expected_revision: 1 }],
         values: { repayment_status: "settled" },
       },
@@ -105,7 +105,7 @@ test("P15b page command IDs replay once and fixed context versions reject later 
         store.change(
           {
             action: "update",
-            expected_schema_revision: 1,
+            expected_schema_revision: 2,
             context_id: context.context_id,
             values: { repayment_status: "overdue" },
           },
@@ -132,7 +132,7 @@ test("P15b undo is atomic, unique per operation, and rejects later edits", async
     const original = store.change(
       {
         action: "update",
-        expected_schema_revision: 1,
+        expected_schema_revision: 2,
         targets: [{ row_id: rowID, expected_revision: 1 }],
         values: { repayment_status: "repaying" },
       },
@@ -159,7 +159,7 @@ test("P15b undo is atomic, unique per operation, and rejects later edits", async
     const second = store.change(
       {
         action: "update",
-        expected_schema_revision: 1,
+        expected_schema_revision: 2,
         targets: [{ row_id: summary.row_ids[1], expected_revision: 1 }],
         values: { repayment_status: "overdue" },
       },
@@ -168,7 +168,7 @@ test("P15b undo is atomic, unique per operation, and rejects later edits", async
     store.change(
       {
         action: "update",
-        expected_schema_revision: 1,
+        expected_schema_revision: 2,
         targets: [{ row_id: summary.row_ids[1], expected_revision: 2 }],
         values: { repayment_status: "settled" },
       },
@@ -200,7 +200,7 @@ test("P15b undo reverses insert and delete without restoring old revision number
     const inserted = store.change(
       {
         action: "insert",
-        expected_schema_revision: 1,
+        expected_schema_revision: 2,
         rows: [{ name: "Synthetic undo insert" }],
       },
       pageSource("insert-command-1"),
@@ -226,7 +226,7 @@ test("P15b undo reverses insert and delete without restoring old revision number
     const deleted = store.change(
       {
         action: "delete",
-        expected_schema_revision: 1,
+        expected_schema_revision: 2,
         targets: [{ row_id: summary.row_ids[2], expected_revision: 1 }],
       },
       pageSource("delete-command-1"),

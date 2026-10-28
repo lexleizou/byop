@@ -14,7 +14,7 @@ test("two MCP processes commit and replay one source command once", async () => 
   try {
     const args = {
       action: "insert",
-      expected_schema_revision: 1,
+      expected_schema_revision: 2,
       rows: [
         {
           name: "Synthetic concurrent insert",
@@ -102,7 +102,7 @@ test("a competing writer fails after the bounded busy wait without a receipt", a
     const startedAt = Date.now();
     const result = await client.callTool("table_change", {
       action: "insert",
-      expected_schema_revision: 1,
+      expected_schema_revision: 2,
       rows: [{ name: "Synthetic busy insert" }],
       _byop: agentSource("busy-message"),
     });

@@ -5,6 +5,11 @@ import { readFile } from "node:fs/promises";
 import { TableStore } from "./src/database.mjs";
 import { asTableError } from "./src/errors.mjs";
 import { createMcpHandler, serveStdio } from "./src/mcp-server.mjs";
+import {
+  importV4Snapshot,
+  inspectAndBackupV4Database,
+  loadV4Snapshot,
+} from "./src/v4-import.mjs";
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
@@ -17,6 +22,10 @@ function parseArgs(argv) {
     const name = arg.slice(2);
     if (name === "if-empty") {
       options.ifEmpty = true;
+      continue;
+    }
+    if (name === "replace-unmodified") {
+      options.replaceUnmodified = true;
       continue;
     }
     const value = rest[index + 1];
@@ -61,6 +70,29 @@ async function main() {
       }
       return;
     }
+    case "import-v4": {
+      if (!options.db || !options["input-dir"]) {
+        throw new Error("import-v4 requires --db and --input-dir.");
+      }
+      const snapshot = loadV4Snapshot(options["input-dir"]);
+      const prepared = inspectAndBackupV4Database(options.db, {
+        replaceUnmodified: options.replaceUnmodified === true,
+      });
+      const store = new TableStore(options.db);
+      try {
+        const summary = importV4Snapshot(store, {
+          inputDirectory: options["input-dir"],
+          replaceUnmodified: options.replaceUnmodified === true,
+          snapshot,
+          backupBeforeReplace: false,
+          preparedBackup: prepared.backup,
+        });
+        process.stdout.write(`${JSON.stringify(summary)}\n`);
+      } finally {
+        store.close();
+      }
+      return;
+    }
     case "serve-mcp": {
       if (!options.db) {
         throw new Error("serve-mcp requires --db.");
@@ -95,7 +127,7 @@ async function main() {
     }
     default:
       throw new Error(
-        "Usage: cli.mjs <seed|serve-mcp|call> [--db path] [options]",
+        "Usage: cli.mjs <seed|import-v4|serve-mcp|call> [--db path] [options]",
       );
   }
 }

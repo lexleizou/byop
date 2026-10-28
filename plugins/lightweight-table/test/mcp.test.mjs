@@ -20,6 +20,7 @@ test("MCP publishes business schemas without _byop and injects source only at ca
       [
         "table_describe",
         "table_query",
+        "table_debt_details",
         "table_change",
         "table_undo",
         "table_history",
@@ -42,7 +43,7 @@ test("MCP publishes business schemas without _byop and injects source only at ca
         name: "table_change",
         arguments: {
           action: "insert",
-          expected_schema_revision: 1,
+          expected_schema_revision: 2,
           rows: [{ name: "Synthetic unavailable source" }],
           _byop: { version: 1, source_kind: "unavailable" },
         },
@@ -59,7 +60,7 @@ test("MCP publishes business schemas without _byop and injects source only at ca
         name: "table_change",
         arguments: {
           action: "insert",
-          expected_schema_revision: 1,
+          expected_schema_revision: 2,
           rows: [{ name: "Synthetic direct MCP source" }],
           _byop: agentSource("mcp-message"),
         },

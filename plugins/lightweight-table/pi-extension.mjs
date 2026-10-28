@@ -61,7 +61,7 @@ export default function lightweightTableExtension(pi) {
     cwd: HERE,
     exposure: "direct",
     description:
-      "Query, change, review, and undo the local BYOP lightweight table using stable row and column IDs. Plugin restarts reload the backend without restarting Pi.",
+      "Query and review the local Fuyao v4 snapshot using stable row and column IDs. This is an imported local SQLite snapshot, not a live v4 connection; call table_describe for the source date. Plugin restarts reload the backend without restarting Pi.",
     timeout: 15,
   });
 

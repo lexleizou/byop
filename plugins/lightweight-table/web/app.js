@@ -6,12 +6,12 @@ const MAIN_COLUMNS = Object.freeze([
   { column_id: "category", type: "text" },
   { column_id: "name", type: "text" },
   { column_id: "principal", type: "number" },
-  { column_id: "actual_received", type: "number", missing: true },
-  { column_id: "remaining_due", type: "number", missing: true },
-  { column_id: "annualized_rate", type: "number", missing: true },
+  { column_id: "actual_received", type: "number" },
+  { column_id: "remaining_due", type: "number" },
+  { column_id: "annualized_rate", type: "text" },
   { column_id: "repayment_status", type: "text" },
-  { column_id: "plan_status", type: "text", missing: true },
-  { column_id: "next_due", type: "date", missing: true },
+  { column_id: "plan_status", type: "text" },
+  { column_id: "next_due", type: "date" },
 ]);
 const MAIN_COLUMN_BY_ID = new Map(
   MAIN_COLUMNS.map((column) => [column.column_id, column]),
@@ -20,6 +20,7 @@ const MAIN_COLUMN_BY_ID = new Map(
 const dom = {
   body: document.body,
   title: document.querySelector("#page-title"),
+  subtitle: document.querySelector("#page-subtitle"),
   searchInput: document.querySelector("#search-input"),
   filterColumn: document.querySelector("#filter-column-select"),
   filterOperatorField: document.querySelector("#filter-operator-field"),
@@ -51,6 +52,8 @@ const dom = {
   rowForm: document.querySelector("#row-editor-form"),
   rowFields: document.querySelector("#row-editor-fields"),
   rowSave: document.querySelector("#row-editor-save-button"),
+  detailDrawer: document.querySelector("#row-detail-drawer"),
+  detailBody: document.querySelector("#row-detail-body"),
   bulkDrawer: document.querySelector("#bulk-drawer"),
   bulkForm: document.querySelector("#bulk-form"),
   bulkTargetSelected: document.querySelector("#bulk-target-selected"),
@@ -214,6 +217,20 @@ function columnByID(columnID) {
   );
 }
 
+function visibleColumns() {
+  return (state.description?.columns ?? []).filter((column) => !column.hidden);
+}
+
+function editableColumns() {
+  return visibleColumns().filter(
+    (column) => column.config?.read_only !== true,
+  );
+}
+
+function isEditableColumn(columnID) {
+  return columnByID(columnID)?.config?.read_only !== true;
+}
+
 function columnLabel(columnID) {
   return message(`column.${columnID}`);
 }
@@ -224,6 +241,10 @@ function localizedValue(columnID, value) {
   }
   if (columnID === "repayment_status") {
     const key = `status.${value}`;
+    return message(key) === key ? String(value) : message(key);
+  }
+  if (columnID === "plan_status") {
+    const key = `planStatus.${value}`;
     return message(key) === key ? String(value) : message(key);
   }
   if (columnID === "category") {
@@ -249,11 +270,17 @@ function formatDecimal(value) {
   return `${negative ? "-" : ""}${grouped}${fraction ? `.${fraction}` : ""}`;
 }
 
-function cellText(column, value) {
+function cellText(column, value, row = null) {
   if (column.type === "number") {
     return formatDecimal(value);
   }
   if (column.type === "date") {
+    if (column.column_id === "next_due" && value && row) {
+      const amount = row.values.next_due_amount;
+      return amount === null || amount === undefined || amount === ""
+        ? value
+        : `${value} · ${formatDecimal(amount)}`;
+    }
     return value || "—";
   }
   return localizedValue(column.column_id, value);
@@ -290,12 +317,20 @@ function operatorOptions(column) {
   ];
 }
 
+function updatePageSubtitle() {
+  const source = state.description?.data_source;
+  dom.subtitle.textContent = source
+    ? message("pageSubtitleSnapshot", { date: source.source_date })
+    : message("pageSubtitle");
+}
+
 function applyStaticLocale() {
   document.documentElement.lang = state.locale;
   document.title = message("pageTitle");
   for (const element of document.querySelectorAll("[data-i18n]")) {
     element.textContent = message(element.dataset.i18n);
   }
+  updatePageSubtitle();
   dom.searchInput.placeholder = message("searchPlaceholder");
   dom.filterValue.placeholder = message("filterValue");
   dom.searchInput.setAttribute("aria-label", message("searchLabel"));
@@ -328,7 +363,7 @@ function renderControls() {
 
   dom.filterColumn.replaceChildren();
   setOption(dom.filterColumn, "", message("filterAll"), !previousFilterColumn);
-  for (const column of state.description?.columns ?? []) {
+  for (const column of visibleColumns()) {
     setOption(
       dom.filterColumn,
       column.column_id,
@@ -365,7 +400,7 @@ function renderControls() {
 
   dom.sortColumn.replaceChildren();
   setOption(dom.sortColumn, "", message("sortDefault"), !previousSortColumn);
-  for (const column of state.description?.columns ?? []) {
+  for (const column of visibleColumns()) {
     setOption(
       dom.sortColumn,
       column.column_id,
@@ -380,7 +415,7 @@ function renderControls() {
 
   const selectedField = dom.bulkField.value;
   dom.bulkField.replaceChildren();
-  for (const column of state.description?.columns ?? []) {
+  for (const column of editableColumns()) {
     setOption(
       dom.bulkField,
       column.column_id,
@@ -473,7 +508,6 @@ function mainColumnClass(column) {
   return [
     `${column.column_id.replaceAll("_", "-")}-cell`,
     column.type === "number" ? "number-cell" : "",
-    column.missing ? "missing-cell" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -556,13 +590,13 @@ function renderTable({ rebaseDrafts = false } = {}) {
       td.dataset.action = "edit-cell";
       td.dataset.rowId = row.row_id;
       td.dataset.columnId = column.column_id;
-      td.dataset.editable = column.missing ? "false" : "true";
+      td.dataset.editable = isEditableColumn(column.column_id) ? "true" : "false";
       td.dataset.contextChanged = row.context_changed ? "true" : "false";
       td.classList.add(...mainColumnClass(column).split(" "));
       td.tabIndex = 0;
       td.setAttribute(
         "aria-label",
-        message(column.missing ? "readOnlyCellAria" : "editCellAria", {
+        message(isEditableColumn(column.column_id) ? "editCellAria" : "readOnlyCellAria", {
           column: columnLabel(column.column_id),
         }),
       );
@@ -586,26 +620,34 @@ function renderTable({ rebaseDrafts = false } = {}) {
         tr.append(td);
         continue;
       }
-      const value = column.missing ? null : row.values[column.column_id];
-      if (column.missing) {
-        td.textContent = message("notImported");
-        td.title = message("missingFieldHint");
-      } else if (column.column_id === "repayment_status" && value) {
+      const value = row.values[column.column_id];
+      if (
+        (column.column_id === "repayment_status" ||
+          column.column_id === "plan_status") &&
+        value
+      ) {
         const badge = document.createElement("span");
         badge.className = "status-badge";
         badge.textContent = localizedValue(column.column_id, value);
         td.append(badge);
       } else {
-        td.textContent = cellText(column, value);
+        td.textContent = cellText(column, value, row);
       }
-      if (!column.missing) {
-        td.title = value === null || value === undefined ? "" : String(value);
-      }
+      td.title = value === null || value === undefined ? "" : String(value);
       tr.append(td);
     }
 
     const actions = document.createElement("td");
     actions.className = "actions-cell";
+    const detailButton = document.createElement("button");
+    detailButton.id = `detail-${row.row_id}`;
+    detailButton.className = "row-action";
+    detailButton.type = "button";
+    detailButton.dataset.action = "open-detail";
+    detailButton.dataset.rowId = row.row_id;
+    detailButton.textContent = message("detailShort");
+    detailButton.title = message("detailActionAria");
+    detailButton.setAttribute("aria-label", message("detailActionAria"));
     const deleteButton = document.createElement("button");
     deleteButton.id = `delete-${row.row_id}`;
     deleteButton.className = "row-delete";
@@ -615,7 +657,7 @@ function renderTable({ rebaseDrafts = false } = {}) {
     deleteButton.textContent = "×";
     deleteButton.title = message("deleteRowAria");
     deleteButton.setAttribute("aria-label", message("deleteRowAria"));
-    actions.append(deleteButton);
+    actions.append(detailButton, deleteButton);
     tr.append(actions);
     dom.bodyRows.append(tr);
   }
@@ -763,7 +805,7 @@ function mountCellEditor(cell, draft, { focus = false } = {}) {
 
 function beginCellEdit(cell) {
   const displayColumn = MAIN_COLUMN_BY_ID.get(cell.dataset.columnId);
-  if (!displayColumn || displayColumn.missing) {
+  if (!displayColumn || !isEditableColumn(displayColumn.column_id)) {
     return;
   }
   const activeDraft = state.editors.values().next().value;
@@ -822,13 +864,17 @@ function closeCellEdit(draft, { triggerRefresh = true } = {}) {
     `#cell-${CSS.escape(draft.row.row_id)}-${CSS.escape(column.column_id)}`,
   );
   if (td) {
-    if (column.column_id === "repayment_status" && value) {
+    if (
+      (column.column_id === "repayment_status" ||
+        column.column_id === "plan_status") &&
+      value
+    ) {
       const badge = document.createElement("span");
       badge.className = "status-badge";
       badge.textContent = localizedValue(column.column_id, value);
       td.replaceChildren(badge);
     } else {
-      td.textContent = cellText(column, value);
+      td.textContent = cellText(column, value, draft.row);
     }
     td.title = value === null || value === undefined ? "" : String(value);
   }
@@ -869,7 +915,8 @@ function settleCellDraft() {
 function adjacentCellTarget(draft, backwards) {
   const rows = state.result?.rows ?? [];
   const columns = MAIN_COLUMNS.filter(
-    (column) => !column.missing && columnByID(column.column_id),
+    (column) =>
+      isEditableColumn(column.column_id) && columnByID(column.column_id),
   );
   const rowIndex = rows.findIndex((row) => row.row_id === draft.row.row_id);
   const columnIndex = columns.findIndex(
@@ -1101,9 +1148,192 @@ async function deleteRow(rowID) {
   }
 }
 
+function detailSection(titleKey) {
+  const section = document.createElement("section");
+  section.className = "detail-section";
+  const heading = document.createElement("h3");
+  heading.textContent = message(titleKey);
+  section.append(heading);
+  return section;
+}
+
+function detailLabel(labelKey) {
+  return message(`detailField.${labelKey}`);
+}
+
+function appendDetailFields(section, fields) {
+  const list = document.createElement("dl");
+  list.className = "detail-fields";
+  for (const [labelKey, value] of fields) {
+    const row = document.createElement("div");
+    const term = document.createElement("dt");
+    const description = document.createElement("dd");
+    term.textContent = detailLabel(labelKey);
+    description.textContent =
+      value === null || value === undefined || value === "" ? "—" : String(value);
+    row.append(term, description);
+    list.append(row);
+  }
+  section.append(list);
+}
+
+function detailNote(textValue) {
+  const note = document.createElement("p");
+  note.className = "detail-note";
+  note.textContent = textValue;
+  return note;
+}
+
+function renderDetail(data) {
+  dom.detailBody.replaceChildren();
+  const debt = data.debt;
+  dom.detailBody.append(
+    detailNote(
+      message("detailSourceNote", {
+        date: data.data_source?.source_date ?? "—",
+      }),
+    ),
+  );
+
+  const debtSection = detailSection("detailDebtSection");
+  appendDetailFields(debtSection, [
+    ["institution", debt.institution],
+    ["name", debt.name],
+    ["category", localizedValue("category", debt.category)],
+    ["funding_source", localizedValue("funding_source", debt.funding_source)],
+    ["product_type", debt.product_type],
+    ["loan_code", debt.loan_code],
+    ["contract_reference", debt.contract_reference],
+    ["product_group_id", debt.product_group_id],
+    ["loan_sequence", debt.loan_sequence],
+    ["borrowed_on", debt.borrowed_on],
+    ["disbursed_on", debt.disbursed_on],
+    ["principal", debt.principal],
+    ["actual_received", debt.actual_received],
+    ["remaining_due", debt.remaining_due],
+    ["annualized_rate", debt.annualized_rate],
+    ["original_rate_value", debt.original_rate_value],
+    ["rate_period", debt.rate_period],
+    ["manual_annualized_rate_percent", debt.manual_annualized_rate_percent],
+    ["calculated_annualized_rate_percent", debt.calculated_annualized_rate_percent],
+    ["interest_basis", debt.interest_basis],
+    ["opening_principal", debt.opening_principal],
+    ["planned_interest", debt.planned_interest],
+    ["remaining_interest", debt.remaining_interest],
+    ["actual_paid", debt.actual_paid],
+    ["source_record_id", debt.source_record_id],
+    ["source_created_at", debt.source_created_at],
+    ["source_updated_at", debt.source_updated_at],
+  ]);
+  dom.detailBody.append(debtSection);
+
+  const planSection = detailSection("detailPlanSection");
+  if (data.current_plan) {
+    const counts = Object.entries(data.installment_counts ?? {})
+      .map(([status, count]) => `${status}: ${count}`)
+      .join(" · ");
+    appendDetailFields(planSection, [
+      ["plan_status", data.current_plan.status],
+      ["plan_method", data.current_plan.method],
+      ["effective_on", data.current_plan.effective_on],
+      ["first_due_on", data.current_plan.first_due_on],
+      ["installments", data.current_plan.installments],
+      ["installment_status", counts || "—"],
+      ["plan_principal", data.current_plan.plan_principal],
+      ["confirmed_remaining", data.current_plan.confirmed_remaining],
+      ["original_rate_value", data.current_plan.original_rate_value],
+      ["rate_period", data.current_plan.rate_period],
+      ["source_updated_at", data.current_plan.updated_at],
+    ]);
+  } else {
+    planSection.append(detailNote(message("detailNoPlan")));
+  }
+  dom.detailBody.append(planSection);
+
+  const paymentSection = detailSection("detailPaymentsSection");
+  appendDetailFields(paymentSection, [
+    [
+      "payment_count",
+      data.payment_summary?.count ?? 0,
+    ],
+    ["payment_total", data.payment_summary?.total],
+  ]);
+  if (data.recent_payments.length === 0) {
+    paymentSection.append(detailNote(message("detailNoPayments")));
+  } else {
+    const recent = document.createElement("div");
+    recent.className = "detail-records";
+    for (const payment of data.recent_payments) {
+      const record = document.createElement("article");
+      const title = document.createElement("strong");
+      title.textContent = `${payment.payment_on} · ${formatDecimal(payment.amount)}`;
+      const meta = document.createElement("span");
+      meta.textContent = [payment.principal_effect, payment.note]
+        .filter(Boolean)
+        .join(" · ");
+      record.append(title, meta);
+      recent.append(record);
+    }
+    paymentSection.append(recent);
+  }
+  dom.detailBody.append(paymentSection);
+
+  const eventSection = detailSection("detailEventsSection");
+  appendDetailFields(eventSection, [
+    ["event_count", data.event_summary?.count ?? 0],
+  ]);
+  if (data.recent_events.length === 0) {
+    eventSection.append(detailNote(message("detailNoEvents")));
+  } else {
+    const recent = document.createElement("div");
+    recent.className = "detail-records";
+    for (const eventItem of data.recent_events) {
+      const record = document.createElement("article");
+      const title = document.createElement("strong");
+      title.textContent = `${eventItem.occurred_at.slice(0, 10)} · ${eventItem.title}`;
+      const meta = document.createElement("span");
+      meta.textContent = [eventItem.event_type, eventItem.content]
+        .filter(Boolean)
+        .join(" · ");
+      const amount = document.createElement("span");
+      amount.textContent = message("detailEventAmount", {
+        amount: formatDecimal(eventItem.amount),
+      });
+      record.append(title, meta, amount);
+      recent.append(record);
+    }
+    eventSection.append(recent);
+  }
+  dom.detailBody.append(eventSection);
+}
+
+async function openDetail(rowID) {
+  const row = rowByID(rowID);
+  if (!row) {
+    return;
+  }
+  openDrawer(dom.detailDrawer);
+  dom.detailBody.replaceChildren(detailNote(message("loading")));
+  setLoading(true);
+  try {
+    const detail = await callPlugin("table.detail", { rowId: rowID });
+    renderDetail(detail);
+  } catch (error) {
+    showError(error);
+    dom.detailBody.replaceChildren(detailNote(localizedError(error)));
+  } finally {
+    setLoading(false);
+  }
+}
+
 function openDrawer(name) {
   settleCellDraft();
-  for (const drawer of [dom.historyDrawer, dom.rowDrawer, dom.bulkDrawer]) {
+  for (const drawer of [
+    dom.historyDrawer,
+    dom.detailDrawer,
+    dom.rowDrawer,
+    dom.bulkDrawer,
+  ]) {
     drawer.hidden = drawer !== name;
     drawer.setAttribute("aria-hidden", drawer === name ? "false" : "true");
   }
@@ -1112,7 +1342,12 @@ function openDrawer(name) {
 }
 
 function closeDrawer() {
-  for (const drawer of [dom.historyDrawer, dom.rowDrawer, dom.bulkDrawer]) {
+  for (const drawer of [
+    dom.historyDrawer,
+    dom.detailDrawer,
+    dom.rowDrawer,
+    dom.bulkDrawer,
+  ]) {
     drawer.hidden = true;
     drawer.setAttribute("aria-hidden", "true");
   }
@@ -1148,7 +1383,7 @@ function openRowEditor() {
   dom.rowFields.replaceChildren();
   state.rowCommandId = newCommandId();
   state.rowAttemptedValue = null;
-  for (const column of state.description?.columns ?? []) {
+  for (const column of editableColumns()) {
     const label = document.createElement("label");
     const caption = document.createElement("span");
     caption.textContent = columnLabel(column.column_id);
@@ -1162,7 +1397,7 @@ function openRowEditor() {
 
 function rowFormValues() {
   const values = {};
-  for (const column of state.description?.columns ?? []) {
+  for (const column of editableColumns()) {
     const input = dom.rowFields.querySelector(
       `[data-column-id="${CSS.escape(column.column_id)}"]`,
     );
@@ -1511,6 +1746,7 @@ async function bootstrap() {
     state.description = boot.description;
     state.summary = boot.summary;
     state.dataRevision = boot.summary.data_revision;
+    updatePageSubtitle();
     renderControls();
     await loadQuery();
   } catch (error) {
@@ -1599,6 +1835,8 @@ document.addEventListener("click", (event) => {
     void loadQuery();
   } else if (action === "delete-row") {
     void deleteRow(actionElement.dataset.rowId);
+  } else if (action === "open-detail") {
+    void openDetail(actionElement.dataset.rowId);
   } else if (action === "close-drawer") {
     closeDrawer();
   } else if (action === "undo-operation") {

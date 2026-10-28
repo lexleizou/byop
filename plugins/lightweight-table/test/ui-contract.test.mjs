@@ -33,8 +33,9 @@ test("en and zh-Hans expose the same complete UI locale keys", async () => {
     "setField",
     "history",
     "clearSelection",
-    "notImported",
     "readOnlyCellAria",
+    "detailTitle",
+    "detailDescription",
     "column.name",
     "column.repayment_status",
     "column.actual_received",
@@ -70,6 +71,8 @@ test("WebView uses the worker locale action and sets its ready flag", async () =
     "sort-direction-select",
     "records-table",
     "history-drawer",
+    "row-detail-drawer",
+    "row-detail-body",
     "row-editor-drawer",
     "bulk-drawer",
   ]) {
@@ -80,6 +83,7 @@ test("WebView uses the worker locale action and sets its ready flag", async () =
     "send-chat",
     "bulk-set",
     "open-history",
+    "open-detail",
     "refresh",
     "edit-cell",
     "delete-row",
@@ -105,6 +109,15 @@ test("WebView uses the worker locale action and sets its ready flag", async () =
   }
   assert.equal(app.includes("fetch("), false);
   assert.match(app, /callPlugin\("table\.locale"/);
+  assert.match(app, /callPlugin\("table\.detail"/);
+  assert.match(app, /dom\.detailDrawer/);
+  assert.doesNotMatch(app, /notImported|missingFieldHint|column\.missing/);
+  assert.match(app, /column\.config\?\.read_only !== true/);
+  assert.match(app, /td\.dataset\.editable = isEditableColumn/);
+  const detailStart = html.indexOf('id="row-detail-drawer"');
+  const detailEnd = html.indexOf("</aside>", detailStart);
+  assert.ok(detailStart > 0 && detailEnd > detailStart);
+  assert.doesNotMatch(html.slice(detailStart, detailEnd), /delete-row/);
   assert.match(app, /dom\.body\.dataset\.ready = "true"/);
   assert.equal(app.includes("state.body"), false);
   assert.equal(manifest.contributes.agentExtension, "pi-extension.mjs");

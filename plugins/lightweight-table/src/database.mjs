@@ -13,17 +13,11 @@ import {
   sumCents,
 } from "./money.mjs";
 
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
+export const TABLE_SCHEMA_REVISION = 2;
 export const DEFAULT_TABLE_ID = "tbl_default";
 
 const COLUMN_DEFINITIONS = [
-  {
-    column_id: "name",
-    label: "名称",
-    type: "text",
-    required: true,
-    config: { source_field: "product_name" },
-  },
   {
     column_id: "institution",
     label: "机构",
@@ -39,11 +33,11 @@ const COLUMN_DEFINITIONS = [
     config: { source_field: "category" },
   },
   {
-    column_id: "funding_source",
-    label: "资金来源",
+    column_id: "name",
+    label: "名称",
     type: "text",
-    required: false,
-    config: { source_field: "funding_source" },
+    required: true,
+    config: { source_field: "product_name" },
   },
   {
     column_id: "principal",
@@ -53,23 +47,53 @@ const COLUMN_DEFINITIONS = [
     config: {
       precision: 2,
       scale: 2,
+      storage: "cents",
       currency: "CNY",
       source_field: "contract_principal_cents",
     },
   },
   {
-    column_id: "amount_due",
-    label: "待还金额",
+    column_id: "actual_received",
+    label: "实际到账",
     type: "number",
     required: false,
-    config: { precision: 2, scale: 2, currency: "CNY", source_field: null },
+    config: {
+      precision: 2,
+      scale: 2,
+      storage: "cents",
+      currency: "CNY",
+      source_field: "actual_disbursed_cents",
+      read_only: true,
+      imported: true,
+    },
   },
   {
-    column_id: "due_date",
-    label: "还款日",
-    type: "date",
+    column_id: "remaining_due",
+    label: "剩余应还",
+    type: "number",
     required: false,
-    config: { source_field: null },
+    config: {
+      precision: 2,
+      scale: 2,
+      storage: "cents",
+      currency: "CNY",
+      source_field: "principal_balance_cents",
+      read_only: true,
+      imported: true,
+      derived: true,
+    },
+  },
+  {
+    column_id: "annualized_rate",
+    label: "年化利率",
+    type: "text",
+    required: false,
+    config: {
+      source_field: "annualized_rate",
+      read_only: true,
+      imported: true,
+      derived: true,
+    },
   },
   {
     column_id: "repayment_status",
@@ -77,6 +101,283 @@ const COLUMN_DEFINITIONS = [
     type: "text",
     required: false,
     config: { source_field: "repayment_status" },
+  },
+  {
+    column_id: "plan_status",
+    label: "计划状态",
+    type: "text",
+    required: false,
+    config: {
+      source_field: "plan_status",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "next_due",
+    label: "下次应还日期",
+    type: "date",
+    required: false,
+    config: {
+      source_field: "next_due.due_on",
+      read_only: true,
+      imported: true,
+      derived: true,
+    },
+  },
+  {
+    column_id: "next_due_amount",
+    label: "下次应还金额",
+    type: "number",
+    required: false,
+    config: {
+      precision: 2,
+      scale: 2,
+      storage: "cents",
+      currency: "CNY",
+      source_field: "next_due.amount_cents",
+      read_only: true,
+      imported: true,
+      derived: true,
+    },
+  },
+  {
+    column_id: "funding_source",
+    label: "资金来源",
+    type: "text",
+    required: false,
+    config: { source_field: "funding_source" },
+  },
+  {
+    column_id: "product_type",
+    label: "产品类型",
+    type: "text",
+    required: false,
+    hidden: true,
+    config: { source_field: "product_type", read_only: true, imported: true },
+  },
+  {
+    column_id: "source_record_id",
+    label: "源记录 ID",
+    type: "text",
+    required: false,
+    hidden: true,
+    config: { source_field: "id", read_only: true, imported: true },
+  },
+  {
+    column_id: "product_group_id",
+    label: "产品组 ID",
+    type: "text",
+    required: false,
+    hidden: true,
+    config: {
+      source_field: "product_group_id",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "loan_sequence",
+    label: "贷款序号",
+    type: "number",
+    required: false,
+    hidden: true,
+    config: {
+      storage: "integer",
+      source_field: "loan_sequence",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "loan_code",
+    label: "贷款编号",
+    type: "text",
+    required: false,
+    hidden: true,
+    config: { source_field: "loan_code", read_only: true, imported: true },
+  },
+  {
+    column_id: "contract_reference",
+    label: "合同参考号",
+    type: "text",
+    required: false,
+    hidden: true,
+    config: {
+      source_field: "contract_reference",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "opening_principal",
+    label: "期初本金",
+    type: "number",
+    required: false,
+    hidden: true,
+    config: {
+      precision: 2,
+      scale: 2,
+      storage: "cents",
+      currency: "CNY",
+      source_field: "opening_principal_cents",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "planned_interest",
+    label: "计划利息",
+    type: "number",
+    required: false,
+    hidden: true,
+    config: {
+      precision: 2,
+      scale: 2,
+      storage: "cents",
+      currency: "CNY",
+      source_field: "planned_interest_cents",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "remaining_interest",
+    label: "剩余利息",
+    type: "number",
+    required: false,
+    hidden: true,
+    config: {
+      precision: 2,
+      scale: 2,
+      storage: "cents",
+      currency: "CNY",
+      source_field: "remaining_interest_cents",
+      read_only: true,
+      imported: true,
+      derived: true,
+    },
+  },
+  {
+    column_id: "actual_paid",
+    label: "实际已付",
+    type: "number",
+    required: false,
+    hidden: true,
+    config: {
+      precision: 2,
+      scale: 2,
+      storage: "cents",
+      currency: "CNY",
+      source_field: "actual_paid_cents",
+      read_only: true,
+      imported: true,
+      derived: true,
+    },
+  },
+  {
+    column_id: "borrowed_on",
+    label: "借款日期",
+    type: "date",
+    required: false,
+    hidden: true,
+    config: {
+      source_field: "borrowed_on",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "disbursed_on",
+    label: "放款日期",
+    type: "date",
+    required: false,
+    hidden: true,
+    config: {
+      source_field: "disbursed_on",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "original_rate_value",
+    label: "原始利率",
+    type: "number",
+    required: false,
+    hidden: true,
+    config: {
+      storage: "decimal",
+      source_field: "original_rate_value",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "rate_period",
+    label: "利率周期",
+    type: "text",
+    required: false,
+    hidden: true,
+    config: { source_field: "rate_period", read_only: true, imported: true },
+  },
+  {
+    column_id: "manual_annualized_rate_percent",
+    label: "手工年化利率",
+    type: "number",
+    required: false,
+    hidden: true,
+    config: {
+      storage: "decimal",
+      source_field: "manual_annualized_rate_percent",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "calculated_annualized_rate_percent",
+    label: "计算年化利率",
+    type: "number",
+    required: false,
+    hidden: true,
+    config: {
+      storage: "decimal",
+      source_field: "calculated_annualized_rate_percent",
+      read_only: true,
+      imported: true,
+      derived: true,
+    },
+  },
+  {
+    column_id: "interest_basis",
+    label: "计息基础",
+    type: "text",
+    required: false,
+    hidden: true,
+    config: { source_field: "interest_basis", read_only: true, imported: true },
+  },
+  {
+    column_id: "source_created_at",
+    label: "源创建时间",
+    type: "text",
+    required: false,
+    hidden: true,
+    config: {
+      source_field: "created_at",
+      read_only: true,
+      imported: true,
+    },
+  },
+  {
+    column_id: "source_updated_at",
+    label: "源更新时间",
+    type: "text",
+    required: false,
+    hidden: true,
+    config: {
+      source_field: "updated_at",
+      read_only: true,
+      imported: true,
+    },
   },
 ];
 
@@ -115,6 +416,7 @@ CREATE TABLE IF NOT EXISTS columns (
 CREATE TABLE IF NOT EXISTS rows (
   row_id TEXT PRIMARY KEY,
   table_id TEXT NOT NULL REFERENCES tables(table_id),
+  source_record_id TEXT,
   revision INTEGER NOT NULL,
   values_json TEXT NOT NULL,
   created_at TEXT NOT NULL,
@@ -162,6 +464,119 @@ CREATE INDEX IF NOT EXISTS operations_source_session
   ON operations (source_session_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS contexts_table_created
   ON contexts (table_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS fuyao_repayment_plans (
+  id TEXT PRIMARY KEY,
+  debt_id TEXT NOT NULL REFERENCES rows(row_id) ON DELETE CASCADE,
+  basis_explanation TEXT,
+  confirmed_remaining_cents INTEGER,
+  created_at TEXT NOT NULL,
+  effective_on TEXT NOT NULL,
+  excluded_old_fee_cents INTEGER NOT NULL,
+  excluded_old_interest_cents INTEGER NOT NULL,
+  excluded_principal_cents INTEGER NOT NULL,
+  first_due_on TEXT NOT NULL,
+  included_old_fee_cents INTEGER NOT NULL,
+  included_old_interest_cents INTEGER NOT NULL,
+  installments INTEGER NOT NULL,
+  interest_basis TEXT NOT NULL,
+  interest_principal_cents INTEGER NOT NULL,
+  method TEXT NOT NULL,
+  new_fee_cents INTEGER NOT NULL,
+  original_rate_value REAL NOT NULL,
+  plan_principal_cents INTEGER,
+  rate_period TEXT NOT NULL,
+  source_note TEXT,
+  status TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  verified_balance_at TEXT,
+  verified_balance_cents INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS fuyao_planned_payments (
+  id TEXT PRIMARY KEY,
+  plan_id TEXT NOT NULL REFERENCES fuyao_repayment_plans(id) ON DELETE CASCADE,
+  debt_id TEXT NOT NULL REFERENCES rows(row_id) ON DELETE CASCADE,
+  actual_paid_on TEXT,
+  adjusted_at TEXT,
+  due_on TEXT NOT NULL,
+  installment_no INTEGER NOT NULL,
+  interest_cents INTEGER NOT NULL,
+  new_fee_cents INTEGER NOT NULL,
+  note TEXT,
+  old_fee_cents INTEGER NOT NULL,
+  old_interest_cents INTEGER NOT NULL,
+  principal_cents INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  total_cents INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fuyao_payments (
+  id TEXT PRIMARY KEY,
+  debt_id TEXT NOT NULL REFERENCES rows(row_id) ON DELETE CASCADE,
+  amount_cents INTEGER NOT NULL,
+  auto_allocation_blocked INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  note TEXT,
+  payment_on TEXT NOT NULL,
+  principal_effect TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fuyao_payment_allocations (
+  id TEXT PRIMARY KEY,
+  payment_id TEXT NOT NULL REFERENCES fuyao_payments(id) ON DELETE CASCADE,
+  planned_payment_id TEXT NOT NULL
+    REFERENCES fuyao_planned_payments(id) ON DELETE CASCADE,
+  allocated_at TEXT NOT NULL,
+  allocation_method TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fuyao_debt_events (
+  id TEXT PRIMARY KEY,
+  debt_id TEXT NOT NULL REFERENCES rows(row_id) ON DELETE CASCADE,
+  amount_cents INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  occurred_at TEXT NOT NULL,
+  title TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fuyao_import_meta (
+  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+  source_instance TEXT NOT NULL,
+  source_date TEXT NOT NULL,
+  exported_at TEXT NOT NULL,
+  manifest_format_version INTEGER NOT NULL,
+  import_format_version TEXT NOT NULL,
+  debt_count INTEGER NOT NULL,
+  repayment_plan_count INTEGER NOT NULL,
+  planned_payment_count INTEGER NOT NULL,
+  payment_count INTEGER NOT NULL,
+  payment_allocation_count INTEGER NOT NULL,
+  debt_event_count INTEGER NOT NULL,
+  counts_json TEXT NOT NULL,
+  digests_json TEXT NOT NULL,
+  snapshot_digest TEXT NOT NULL,
+  imported_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS fuyao_repayment_plans_debt
+  ON fuyao_repayment_plans (debt_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS fuyao_planned_payments_plan
+  ON fuyao_planned_payments (plan_id, installment_no);
+CREATE INDEX IF NOT EXISTS fuyao_planned_payments_debt
+  ON fuyao_planned_payments (debt_id, due_on);
+CREATE INDEX IF NOT EXISTS fuyao_payments_debt
+  ON fuyao_payments (debt_id, payment_on DESC);
+CREATE INDEX IF NOT EXISTS fuyao_payment_allocations_payment
+  ON fuyao_payment_allocations (payment_id, allocated_at DESC);
+CREATE INDEX IF NOT EXISTS fuyao_payment_allocations_planned
+  ON fuyao_payment_allocations (planned_payment_id, allocated_at DESC);
+CREATE INDEX IF NOT EXISTS fuyao_debt_events_debt
+  ON fuyao_debt_events (debt_id, occurred_at DESC);
 `;
 
 function nowISO() {
@@ -234,33 +649,21 @@ function normalizeSeed(input) {
   if (!Array.isArray(input.rows)) {
     throw new TableError("invalid_seed", "rows must be an array.");
   }
+  const editableColumns = COLUMN_DEFINITIONS.filter(
+    (column) => column.config.read_only !== true,
+  );
   const rows = input.rows.map((row, index) => {
-    assertPlainObject(row, `rows[${index}]`, [
-      "name",
-      "institution",
-      "category",
-      "funding_source",
-      "principal",
-      "amount_due",
-      "due_date",
-      "repayment_status",
-    ]);
-    return {
-      name: requiredText(row.name, `rows[${index}].name`),
-      institution: optionalText(row.institution, `rows[${index}].institution`),
-      category: optionalText(row.category, `rows[${index}].category`),
-      funding_source: optionalText(
-        row.funding_source,
-        `rows[${index}].funding_source`,
-      ),
-      principal: centsFromDecimal(row.principal, `rows[${index}].principal`, 2),
-      amount_due: centsFromDecimal(row.amount_due, `rows[${index}].amount_due`, 2),
-      due_date: validDate(row.due_date, `rows[${index}].due_date`),
-      repayment_status: optionalText(
-        row.repayment_status,
-        `rows[${index}].repayment_status`,
-      ),
-    };
+    assertPlainObject(
+      row,
+      `rows[${index}]`,
+      editableColumns.map((column) => column.column_id),
+    );
+    return Object.fromEntries(
+      editableColumns.map((column) => [
+        column.column_id,
+        normalizeEditableValue(column, row[column.column_id], `rows[${index}]`),
+      ]),
+    );
   });
   return { workbookName, timezone, rows };
 }
@@ -370,11 +773,64 @@ function parseJSON(value) {
 }
 
 function rowValuesForOutput(values) {
-  return {
-    ...values,
-    principal: decimalFromCents(values.principal, 2),
-    amount_due: decimalFromCents(values.amount_due, 2),
-  };
+  return Object.fromEntries(
+    COLUMN_DEFINITIONS.map((column) => {
+      const value = values[column.column_id] ?? null;
+      if (value === null || column.type !== "number") {
+        return [column.column_id, value];
+      }
+      if ((column.config.storage ?? "cents") === "cents") {
+        return [
+          column.column_id,
+          decimalFromCents(value, column.config.scale ?? 2),
+        ];
+      }
+      if (column.config.storage === "integer") {
+        return [column.column_id, String(value)];
+      }
+      return [column.column_id, String(value)];
+    }),
+  );
+}
+
+function normalizeEditableValue(column, rawValue, label) {
+  if (column.config.read_only === true) {
+    throw new TableError(
+      "read_only_column",
+      `${label}.${column.column_id} is imported or derived and cannot be changed.`,
+      { column_id: column.column_id },
+    );
+  }
+  const value = rawValue === undefined ? null : rawValue;
+  switch (column.type) {
+    case "number":
+      if ((column.config.storage ?? "cents") === "cents") {
+        return centsFromDecimal(
+          value,
+          `${label}.${column.column_id}`,
+          column.config.scale ?? 2,
+        );
+      }
+      if (value === null) {
+        return null;
+      }
+      if (
+        typeof value !== "string" ||
+        !/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)
+      ) {
+        throw new TableError(
+          "invalid_value",
+          `${label}.${column.column_id} must be a decimal string or null.`,
+        );
+      }
+      return value;
+    case "date":
+      return validDate(value, `${label}.${column.column_id}`);
+    case "text":
+      return optionalText(value, `${label}.${column.column_id}`);
+    default:
+      throw new TableError("internal_error", `Unknown column type ${column.type}.`);
+  }
 }
 
 function normalizeChangeValues(value, label) {
@@ -392,28 +848,13 @@ function normalizeChangeValues(value, label) {
         `${label} contains unknown column ${JSON.stringify(columnID)}.`,
       );
     }
-    switch (column.type) {
-      case "number":
-        normalized[columnID] = centsFromDecimal(
-          rawValue,
-          `${label}.${columnID}`,
-          column.config.scale,
-        );
-        break;
-      case "date":
-        normalized[columnID] = validDate(rawValue, `${label}.${columnID}`);
-        break;
-      case "text":
-        normalized[columnID] = optionalText(rawValue, `${label}.${columnID}`);
-        if (column.required && normalized[columnID] === null) {
-          throw new TableError(
-            "invalid_value",
-            `${label}.${columnID} is required.`,
-          );
-        }
-        break;
-      default:
-        throw new TableError("internal_error", `Unknown column type ${column.type}.`);
+    normalized[columnID] = normalizeEditableValue(
+      column,
+      rawValue,
+      label,
+    );
+    if (column.required && normalized[columnID] === null) {
+      throw new TableError("invalid_value", `${label}.${columnID} is required.`);
     }
   }
   return normalized;
@@ -572,7 +1013,17 @@ function normalizeSearch(value) {
 
 function typedFilterValue(column, value, label) {
   if (column.type === "number") {
-    return centsFromDecimal(value, label, column.config.scale);
+    if ((column.config.storage ?? "cents") === "cents") {
+      return centsFromDecimal(value, label, column.config.scale ?? 2);
+    }
+    if (
+      (typeof value !== "string" && typeof value !== "number") ||
+      String(value).trim() === "" ||
+      !Number.isFinite(Number(value))
+    ) {
+      throw new TableError("invalid_value", `${label} must be numeric.`);
+    }
+    return Number(value);
   }
   if (column.type === "date") {
     return validDate(value, label);
@@ -708,6 +1159,41 @@ function workbookRecord(db) {
     .get();
 }
 
+function importMetaRecord(db) {
+  const meta = db
+    .prepare(
+      `SELECT source_instance, source_date, exported_at,
+              manifest_format_version, import_format_version,
+              debt_count, repayment_plan_count, planned_payment_count,
+              payment_count, payment_allocation_count, debt_event_count,
+              snapshot_digest, imported_at
+         FROM fuyao_import_meta
+        WHERE singleton = 1`,
+    )
+    .get();
+  if (!meta) {
+    return null;
+  }
+  return {
+    source_instance: meta.source_instance,
+    source_date: meta.source_date,
+    exported_at: meta.exported_at,
+    manifest_format_version: meta.manifest_format_version,
+    import_format_version: meta.import_format_version,
+    counts: {
+      debts: meta.debt_count,
+      repayment_plans: meta.repayment_plan_count,
+      planned_payments: meta.planned_payment_count,
+      payments: meta.payment_count,
+      payment_allocations: meta.payment_allocation_count,
+      debt_events: meta.debt_event_count,
+    },
+    snapshot_digest: meta.snapshot_digest,
+    imported_at: meta.imported_at,
+    live_connected: false,
+  };
+}
+
 function rowsForTargets(db, targets) {
   const statement = db.prepare(
     `SELECT row_id, revision, values_json, created_at, updated_at
@@ -841,6 +1327,13 @@ export class TableStore {
 
   ensureSchema() {
     this.db.exec(SCHEMA_SQL);
+    const rowColumns = this.db
+      .prepare("PRAGMA table_info(rows)")
+      .all()
+      .map((column) => column.name);
+    if (!rowColumns.includes("source_record_id")) {
+      this.db.exec("ALTER TABLE rows ADD COLUMN source_record_id TEXT");
+    }
     const operationColumns = this.db
       .prepare("PRAGMA table_info(operations)")
       .all()
@@ -853,6 +1346,66 @@ export class TableStore {
          ON operations (undo_of)
        WHERE undo_of IS NOT NULL`,
     );
+    this.db.exec(
+      `CREATE UNIQUE INDEX IF NOT EXISTS rows_source_record
+         ON rows (table_id, source_record_id)
+       WHERE source_record_id IS NOT NULL`,
+    );
+    if (!this.initialized()) {
+      return;
+    }
+    const table = tableRecord(this.db);
+    if (!table) {
+      return;
+    }
+    if (table.schema_revision > TABLE_SCHEMA_REVISION) {
+      throw new TableError(
+        "unsupported_schema",
+        `The table schema ${table.schema_revision} is newer than this plugin supports.`,
+      );
+    }
+    this.immediate(() => {
+      this.db
+        .prepare(
+          `UPDATE workbook_meta
+              SET format_version = ?
+            WHERE singleton = 1`,
+        )
+        .run(FORMAT_VERSION);
+      this.db
+        .prepare(
+          `UPDATE tables
+              SET schema_revision = ?
+            WHERE table_id = ?`,
+        )
+        .run(TABLE_SCHEMA_REVISION, DEFAULT_TABLE_ID);
+      this.db
+        .prepare("DELETE FROM columns WHERE table_id = ?")
+        .run(DEFAULT_TABLE_ID);
+      const insertColumn = this.db.prepare(
+        `INSERT INTO columns
+           (column_id, table_id, label, type, required, config, position, hidden)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      COLUMN_DEFINITIONS.forEach((column, position) => {
+        insertColumn.run(
+          column.column_id,
+          DEFAULT_TABLE_ID,
+          column.label,
+          column.type,
+          column.required ? 1 : 0,
+          canonicalJSON(column.config),
+          position,
+          column.hidden ? 1 : 0,
+        );
+      });
+      this.db.exec(
+        `UPDATE rows
+            SET source_record_id = json_extract(values_json, '$.source_record_id')
+          WHERE source_record_id IS NULL
+            AND json_type(values_json, '$.source_record_id') = 'text'`,
+      );
+    });
   }
 
   close() {
@@ -924,6 +1477,7 @@ export class TableStore {
       schema_revision: table.schema_revision,
       data_revision: table.data_revision,
       row_count: Number(count.count),
+      data_source: importMetaRecord(this.db),
     };
   }
 
@@ -959,13 +1513,18 @@ export class TableStore {
         .prepare(
           `INSERT INTO tables
              (table_id, name, schema_revision, data_revision)
-           VALUES (?, ?, 1, ?)`,
+           VALUES (?, ?, ?, ?)`,
         )
-        .run(DEFAULT_TABLE_ID, "银行负债", normalized.rows.length > 0 ? 1 : 0);
+        .run(
+          DEFAULT_TABLE_ID,
+          "银行负债",
+          TABLE_SCHEMA_REVISION,
+          normalized.rows.length > 0 ? 1 : 0,
+        );
       const insertColumn = this.db.prepare(
         `INSERT INTO columns
            (column_id, table_id, label, type, required, config, position, hidden)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       COLUMN_DEFINITIONS.forEach((column, position) => {
         insertColumn.run(
@@ -976,12 +1535,14 @@ export class TableStore {
           column.required ? 1 : 0,
           canonicalJSON(column.config),
           position,
+          column.hidden ? 1 : 0,
         );
       });
       const insertRow = this.db.prepare(
         `INSERT INTO rows
-           (row_id, table_id, revision, values_json, created_at, updated_at, deleted_at)
-         VALUES (?, ?, 1, ?, ?, ?, NULL)`,
+           (row_id, table_id, source_record_id, revision, values_json,
+            created_at, updated_at, deleted_at)
+         VALUES (?, ?, NULL, 1, ?, ?, ?, NULL)`,
       );
       const rowIDs = [];
       for (const values of normalized.rows) {
@@ -998,7 +1559,7 @@ export class TableStore {
       return {
         workbook_id: workbookID,
         table_id: DEFAULT_TABLE_ID,
-        schema_revision: 1,
+        schema_revision: TABLE_SCHEMA_REVISION,
         data_revision: normalized.rows.length > 0 ? 1 : 0,
         row_count: normalized.rows.length,
         row_ids: rowIDs,
@@ -1064,6 +1625,7 @@ export class TableStore {
           data_revision: table.data_revision,
         },
         columns,
+        data_source: importMetaRecord(this.db),
         source_local_date: localDateForSource(source, workbook.timezone),
       };
     });
@@ -1624,6 +2186,169 @@ export class TableStore {
         row_ids: currentRows.map((row) => row.row_id),
         schema_revision: table.schema_revision,
         data_revision: table.data_revision,
+      };
+    });
+  }
+
+  detail(args) {
+    assertPlainObject(args, "table_debt_details", ["row_id"]);
+    const rowID = requiredText(args.row_id, "row_id");
+    return this.read(() => {
+      const row = this.db
+        .prepare(
+          `SELECT row_id, revision, values_json, created_at, updated_at
+             FROM rows
+            WHERE table_id = ? AND row_id = ? AND deleted_at IS NULL`,
+        )
+        .get(DEFAULT_TABLE_ID, rowID);
+      if (!row) {
+        throw new TableError(
+          "row_not_found",
+          `Row ${rowID} does not exist in the active table.`,
+        );
+      }
+      const planCount = Number(
+        this.db
+          .prepare(
+            "SELECT COUNT(*) AS count FROM fuyao_repayment_plans WHERE debt_id = ?",
+          )
+          .get(rowID).count,
+      );
+      const currentPlan = this.db
+        .prepare(
+          `SELECT *
+             FROM fuyao_repayment_plans
+            WHERE debt_id = ? AND status <> 'replaced'
+            ORDER BY effective_on DESC, created_at DESC, id DESC
+            LIMIT 1`,
+        )
+        .get(rowID) ?? null;
+      let installmentCounts = {};
+      let installments = [];
+      if (currentPlan) {
+        installments = this.db
+          .prepare(
+            `SELECT id, installment_no, due_on, principal_cents, interest_cents,
+                    old_interest_cents, old_fee_cents, new_fee_cents, total_cents,
+                    status, actual_paid_on, note, adjusted_at
+               FROM fuyao_planned_payments
+              WHERE plan_id = ?
+              ORDER BY installment_no, id`,
+          )
+          .all(currentPlan.id)
+          .map((installment) => ({
+            ...installment,
+            principal: decimalFromCents(installment.principal_cents, 2),
+            interest: decimalFromCents(installment.interest_cents, 2),
+            old_interest: decimalFromCents(installment.old_interest_cents, 2),
+            old_fee: decimalFromCents(installment.old_fee_cents, 2),
+            new_fee: decimalFromCents(installment.new_fee_cents, 2),
+            total: decimalFromCents(installment.total_cents, 2),
+          }));
+        installmentCounts = Object.fromEntries(
+          this.db
+            .prepare(
+              `SELECT status, COUNT(*) AS count
+                 FROM fuyao_planned_payments
+                WHERE plan_id = ?
+                GROUP BY status
+                ORDER BY status`,
+            )
+            .all(currentPlan.id)
+            .map((entry) => [entry.status, Number(entry.count)]),
+        );
+      }
+      const paymentCount = Number(
+        this.db
+          .prepare(
+            "SELECT COUNT(*) AS count FROM fuyao_payments WHERE debt_id = ?",
+          )
+          .get(rowID).count,
+      );
+      const paymentTotal = this.db
+        .prepare(
+          `SELECT COALESCE(SUM(amount_cents), 0) AS total
+             FROM fuyao_payments
+            WHERE debt_id = ?`,
+        )
+        .get(rowID).total;
+      const payments = this.db
+        .prepare(
+          `SELECT id, amount_cents, payment_on, principal_effect, note, created_at
+             FROM fuyao_payments
+            WHERE debt_id = ?
+            ORDER BY payment_on DESC, created_at DESC, id DESC`,
+        )
+        .all(rowID)
+        .map((payment) => ({
+          ...payment,
+          amount: decimalFromCents(payment.amount_cents, 2),
+          amount_cents: payment.amount_cents,
+        }));
+      const eventCount = Number(
+        this.db
+          .prepare(
+            "SELECT COUNT(*) AS count FROM fuyao_debt_events WHERE debt_id = ?",
+          )
+          .get(rowID).count,
+      );
+      const events = this.db
+        .prepare(
+          `SELECT id, event_type, title, content, amount_cents, occurred_at,
+                  created_at, updated_at
+             FROM fuyao_debt_events
+            WHERE debt_id = ?
+            ORDER BY occurred_at DESC, created_at DESC, id DESC`,
+        )
+        .all(rowID)
+        .map((event) => ({
+          ...event,
+          amount: decimalFromCents(event.amount_cents, 2),
+          amount_cents: event.amount_cents,
+        }));
+      const currentPlanSummary = currentPlan
+        ? {
+            id: currentPlan.id,
+            status: currentPlan.status,
+            method: currentPlan.method,
+            effective_on: currentPlan.effective_on,
+            first_due_on: currentPlan.first_due_on,
+            installments: currentPlan.installments,
+            installment_rows: installments,
+            plan_principal:
+              currentPlan.plan_principal_cents === null
+                ? null
+                : decimalFromCents(currentPlan.plan_principal_cents, 2),
+            confirmed_remaining:
+              currentPlan.confirmed_remaining_cents === null
+                ? null
+                : decimalFromCents(currentPlan.confirmed_remaining_cents, 2),
+            original_rate_value: currentPlan.original_rate_value,
+            rate_period: currentPlan.rate_period,
+            updated_at: currentPlan.updated_at,
+          }
+        : null;
+      return {
+        table_id: DEFAULT_TABLE_ID,
+        row_id: row.row_id,
+        revision: row.revision,
+        debt: rowValuesForOutput(parseJSON(row.values_json)),
+        plan_count: planCount,
+        current_plan: currentPlanSummary,
+        installment_counts: installmentCounts,
+        payment_summary: {
+          count: paymentCount,
+          total: decimalFromCentsString(BigInt(paymentTotal), 2),
+          currency: "CNY",
+        },
+        payments,
+        recent_payments: payments.slice(0, 5),
+        event_summary: { count: eventCount },
+        events,
+        recent_events: events.slice(0, 5),
+        data_source: importMetaRecord(this.db),
+        created_at: row.created_at,
+        updated_at: row.updated_at,
       };
     });
   }

@@ -1,6 +1,8 @@
-# BYOP Fuyao 0.3.0
+# BYOP Fuyao 0.4.0
 
 Fuyao adds a normal BYOP WebView on top of the P15a Node data layer.
+Version 0.4.0 imports a complete Fuyao v4 export into an independent SQLite
+snapshot. The plugin does not connect to Fuyao PostgreSQL at runtime.
 The plugin uses native HTML and JavaScript, `window.byop.postMessage`, the
 existing theme tokens, and an independent SQLite file. It has no build step,
 grid dependency, network access, approval flow, clear-all action, CSV, or
@@ -8,8 +10,14 @@ XLSX support.
 
 ## Included flow
 
-- V4 debt columns in display order, with unavailable fields marked read-only
-  and not imported.
+- The ten visible v4 debt columns in display order. Imported or derived values
+  are read-only; a missing value displays as `—`.
+- A complete one-time v4 import for debts, repayment plans, planned payments,
+  payments, payment allocations, and debt events. All related writes run in one
+  transaction with foreign keys enabled.
+- A read-only row detail drawer with source metadata, the current plan,
+  installment status counts, payment totals and recent payments, and recent
+  events.
 - A single cell click toggles the row selection; double-click or Enter starts
   one inline editor. Escape cancels an editor or clears the row selection.
 - Compact business table with horizontal scrolling and a narrow-window layout.
@@ -92,8 +100,8 @@ window.byop.postMessage({ action, ...payload })
 ```
 
 There is no product-test RPC. The page API covers locale, bootstrap, query,
-version, change, context capture, history, undo, and opening chat with a fixed
-context.
+debt detail, version, change, context capture, history, undo, and opening chat
+with a fixed context.
 
 For automated real-WebView QA:
 
@@ -152,6 +160,7 @@ the tool-call hook.
 |---|---|
 | `table_describe` | Workbook, columns, revisions, timezone, and filter options |
 | `table_query` | Search/filter/sort/page, exact sum, capture/read a fixed context |
+| `table_debt_details` | One debt with its current plan, installment counts, payments, and events |
 | `table_change` | Insert, versioned update/delete, batch field update, dry run |
 | `table_undo` | One atomic inverse operation with later-edit conflict checks |
 | `table_history` | Successful operations, source, undo status, and pagination |
@@ -168,11 +177,49 @@ removable chip.
 
 ## Seed and local checks
 
-Seed a private database only when it is empty:
+The v4 importer reads only these local files:
+
+```text
+debts-api.json
+debts.json
+repayment_plans.json
+planned_payments.json
+payments.json
+payment_allocations.json
+debt_events.json
+manifest.json
+```
+
+It verifies each file count and SHA-256 digest in `manifest.json`, requires
+matching API/raw debt IDs, validates relation foreign keys, and writes no file
+under the source directory.
+
+Import into a new database:
+
+```sh
+node plugins/lightweight-table/cli.mjs import-v4 \
+  --db "$BYOP_PLUGIN_DATA_DIR/tables.sqlite" \
+  --input-dir /path/to/fuyao-v4-export
+```
+
+To replace an existing seed, pass `--replace-unmodified`. This is accepted only
+when the database has zero operations and zero contexts. The CLI validates the
+snapshot first, inspects the original database without opening the migrating
+`TableStore`, and copies the unmodified SQLite file to:
+
+```text
+<db>.pre-v4-import-YYYYMMDD-HHMMSS
+```
+
+A database containing saved history is rejected instead of being deleted.
+Running the same snapshot again with the replacement flag is idempotent for
+rows and related data.
+
+The synthetic seed remains available for generic table tests:
 
 ```sh
 node plugins/lightweight-table/cli.mjs seed \
-  --db "$BYOP_PLUGIN_DATA_DIR/tables.sqlite" \
+  --db /path/to/synthetic.sqlite \
   --input /path/to/synthetic-seed.json \
   --if-empty
 ```
@@ -190,8 +237,12 @@ The check covers:
 - page command replay and command-ID conflict;
 - immutable context targets and version conflicts;
 - exact search/filter/sort/total behavior;
+- complete synthetic v4 import counts, stable UUID row IDs, exact cents,
+  derived rate formatting, foreign keys, backup, replacement guard, and
+  idempotency;
+- read-only rejection for imported and derived columns;
 - insert, update, and delete undo, unique `undo_of`, and later-edit conflicts;
-- MCP `table_query`, context reading, and `table_undo`;
+- MCP `table_query`, `table_debt_details`, context reading, and `table_undo`;
 - plugin-data path resolution and scoped MCP Node permissions;
 - stable proxy identity, backend PID replacement, `tools/list_changed`, and
   in-flight request completion before backend switch;

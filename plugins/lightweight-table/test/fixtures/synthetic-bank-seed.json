@@ -8,8 +8,6 @@
       "category": "financial",
       "funding_source": "bank",
       "principal": "1200.50",
-      "amount_due": null,
-      "due_date": null,
       "repayment_status": "not_started"
     },
     {
@@ -18,8 +16,6 @@
       "category": "financial",
       "funding_source": "bank",
       "principal": "0.00",
-      "amount_due": null,
-      "due_date": null,
       "repayment_status": "repaying"
     },
     {
@@ -28,8 +24,6 @@
       "category": "financial",
       "funding_source": "bank",
       "principal": null,
-      "amount_due": null,
-      "due_date": null,
       "repayment_status": "overdue"
     }
   ]

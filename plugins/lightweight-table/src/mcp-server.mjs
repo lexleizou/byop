@@ -16,17 +16,23 @@ const columnProperties = Object.fromEntries(
     column.type === "number"
       ? {
           type: ["string", "null"],
-          description: `${column.label}; decimal string with ${column.config.scale} places.`,
+          description:
+            (column.config.storage ?? "cents") === "cents"
+              ? `${column.label}; decimal string with ${column.config.scale} places.`
+              : `${column.label}; numeric value represented as a decimal string.`,
+          readOnly: column.config.read_only === true,
         }
       : column.type === "date"
         ? {
             type: ["string", "null"],
             pattern: "^\\d{4}-\\d{2}-\\d{2}$",
             description: `${column.label}; calendar date or null.`,
+            readOnly: column.config.read_only === true,
           }
         : {
             type: ["string", "null"],
             description: column.label,
+            readOnly: column.config.read_only === true,
           },
   ]),
 );
@@ -35,7 +41,7 @@ const tools = [
   {
     name: "table_describe",
     description:
-      "Describe the fixed local bank table, its stable column IDs, revisions, and timezone.",
+      "Describe the fixed Fuyao v4 snapshot imported into local SQLite, including stable column IDs, revisions, read-only fields, source date, and import metadata. This is not a live PostgreSQL connection.",
     inputSchema: {
       type: "object",
       properties: {
@@ -47,7 +53,7 @@ const tools = [
   {
     name: "table_query",
     description:
-      "Read rows from the local bank table by filters or a fixed context. Use stable row and column IDs; no arbitrary SQL. When a user prompt ends with [byop-table-context:<contextId>], pass that value as context_id.",
+      "Read debt rows from the imported Fuyao v4 snapshot by filters or a fixed context. Use stable row and column IDs; no arbitrary SQL. Imported and derived columns are read-only. When a user prompt ends with [byop-table-context:<contextId>], pass that value as context_id.",
     inputSchema: {
       type: "object",
       properties: {
@@ -117,9 +123,25 @@ const tools = [
     },
   },
   {
+    name: "table_debt_details",
+    description:
+      "Read one imported Fuyao debt with its current repayment plan, installment status counts, payment totals, recent payments, and recent events. Imported data is read-only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        row_id: {
+          type: "string",
+          description: "Stable source UUID used as the debt row_id.",
+        },
+      },
+      required: ["row_id"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "table_change",
     description:
-      "Preview or commit one insert, update, or delete command. Updates and deletes require expected row revisions.",
+      "Preview or commit one row operation. Imported and derived fields marked readOnly cannot be changed. Updates and deletes require expected row revisions.",
     inputSchema: {
       type: "object",
       properties: {
@@ -263,7 +285,7 @@ export function createMcpHandler(databasePath) {
           return response(message.id, {
             protocolVersion,
             capabilities: { tools: { listChanged: true } },
-            serverInfo: { name: "lightweight_table", version: "0.3.0" },
+            serverInfo: { name: "lightweight_table", version: "0.4.0" },
           });
         }
         case "ping":
@@ -279,6 +301,8 @@ export function createMcpHandler(databasePath) {
                 return response(message.id, toolResult(store.describe(source)));
               case "table_query":
                 return response(message.id, toolResult(store.query(business, source)));
+              case "table_debt_details":
+                return response(message.id, toolResult(store.detail(business)));
               case "table_change":
                 return response(message.id, toolResult(store.change(business, source)));
               case "table_undo":

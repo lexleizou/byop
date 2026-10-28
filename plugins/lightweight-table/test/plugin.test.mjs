@@ -107,7 +107,7 @@ test("plugin worker serves the WebView API and calls host.openChat with a fixed 
 
     const boot = await plugin.message({ action: "table.bootstrap" });
     assert.equal(boot.summary.row_count, 3);
-    assert.equal(boot.description.table.schema_revision, 1);
+    assert.equal(boot.description.table.schema_revision, 2);
 
     const query = await plugin.message({
       action: "table.query",
@@ -120,13 +120,21 @@ test("plugin worker serves the WebView API and calls host.openChat with a fixed 
     assert.equal(query.matched_count, 1);
     assert.equal(query.sum.value, "1200.50");
 
+    const detail = await plugin.message({
+      action: "table.detail",
+      rowId: summary.row_ids[0],
+    });
+    assert.equal(detail.row_id, summary.row_ids[0]);
+    assert.equal(detail.debt.name, "Synthetic product alpha");
+    assert.equal(detail.current_plan, null);
+
     const change = {
       action: "table.change",
       viewInstanceId: "view-worker",
       commandId: "page-worker-command",
       change: {
         action: "update",
-        expected_schema_revision: 1,
+        expected_schema_revision: 2,
         targets: [
           {
             row_id: summary.row_ids[0],

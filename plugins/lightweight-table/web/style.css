@@ -272,7 +272,8 @@ td.checkbox-cell {
 }
 
 .actions-cell {
-  width: 58px;
+  width: 102px;
+  min-width: 102px;
   text-align: right;
 }
 
@@ -371,6 +372,7 @@ td[data-context-changed="true"] {
   font-variant-numeric: tabular-nums;
 }
 
+.row-action,
 .row-delete {
   min-width: 28px;
   min-height: 28px;
@@ -378,11 +380,20 @@ td[data-context-changed="true"] {
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--byop-danger-text, Mark);
   cursor: pointer;
   font-size: var(--byop-font-body, 14px);
 }
 
+.row-action {
+  color: var(--byop-accent-text, Highlight);
+  font-size: var(--byop-font-caption, 12px);
+}
+
+.row-delete {
+  color: var(--byop-danger-text, Mark);
+}
+
+.row-action:hover,
 .row-delete:hover {
   background: var(--byop-surface-hover, ButtonFace);
 }
@@ -552,6 +563,81 @@ td[data-context-changed="true"] {
   grid-row: 1 / span 2;
   grid-column: 2;
   align-self: center;
+}
+
+.detail-drawer {
+  width: min(560px, 100vw);
+}
+
+.detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-section {
+  padding: 12px;
+  border: var(--table-border) solid var(--byop-border, GrayText);
+  border-radius: var(--byop-radius-input, 8px);
+}
+
+.detail-section h3 {
+  margin: 0 0 10px;
+  font-size: var(--byop-font-body, 14px);
+}
+
+.detail-fields {
+  display: grid;
+  grid-template-columns: minmax(112px, 0.42fr) minmax(0, 1fr);
+  gap: 7px 12px;
+  margin: 0;
+}
+
+.detail-fields > div {
+  display: contents;
+}
+
+.detail-fields dt,
+.detail-fields dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.detail-fields dt {
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-caption, 12px);
+}
+
+.detail-fields dd {
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-note {
+  margin: 0;
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-caption, 12px);
+}
+
+.detail-records {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.detail-records article {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 8px;
+  border-top: var(--table-border) solid var(--byop-border, GrayText);
+}
+
+.detail-records span {
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-caption, 12px);
+  overflow-wrap: anywhere;
 }
 
 .drawer-form {

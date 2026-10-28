@@ -415,7 +415,7 @@ export class ReloadingMcpProxy {
       await next.request("initialize", {
         protocolVersion: "2025-11-25",
         capabilities: {},
-        clientInfo: { name: "byop-plugin-proxy", version: "0.3.0" },
+        clientInfo: { name: "byop-plugin-proxy", version: "0.4.0" },
       }, this.initializeTimeoutMs);
       this.current = next;
       next = null;
