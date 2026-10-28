@@ -1,6 +1,6 @@
 {
   "name": "byop-lightweight-table",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,6 +8,6 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "check": "node --check plugin.mjs && node --check pi-extension.mjs && node --check web/app.js && node --test test/*.test.mjs"
+    "check": "node --check plugin.mjs && node --check pi-extension.mjs && node --check mcp-proxy.mjs && node --check src/mcp-server.mjs && node --check web/app.js && node --test test/*.test.mjs"
   }
 }

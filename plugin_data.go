@@ -6,9 +6,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
-const pluginDataDirectoryName = "plugin-data"
+const (
+	pluginDataDirectoryName         = "plugin-data"
+	pluginRuntimeGenerationFilename = "runtime-generation.json"
+)
+
+type pluginRuntimeGenerationMarker struct {
+	Version    int    `json:"version"`
+	PluginID   string `json:"pluginId"`
+	Generation int64  `json:"generation"`
+	UpdatedAt  string `json:"updatedAt"`
+}
 
 func pluginDataDir(configDir, pluginID string) (string, error) {
 	if !pluginIDPattern.MatchString(pluginID) {
@@ -58,31 +69,83 @@ func pluginDataDirsJSON(directories map[string]string) (string, error) {
 	return string(data), nil
 }
 
+func writePluginRuntimeGeneration(configDir, pluginID string) (pluginRuntimeGenerationMarker, error) {
+	directory, err := pluginDataDir(configDir, pluginID)
+	if err != nil {
+		return pluginRuntimeGenerationMarker{}, err
+	}
+	path := filepath.Join(directory, pluginRuntimeGenerationFilename)
+	generation := time.Now().UnixNano()
+	if data, readErr := os.ReadFile(path); readErr == nil {
+		var previous pluginRuntimeGenerationMarker
+		if json.Unmarshal(data, &previous) == nil && previous.Generation >= generation {
+			generation = previous.Generation + 1
+		}
+	}
+	marker := pluginRuntimeGenerationMarker{
+		Version:    1,
+		PluginID:   pluginID,
+		Generation: generation,
+		UpdatedAt:  time.Now().UTC().Format(time.RFC3339Nano),
+	}
+	data, err := json.Marshal(marker)
+	if err != nil {
+		return pluginRuntimeGenerationMarker{}, fmt.Errorf("encode runtime generation: %w", err)
+	}
+	if err := atomicWritePluginFile(path, data); err != nil {
+		return pluginRuntimeGenerationMarker{}, fmt.Errorf("write runtime generation: %w", err)
+	}
+	return marker, nil
+}
+
 func registeredPiPluginSignature(registry pluginRegistry) string {
 	var entries []string
 	for _, entry := range registry.Entries {
 		if entry.Status != pluginRegistered || entry.Manifest == nil {
 			continue
 		}
-		extension := ""
-		if entry.Manifest.Contributes.AgentExtension != "" {
-			if resolved, info, err := resolvePluginPath(
-				entry.SourceDirectory,
-				entry.Manifest.Contributes.AgentExtension,
-			); err == nil {
-				extension = fmt.Sprintf("%s@%d:%d", resolved, info.ModTime().UnixNano(), info.Size())
-			}
-		}
-		entries = append(entries, entry.ID+"="+extension)
+		entries = append(entries, registeredPluginPiEntrySignature(entry))
 	}
 	return strings.Join(entries, "\x00")
+}
+
+func registeredPluginPiEntrySignature(entry pluginRegistryEntry) string {
+	if entry.Status != pluginRegistered || entry.Manifest == nil {
+		return entry.ID + "="
+	}
+	var runtimeFiles []string
+	for _, runtimeFile := range []string{
+		entry.Manifest.Contributes.AgentExtension,
+		entry.Manifest.Contributes.AgentProxy,
+	} {
+		signature := ""
+		if runtimeFile != "" {
+			if resolved, info, err := resolvePluginPath(entry.SourceDirectory, runtimeFile); err == nil {
+				signature = fmt.Sprintf("%s@%d:%d", resolved, info.ModTime().UnixNano(), info.Size())
+			}
+		}
+		runtimeFiles = append(runtimeFiles, signature)
+	}
+	return entry.ID + "=" + strings.Join(runtimeFiles, "|")
 }
 
 func (s *appState) refreshPiPluginRuntimeAfterScan(before, after string) {
 	if s == nil || s.pi == nil || before == after {
 		return
 	}
-	// Pi discovers extensions only at process start. The existing channel
-	// refresh restores the current session when idle and never interrupts a run.
+	// Extensions and their stable proxies are loaded with the Pi process. Keep
+	// the current process intact until the idle refresh can restore its session.
+	s.pluginPiRefreshRequired = true
+}
+
+func (s *appState) refreshPiForPluginRuntime() {
+	if s == nil || !s.pluginPiRefreshRequired {
+		return
+	}
+	if s.pi == nil || s.piConn != piConnected {
+		s.connectPi()
+		return
+	}
 	s.markChannelRefreshPending()
+	s.showNotice(text("pluginsPiRefreshRequested"))
 }

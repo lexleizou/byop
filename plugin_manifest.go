@@ -69,6 +69,7 @@ type pluginContributions struct {
 	WebViews       []pluginWebViewContribution    `json:"webviews,omitempty"`
 	Automations    []pluginAutomationContribution `json:"automations,omitempty"`
 	AgentExtension string                         `json:"agentExtension,omitempty"`
+	AgentProxy     string                         `json:"agentProxy,omitempty"`
 }
 
 type pluginNavigationContribution struct {

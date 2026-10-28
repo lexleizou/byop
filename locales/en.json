@@ -647,6 +647,38 @@
   "@pluginsDeactivate": {
     "description": "User-interface text for plugins Deactivate."
   },
+  "pluginsRestart": "Restart plugin",
+  "@pluginsRestart": {
+    "description": "Action that restarts one plugin without restarting BYOP or Pi."
+  },
+  "pluginsRestarting": "Restarting {name}…",
+  "@pluginsRestarting": {
+    "description": "Progress message while one plugin is being restarted."
+  },
+  "pluginsRestarted": "{name} restarted. Only this plugin was restarted.",
+  "@pluginsRestarted": {
+    "description": "Success message after restarting one plugin."
+  },
+  "pluginsRestartFailed": "Could not restart {name}: {error}",
+  "@pluginsRestartFailed": {
+    "description": "Failure message when one plugin cannot be restarted."
+  },
+  "pluginsPiRefreshRequired": "Pi refresh required",
+  "@pluginsPiRefreshRequired": {
+    "description": "Status shown when a plugin's stable Pi extension or proxy changed."
+  },
+  "pluginsPiRefreshRequiredDetail": "The plugin's Pi extension or stable MCP proxy changed. Refresh Pi waits for idle and restores this session; backend-only changes can use Restart plugin.",
+  "@pluginsPiRefreshRequiredDetail": {
+    "description": "Explanation for the Pi refresh state after stable plugin runtime files change."
+  },
+  "pluginsPiRefresh": "Refresh Pi",
+  "@pluginsPiRefresh": {
+    "description": "Action that reloads stable plugin runtime files while preserving the current Pi session."
+  },
+  "pluginsPiRefreshRequested": "Pi refresh requested. It will wait for idle and restore this session.",
+  "@pluginsPiRefreshRequested": {
+    "description": "Confirmation after requesting a session-restoring Pi refresh."
+  },
   "pluginsOpen": "Open {title}",
   "@pluginsOpen": {
     "description": "User-interface text for plugins Open."

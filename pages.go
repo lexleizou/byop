@@ -48,6 +48,11 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 						"registered":    registry.registeredCount(),
 						"contributions": registry.contributionCount(),
 					}), tone)
+					if s.pluginPiRefreshRequired {
+						statusPill(c, p, text("pluginsPiRefreshRequired"), p.warning)
+						secondaryAction(c, p, "plugin-pi-refresh",
+							text("pluginsPiRefresh"), s.refreshPiForPluginRuntime)
+					}
 					ui.Spacer(c)
 					secondaryAction(c, p, "plugin-dir", text("pluginsFolders"), func() {
 						s.showNotice(textArgs("pluginsRoots", map[string]any{
@@ -297,8 +302,9 @@ func (s *appState) pluginCard(
 		pillTone = pluginRuntimeTone(p, runtime.State)
 	}
 	statusSummary, statusTone := s.pluginCardStatusSummary(p, entry, runtime)
+	restarting := s.pluginRestarting != nil && s.pluginRestarting[entry.ID]
 	busy := runtime.State == pluginStateStarting || runtime.State == pluginStateRunning ||
-		runtime.State == pluginStateStopping
+		runtime.State == pluginStateStopping || restarting
 	action := pluginCardPrimaryAction(entry)
 	entryKey := pluginEntryKey(entry, index)
 
@@ -431,6 +437,8 @@ func (s *appState) pluginDetailsPanel(
 	busy bool,
 ) {
 	registered := entry.Status == pluginRegistered && entry.Manifest != nil
+	restarting := s.pluginRestarting != nil && s.pluginRestarting[entry.ID]
+	busy = busy || restarting
 	_, windowHeight := c.Size()
 	maxHeight := windowHeight - 80
 	if maxHeight > 520 {
@@ -501,11 +509,25 @@ func (s *appState) pluginDetailsPanel(
 					})
 				}
 
+				if registered {
+					pluginSecondaryActionDisabled(c, p, "plugin-details-restart-"+entryKey,
+						text("pluginsRestart"), busy, func() {
+							s.restartPlugin(entry)
+						})
+				}
+
 				if registered && runtime.State == pluginStateActive {
 					secondaryAction(c, p, "plugin-details-stop-"+entryKey,
 						text("pluginsDeactivate"), func() {
 							s.deactivatePlugin(entry)
 						})
+				}
+
+				if s.pluginPiRefreshRequired {
+					pluginDetailBlock(c, p, text("pluginsPiRefreshRequired"),
+						text("pluginsPiRefreshRequiredDetail"), false)
+					secondaryAction(c, p, "plugin-details-pi-refresh-"+entryKey,
+						text("pluginsPiRefresh"), s.refreshPiForPluginRuntime)
 				}
 
 				if registered {

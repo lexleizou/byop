@@ -174,11 +174,22 @@ func scanPluginRegistry(rootSpecs []pluginRootSpec) pluginRegistry {
 }
 
 func validatePluginAgentExtension(entry pluginRegistryEntry) string {
-	if entry.Manifest == nil || entry.Manifest.Contributes.AgentExtension == "" {
+	if entry.Manifest == nil {
 		return ""
 	}
-	if _, _, err := resolvePluginPath(entry.SourceDirectory, entry.Manifest.Contributes.AgentExtension); err != nil {
-		return fmt.Sprintf("agent extension: %v", err)
+	for _, file := range []struct {
+		label string
+		path  string
+	}{
+		{label: "agent extension", path: entry.Manifest.Contributes.AgentExtension},
+		{label: "agent proxy", path: entry.Manifest.Contributes.AgentProxy},
+	} {
+		if file.path == "" {
+			continue
+		}
+		if _, _, err := resolvePluginPath(entry.SourceDirectory, file.path); err != nil {
+			return fmt.Sprintf("%s: %v", file.label, err)
+		}
 	}
 	return ""
 }

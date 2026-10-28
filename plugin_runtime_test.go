@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-const pluginHelperEnv = "BYOP_TEST_PLUGIN_HELPER"
+const (
+	pluginHelperEnv                = "BYOP_TEST_PLUGIN_HELPER"
+	pluginHelperDeactivateDelayEnv = "BYOP_TEST_PLUGIN_DEACTIVATE_DELAY"
+)
 
 // TestPluginHelperProcess is not a real test. It acts as a native plugin when
 // the runtime tests launch the test binary through a small wrapper script.
@@ -68,7 +71,14 @@ func TestPluginHelperProcess(t *testing.T) {
 		switch request.Method {
 		case "initialize":
 			response["result"] = map[string]any{"name": "helper"}
-		case "activate", "deactivate":
+		case "activate":
+			response["result"] = map[string]any{}
+		case "deactivate":
+			if value := os.Getenv(pluginHelperDeactivateDelayEnv); value != "" {
+				if delay, err := time.ParseDuration(value); err == nil {
+					time.Sleep(delay)
+				}
+			}
 			response["result"] = map[string]any{}
 		case "invokeCommand":
 			var params struct {

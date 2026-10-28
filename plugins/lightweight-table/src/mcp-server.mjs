@@ -262,8 +262,8 @@ export function createMcpHandler(databasePath) {
             : "2025-11-25";
           return response(message.id, {
             protocolVersion,
-            capabilities: { tools: { listChanged: false } },
-            serverInfo: { name: "lightweight_table", version: "0.2.1" },
+            capabilities: { tools: { listChanged: true } },
+            serverInfo: { name: "lightweight_table", version: "0.3.0" },
           });
         }
         case "ping":

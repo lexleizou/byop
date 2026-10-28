@@ -602,6 +602,38 @@
   "@pluginsDeactivate": {
     "description": "User-interface text for plugins Deactivate."
   },
+  "pluginsRestart": "重启插件",
+  "@pluginsRestart": {
+    "description": "Action that restarts one plugin without restarting BYOP or Pi."
+  },
+  "pluginsRestarting": "正在重启 {name}…",
+  "@pluginsRestarting": {
+    "description": "Progress message while one plugin is being restarted."
+  },
+  "pluginsRestarted": "{name} 已重启，仅重启了此插件。",
+  "@pluginsRestarted": {
+    "description": "Success message after restarting one plugin."
+  },
+  "pluginsRestartFailed": "无法重启 {name}：{error}",
+  "@pluginsRestartFailed": {
+    "description": "Failure message when one plugin cannot be restarted."
+  },
+  "pluginsPiRefreshRequired": "需要刷新 Pi",
+  "@pluginsPiRefreshRequired": {
+    "description": "Status shown when a plugin's stable Pi extension or proxy changed."
+  },
+  "pluginsPiRefreshRequiredDetail": "插件的 Pi 扩展或稳定 MCP 代理已更改。刷新 Pi 会等待空闲并恢复当前会话；仅后端更改可使用“重启插件”。",
+  "@pluginsPiRefreshRequiredDetail": {
+    "description": "Explanation for the Pi refresh state after stable plugin runtime files change."
+  },
+  "pluginsPiRefresh": "刷新 Pi",
+  "@pluginsPiRefresh": {
+    "description": "Action that reloads stable plugin runtime files while preserving the current Pi session."
+  },
+  "pluginsPiRefreshRequested": "已请求刷新 Pi，将在空闲时执行并恢复当前会话。",
+  "@pluginsPiRefreshRequested": {
+    "description": "Confirmation after requesting a session-restoring Pi refresh."
+  },
   "pluginsOpen": "打开 {title}",
   "@pluginsOpen": {
     "description": "User-interface text for plugins Open."

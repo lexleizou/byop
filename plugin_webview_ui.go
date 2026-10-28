@@ -42,6 +42,13 @@ func (s *appState) pluginWebViewHeader(
 	title := fallback(view.Title, view.ID)
 	pluginName := fallback(entry.Name, entry.ID)
 	sameName := strings.EqualFold(strings.TrimSpace(pluginName), strings.TrimSpace(title))
+	runtime := pluginRuntimeStatus{State: pluginStateInactive}
+	if s.plugins != nil {
+		runtime = s.plugins.status(entry.ID)
+	}
+	restarting := s.pluginRestarting != nil && s.pluginRestarting[entry.ID]
+	restartDisabled := restarting || runtime.State == pluginStateStarting ||
+		runtime.State == pluginStateRunning || runtime.State == pluginStateStopping
 	ui.Row(c).FillWidth().MinHeight(64).Padding(12, 16).
 		BorderWidth(0, 0, runtimeTokens.Dimension.Border.Value, 0).
 		BorderColor(p.border).Background(p.surface).AlignItems(ui.Center).
@@ -52,7 +59,17 @@ func (s *appState) pluginWebViewHeader(
 				ui.Text(c, pluginName).FontSize(fontCaption).TextColor(p.muted)
 			}
 		})
-		pluginWebViewStatusPill(c, p, text("pluginsWebViewIsolated"), p.success)
+		if s.pluginPiRefreshRequired {
+			pluginWebViewStatusPill(c, p, text("pluginsPiRefreshRequired"), p.warning)
+			pluginSecondaryAction(c, p, "plugin-webview-pi-refresh-"+entry.ID+"-"+view.ID,
+				text("pluginsPiRefresh"), s.refreshPiForPluginRuntime)
+		} else {
+			pluginWebViewStatusPill(c, p, text("pluginsWebViewIsolated"), p.success)
+		}
+		pluginSecondaryActionDisabled(c, p, "plugin-webview-restart-"+entry.ID+"-"+view.ID,
+			text("pluginsRestart"), restartDisabled, func() {
+				s.restartPlugin(entry)
+			})
 		pluginSecondaryAction(c, p, "plugin-webview-reload-"+entry.ID+"-"+view.ID,
 			text("pluginsWebViewReload"), func() {
 				s.recreatePluginWebView(entry.ID, view.ID)
@@ -90,6 +107,10 @@ func (s *appState) pluginWebViewFallback(
 					ui.Text(c, message).Selectable().FontSize(fontBody).LineHeight(1.5).
 						TextColor(p.text)
 					ui.Row(c).Gap(8).Children(func() {
+						pluginSecondaryAction(c, p, "plugin-webview-fallback-restart-"+entry.ID+"-"+view.ID,
+							text("pluginsRestart"), func() {
+								s.restartPlugin(entry)
+							})
 						pluginSecondaryAction(c, p, "plugin-webview-fallback-reload-"+entry.ID+"-"+view.ID,
 							text("pluginsWebViewReload"), func() {
 								s.recreatePluginWebView(entry.ID, view.ID)

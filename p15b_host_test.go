@@ -232,7 +232,7 @@ func TestP15bQueuedSendClearsOrRestoresContextAfterAcceptance(t *testing.T) {
 	})
 }
 
-func TestP15bPluginScanRefreshWaitsForIdleSession(t *testing.T) {
+func TestP17StableExtensionChangeShowsPiRefreshWithoutRestarting(t *testing.T) {
 	client := &piClient{}
 	state := &appState{
 		pi:     client,
@@ -240,15 +240,18 @@ func TestP15bPluginScanRefreshWaitsForIdleSession(t *testing.T) {
 		piConn: piConnected,
 	}
 	state.refreshPiPluginRuntimeAfterScan("", "/tmp/pi-extension.mjs")
-	if state.channelRefresh.request != 1 || !state.channelRefresh.pending ||
-		state.channelRefresh.phase != channelRefreshPhasePending {
-		t.Fatalf("refresh state = %#v", state.channelRefresh)
+	if !state.pluginPiRefreshRequired {
+		t.Fatal("stable extension change did not set the refresh-required state")
+	}
+	if state.channelRefresh.request != 0 || state.channelRefresh.pending ||
+		state.channelRefresh.phase != "" {
+		t.Fatalf("stable extension change restarted Pi automatically: %#v", state.channelRefresh)
 	}
 	if state.pi != client || state.run != runStreaming {
 		t.Fatal("extension discovery interrupted the live session")
 	}
 	state.refreshPiPluginRuntimeAfterScan("/tmp/pi-extension.mjs", "/tmp/pi-extension.mjs")
-	if state.channelRefresh.request != 1 {
-		t.Fatalf("unchanged extensions queued another refresh: %#v", state.channelRefresh)
+	if state.channelRefresh.request != 0 || !state.pluginPiRefreshRequired {
+		t.Fatalf("unchanged extension state changed unexpectedly: %#v", state)
 	}
 }

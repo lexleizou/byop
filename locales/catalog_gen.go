@@ -2158,6 +2158,126 @@ func (msgs Messages) PluginsDeactivate() string {
 	return Catalog.Format(msgs.locale, "pluginsDeactivate", nil)
 }
 
+// PluginsRestart says "Restart plugin"
+// in the language the app shows.
+//
+// Action that restarts one plugin without restarting BYOP or Pi.
+func PluginsRestart() string { return In(i18n.Locale()).PluginsRestart() }
+
+// PluginsRestart says "Restart plugin"
+// in the language of msgs.
+//
+// Action that restarts one plugin without restarting BYOP or Pi.
+func (msgs Messages) PluginsRestart() string {
+	return Catalog.Format(msgs.locale, "pluginsRestart", nil)
+}
+
+// PluginsRestarting says "Restarting {name}…"
+// in the language the app shows.
+//
+// Progress message while one plugin is being restarted.
+func PluginsRestarting(name string) string { return In(i18n.Locale()).PluginsRestarting(name) }
+
+// PluginsRestarting says "Restarting {name}…"
+// in the language of msgs.
+//
+// Progress message while one plugin is being restarted.
+func (msgs Messages) PluginsRestarting(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsRestarting", map[string]any{"name": name})
+}
+
+// PluginsRestarted says "{name} restarted. Only this plugin was restarted."
+// in the language the app shows.
+//
+// Success message after restarting one plugin.
+func PluginsRestarted(name string) string { return In(i18n.Locale()).PluginsRestarted(name) }
+
+// PluginsRestarted says "{name} restarted. Only this plugin was restarted."
+// in the language of msgs.
+//
+// Success message after restarting one plugin.
+func (msgs Messages) PluginsRestarted(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsRestarted", map[string]any{"name": name})
+}
+
+// PluginsRestartFailed says "Could not restart {name}: {error}"
+// in the language the app shows.
+//
+// Failure message when one plugin cannot be restarted.
+func PluginsRestartFailed(name string, error string) string {
+	return In(i18n.Locale()).PluginsRestartFailed(name, error)
+}
+
+// PluginsRestartFailed says "Could not restart {name}: {error}"
+// in the language of msgs.
+//
+// Failure message when one plugin cannot be restarted.
+func (msgs Messages) PluginsRestartFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "pluginsRestartFailed", map[string]any{"name": name, "error": error})
+}
+
+// PluginsPiRefreshRequired says "Pi refresh required"
+// in the language the app shows.
+//
+// Status shown when a plugin's stable Pi extension or proxy changed.
+func PluginsPiRefreshRequired() string { return In(i18n.Locale()).PluginsPiRefreshRequired() }
+
+// PluginsPiRefreshRequired says "Pi refresh required"
+// in the language of msgs.
+//
+// Status shown when a plugin's stable Pi extension or proxy changed.
+func (msgs Messages) PluginsPiRefreshRequired() string {
+	return Catalog.Format(msgs.locale, "pluginsPiRefreshRequired", nil)
+}
+
+// PluginsPiRefreshRequiredDetail says "The plugin's Pi extension or stable MCP proxy changed. Refresh Pi waits for idle and restores this session; backend-o…"
+// in the language the app shows.
+//
+// Explanation for the Pi refresh state after stable plugin runtime files
+// change.
+func PluginsPiRefreshRequiredDetail() string {
+	return In(i18n.Locale()).PluginsPiRefreshRequiredDetail()
+}
+
+// PluginsPiRefreshRequiredDetail says "The plugin's Pi extension or stable MCP proxy changed. Refresh Pi waits for idle and restores this session; backend-o…"
+// in the language of msgs.
+//
+// Explanation for the Pi refresh state after stable plugin runtime files
+// change.
+func (msgs Messages) PluginsPiRefreshRequiredDetail() string {
+	return Catalog.Format(msgs.locale, "pluginsPiRefreshRequiredDetail", nil)
+}
+
+// PluginsPiRefresh says "Refresh Pi"
+// in the language the app shows.
+//
+// Action that reloads stable plugin runtime files while preserving the
+// current Pi session.
+func PluginsPiRefresh() string { return In(i18n.Locale()).PluginsPiRefresh() }
+
+// PluginsPiRefresh says "Refresh Pi"
+// in the language of msgs.
+//
+// Action that reloads stable plugin runtime files while preserving the
+// current Pi session.
+func (msgs Messages) PluginsPiRefresh() string {
+	return Catalog.Format(msgs.locale, "pluginsPiRefresh", nil)
+}
+
+// PluginsPiRefreshRequested says "Pi refresh requested. It will wait for idle and restore this session."
+// in the language the app shows.
+//
+// Confirmation after requesting a session-restoring Pi refresh.
+func PluginsPiRefreshRequested() string { return In(i18n.Locale()).PluginsPiRefreshRequested() }
+
+// PluginsPiRefreshRequested says "Pi refresh requested. It will wait for idle and restore this session."
+// in the language of msgs.
+//
+// Confirmation after requesting a session-restoring Pi refresh.
+func (msgs Messages) PluginsPiRefreshRequested() string {
+	return Catalog.Format(msgs.locale, "pluginsPiRefreshRequested", nil)
+}
+
 // PluginsOpen says "Open {title}"
 // in the language the app shows.
 //

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "local.lightweight-table",
   "name": "%manifestName%",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "%manifestDescription%",
   "l10n": "l10n",
   "runtime": "node",
@@ -14,6 +14,7 @@
   },
   "contributes": {
     "agentExtension": "pi-extension.mjs",
+    "agentProxy": "mcp-proxy.mjs",
     "navigation": [
       {
         "id": "table",

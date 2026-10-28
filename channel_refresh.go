@@ -548,6 +548,7 @@ func (s *appState) applyChannelRefreshOutcome(snapshot channelRefreshSnapshot, o
 		state.phase = channelRefreshPhasePending
 		return true
 	}
+	s.pluginPiRefreshRequired = false
 	state.pending = false
 	state.failure = channelRefreshFailureNone
 	state.phase = channelRefreshPhaseSucceeded

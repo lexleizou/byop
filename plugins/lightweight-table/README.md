@@ -1,4 +1,4 @@
-# BYOP Fuyao
+# BYOP Fuyao 0.3.0
 
 Fuyao adds a normal BYOP WebView on top of the P15a Node data layer.
 The plugin uses native HTML and JavaScript, `window.byop.postMessage`, the
@@ -34,9 +34,10 @@ databases, screenshots, and logs must stay outside the repository.
 
 | Path | Purpose |
 |---|---|
-| `plugin.json` | Navigation, WebView, locale, and `contributes.agentExtension` |
+| `plugin.json` | Navigation, WebView, locale, `agentExtension`, and stable `agentProxy` |
 | `plugin.mjs` | Long-lived plugin worker and page API |
 | `pi-extension.mjs` | Pi MCP registration and plugin-data path resolution |
+| `mcp-proxy.mjs` | Stable stdio MCP proxy and generation-based backend reload |
 | `web/` | Native HTML, CSS, and JavaScript WebView |
 | `l10n/` | Complete `en` and `zh-Hans` copy |
 | `src/` | Shared SQLite, context, MCP, and validation modules |
@@ -66,6 +67,21 @@ BYOP_PLUGIN_DATA_DIRS["local.lightweight-table"]/tables.sqlite
 The MCP child is launched with Node permissions scoped to the package directory
 for reads and its own data directory for reads and writes. It does not receive
 network or child-process permission.
+
+The Pi extension registers `mcp-proxy.mjs` as the stable stdio MCP server. The
+proxy keeps its process and MCP session alive while it runs the table MCP in a
+separate backend child. A successful BYOP plugin restart atomically updates:
+
+```text
+<BYOP_PLUGIN_DATA_DIR>/runtime-generation.json
+```
+
+On the next poll, the proxy waits for any in-flight request, closes the old
+backend, starts the changed backend, and sends
+`notifications/tools/list_changed`. The proxy is the only process with
+`--allow-child-process`; the backend keeps the prior package/data read scope and
+data write scope with no network or child-process permission. Changes to
+`pi-extension.mjs` or `mcp-proxy.mjs` itself still require Pi to be refreshed.
 
 ## WebView bridge
 
@@ -177,6 +193,8 @@ The check covers:
 - insert, update, and delete undo, unique `undo_of`, and later-edit conflicts;
 - MCP `table_query`, context reading, and `table_undo`;
 - plugin-data path resolution and scoped MCP Node permissions;
+- stable proxy identity, backend PID replacement, `tools/list_changed`, and
+  in-flight request completion before backend switch;
 - worker-to-host `host.openChat` shape;
 - `en`/`zh-Hans` key parity, stable QA selectors, ready flag, and query-free
   local resource paths.

@@ -244,6 +244,34 @@ func TestChannelRefreshRestoresSessionAndSwapsAfterReadback(t *testing.T) {
 	}
 }
 
+func TestP17PluginPiRefreshUsesSessionRestoringChannelRefresh(t *testing.T) {
+	state, _ := newChannelRefreshTestState()
+	ui := installChannelRefreshTestUI(state)
+	newClient := newChannelRefreshFakeClient()
+	state.pluginPiRefreshRequired = true
+	state.channelRefresh.launch = func(_ string, _ string, _ func(piEvent)) (channelRefreshClient, error) {
+		return newClient, nil
+	}
+
+	state.refreshPiForPluginRuntime()
+	waitForChannelRefreshPhase(t, state, channelRefreshPhaseSucceeded, ui)
+
+	calls := newClient.callNames()
+	foundSessionSwitch := false
+	for _, call := range calls {
+		if call == "switch_session:/tmp/byop-refresh-session.jsonl" {
+			foundSessionSwitch = true
+			break
+		}
+	}
+	if !foundSessionSwitch {
+		t.Fatalf("plugin refresh skipped session restore: %#v", calls)
+	}
+	if state.pluginPiRefreshRequired {
+		t.Fatal("successful channel refresh left the plugin Pi refresh flag set")
+	}
+}
+
 func TestChannelRefreshFailureRetainsOldClientAndRetries(t *testing.T) {
 	state, oldClient := newChannelRefreshTestState()
 	ui := installChannelRefreshTestUI(state)

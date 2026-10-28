@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { SourceTracker } from "./src/source-tracker.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CLI = join(HERE, "cli.mjs");
+const MCP_PROXY = join(HERE, "mcp-proxy.mjs");
 const MCP_SERVER_NAME = "lightweight_table";
 const PLUGIN_ID = "local.lightweight-table";
 
@@ -41,10 +41,12 @@ export function mcpLaunchArgs(databasePath) {
     `--allow-fs-read=${HERE}`,
     `--allow-fs-read=${dataDirectory}`,
     `--allow-fs-write=${dataDirectory}`,
-    CLI,
-    "serve-mcp",
+    "--allow-child-process",
+    MCP_PROXY,
     "--db",
     resolve(databasePath),
+    "--generation",
+    join(dataDirectory, "runtime-generation.json"),
   ];
 }
 
@@ -59,7 +61,7 @@ export default function lightweightTableExtension(pi) {
     cwd: HERE,
     exposure: "direct",
     description:
-      "Query, change, review, and undo the local BYOP lightweight table using stable row and column IDs.",
+      "Query, change, review, and undo the local BYOP lightweight table using stable row and column IDs. Plugin restarts reload the backend without restarting Pi.",
     timeout: 15,
   });
 

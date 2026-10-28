@@ -37,7 +37,10 @@ const (
 	maxPluginStderrBytes   = 4096
 )
 
-var errPluginStopped = errors.New("plugin stopped")
+var (
+	errPluginStopped    = errors.New("plugin stopped")
+	errPluginRestarting = errors.New("plugin is restarting")
+)
 
 // pluginRuntimeStatus is the UI-facing snapshot of one plugin process.
 type pluginRuntimeStatus struct {
@@ -77,6 +80,7 @@ type pluginHost struct {
 	processes        map[string]*pluginProcess
 	statuses         map[string]pluginRuntimeStatus
 	starting         map[string]*sync.Mutex
+	restarting       map[string]bool
 	settingsMu       sync.Mutex
 	settingsByPlugin map[string]map[string]any
 
@@ -173,6 +177,7 @@ func newPluginHost(hostVersion string, onChange func(), options ...pluginHostOpt
 		processes:               make(map[string]*pluginProcess),
 		statuses:                make(map[string]pluginRuntimeStatus),
 		starting:                make(map[string]*sync.Mutex),
+		restarting:              make(map[string]bool),
 		workspaceRoot:           workspace,
 		configDir:               configDir,
 		settings:                newPluginSettingsStore(configDir),
@@ -227,6 +232,50 @@ func (h *pluginHost) updateStatus(pluginID string, update func(*pluginRuntimeSta
 	if h.onChange != nil {
 		h.onChange()
 	}
+}
+
+func (h *pluginHost) updateStatusIfProcessAbsent(
+	pluginID string,
+	update func(*pluginRuntimeStatus),
+) bool {
+	h.mu.Lock()
+	if h.processes[pluginID] != nil {
+		h.mu.Unlock()
+		return false
+	}
+	status, ok := h.statuses[pluginID]
+	if !ok {
+		status.State = pluginStateInactive
+	}
+	update(&status)
+	status.UpdatedAt = time.Now()
+	h.statuses[pluginID] = status
+	h.mu.Unlock()
+	if h.onChange != nil {
+		h.onChange()
+	}
+	return true
+}
+
+func (h *pluginHost) beginPluginRestart(pluginID string) {
+	h.mu.Lock()
+	if h.restarting == nil {
+		h.restarting = make(map[string]bool)
+	}
+	h.restarting[pluginID] = true
+	h.mu.Unlock()
+}
+
+func (h *pluginHost) endPluginRestart(pluginID string) {
+	h.mu.Lock()
+	delete(h.restarting, pluginID)
+	h.mu.Unlock()
+}
+
+func (h *pluginHost) pluginRestartInProgress(pluginID string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.restarting[pluginID]
 }
 
 func (h *pluginHost) startLock(pluginID string) *sync.Mutex {
@@ -301,6 +350,9 @@ func (h *pluginHost) invokeCommandTimeout(
 }
 
 func (h *pluginHost) ensureActive(ctx context.Context, entry pluginRegistryEntry, reason string) (*pluginProcess, error) {
+	if h.pluginRestartInProgress(entry.ID) {
+		return nil, fmt.Errorf("plugin %s is restarting: %w", entry.ID, errPluginRestarting)
+	}
 	if process := h.process(entry.ID); process != nil && !process.exited() {
 		return process, nil
 	}
@@ -309,6 +361,9 @@ func (h *pluginHost) ensureActive(ctx context.Context, entry pluginRegistryEntry
 	defer lock.Unlock()
 	if process := h.process(entry.ID); process != nil && !process.exited() {
 		return process, nil
+	}
+	if h.pluginRestartInProgress(entry.ID) {
+		return nil, fmt.Errorf("plugin %s is restarting: %w", entry.ID, errPluginRestarting)
 	}
 	if !pluginActivatesOn(entry.Manifest, reason) {
 		return nil, fmt.Errorf("plugin %s does not declare activation event %s", entry.ID, reason)
@@ -409,6 +464,12 @@ func (h *pluginHost) invalidateSettingsCache() {
 	h.settingsMu.Unlock()
 }
 
+func (h *pluginHost) invalidatePluginSettings(pluginID string) {
+	h.settingsMu.Lock()
+	delete(h.settingsByPlugin, pluginID)
+	h.settingsMu.Unlock()
+}
+
 func clonePluginSettings(values map[string]any) map[string]any {
 	clone := make(map[string]any, len(values))
 	for key, value := range values {
@@ -466,7 +527,7 @@ func (h *pluginHost) deactivate(pluginID string) error {
 		return nil
 	}
 	process.stopPending(fmt.Errorf("plugin %s stopped: %w", pluginID, errPluginStopped))
-	h.updateStatus(pluginID, func(status *pluginRuntimeStatus) {
+	h.updateStatusIfProcessAbsent(pluginID, func(status *pluginRuntimeStatus) {
 		status.State = pluginStateStopping
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), pluginStopTimeout)
@@ -479,7 +540,7 @@ func (h *pluginHost) deactivate(pluginID string) error {
 		process.kill()
 		<-process.done
 	}
-	h.updateStatus(pluginID, func(status *pluginRuntimeStatus) {
+	h.updateStatusIfProcessAbsent(pluginID, func(status *pluginRuntimeStatus) {
 		status.State = pluginStateStopped
 		status.PID = 0
 		if callErr != nil {
@@ -490,6 +551,11 @@ func (h *pluginHost) deactivate(pluginID string) error {
 		return fmt.Errorf("deactivate %s: %w", pluginID, callErr)
 	}
 	return nil
+}
+
+func (h *pluginHost) restartPluginProcess(pluginID string) error {
+	h.beginPluginRestart(pluginID)
+	return h.deactivate(pluginID)
 }
 
 func (h *pluginHost) stopAll() {

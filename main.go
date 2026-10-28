@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.16.2"
+	appVersion = "0.17.0"
 )
 
 func appBuildVersion() string {
@@ -237,6 +237,8 @@ type appState struct {
 	pluginRegistry                  pluginRegistry
 	pluginRegistryMu                sync.RWMutex
 	plugins                         *pluginHost
+	pluginRestarting                map[string]bool
+	pluginPiRefreshRequired         bool
 	pluginSettingForms              map[string]*pluginSettingForm
 	pluginTasks                     map[string]pluginTaskUpdate
 	pluginViewPluginID              string
@@ -379,6 +381,7 @@ func newAppState() *appState {
 		run:                   runIdle,
 		pluginSettingForms:    make(map[string]*pluginSettingForm),
 		pluginTasks:           make(map[string]pluginTaskUpdate),
+		pluginRestarting:      make(map[string]bool),
 		pluginViewModels:      make(map[string]pluginViewModel),
 		pluginWebViews:        make(map[string]*pluginWebViewState),
 		pluginBridgeSlots:     make(map[string]chan struct{}),
@@ -2326,6 +2329,7 @@ func (s *appState) connectPi() {
 			s.piError = ""
 			s.piErrorCode = ""
 			s.piErrorDetailsOpen = false
+			s.pluginPiRefreshRequired = false
 			s.resetRuntimeDiagnostics()
 			if modelsErr != nil || levelsErr != nil {
 				s.showNotice(text("noticePiConnectedNoModels"))

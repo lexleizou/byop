@@ -380,17 +380,32 @@ func pluginSecondaryAction(
 	label string,
 	click func(),
 ) {
+	pluginSecondaryActionDisabled(c, p, key, label, false, click)
+}
+
+func pluginSecondaryActionDisabled(
+	c *ui.Context,
+	p palette,
+	key,
+	label string,
+	disabled bool,
+	click func(),
+) {
 	btn := ui.ButtonBase(c.Key(key)).Padding(7, 11).Radius(
 		runtimeTokens.Dimension.Radius["input"].Value,
 	).Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(p.surface).Cursor(ui.CursorPointer).Label(label)
-	if btn.Hovered() {
+		Background(p.surface).Cursor(ui.CursorPointer).Label(label).Disabled(disabled)
+	if btn.Hovered() && !disabled {
 		btn.Background(p.surfaceHover)
 	}
 	btn.Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(p.text)
+		color := p.text
+		if disabled {
+			color = p.muted
+		}
+		ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(color)
 	})
-	if btn.Clicked() {
+	if btn.Clicked() && !disabled {
 		click()
 	}
 }
