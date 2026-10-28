@@ -1,0 +1,36 @@
+{
+  "workbook_name": "Synthetic bank fixture - not a real ledger",
+  "timezone": "Asia/Singapore",
+  "rows": [
+    {
+      "name": "Synthetic product alpha",
+      "institution": "Synthetic institution one",
+      "category": "financial",
+      "funding_source": "bank",
+      "principal": "1200.50",
+      "amount_due": null,
+      "due_date": null,
+      "repayment_status": "not_started"
+    },
+    {
+      "name": "Synthetic product beta",
+      "institution": "Synthetic institution two",
+      "category": "financial",
+      "funding_source": "bank",
+      "principal": "0.00",
+      "amount_due": null,
+      "due_date": null,
+      "repayment_status": "repaying"
+    },
+    {
+      "name": "Synthetic product gamma",
+      "institution": "Synthetic institution three",
+      "category": "financial",
+      "funding_source": "bank",
+      "principal": null,
+      "amount_due": null,
+      "due_date": null,
+      "repayment_status": "overdue"
+    }
+  ]
+}

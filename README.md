@@ -152,6 +152,19 @@ go run .
 BYOP_PI_PATH=/absolute/path/to/pi go run .
 ```
 
+P15a 轻量表格链路默认关闭。显式加载会话桥时，使用独立本地数据库和扩展路径：
+
+```sh
+BYOP_PI_EXTENSIONS="$PWD/plugins/lightweight-table/pi-extension.mjs" \
+BYOP_LIGHTWEIGHT_TABLE_DB=/path/under/AgentScratch/tables.sqlite \
+go run .
+```
+
+`BYOP_PI_EXTENSIONS` 使用当前系统的路径列表分隔符，每个路径追加为 Pi
+`--extension`。该桥只注册当前会话的本地 stdio MCP，不修改全局 Pi
+`mcp.json`。seed JSON、四个 MCP 工具、SQLite 约束和真实 E2E 入口见
+[Lightweight Table](plugins/lightweight-table/README.md)。
+
 macOS 上查找登录 shell PATH 使用非交互的 `/bin/zsh -lc`，不会读取 `.zshrc`。若 Pi 仅由 `.zshrc` 中的 nvm 配置提供，请设置 `BYOP_PI_PATH`，或把 Pi 安装到 `/opt/homebrew/bin`、`/usr/local/bin`、`~/.local/bin`、`~/.npm-global/bin` 等常见目录。
 
 只启动原生外壳、不连接 Pi：

@@ -231,10 +231,7 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 		cwd = resolved
 	}
 
-	args := []string{"--mode", "rpc"}
-	if piEphemeralSessions() {
-		args = append(args, "--no-session")
-	}
+	args := piClientArgs()
 	cmd := exec.Command(path, args...)
 	cmd.Dir = cwd
 	cmd.Env = piProcessEnv(path, os.Environ())
@@ -289,6 +286,27 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 	}()
 
 	return client, nil
+}
+
+func piClientArgs() []string {
+	args := []string{"--mode", "rpc"}
+	if piEphemeralSessions() {
+		args = append(args, "--no-session")
+	}
+	for _, extension := range piExtensionPaths(os.Getenv("BYOP_PI_EXTENSIONS")) {
+		args = append(args, "--extension", extension)
+	}
+	return args
+}
+
+func piExtensionPaths(value string) []string {
+	var paths []string
+	for _, path := range filepath.SplitList(strings.TrimSpace(value)) {
+		if path = strings.TrimSpace(path); path != "" {
+			paths = append(paths, path)
+		}
+	}
+	return paths
 }
 
 func resolvePiPath(ctx context.Context) (string, error) {
