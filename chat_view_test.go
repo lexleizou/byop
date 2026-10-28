@@ -121,6 +121,47 @@ func TestAssistantToolOnly(t *testing.T) {
 	}
 }
 
+func TestP16EmptyTranscriptForegroundsOnlyForJAgentWallpaper(t *testing.T) {
+	title, hint, wallpaperVisible := emptyTranscriptForegrounds(
+		appearancePresetJAgent, "jagent-misty-mountains", true, false, false,
+	)
+	if !wallpaperVisible {
+		t.Fatal("J Agent wallpaper should use dark transcript foregrounds")
+	}
+	p := themePaletteForAppearance(appearancePresetJAgent, true, false, false)
+	if title != ui.Hex("#20242B") || hint != ui.Hex("#353B43") {
+		t.Fatalf("empty transcript foregrounds = %v / %v", title, hint)
+	}
+	if title == p.text {
+		t.Fatal("wallpaper title color must differ from the original light title color")
+	}
+	if hint == p.muted {
+		t.Fatal("wallpaper hint color must differ from the original muted hint color")
+	}
+
+	tests := []struct {
+		name         string
+		preset       appearancePreset
+		wallpaper    string
+		high, reduce bool
+	}{
+		{name: "BYOP wallpaper", preset: appearancePresetBYOP, wallpaper: "ember"},
+		{name: "J Agent without wallpaper", preset: appearancePresetJAgent, wallpaper: "none"},
+		{name: "J Agent high contrast", preset: appearancePresetJAgent, wallpaper: "jagent-misty-mountains", high: true},
+		{name: "J Agent reduced transparency", preset: appearancePresetJAgent, wallpaper: "jagent-misty-mountains", reduce: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			title, hint, got := emptyTranscriptForegrounds(
+				test.preset, test.wallpaper, true, test.high, test.reduce,
+			)
+			if got || title != (ui.Color{}) || hint != (ui.Color{}) {
+				t.Fatal("foreground override should remain limited to visible J Agent wallpaper")
+			}
+		})
+	}
+}
+
 func TestPromptToolGroupEndIncludesAdjacentToolOnlyMessages(t *testing.T) {
 	messages := []chatMessage{
 		{role: chatUser},

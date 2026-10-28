@@ -353,10 +353,36 @@ func assistantToolOnly(message *chatMessage) bool {
 func (s *appState) emptyTranscript(c *ui.Context) {
 	t := c.Theme()
 	metrics := s.visualMetrics()
+	titleColor, hintColor, wallpaperVisible := emptyTranscriptForegrounds(
+		s.currentAppearancePreset(),
+		s.activeWallpaper(),
+		s.effectiveDark(),
+		s.highContrastActive(currentAppearanceHighContrast()),
+		currentAppearanceReduceTransparency(),
+	)
+	if !wallpaperVisible {
+		titleColor, hintColor = t.Text, t.TextMuted
+	}
 	ui.Column(c).FillWidth().Padding(96, 0, 0, 0).AlignItems(ui.Center).Gap(10).Children(func() {
-		components.Text(c, text("chatEmptyTitle")).FontSize(metrics.titleFont).FontWeight(600).TextColor(t.Text)
-		components.Text(c, text("chatEmptyHint")).FontSize(metrics.bodyFont).TextColor(t.TextMuted)
+		components.Text(c, text("chatEmptyTitle")).FontSize(metrics.titleFont).
+			FontWeight(600).TextColor(titleColor)
+		components.Text(c, text("chatEmptyHint")).FontSize(metrics.bodyFont).
+			TextColor(hintColor)
 	})
+}
+
+func emptyTranscriptForegrounds(
+	preset appearancePreset,
+	wallpaper string,
+	dark, high, reduceTransparency bool,
+) (title, hint ui.Color, wallpaperVisible bool) {
+	if normalizeAppearancePreset(string(preset)) != appearancePresetJAgent ||
+		!deepLiquidGlassActive(dark, high, reduceTransparency) ||
+		normalizeJAgentWallpaper(wallpaper) != "jagent-misty-mountains" ||
+		wallpaperBitmap("jagent-misty-mountains") == nil {
+		return ui.Color{}, ui.Color{}, false
+	}
+	return ui.Hex("#20242B"), ui.Hex("#353B43"), true
 }
 
 func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessage, live bool) {
