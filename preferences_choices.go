@@ -109,5 +109,8 @@ func (s *appState) panelAnimationDuration(systemReduceMotion bool) time.Duration
 	if s.reducedMotionActive(systemReduceMotion) {
 		return 0
 	}
+	if s.jAgentPresetActive() {
+		return 125 * time.Millisecond
+	}
 	return time.Duration(normalizePanelAnimationMS(s.preferences.PanelAnimationMS)) * time.Millisecond
 }

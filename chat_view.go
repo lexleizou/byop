@@ -20,16 +20,20 @@ import (
 // chatPresentation retains Onevra presentation state across frames. Pi owns
 // the conversation data; these values only remember scroll and disclosure.
 type chatPresentation struct {
-	conversation  chat.ConversationState
-	layout        chat.FloatingConversationState
-	modelPicker   chat.PickerState
-	contextPicker chat.PickerState
-	effortPicker  chat.EffortState
-	markdown      markdown.Options
-	turns         map[int]*chat.TurnState
-	groups        map[string]*chat.GroupState
-	activities    map[string]*activityPresentation
-	toolGroups    map[string]*toolGroupPresentation
+	conversation   chat.ConversationState
+	layout         chat.FloatingConversationState
+	modelPicker    chat.PickerState
+	contextPicker  chat.PickerState
+	effortPicker   chat.EffortState
+	markdown       markdown.Options
+	turns          map[int]*chat.TurnState
+	groups         map[string]*chat.GroupState
+	activities     map[string]*activityPresentation
+	toolGroups     map[string]*toolGroupPresentation
+	composerHeight float32
+	jAgentPaused   bool
+	jAgentPauseY   float32
+	jAgentBuildY   float32
 
 	thinkingPending     string
 	thinkingCommitTimer *time.Timer
@@ -181,6 +185,10 @@ func (s *appState) chatPage(c *ui.Context, p palette) {
 		c.After(time.Second)
 	}
 	s.configureMarkdownV12(c, p)
+	if s.jAgentPresetActive() {
+		s.jAgentChatPage(c, p)
+		return
+	}
 	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
 		if s.piConnectionErrorActive() {
 			s.piConnectionAlert(c, p)
@@ -196,18 +204,18 @@ func (s *appState) chatPage(c *ui.Context, p palette) {
 
 func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	theme := markdown.DefaultTheme(c.Theme())
-	theme.FontSize = fontBody
+	theme.FontSize = p.bodyFont
 	theme.LineHeight = 1.5
-	theme.BlockSpacing = 12.0 / fontBody
-	theme.ItemSpacing = 4.0 / fontBody
-	theme.ListIndent = 22.0 / fontBody
+	theme.BlockSpacing = 12.0 / p.bodyFont
+	theme.ItemSpacing = 4.0 / p.bodyFont
+	theme.ListIndent = 22.0 / p.bodyFont
 	theme.Code = p.text
 	theme.CodeBackground = p.text.Alpha(.09)
-	theme.CodeSize = 1
+	theme.CodeSize = p.codeFont / p.bodyFont
 	theme.CodeBlockBackground = p.raisedSurface
 	theme.CodeBlockBorder = p.border
-	theme.CodeBlockRadius = 8
-	theme.CodeBlockPadding = 12.0 / fontBody
+	theme.CodeBlockRadius = p.inputRadius
+	theme.CodeBlockPadding = 12.0 / p.bodyFont
 	theme.CodeLineHeight = 1.4
 	codeColors := editor.DefaultTheme(c.Theme())
 	codeColors.Background = p.raisedSurface
@@ -243,8 +251,9 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 
 func (s *appState) piConnectionAlert(c *ui.Context, p palette) {
 	message := s.piConnectionErrorText()
+	contentWidth := p.chatContentWidth
 	ui.Row(c).FillWidth().Justify(ui.Center).MarginY(8).Children(func() {
-		ui.Row(c).FillWidth().MaxWidth(chat.ContentWidth).MinWidth(0).Padding(9, 12).Gap(10).Radius(8).
+		ui.Row(c).FillWidth().MaxWidth(contentWidth).MinWidth(0).Padding(9, 12).Gap(10).Radius(8).
 			Border(runtimeTokens.Dimension.Border.Value, p.danger.Alpha(.35)).Background(p.danger.Alpha(.08)).
 			AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icon("info")).Size(16, 16).Shrink(0).TextColor(p.dangerText)
@@ -343,13 +352,18 @@ func assistantToolOnly(message *chatMessage) bool {
 
 func (s *appState) emptyTranscript(c *ui.Context) {
 	t := c.Theme()
+	metrics := s.visualMetrics()
 	ui.Column(c).FillWidth().Padding(96, 0, 0, 0).AlignItems(ui.Center).Gap(10).Children(func() {
-		components.Text(c, text("chatEmptyTitle")).FontSize(fontTitle).FontWeight(600).TextColor(t.Text)
-		components.Text(c, text("chatEmptyHint")).FontSize(fontSmall).TextColor(t.TextMuted)
+		components.Text(c, text("chatEmptyTitle")).FontSize(metrics.titleFont).FontWeight(600).TextColor(t.Text)
+		components.Text(c, text("chatEmptyHint")).FontSize(metrics.bodyFont).TextColor(t.TextMuted)
 	})
 }
 
 func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessage, live bool) {
+	if s.jAgentPresetActive() {
+		s.jAgentTurnView(c, index, prompt, message, live)
+		return
+	}
 	options := chat.TurnOptions{ID: fmt.Sprintf("turn-%d", index), Status: chat.Completed, HoldOpen: !s.chatView.conversation.AtLatest()}
 	if prompt != nil {
 		text := messageText(prompt)
@@ -465,6 +479,9 @@ func (s *appState) turnStep(turnID string, message *chatMessage, step turnPlanSt
 			if button.Clicked() {
 				group.set(!open)
 				open = !open
+				if s.jAgentPresetActive() {
+					s.pauseJAgentConversation(c)
+				}
 			}
 			if open {
 				ui.Column(c).FillWidth().MinWidth(0).Gap(8).Padding(18, 0, 0, 0).
@@ -731,12 +748,13 @@ func composerAddButtonV12(c *ui.Context) ui.Element {
 }
 
 func (s *appState) chatMainWidth(windowWidth float32) float32 {
-	navigationWidth := s.navigationWidth(windowWidth) + shellGap
+	spacing := s.shellSpacing()
+	navigationWidth := s.navigationWidth(windowWidth) + spacing
 	var tasksWidth float32
 	if s.tasksOpen && windowWidth >= narrowShellWidth {
-		tasksWidth = taskPanelWidth + shellGap
+		tasksWidth = taskPanelWidth + spacing
 	}
-	return max(0, windowWidth-2*shellGap-navigationWidth-tasksWidth)
+	return max(0, windowWidth-2*spacing-navigationWidth-tasksWidth)
 }
 
 const (
@@ -1264,6 +1282,12 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 		s.chatView.contextPicker.Open = false
 	}
 	windowWidth, windowHeight := c.Size()
+	p := themePaletteForAppearance(
+		s.currentAppearancePreset(),
+		t.Dark,
+		s.highContrastActive(currentAppearanceHighContrast()),
+		currentAppearanceReduceTransparency(),
+	)
 	width := float32(modelPopoverMinWidthV12)
 	if s.chatView.modelPicker.Open {
 		// Measuring every name costs a layout each; the panel only needs it
@@ -1274,7 +1298,7 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 		}
 		width = modelPopoverWidthV12(c, labels, windowWidth)
 	}
-	popoverWidthV12(c, chip, &s.chatView.modelPicker.Open,
+	popoverWidthV12(c, p, chip, &s.chatView.modelPicker.Open,
 		s.highContrastActive(currentAppearanceHighContrast()) || currentAppearanceReduceTransparency(),
 		width, func(panel ui.Element) {
 			panel.Label(label).Padding(6).Gap(0).Children(func() {

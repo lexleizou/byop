@@ -19,17 +19,16 @@ const (
 
 // popoverV12 replaces Onevra's glass-and-1px popover while preserving MyGo's
 // positioning, focus order and Escape/outside-press dismissal.
-func popoverV12(c *ui.Context, anchor ui.Element, open *bool, opaque bool, build func(panel ui.Element)) ui.Element {
-	return popoverWidthV12(c, anchor, open, opaque, 260, build)
+func popoverV12(c *ui.Context, p palette, anchor ui.Element, open *bool, opaque bool, build func(panel ui.Element)) ui.Element {
+	return popoverWidthV12(c, p, anchor, open, opaque, 260, build)
 }
 
 // popoverWidthV12 is popoverV12 with an explicit panel width, for popovers
 // whose content is wider than the shared default.
-func popoverWidthV12(c *ui.Context, anchor ui.Element, open *bool, opaque bool, width float32,
+func popoverWidthV12(c *ui.Context, p palette, anchor ui.Element, open *bool, opaque bool, width float32,
 	build func(panel ui.Element),
 ) ui.Element {
 	t := c.Theme()
-	p := themePalette(t.Dark)
 	return ui.PopoverBase(c, anchor, open, func(panel ui.Element) {
 		panel.Column().Width(width).Padding(6).Gap(0).Margin(4, 0, 0, 0).
 			Radius(12).TextColor(t.Text)
@@ -100,7 +99,7 @@ func chipV12(c *ui.Context, label string, options chat.ChipOptions) ui.Element {
 
 // effortPickerV12 keeps Onevra's discrete slider interaction while replacing
 // its violet effects with the product's semantic accent.
-func (s *appState) effortPickerV12(c *ui.Context, state *chat.EffortState, options chat.EffortPickerOptions,
+func (s *appState) effortPickerV12(c *ui.Context, p palette, state *chat.EffortState, options chat.EffortPickerOptions,
 	opaque bool,
 ) chat.PickerResult {
 	if state == nil || len(options.Levels) == 0 {
@@ -133,7 +132,7 @@ func (s *appState) effortPickerV12(c *ui.Context, state *chat.EffortState, optio
 	if width <= 0 {
 		width = 280
 	}
-	popoverV12(c, trigger, &state.Open, opaque, func(panel ui.Element) {
+	popoverV12(c, p, trigger, &state.Open, opaque, func(panel ui.Element) {
 		const padding float32 = 14
 		names := make([][]ui.Glyph, len(options.Levels))
 		slots := make([]float32, len(options.Levels))
@@ -319,7 +318,7 @@ func clampUnitV12(value float32) float32 {
 
 // pickerV12 keeps Onevra's grouped, searchable picker behavior while using the
 // shared product surface and type scale.
-func pickerV12(c *ui.Context, state *chat.PickerState, options chat.PickerOptions,
+func pickerV12(c *ui.Context, p palette, state *chat.PickerState, options chat.PickerOptions,
 	opaque bool,
 ) chat.PickerResult {
 	if state == nil {
@@ -344,7 +343,7 @@ func pickerV12(c *ui.Context, state *chat.PickerState, options chat.PickerOption
 	if threshold <= 0 {
 		threshold = 8
 	}
-	popoverV12(c, trigger, &state.Open, opaque, func(panel ui.Element) {
+	popoverV12(c, p, trigger, &state.Open, opaque, func(panel ui.Element) {
 		panel.Label(options.Label).Width(width).Padding(0).Gap(0).Children(func() {
 			if options.SearchLabel != "" && len(options.Options) > threshold {
 				ui.Row(c).FillWidth().Padding(8, 8, 0, 8).Children(func() {

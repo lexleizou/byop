@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.15.0"
+	appVersion = "0.16.0"
 )
 
 func appBuildVersion() string {
@@ -54,7 +54,7 @@ var setMygoThemeSource = mygo.Theme.SetSource
 func main() {
 	configureFontSmoothing()
 	state := newAppState()
-	mygo.Theme.SetSource(themeSource(state.themeMode))
+	mygo.Theme.SetSource(state.effectiveThemeSource())
 	if err := mygo.Protocol.Handle(pluginWebViewScheme, newPluginWebViewSchemeHandler(state)); err != nil {
 		log.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func main() {
 	mygo.App.WhenReady(func() {
 		appearanceReady.Store(true)
 		state.applyUILanguage()
-		state.syncPluginWebViewTheme(currentAppearanceDark(), state.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
+		state.syncPluginWebViewTheme(state.effectiveDark(), state.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
 		state.syncPluginWebViewLocale()
 		win := mygo.NewWindow(mygo.WindowOptions{
 			Title:         locales.AppWindowTitle(),
@@ -78,7 +78,7 @@ func main() {
 			TitleBarStyle: mygo.TitleBarHiddenInset,
 			TrafficLightPosition: &mygo.Point{
 				X: 18,
-				Y: int(shellGap) + (int(shellTitleBarHeight)-14)/2,
+				Y: state.trafficLightY(),
 			},
 			BackgroundColor: "light-dark(#fcfbf9, #111110)",
 			StateKey:        "byop-p2-pi-rpc",
@@ -204,6 +204,7 @@ type appState struct {
 	effectiveLocale                 atomic.Pointer[string]
 	navCollapsed                    bool
 	navWidth                        float32
+	jAgentNavWidth                  float32
 	navResizeDragging               bool
 	tasksOpen                       bool
 	channelRefresh                  channelRefreshCoordinator
@@ -250,6 +251,7 @@ type appState struct {
 	pluginWebViewDark               bool
 	pluginWebViewHighContrast       bool
 	pluginWebViewReduceTransparency bool
+	pluginWebViewPreset             appearancePreset
 	pluginBridgeSlots               map[string]chan struct{}
 	pluginBridgeMu                  sync.Mutex
 	automations                     *automationStore
@@ -360,12 +362,14 @@ func newAppState() *appState {
 	}
 	preferencesStore := newByopPreferencesStore(configDir)
 	preferences, preferencesWarning := preferencesStore.load()
-	s := &appState{
+	var s *appState
+	s = &appState{
 		page:                  configuredPage(),
 		themeMode:             themeMode(preferences.Theme),
 		uiLanguage:            normalizeUILanguage(preferences.UILanguage),
 		navCollapsed:          preferences.NavCollapsed,
 		navWidth:              normalizeNavExpandedWidth(preferences.NavExpandedWidth),
+		jAgentNavWidth:        normalizeJAgentNavExpandedWidth(preferences.JAgentNavExpandedWidth),
 		tasksOpen:             preferences.TasksOpen,
 		configDir:             configDir,
 		preferences:           preferences,
@@ -407,7 +411,7 @@ func newAppState() *appState {
 	}
 	s.plugins = newPluginHost(pluginHostVersion, func() { s.postUI(func() {}) },
 		pluginHostWorkspace(workspace),
-		pluginHostTheme(currentAppearanceDark),
+		pluginHostTheme(func() bool { return s.effectiveDark() }),
 		pluginHostHighContrast(func() bool {
 			return s.highContrastActive(currentAppearanceHighContrast())
 		}),
@@ -655,8 +659,30 @@ func (s *appState) setTheme(mode themeMode) {
 
 func (s *appState) applyTheme(mode themeMode) {
 	s.themeMode = mode
-	setMygoThemeSource(themeSource(mode))
-	s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
+	setMygoThemeSource(s.effectiveThemeSource())
+	s.syncPluginWebViewTheme(s.effectiveDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
+}
+
+func (s *appState) setAppearancePreset(preset appearancePreset) {
+	preset = normalizeAppearancePreset(string(preset))
+	if s.currentAppearancePreset() == preset {
+		return
+	}
+	previous := s.preferences.AppearancePreset
+	s.applyAppearancePreset(preset)
+	if err := s.persistAppearancePreset(preset); err != nil {
+		s.preferences.AppearancePreset = previous
+		s.applyAppearancePreset(normalizeAppearancePreset(previous))
+		s.showNotice(text("noticePreferenceSaveAppearance"))
+	}
+}
+
+func (s *appState) applyAppearancePreset(preset appearancePreset) {
+	preset = normalizeAppearancePreset(string(preset))
+	s.preferences.AppearancePreset = string(preset)
+	setMygoThemeSource(s.effectiveThemeSource())
+	s.syncPluginWebViewTheme(s.effectiveDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
+	s.invalidateUI()
 }
 
 func (s *appState) setNavCollapsed(collapsed bool) {
@@ -696,10 +722,13 @@ func (s *appState) persistedPreferences() byopPreferences {
 	}
 
 	persisted.NavExpandedWidth = normalizeNavExpandedWidth(current.NavExpandedWidth)
+	persisted.JAgentNavExpandedWidth = normalizeJAgentNavExpandedWidth(current.JAgentNavExpandedWidth)
+	persisted.AppearancePreset = string(normalizeAppearancePreset(current.AppearancePreset))
 	persisted.Contrast = current.Contrast
 	persisted.Motion = current.Motion
 	persisted.PanelAnimationMS = current.PanelAnimationMS
 	persisted.Wallpaper = current.Wallpaper
+	persisted.JAgentWallpaper = normalizeJAgentWallpaper(current.JAgentWallpaper)
 	persisted.NavTransparency = current.NavTransparency
 	persisted.GlassBlur = current.GlassBlur
 	persisted.GlassRefraction = current.GlassRefraction
@@ -721,8 +750,18 @@ func (s *appState) persistTheme(mode themeMode) error {
 	})
 }
 
+func (s *appState) persistAppearancePreset(preset appearancePreset) error {
+	return s.persistPreferencePatch(func(preferences *byopPreferences) {
+		preferences.AppearancePreset = string(normalizeAppearancePreset(string(preset)))
+	})
+}
+
 func (s *appState) persistNavigationWidth() error {
 	return s.persistPreferencePatch(func(preferences *byopPreferences) {
+		if s.jAgentPresetActive() {
+			preferences.JAgentNavExpandedWidth = normalizeJAgentNavExpandedWidth(s.jAgentNavWidth)
+			return
+		}
 		preferences.NavExpandedWidth = normalizeNavExpandedWidth(s.navWidth)
 	})
 }
@@ -762,13 +801,13 @@ func (s *appState) setContrast(mode contrastMode) {
 	}
 	previous := s.preferences.Contrast
 	s.preferences.Contrast = string(mode)
-	s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
+	s.syncPluginWebViewTheme(s.effectiveDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
 	if s.window != nil {
 		s.window.Invalidate()
 	}
 	if err := s.persistPreferences(); err != nil {
 		s.preferences.Contrast = previous
-		s.syncPluginWebViewTheme(currentAppearanceDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
+		s.syncPluginWebViewTheme(s.effectiveDark(), s.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
 		if s.window != nil {
 			s.window.Invalidate()
 		}
@@ -796,6 +835,21 @@ func (s *appState) setMotion(mode motionMode) {
 }
 
 func (s *appState) setWallpaper(value string) {
+	if s.jAgentPresetActive() {
+		value = normalizeJAgentWallpaper(value)
+		if s.preferences.JAgentWallpaper == value {
+			return
+		}
+		previous := s.preferences.JAgentWallpaper
+		s.preferences.JAgentWallpaper = value
+		s.invalidateUI()
+		if err := s.persistPreferences(); err != nil {
+			s.preferences.JAgentWallpaper = previous
+			s.invalidateUI()
+			s.showNotice(text("noticePreferenceSaveGlass"))
+		}
+		return
+	}
 	value = normalizeWallpaper(value)
 	if s.preferences.Wallpaper == value {
 		return

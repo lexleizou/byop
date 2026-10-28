@@ -26,7 +26,7 @@ func (s *appState) navigationGlassButton(c *ui.Context, p palette) {
 	}
 	opaque := s.highContrastActive(currentAppearanceHighContrast()) ||
 		currentAppearanceReduceTransparency()
-	popoverV12(c, button, &s.navGlassPopoverOpen, opaque, func(panel ui.Element) {
+	popoverV12(c, p, button, &s.navGlassPopoverOpen, opaque, func(panel ui.Element) {
 		panel.AttachTo(button, ui.AnchorBottomRight, ui.AnchorBottomLeft).
 			Margin(0, 0, 90, 0).MarginStart(12)
 		panel.Children(func() {
@@ -121,6 +121,9 @@ func (s *appState) glassSliderControl(
 				TextColor(p.text)
 		})
 		slider := glassSliderV12(c, p, value, lo, hi, label)
+		if p.preset == appearancePresetJAgent {
+			slider.Disabled(true).Tooltip(text("settingsGlassJAgentFixed"))
+		}
 		track(slider)
 		if description != "" {
 			ui.Text(c, description).FontSize(fontCaption).LineHeight(1.4).
@@ -197,6 +200,9 @@ func (s *appState) glassSliderInlineV12(
 	ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 		slider := ui.Slider(c, value, float64(lo), float64(hi)).Step(1).
 			Width(180).Label(label)
+		if p.preset == appearancePresetJAgent {
+			slider.Disabled(true).Tooltip(text("settingsGlassJAgentFixed"))
+		}
 		track(slider)
 		ui.Text(c, valueText).FontSize(fontBody).
 			TextColor(p.text).Width(44).TextAlign(ui.End)
@@ -210,6 +216,9 @@ func (s *appState) glassRefractionControl(c *ui.Context, p palette, description 
 		ui.Row(c).FillWidth().MinHeight(18).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, title).FontSize(fontBody).TextColor(p.text).Grow(1)
 			toggle := ui.Switch(c, &value).Label(title)
+			if p.preset == appearancePresetJAgent {
+				toggle.Disabled(true).Tooltip(text("settingsGlassJAgentFixed"))
+			}
 			if toggle.Changed() {
 				s.setGlassRefraction(value)
 			}
@@ -225,6 +234,9 @@ func (s *appState) glassRefractionInlineV12(c *ui.Context, p palette) {
 	value := s.preferences.GlassRefraction
 	title := text("settingsGlassRefractionTitle")
 	toggle := ui.Switch(c, &value).Size(30, 18).Radius(9).Label(title)
+	if p.preset == appearancePresetJAgent {
+		toggle.Disabled(true).Tooltip(text("settingsGlassJAgentFixed"))
+	}
 	if toggle.Changed() {
 		s.setGlassRefraction(value)
 	}
@@ -316,7 +328,10 @@ func (s *appState) persistGlassBlurSlider(previous int) {
 }
 
 func (s *appState) glassStatusText() string {
-	dark := currentAppearanceDark()
+	if s.jAgentPresetActive() {
+		return text("settingsGlassJAgentFixed")
+	}
+	dark := s.effectiveDark()
 	high := s.highContrastActive(currentAppearanceHighContrast())
 	reduceTransparency := currentAppearanceReduceTransparency()
 	if !dark {
@@ -330,7 +345,7 @@ func (s *appState) glassStatusText() string {
 
 func (s *appState) settingsWallpaperChoicesV12(c *ui.Context, p palette) {
 	ui.Row(c).Gap(8).Children(func() {
-		for _, choice := range []struct {
+		choices := []struct {
 			value string
 			key   string
 		}{
@@ -338,14 +353,24 @@ func (s *appState) settingsWallpaperChoicesV12(c *ui.Context, p palette) {
 			{"jade", "settingsWallpaperJade"},
 			{"graphite", "settingsWallpaperGraphite"},
 			{"none", "settingsWallpaperNone"},
-		} {
+		}
+		if p.preset == appearancePresetJAgent {
+			choices = []struct {
+				value string
+				key   string
+			}{
+				{"jagent-misty-mountains", "settingsWallpaperJAgent"},
+				{"none", "settingsWallpaperNone"},
+			}
+		}
+		for _, choice := range choices {
 			s.wallpaperChoiceV12(c, p, choice.value, text(choice.key))
 		}
 	})
 }
 
 func (s *appState) wallpaperChoiceV12(c *ui.Context, p palette, value, label string) {
-	selected := s.preferences.Wallpaper == value
+	selected := s.activeWallpaper() == value
 	border := p.border
 	borderWidth := runtimeTokens.Dimension.Border.Value
 	if selected {
@@ -368,14 +393,18 @@ func (s *appState) wallpaperChoiceV12(c *ui.Context, p palette, value, label str
 }
 
 func (s *appState) settingsGlassPreviewV12(c *ui.Context, p palette) {
-	dark := currentAppearanceDark()
+	dark := s.effectiveDark()
 	high := s.highContrastActive(currentAppearanceHighContrast())
 	reduceTransparency := currentAppearanceReduceTransparency()
-	preview := ui.Row(c).Height(120).FillWidth().Radius(shellRadius).
+	preview := ui.Row(c).Height(120).FillWidth().Radius(p.mainRadius).
 		Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(p.readingSurface).Clip()
 	preview.Children(func() {
 		s.wallpaperBackdrop(c, dark, high, reduceTransparency)
+		if s.jAgentPresetActive() {
+			s.jAgentGlassPreview(c, p, high, reduceTransparency)
+			return
+		}
 		ui.Row(c).Absolute().Top(0).Right(0).Bottom(0).Left(0).
 			Padding(8).Gap(8).Children(func() {
 			navGlassCard(c, p, dark, high, reduceTransparency, shellRadius,
@@ -392,6 +421,60 @@ func (s *appState) settingsGlassPreviewV12(c *ui.Context, p palette) {
 			ui.Column(c).Grow(1).FillHeight().Radius(8).
 				Border(runtimeTokens.Dimension.Border.Value, p.border).
 				Background(p.readingSurface)
+		})
+	})
+}
+
+func (s *appState) jAgentGlassPreview(c *ui.Context, p palette, high, reduceTransparency bool) {
+	ui.Row(c).Absolute().Top(0).Right(0).Bottom(0).Left(0).Children(func() {
+		nav := ui.Column(c).Width(118).FillHeight().Padding(8, 6).
+			BorderWidth(0, 1, 0, 0).BorderColor(ui.Hex("#32353c")).Gap(5)
+		if high || reduceTransparency {
+			nav.Background(ui.Hex("#171c26"))
+		} else {
+			nav.Material(blurredTintMaterial{blur: 24, tint: ui.RGBA(23, 28, 38, .70)})
+		}
+		nav.Children(func() {
+			ui.Text(c, text("settingsAppearancePresetJAgent")).FontSize(12).
+				FontWeight(650).TextColor(p.text).SingleLine()
+			for index := range 4 {
+				row := ui.Row(c).Height(18).FillWidth().Padding(0, 4).
+					Radius(6).AlignItems(ui.Center).Gap(5)
+				if index == 0 {
+					row.Background(p.text.Alpha(.08))
+				}
+				row.Children(func() {
+					ui.Box(c).Size(7, 7).Radius(2).Background(p.text.Alpha(.72))
+					ui.Box(c).Height(4).Grow(1).Radius(2).Background(p.text.Alpha(.42))
+				})
+			}
+		})
+		ui.Column(c).Grow(1).FillHeight().Children(func() {
+			ui.Row(c).Height(26).FillWidth().Padding(0, 8).AlignItems(ui.Center).
+				BorderWidth(0, 0, 0.5, 0).BorderColor(p.border).Children(func() {
+				ui.Box(c).Width(76).Height(5).Radius(3).Background(p.text.Alpha(.62))
+			})
+			ui.Column(c).Grow(1).Padding(10, 12).Gap(6).Children(func() {
+				for _, width := range []float32{88, 112} {
+					card := ui.Column(c).Width(width).Padding(6, 8).Gap(4)
+					card = jAgentGlassSurface(card, p, 8, 14,
+						ui.RGBA(27, 27, 27, .72))
+					card.Children(func() {
+						ui.Box(c).FillWidth().Height(4).Radius(2).
+							Background(p.text.Alpha(.55))
+						ui.Box(c).FillWidth().Height(4).Radius(2).
+							Background(p.text.Alpha(.28))
+					})
+				}
+			})
+			composer := ui.Row(c).Height(20).FillWidth().Margin(0, 8, 8, 8).
+				Padding(0, 6).Radius(7).AlignItems(ui.Center)
+			composer = jAgentGlassSurface(composer, p, 7, 14,
+				ui.RGBA(27, 27, 27, .72))
+			composer.Children(func() {
+				ui.Box(c).Height(4).Grow(1).Radius(2).Background(p.text.Alpha(.34))
+				ui.Box(c).Size(10, 10).Radius(3).Background(ui.Hex("#f1f1f1"))
+			})
 		})
 	})
 }

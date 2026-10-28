@@ -2,7 +2,7 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本 0.15.0：新增可安装的轻量表格插件，支持本地记录编辑、筛选、固定上下文发送到 Agent 和历史撤销；Pi 会话自动加载插件扩展，使用插件独立 SQLite 数据目录。见 [P15b 验证记录](docs/P15b-validation.md) 和 [插件说明](plugins/lightweight-table/README.md)。P14 已完成统一深色材质层级，壁纸作为根背景，导航玻璃继续直接采样壁纸；阅读区保持不透明深底，Composer、卡片、任务栏和浮层使用分层表面与一致的玻璃边缘。见 [P14 验证记录](docs/P14-validation.md)。P13b 的窗口拖动、侧栏调宽和列表间距继续保留，见 [P13b 验证记录](docs/P13b-validation.md)。P13 深色液态玻璃主题已加入壁纸、导航透明度、模糊和边缘折射可调，高对比与减少透明度回退规则保持不变；具体证据和限制见 [P13 验证记录](docs/P13-validation.md)。P12 完整界面、BYOP Radix 产品 token、分组设置与模型渠道流程继续保留。产品字号只使用 12/14/18 px，正文与代码为 14 px；可见边框为 0.5 px，必要过渡为 250 ms ease-out。Liquid Glass 只用于 chrome、导航和必要浮层，阅读区与 Composer 背景不透明。主题、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。轻量表格已按明确授权进入实施；其他功能插件继续暂停。BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本 0.16.0：Appearance 新增可切换的 BYOP / J Agent（深色）视觉预设。J Agent 使用独立 261 px 导航、768 px 阅读列、实测玻璃 tints、125 ms 微交互近似和已核实的雾山壁纸；切回 BYOP 会恢复原浅色/深色模式、导航宽度、玻璃设置与壁纸。见 [P16 验证记录](docs/P16-validation.md)。P15b 的轻量表格插件、固定上下文发送、历史撤销和会话 MCP 集成继续保留，见 [P15b 验证记录](docs/P15b-validation.md) 和 [插件说明](plugins/lightweight-table/README.md)。P14 已统一 BYOP 深色材质层级，壁纸作为根背景，导航玻璃继续直接采样壁纸；阅读区保持不透明深底，Composer、卡片、任务栏和浮层使用分层表面与一致的玻璃边缘。见 [P14 验证记录](docs/P14-validation.md)。P13b 的窗口拖动、侧栏调宽和列表间距继续保留，见 [P13b 验证记录](docs/P13b-validation.md)。P13 深色液态玻璃主题已加入壁纸、导航透明度、模糊和边缘折射可调，高对比与减少透明度回退规则保持不变；具体证据和限制见 [P13 验证记录](docs/P13-validation.md)。P12 完整界面、BYOP Radix 产品 token、分组设置与模型渠道流程继续保留。BYOP 预设继续使用 12/14/18 px、0.5 px 边框和 250 ms 过渡；J Agent 预设按其快照使用 13/15/18 px、实测圆角和 125 ms 近似。主题、视觉预设、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
@@ -18,6 +18,10 @@
 - Settings 顶部提供跟随系统、English 与简体中文；切换后原生界面、窗口标题、插件清单显示文字和现有 WebView 立即刷新，无需重启；
 - 宿主界面文字来自 `locales/<tag>.json`，新增语言只需复制源语言文件、翻译、重新生成访问器并构建；
 - Light、Dark、System 三种主题；
+- Appearance 可选择 BYOP 或 J Agent（深色）视觉预设；未知/缺失预设回退到 BYOP，保存失败会回滚有效外观；
+- J Agent 预设使用 261 px 独立导航宽度、768 px 居中阅读列、28 px 紧凑导航行、56 px 标题区、实测卡片/输入区玻璃与固定深色模式；BYOP 的导航宽度、壁纸、玻璃参数和已保存 Light/Dark/System 选择相互隔离；
+- J Agent 默认使用已核实的 Misty Mountains 照片，可切换为无壁纸；来源与许可见 `assets/wallpapers/JAGENT-WALLPAPER-NOTICE.md`；
+- J Agent 的高对比和减少透明度回退使用不透明 J 中性表面；不支持浏览器 CSS 的折射/饱和细节以 MyGo 原生模糊与 tint 近似；
 - 对比度可跟随系统、固定标准或增强；增强主题使用单独的高对比度 palette，并同步到插件 WebView；
 - 动效可跟随系统、固定标准或减少；减少动效时状态文字保持静态，不启动持续重绘；
 - 必要界面过渡统一为 250 ms ease-out；跟随系统减少动态或固定减少动效时为 0 ms；

@@ -68,7 +68,11 @@ func (s *appState) settingsPageV12(c *ui.Context, p palette, state *SettingsPage
 		return
 	}
 
-	ui.Row(c).Fill().Padding(8, 0, 0, 0).Children(func() {
+	topPadding := float32(8)
+	if p.preset == appearancePresetJAgent {
+		topPadding = 0
+	}
+	ui.Row(c).Fill().Padding(topPadding, 0, 0, 0).Children(func() {
 		s.settingsNavigationV12(c, p, state, active, false)
 		s.settingsContentPaneV12(c, p, state, active)
 	})
@@ -89,16 +93,17 @@ func (s *appState) settingsContentWidthV12(windowWidth float32) float32 {
 	// Settings keep their own breakpoint semantics: an expanded navigation
 	// reserves its width even below the shell's narrow-window breakpoint, but
 	// the same limit as the shell keeps the content area usable.
+	spacing := s.shellSpacing()
 	navigationWidth := min(s.navigationExpandedWidth(), s.navExpandedWidthLimit(windowWidth)) +
-		shellGap
+		spacing
 	if s.navCollapsed {
-		navigationWidth = navCollapsedWidth + shellGap
+		navigationWidth = navCollapsedWidth + spacing
 	}
 	var tasksWidth float32
 	if s.tasksOpen && windowWidth >= narrowShellWidth {
-		tasksWidth = taskPanelWidth + shellGap
+		tasksWidth = taskPanelWidth + spacing
 	}
-	available := max(0, windowWidth-2*shellGap-navigationWidth-tasksWidth-
+	available := max(0, windowWidth-2*spacing-navigationWidth-tasksWidth-
 		2*settingsPageHorizontalPaddingV12)
 	return min(settingsPageMaxWidthV12, available)
 }
@@ -120,12 +125,16 @@ func (s *appState) settingsContentPaneV12(
 
 func (s *appState) settingsContentHeaderV12(c *ui.Context, p palette, active settingsCategoryID) {
 	spec, _ := settingsCategory(active)
+	descriptionKey := settingsCategoryDescriptionKey(active)
+	if s.jAgentPresetActive() && active == settingsCategoryAppearance {
+		descriptionKey = "settingsCategoryAppearanceJAgentDescription"
+	}
 	ui.Row(c).FillWidth().Gap(12).AlignItems(ui.Start).Children(func() {
 		ui.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
-			ui.Text(c, text(spec.labelKey)).FontSize(18).FontWeight(650).LineHeight(1.5).
+			ui.Text(c, text(spec.labelKey)).FontSize(p.titleFont).FontWeight(650).LineHeight(1.5).
 				TextColor(p.text)
-			ui.Text(c, text(settingsCategoryDescriptionKey(active))).
-				FontSize(fontBody).LineHeight(1.5).TextColor(p.muted)
+			ui.Text(c, text(descriptionKey)).
+				FontSize(p.bodyFont).LineHeight(1.5).TextColor(p.muted)
 		})
 		backLabel := text("settingsBackToChat")
 		back := ui.ButtonBase(c.Key("settings-back-chat")).Size(28, 28).Radius(8).
@@ -172,7 +181,7 @@ func (s *appState) settingsSearchV12(c *ui.Context, p palette, state *SettingsPa
 		Background(p.composerSurface).AlignItems(ui.Center).Margin(0, 0, 8, 0).Children(func() {
 		ui.Icon(c, icon("search")).Size(15, 15).TextColor(p.muted)
 		input := ui.TextInputBase(c.Key("settings-search"), &state.Search).Grow(1).
-			Placeholder(placeholder).FontSize(fontBody).TextColor(p.text).
+			Placeholder(placeholder).FontSize(p.bodyFont).TextColor(p.text).
 			Background(ui.Color{}).Border(0, ui.Color{}).Padding(0).Label(placeholder)
 		input.OnTextKey(func(k ui.TextKey) bool {
 			if k.Key != ui.KeyEnter || k.Mods != 0 {
@@ -197,10 +206,10 @@ func (s *appState) settingsSearchV12(c *ui.Context, p palette, state *SettingsPa
 	card := ui.Column(c).FillWidth().Gap(6).Padding(10)
 	card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["overlay"].Value)
 	card.Children(func() {
-		ui.Text(c, text("settingsSearchResults")).FontSize(fontSmall).
+		ui.Text(c, text("settingsSearchResults")).FontSize(p.captionFont).
 			FontWeight(650).TextColor(p.muted)
 		if len(matches) == 0 {
-			ui.Text(c, text("settingsSearchNoResults")).FontSize(fontBody).
+			ui.Text(c, text("settingsSearchNoResults")).FontSize(p.bodyFont).
 				TextColor(p.muted)
 			return
 		}
@@ -231,7 +240,7 @@ func (s *appState) settingsSearchResultV12(
 	button.Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icon(spec.iconName)).Size(15, 15).TextColor(p.accentText)
-			ui.Text(c, label).FontSize(fontBody).FontWeight(600).TextColor(p.text)
+			ui.Text(c, label).FontSize(p.bodyFont).FontWeight(600).TextColor(p.text)
 		})
 	})
 	if button.Clicked() {
@@ -348,9 +357,9 @@ func (s *appState) settingsCategoryButtonV12(
 		button.Background(p.text.Alpha(.09))
 	}
 	button.Children(func() {
-		ui.Text(c, label).FontSize(fontBody).FontWeight(400).TextColor(fg).Grow(1)
+		ui.Text(c, label).FontSize(p.bodyFont).FontWeight(400).TextColor(fg).Grow(1)
 		if id == settingsCategoryAbout {
-			ui.Text(c, appVersion).FontSize(fontBody).
+			ui.Text(c, appVersion).FontSize(p.bodyFont).
 				TextColor(p.muted).Shrink(0)
 		}
 	})
@@ -421,21 +430,39 @@ func (s *appState) settingsGeneralV12(c *ui.Context, p palette) {
 func (s *appState) settingsAppearanceV12(c *ui.Context, p palette) {
 	appearanceBody := func() {
 		ui.Column(c).FillWidth().Gap(0).Children(func() {
+			presetDescription := text("settingsAppearancePresetDescription")
+			if s.jAgentPresetActive() {
+				presetDescription = text("settingsAppearancePresetDarkHint")
+			}
 			settingsRowV12(c, p,
-				text("settingsThemeTitle"), text("settingsThemeDescription"),
-				func() { s.settingsThemeSegmentV12(c, p) })
+				text("settingsAppearancePresetTitle"), presetDescription,
+				func() { s.settingsAppearancePresetSegmentV12(c, p) })
+			themeDescription := text("settingsThemeDescription")
+			themeControl := func() { s.settingsThemeSegmentV12(c, p) }
+			if s.jAgentPresetActive() {
+				themeDescription = text("settingsThemeDescriptionJAgent")
+				themeControl = func() { s.settingsJAgentEffectiveThemeV12(c, p) }
+			}
 			settingsRowV12(c, p,
-				text("settingsWallpaperTitle"), text("settingsWallpaperDescription"),
+				text("settingsThemeTitle"), themeDescription, themeControl)
+			wallpaperDescription := text("settingsWallpaperDescription")
+			if s.jAgentPresetActive() {
+				wallpaperDescription = text("settingsWallpaperJAgentDescription")
+			}
+			settingsRowV12(c, p,
+				text("settingsWallpaperTitle"), wallpaperDescription,
 				func() { s.settingsWallpaperChoicesV12(c, p) })
-			settingsRowV12(c, p,
-				text("settingsNavTransparencyTitle"), text("settingsNavTransparencyDescription"),
-				func() { s.navTransparencyInlineV12(c, p) })
-			settingsRowV12(c, p,
-				text("settingsGlassBlurTitle"), text("settingsGlassBlurDescription"),
-				func() { s.glassBlurInlineV12(c, p) })
-			settingsRowV12(c, p,
-				text("settingsGlassRefractionTitle"), text("settingsGlassRefractionDescription"),
-				func() { s.glassRefractionInlineV12(c, p) })
+			if !s.jAgentPresetActive() {
+				settingsRowV12(c, p,
+					text("settingsNavTransparencyTitle"), text("settingsNavTransparencyDescription"),
+					func() { s.navTransparencyInlineV12(c, p) })
+				settingsRowV12(c, p,
+					text("settingsGlassBlurTitle"), text("settingsGlassBlurDescription"),
+					func() { s.glassBlurInlineV12(c, p) })
+				settingsRowV12(c, p,
+					text("settingsGlassRefractionTitle"), text("settingsGlassRefractionDescription"),
+					func() { s.glassRefractionInlineV12(c, p) })
+			}
 			settingsRowV12(c, p,
 				text("settingsReduceTransparencyTitle"), text("settingsReduceTransparencyDescription"),
 				func() { s.reduceTransparencyInlineV12(c, p) })
@@ -465,10 +492,10 @@ func settingsRowV12(
 		Padding(14, 0).BorderWidth(0, 0, runtimeTokens.Dimension.Border.Value, 0).
 		BorderColor(p.border).Children(func() {
 		ui.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-			ui.Text(c, title).FontSize(fontBody).FontWeight(400).LineHeight(1.5).
+			ui.Text(c, title).FontSize(p.bodyFont).FontWeight(400).LineHeight(1.5).
 				TextColor(p.text)
 			if description != "" {
-				ui.Text(c, description).FontSize(fontCaption).LineHeight(1.5).
+				ui.Text(c, description).FontSize(p.captionFont).LineHeight(1.5).
 					TextColor(p.muted)
 			}
 		})
@@ -485,6 +512,15 @@ func (s *appState) settingsThemeSegmentV12(c *ui.Context, p palette) {
 			locales.SettingsAppearanceDark())
 		s.settingsThemeSegmentButtonV12(c, p, themeSystem,
 			locales.SettingsAppearanceSystem())
+	})
+}
+
+func (s *appState) settingsJAgentEffectiveThemeV12(c *ui.Context, p palette) {
+	ui.Row(c).Height(28).Padding(0, 10).Radius(6).
+		Background(p.text.Alpha(.14)).AlignItems(ui.Center).Gap(6).Children(func() {
+		ui.Icon(c, icon("moon")).Size(13, 13).TextColor(p.text)
+		ui.Text(c, text("settingsThemeEffectiveDark")).FontSize(p.captionFont).
+			FontWeight(500).TextColor(p.text)
 	})
 }
 
@@ -505,11 +541,29 @@ func (s *appState) settingsThemeSegmentButtonV12(
 		button.Background(p.text.Alpha(.09))
 	}
 	button.Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).FontWeight(500).TextColor(fg)
+		ui.Text(c, label).FontSize(p.captionFont).FontWeight(500).TextColor(fg)
 	})
 	if button.Clicked() {
 		s.setTheme(mode)
 	}
+}
+
+func (s *appState) settingsAppearancePresetSegmentV12(c *ui.Context, p palette) {
+	settingsSegmentV12(c, p, func() {
+		for _, choice := range []struct {
+			preset appearancePreset
+			key    string
+			label  string
+		}{
+			{appearancePresetBYOP, "appearance-preset-byop", text("settingsAppearancePresetBYOP")},
+			{appearancePresetJAgent, "appearance-preset-jagent", text("settingsAppearancePresetJAgent")},
+		} {
+			selected := s.currentAppearancePreset() == choice.preset
+			s.settingsChoiceSegmentButtonV12(c, p, choice.key, choice.label, selected, func() {
+				s.setAppearancePreset(choice.preset)
+			})
+		}
+	})
 }
 
 func (s *appState) settingsContrastSegmentV12(c *ui.Context, p palette) {
@@ -564,7 +618,7 @@ func (s *appState) settingsChoiceSegmentButtonV12(
 		button.Background(p.text.Alpha(.09))
 	}
 	button.Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).FontWeight(500).TextColor(fg)
+		ui.Text(c, label).FontSize(p.captionFont).FontWeight(500).TextColor(fg)
 	})
 	if button.Clicked() {
 		click()
@@ -681,10 +735,10 @@ func settingsCardV12(c *ui.Context, p palette, title, description string, body f
 	card = styleRaisedSurface(card, p, runtimeTokens.Dimension.Radius["overlay"].Value)
 	card.Children(func() {
 		if title != "" {
-			ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
+			ui.Text(c, title).FontSize(p.bodyFont).FontWeight(650).TextColor(p.text)
 		}
 		if description != "" {
-			ui.Text(c, description).FontSize(fontSmall).LineHeight(1.4).
+			ui.Text(c, description).FontSize(p.captionFont).LineHeight(1.4).
 				TextColor(p.muted)
 		}
 		body()
@@ -695,9 +749,9 @@ func settingsValueV12(c *ui.Context, p palette, label, value string) {
 	ui.Row(c).FillWidth().Padding(8, 10).
 		Radius(runtimeTokens.Dimension.Radius["input"].Value).Background(p.readingSurface).
 		Wrap().AlignItems(ui.Center).Gap(12).Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).TextColor(p.muted).MinWidth(72).
+		ui.Text(c, label).FontSize(p.captionFont).TextColor(p.muted).MinWidth(72).
 			MaxWidth(150)
-		ui.Text(c, value).FontSize(fontBody).FontWeight(400).
+		ui.Text(c, value).FontSize(p.bodyFont).FontWeight(400).
 			TextColor(p.text).Grow(1).MinWidth(0).MaxLines(2).Tooltip(value)
 	})
 }
@@ -780,11 +834,14 @@ func settingsCategorySearchTermsWithText(
 			"keyboard", "shortcut", "contrast", "motion")
 	case settingsCategoryAppearance:
 		terms = append(terms, localize("settingsAppearanceTitle"),
+			localize("settingsAppearancePresetTitle"),
+			localize("settingsAppearancePresetBYOP"),
+			localize("settingsAppearancePresetJAgent"),
 			localize("settingsGlassTitle"), localize("settingsWallpaperTitle"),
 			localize("settingsNavTransparencyTitle"),
 			localize("settingsGlassBlurTitle"),
 			localize("settingsGlassRefractionTitle"),
-			"theme", "wallpaper", "glass",
+			"theme", "style", "preset", "J Agent", "wallpaper", "glass",
 			"transparency", "blur", "refraction")
 	case settingsCategoryModels:
 		terms = append(terms, "models.json", "provider", "model", "channel", "API")

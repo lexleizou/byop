@@ -143,12 +143,15 @@ func (s *appState) ensurePluginWebView(
 	dark := s.pluginWebViewDark
 	high := s.pluginWebViewHighContrast
 	reduceTransparency := s.pluginWebViewReduceTransparency
+	preset := s.pluginWebViewPreset
 	reduceMotion := s.reducedMotionActive(currentAppearanceReduceMotion())
 	s.pluginWebViewsMu.RUnlock()
 	locale := s.locale()
 	webView, err := s.window.NewWebView(mygo.WebViewOptions{
-		URL:             "byop-plugin://" + entry.ID + "/" + view.Entry,
-		BackgroundColor: pluginColorHex(themePaletteWithContrast(dark, high).background),
+		URL: "byop-plugin://" + entry.ID + "/" + view.Entry,
+		BackgroundColor: pluginColorHex(themePaletteForAppearance(
+			preset, dark, high, reduceTransparency,
+		).background),
 		Page: mygo.PageOptions{
 			PreloadScript: pluginWebViewBridgeScript(dark, high, reduceTransparency, reduceMotion, locale),
 		},
@@ -442,14 +445,17 @@ func (s *appState) syncPluginWebViewTheme(dark, high, reduceTransparency bool, e
 		s.plugins.reducedMotion.Store(reduceMotion)
 	}
 	s.pluginWebViewsMu.Lock()
+	preset := s.currentAppearancePreset()
 	if s.pluginWebViewDark == dark && s.pluginWebViewHighContrast == high &&
-		s.pluginWebViewReduceTransparency == reduceTransparency {
+		s.pluginWebViewReduceTransparency == reduceTransparency &&
+		s.pluginWebViewPreset == preset {
 		s.pluginWebViewsMu.Unlock()
 		return
 	}
 	s.pluginWebViewDark = dark
 	s.pluginWebViewHighContrast = high
 	s.pluginWebViewReduceTransparency = reduceTransparency
+	s.pluginWebViewPreset = preset
 	views := make([]*pluginWebViewState, 0, len(s.pluginWebViews))
 	for _, state := range s.pluginWebViews {
 		views = append(views, state)
@@ -457,7 +463,9 @@ func (s *appState) syncPluginWebViewTheme(dark, high, reduceTransparency bool, e
 	s.pluginWebViewsMu.Unlock()
 
 	payload := currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion)
-	background := pluginColorHex(themePaletteWithContrast(dark, high).background)
+	background := pluginColorHex(themePaletteForAppearance(
+		preset, dark, high, reduceTransparency,
+	).background)
 	for _, state := range views {
 		if state.webView == nil || state.webView.IsDestroyed() {
 			continue

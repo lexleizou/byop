@@ -1345,8 +1345,8 @@ func settingsCard(c *ui.Context, p palette, title, description string, body func
 	card = styleRaisedSurface(card, p, 12)
 	card.Children(func() {
 		ui.Column(c).Gap(4).Children(func() {
-			ui.Text(c, title).FontSize(fontBody).FontWeight(650).TextColor(p.text)
-			ui.Text(c, description).FontSize(fontSmall).LineHeight(1.45).TextColor(p.muted)
+			ui.Text(c, title).FontSize(p.bodyFont).FontWeight(650).TextColor(p.text)
+			ui.Text(c, description).FontSize(p.captionFont).LineHeight(1.45).TextColor(p.muted)
 		})
 		body()
 	})
@@ -1355,8 +1355,8 @@ func settingsCard(c *ui.Context, p palette, title, description string, body func
 func settingsValue(c *ui.Context, p palette, label, value string) {
 	ui.Row(c).FillWidth().Padding(8, 10).Radius(8).Background(p.background).
 		AlignItems(ui.Center).Children(func() {
-		ui.Text(c, label).FontSize(fontCaption).TextColor(p.muted).Width(180)
-		ui.Text(c, value).FontSize(fontCaption).FontWeight(600).TextColor(p.text).Grow(1)
+		ui.Text(c, label).FontSize(p.captionFont).TextColor(p.muted).Width(180)
+		ui.Text(c, value).FontSize(p.captionFont).FontWeight(600).TextColor(p.text).Grow(1)
 	})
 }
 
@@ -1378,7 +1378,7 @@ func (s *appState) themeButton(c *ui.Context, p palette, mode themeMode, iconNam
 	btn.Children(func() {
 		ui.Row(c).Gap(7).AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icon(iconName)).Size(15, 15).TextColor(fg)
-			ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(fg)
+			ui.Text(c, label).FontSize(p.controlFont()).FontWeight(600).TextColor(fg)
 			if selected {
 				ui.Icon(c, icon("check")).Size(12, 12).TextColor(fg)
 			}

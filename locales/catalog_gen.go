@@ -5422,6 +5422,82 @@ func (msgs Messages) SettingsAppearanceDescription() string {
 	return Catalog.Format(msgs.locale, "settingsAppearanceDescription", nil)
 }
 
+// SettingsAppearancePresetTitle says "Interface style"
+// in the language the app shows.
+//
+// Label for the selectable visual preset.
+func SettingsAppearancePresetTitle() string { return In(i18n.Locale()).SettingsAppearancePresetTitle() }
+
+// SettingsAppearancePresetTitle says "Interface style"
+// in the language of msgs.
+//
+// Label for the selectable visual preset.
+func (msgs Messages) SettingsAppearancePresetTitle() string {
+	return Catalog.Format(msgs.locale, "settingsAppearancePresetTitle", nil)
+}
+
+// SettingsAppearancePresetDescription says "Use BYOP's material system or the measured J Agent dark appearance."
+// in the language the app shows.
+//
+// Description for the selectable visual preset.
+func SettingsAppearancePresetDescription() string {
+	return In(i18n.Locale()).SettingsAppearancePresetDescription()
+}
+
+// SettingsAppearancePresetDescription says "Use BYOP's material system or the measured J Agent dark appearance."
+// in the language of msgs.
+//
+// Description for the selectable visual preset.
+func (msgs Messages) SettingsAppearancePresetDescription() string {
+	return Catalog.Format(msgs.locale, "settingsAppearancePresetDescription", nil)
+}
+
+// SettingsAppearancePresetDarkHint says "J Agent uses its measured dark appearance. Your BYOP light or dark choice returns with the BYOP style."
+// in the language the app shows.
+//
+// Explains that J Agent is dark-only and BYOP mode is retained.
+func SettingsAppearancePresetDarkHint() string {
+	return In(i18n.Locale()).SettingsAppearancePresetDarkHint()
+}
+
+// SettingsAppearancePresetDarkHint says "J Agent uses its measured dark appearance. Your BYOP light or dark choice returns with the BYOP style."
+// in the language of msgs.
+//
+// Explains that J Agent is dark-only and BYOP mode is retained.
+func (msgs Messages) SettingsAppearancePresetDarkHint() string {
+	return Catalog.Format(msgs.locale, "settingsAppearancePresetDarkHint", nil)
+}
+
+// SettingsAppearancePresetBYOP says "BYOP"
+// in the language the app shows.
+//
+// The default BYOP visual preset.
+func SettingsAppearancePresetBYOP() string { return In(i18n.Locale()).SettingsAppearancePresetBYOP() }
+
+// SettingsAppearancePresetBYOP says "BYOP"
+// in the language of msgs.
+//
+// The default BYOP visual preset.
+func (msgs Messages) SettingsAppearancePresetBYOP() string {
+	return Catalog.Format(msgs.locale, "settingsAppearancePresetBYOP", nil)
+}
+
+// SettingsAppearancePresetJAgent says "J Agent (dark)"
+// in the language the app shows.
+//
+// The measured J Agent dark visual preset.
+func SettingsAppearancePresetJAgent() string {
+	return In(i18n.Locale()).SettingsAppearancePresetJAgent()
+}
+
+// SettingsAppearancePresetJAgent says "J Agent (dark)"
+// in the language of msgs.
+//
+// The measured J Agent dark visual preset.
+func (msgs Messages) SettingsAppearancePresetJAgent() string {
+	return Catalog.Format(msgs.locale, "settingsAppearancePresetJAgent", nil)
+}
+
 // SettingsThemeTitle says "Theme"
 // in the language the app shows.
 //
@@ -5448,6 +5524,36 @@ func SettingsThemeDescription() string { return In(i18n.Locale()).SettingsThemeD
 // Description for the theme row in appearance settings.
 func (msgs Messages) SettingsThemeDescription() string {
 	return Catalog.Format(msgs.locale, "settingsThemeDescription", nil)
+}
+
+// SettingsThemeDescriptionJAgent says "J Agent is fixed to its measured Dark appearance. Your saved BYOP Light, Dark, or System choice stays unchanged."
+// in the language the app shows.
+//
+// Read-only theme description for the J Agent preset.
+func SettingsThemeDescriptionJAgent() string {
+	return In(i18n.Locale()).SettingsThemeDescriptionJAgent()
+}
+
+// SettingsThemeDescriptionJAgent says "J Agent is fixed to its measured Dark appearance. Your saved BYOP Light, Dark, or System choice stays unchanged."
+// in the language of msgs.
+//
+// Read-only theme description for the J Agent preset.
+func (msgs Messages) SettingsThemeDescriptionJAgent() string {
+	return Catalog.Format(msgs.locale, "settingsThemeDescriptionJAgent", nil)
+}
+
+// SettingsThemeEffectiveDark says "Effective: Dark"
+// in the language the app shows.
+//
+// Read-only effective theme indicator for the J Agent preset.
+func SettingsThemeEffectiveDark() string { return In(i18n.Locale()).SettingsThemeEffectiveDark() }
+
+// SettingsThemeEffectiveDark says "Effective: Dark"
+// in the language of msgs.
+//
+// Read-only effective theme indicator for the J Agent preset.
+func (msgs Messages) SettingsThemeEffectiveDark() string {
+	return Catalog.Format(msgs.locale, "settingsThemeEffectiveDark", nil)
 }
 
 // SettingsReduceTransparencyTitle says "Reduce transparency"
@@ -6046,6 +6152,22 @@ func NoticePreferenceSaveTheme() string { return In(i18n.Locale()).NoticePrefere
 // Notice when the theme changed but could not be persisted.
 func (msgs Messages) NoticePreferenceSaveTheme() string {
 	return Catalog.Format(msgs.locale, "noticePreferenceSaveTheme", nil)
+}
+
+// NoticePreferenceSaveAppearance says "Interface style changed, but preferences could not be saved."
+// in the language the app shows.
+//
+// Notice when the visual preset changed but could not be persisted.
+func NoticePreferenceSaveAppearance() string {
+	return In(i18n.Locale()).NoticePreferenceSaveAppearance()
+}
+
+// NoticePreferenceSaveAppearance says "Interface style changed, but preferences could not be saved."
+// in the language of msgs.
+//
+// Notice when the visual preset changed but could not be persisted.
+func (msgs Messages) NoticePreferenceSaveAppearance() string {
+	return Catalog.Format(msgs.locale, "noticePreferenceSaveAppearance", nil)
 }
 
 // NoticePreferenceSaveNavigation says "Navigation changed, but preferences could not be saved."
@@ -8802,6 +8924,22 @@ func (msgs Messages) SettingsCategoryAppearanceDescription() string {
 	return Catalog.Format(msgs.locale, "settingsCategoryAppearanceDescription", nil)
 }
 
+// SettingsCategoryAppearanceJAgentDescription says "J Agent keeps chat over its wallpaper with tinted glass cards; settings and tool pages use a solid neutral surface."
+// in the language the app shows.
+//
+// J Agent-specific description shown above appearance settings.
+func SettingsCategoryAppearanceJAgentDescription() string {
+	return In(i18n.Locale()).SettingsCategoryAppearanceJAgentDescription()
+}
+
+// SettingsCategoryAppearanceJAgentDescription says "J Agent keeps chat over its wallpaper with tinted glass cards; settings and tool pages use a solid neutral surface."
+// in the language of msgs.
+//
+// J Agent-specific description shown above appearance settings.
+func (msgs Messages) SettingsCategoryAppearanceJAgentDescription() string {
+	return Catalog.Format(msgs.locale, "settingsCategoryAppearanceJAgentDescription", nil)
+}
+
 // SettingsCategoryModels says "Models and channels"
 // in the language the app shows.
 //
@@ -10954,6 +11092,22 @@ func (msgs Messages) SettingsWallpaperDescription() string {
 	return Catalog.Format(msgs.locale, "settingsWallpaperDescription", nil)
 }
 
+// SettingsWallpaperJAgentDescription says "Use the verified J Agent misty mountains photo, or leave an opaque dark surface."
+// in the language the app shows.
+//
+// J Agent preset wallpaper choice description.
+func SettingsWallpaperJAgentDescription() string {
+	return In(i18n.Locale()).SettingsWallpaperJAgentDescription()
+}
+
+// SettingsWallpaperJAgentDescription says "Use the verified J Agent misty mountains photo, or leave an opaque dark surface."
+// in the language of msgs.
+//
+// J Agent preset wallpaper choice description.
+func (msgs Messages) SettingsWallpaperJAgentDescription() string {
+	return Catalog.Format(msgs.locale, "settingsWallpaperJAgentDescription", nil)
+}
+
 // SettingsWallpaperEmber says "Ember"
 // in the language the app shows.
 //
@@ -10994,6 +11148,20 @@ func SettingsWallpaperGraphite() string { return In(i18n.Locale()).SettingsWallp
 // Name of the graphite wallpaper.
 func (msgs Messages) SettingsWallpaperGraphite() string {
 	return Catalog.Format(msgs.locale, "settingsWallpaperGraphite", nil)
+}
+
+// SettingsWallpaperJAgent says "J Agent misty mountains"
+// in the language the app shows.
+//
+// The verified Misty Mountains wallpaper used by the J Agent preset.
+func SettingsWallpaperJAgent() string { return In(i18n.Locale()).SettingsWallpaperJAgent() }
+
+// SettingsWallpaperJAgent says "J Agent misty mountains"
+// in the language of msgs.
+//
+// The verified Misty Mountains wallpaper used by the J Agent preset.
+func (msgs Messages) SettingsWallpaperJAgent() string {
+	return Catalog.Format(msgs.locale, "settingsWallpaperJAgent", nil)
 }
 
 // SettingsWallpaperNone says "No wallpaper"
@@ -11124,6 +11292,20 @@ func SettingsGlassSolidFallback() string { return In(i18n.Locale()).SettingsGlas
 // Status shown when appearance settings require solid fallback colors.
 func (msgs Messages) SettingsGlassSolidFallback() string {
 	return Catalog.Format(msgs.locale, "settingsGlassSolidFallback", nil)
+}
+
+// SettingsGlassJAgentFixed says "J Agent uses its measured navigation and card materials; BYOP glass settings remain saved for when you switch back."
+// in the language the app shows.
+//
+// Explains why BYOP glass sliders are disabled in the J Agent preset.
+func SettingsGlassJAgentFixed() string { return In(i18n.Locale()).SettingsGlassJAgentFixed() }
+
+// SettingsGlassJAgentFixed says "J Agent uses its measured navigation and card materials; BYOP glass settings remain saved for when you switch back."
+// in the language of msgs.
+//
+// Explains why BYOP glass sliders are disabled in the J Agent preset.
+func (msgs Messages) SettingsGlassJAgentFixed() string {
+	return Catalog.Format(msgs.locale, "settingsGlassJAgentFixed", nil)
 }
 
 // SettingsGlassPreview says "Preview"

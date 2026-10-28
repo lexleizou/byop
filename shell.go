@@ -39,11 +39,11 @@ var (
 const narrowShellWidth float32 = 960
 
 func (s *appState) view(c *ui.Context) {
-	dark := currentAppearanceDark()
+	dark := s.effectiveDark()
 	high := s.highContrastActive(currentAppearanceHighContrast())
 	reduceTransparency := currentAppearanceReduceTransparency()
 	s.syncPluginWebViewTheme(dark, high, reduceTransparency)
-	t, p := nativeThemeWithContrast(dark, high)
+	t, p := nativeThemeForAppearance(s.currentAppearancePreset(), dark, high, reduceTransparency)
 	c.SetTheme(t)
 	c.Root().Background(p.background)
 	c.OnShortcut(ui.Cmd, ui.KeyB, func() {
@@ -53,6 +53,14 @@ func (s *appState) view(c *ui.Context) {
 		s.setTasksOpen(!s.tasksOpen)
 	})
 
+	if s.jAgentPresetActive() {
+		s.jAgentShell(c, p, dark, high, reduceTransparency)
+		return
+	}
+	s.byopShell(c, p, dark, high, reduceTransparency)
+}
+
+func (s *appState) byopShell(c *ui.Context, p palette, dark, high, reduceTransparency bool) {
 	ui.Column(c).Fill().Background(p.background).Children(func() {
 		s.wallpaperLayer(c, p, dark, high, reduceTransparency)
 		ui.Row(c).Absolute().Top(0).Right(0).Bottom(0).Left(0).
@@ -134,7 +142,7 @@ func (s *appState) titleBarHeading(c *ui.Context, p palette) {
 	width, _ := c.Size()
 	maxWidth := s.titleCapsuleMaxWidth(width)
 	if s.page != pageChat {
-		ui.Text(c, s.headerPageTitle()).MaxWidth(maxWidth).FontSize(fontBody).
+		ui.Text(c, s.headerPageTitle()).MaxWidth(maxWidth).FontSize(p.bodyFont).
 			FontWeight(600).TextColor(p.text).SingleLine().Tooltip(s.headerPageTitle())
 		return
 	}
@@ -146,7 +154,7 @@ func (s *appState) titleBarHeading(c *ui.Context, p palette) {
 				Border(runtimeTokens.Dimension.Border.Value, p.focus).Background(p.background).
 				AlignItems(ui.Center).Children(func() {
 				input := ui.TextInputBase(c.Key("session-title-rename"), &s.sessionRenameDraft).
-					Grow(1).Placeholder(text("titleNewChat")).FontSize(fontBody).
+					Grow(1).Placeholder(text("titleNewChat")).FontSize(p.bodyFont).
 					TextColor(p.text).Background(ui.Color{}).Border(0, ui.Color{}).
 					Padding(0).Label(text("titleRenameSession")).AutoFocus()
 				input.OnTextKey(func(k ui.TextKey) bool {
@@ -181,16 +189,16 @@ func (s *appState) titleBarHeading(c *ui.Context, p palette) {
 	}
 	title := s.sessionDisplayTitle()
 	ui.Row(c).MaxWidth(maxWidth).MinWidth(0).Gap(8).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, title).Shrink(1).MinWidth(0).FontSize(fontBody).FontWeight(600).
+		ui.Text(c, title).Shrink(1).MinWidth(0).FontSize(p.bodyFont).FontWeight(600).
 			TextColor(titleColor).SingleLine().Tooltip(title)
 		path := ui.Row(c).Shrink(1).MinWidth(0).Gap(4).AlignItems(ui.Center)
 		path.Children(func() {
 			workspace := s.workspaceDisplayPath()
-			ui.Text(c, "· "+workspace).FontSize(fontCaption).TextColor(p.muted).
+			ui.Text(c, "· "+workspace).FontSize(p.captionFont).TextColor(p.muted).
 				Shrink(1).MinWidth(0).SingleLine().Tooltip(workspace)
 			if branch := strings.TrimSpace(s.hud.branch); branch != "" {
 				ui.Icon(c, icon("git-branch")).Size(12, 12).Shrink(0).TextColor(p.muted)
-				ui.Text(c, branch).FontSize(fontCaption).TextColor(p.muted).
+				ui.Text(c, branch).FontSize(p.captionFont).TextColor(p.muted).
 					Shrink(1).MinWidth(0).SingleLine().Tooltip(branch)
 			}
 		})
@@ -304,7 +312,7 @@ func panelToggleButton(c *ui.Context, p palette, key, iconName, label string, se
 		bg = p.text.Alpha(.10)
 		fg = p.text
 	}
-	btn := ui.ButtonBase(c.Key(key)).Size(28, 28).Background(bg).Radius(8).
+	btn := ui.ButtonBase(c.Key(key)).Size(28, 28).Background(bg).Radius(p.navRadius).
 		Center().Cursor(ui.CursorPointer).Label(label).Tooltip(label)
 	if !selected && btn.Hovered() {
 		btn.Background(p.surfaceHover)
@@ -343,24 +351,36 @@ func normalizeNavExpandedWidth(value float32) float32 {
 	return min(max(value, navMinExpandedWidth), navMaxExpandedWidth)
 }
 
+func normalizeJAgentNavExpandedWidth(value float32) float32 {
+	metrics := metricsForAppearancePreset(appearancePresetJAgent)
+	if value <= 0 {
+		return metrics.navDefaultWidth
+	}
+	return min(max(value, metrics.navMinWidth), metrics.navMaxWidth)
+}
+
 // navExpandedWidthLimit is the widest the navigation may grow in a window: it
 // leaves chatMinMainWidth for the stage once the shell gaps and the docked task
 // panel take their room, and never narrows the navigation past its minimum.
 func (s *appState) navExpandedWidthLimit(windowWidth float32) float32 {
+	metrics := s.visualMetrics()
 	var tasksWidth float32
 	if s.tasksOpen && windowWidth >= narrowShellWidth {
-		tasksWidth = taskPanelWidth + shellGap
+		tasksWidth = taskPanelWidth + metrics.shellSpacing
 	}
 	// The window keeps two outer gaps, the gap after the navigation, and the
 	// stage's own room.
-	room := windowWidth - 3*shellGap - tasksWidth - chatMinMainWidth
-	return max(navMinExpandedWidth, min(navMaxExpandedWidth, room))
+	room := windowWidth - 3*metrics.shellSpacing - tasksWidth - chatMinMainWidth
+	return max(metrics.navMinWidth, min(metrics.navMaxWidth, room))
 }
 
 // navigationExpandedWidth is the width the user chose, clamped to the widths
 // the handle offers. It is the saved preference, not what a narrow layout
 // shows.
 func (s *appState) navigationExpandedWidth() float32 {
+	if s.jAgentPresetActive() {
+		return normalizeJAgentNavExpandedWidth(s.jAgentNavWidth)
+	}
 	return normalizeNavExpandedWidth(s.navWidth)
 }
 
@@ -386,7 +406,7 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 	windowWidth, _ := c.Size()
 	collapsed := s.navigationCollapsedForWidth(windowWidth)
 	width := s.navigationWidth(windowWidth)
-	dark := currentAppearanceDark()
+	dark := s.effectiveDark()
 	high := s.highContrastActive(currentAppearanceHighContrast())
 	reduceTransparency := currentAppearanceReduceTransparency()
 	navPalette := p
@@ -569,8 +589,12 @@ func (s *appState) newChatNavButton(c *ui.Context, p palette) {
 	if runtime.GOOS != "darwin" {
 		shortcut = "Ctrl N"
 	}
-	btn := ui.ButtonBase(c.Key("nav-new-chat")).Height(32).FillWidth().Padding(0, 8).
-		Radius(8).Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
+	padding := p.navPaddingX
+	if p.preset == appearancePresetJAgent {
+		padding = 12
+	}
+	btn := ui.ButtonBase(c.Key("nav-new-chat")).Height(p.navItemHeight).FillWidth().Padding(0, padding).
+		Radius(p.navRadius).Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
 	btn.Justify(ui.Start)
 	if btn.Hovered() {
 		btn.Background(p.surfaceHover)
@@ -578,8 +602,8 @@ func (s *appState) newChatNavButton(c *ui.Context, p palette) {
 	btn.Children(func() {
 		ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icon("square-pen")).Size(16, 16).TextColor(foreground)
-			ui.Text(c, label).FontSize(fontBody).TextColor(foreground).Grow(1).SingleLine()
-			ui.Text(c, shortcut).FontSize(fontSmall).TextColor(p.muted)
+			ui.Text(c, label).FontSize(p.navFont).TextColor(foreground).Grow(1).SingleLine()
+			ui.Text(c, shortcut).FontSize(p.captionFont).TextColor(p.muted)
 		})
 	})
 	if btn.Clicked() {
@@ -599,8 +623,8 @@ func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigati
 	}
 	label := fallback(item.nav.Title, viewID)
 	key := "nav-plugin-" + item.entry.ID + "-" + item.nav.ID
-	btn := ui.ButtonBase(c.Key(key)).Height(32).FillWidth().Padding(0, 8).
-		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(label)
+	btn := ui.ButtonBase(c.Key(key)).Height(p.navItemHeight).FillWidth().Padding(0, p.navPaddingX).
+		Radius(p.navRadius).Background(bg).Cursor(ui.CursorPointer).Label(label)
 	collapsed := s.navigationVisuallyCollapsed(c)
 	if collapsed {
 		btn.Tooltip(label)
@@ -617,7 +641,7 @@ func (s *appState) pluginNavButton(c *ui.Context, p palette, item pluginNavigati
 				ui.Icon(c, iconOr(item.nav.Icon, "plugins")).Size(16, 16).TextColor(foreground)
 			})
 			if !collapsed {
-				ui.Text(c, label).FontSize(fontBody).TextColor(foreground).SingleLine()
+				ui.Text(c, label).FontSize(p.navFont).TextColor(foreground).SingleLine()
 			}
 		})
 	})
@@ -635,8 +659,9 @@ func (s *appState) navButton(c *ui.Context, p palette, item navItem) {
 		foreground = p.text
 	}
 	label := text(item.label)
-	btn := ui.ButtonBase(c.Key("nav-"+item.id)).Height(32).FillWidth().Padding(0, 8).
-		Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(label)
+	btn := ui.ButtonBase(c.Key("nav-"+item.id)).Height(p.navItemHeight).FillWidth().
+		Padding(0, p.navPaddingX).Radius(p.navRadius).Background(bg).
+		Cursor(ui.CursorPointer).Label(label)
 	collapsed := s.navigationVisuallyCollapsed(c)
 	if collapsed {
 		btn.Tooltip(label)
@@ -653,7 +678,7 @@ func (s *appState) navButton(c *ui.Context, p palette, item navItem) {
 				ui.Icon(c, icon(item.icon)).Size(16, 16).TextColor(foreground)
 			})
 			if !collapsed {
-				ui.Text(c, label).FontSize(fontBody).TextColor(foreground).SingleLine()
+				ui.Text(c, label).FontSize(p.navFont).TextColor(foreground).SingleLine()
 			}
 		})
 	})
@@ -820,7 +845,7 @@ func (s *appState) sessionSection(c *ui.Context, p palette, key, label string, s
 					if index == 0 {
 						top = 0
 					}
-					ui.Text(c, sessionDateGroupLabel(next)).FontSize(fontCaption).
+					ui.Text(c, sessionDateGroupLabel(next)).FontSize(p.captionFont).
 						TextColor(p.muted).Padding(top, 8, 4, 8)
 				}
 				group = next
@@ -848,8 +873,8 @@ func (s *appState) archivedSessionSection(c *ui.Context, p palette, groups sessi
 	target := float32(0)
 	if expanded {
 		// Rows, their gaps, and the room a drop highlight adds around them.
-		target = float32(len(groups.archived))*(sessionRowHeight+sessionRowGap) -
-			sessionRowGap + 16
+		target = float32(len(groups.archived))*(p.sessionRowHeight+p.sessionGap) -
+			p.sessionGap + 16
 	}
 	body := ui.Column(c)
 	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
@@ -871,13 +896,14 @@ func (s *appState) sessionSectionHeader(c *ui.Context, p palette, key, label, st
 	count int, collapsible bool,
 ) {
 	header := ui.ButtonBase(c.Key("session-section-"+key)).Height(28).FillWidth().
-		Padding(0, 8).Radius(8).Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
+		Padding(0, p.navPaddingX).Radius(p.navRadius).Background(ui.Color{}).
+		Cursor(ui.CursorPointer).Label(label)
 	if header.Hovered() {
 		header.Background(p.surfaceHover)
 	}
 	header.Children(func() {
 		ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(6).Children(func() {
-			ui.Text(c, label).FontSize(fontCaption).TextColor(p.muted).Grow(1)
+			ui.Text(c, label).FontSize(p.captionFont).TextColor(p.muted).Grow(1)
 			if collapsible {
 				iconName := "chevron-down"
 				if key == "archived" && !s.archivedExpanded {
@@ -908,7 +934,7 @@ func (s *appState) sessionSectionHeader(c *ui.Context, p palette, key, label, st
 }
 
 func (s *appState) sessionDropArea(c *ui.Context, p palette, key, state, label string, empty bool, children func()) {
-	area := ui.Column(c).FillWidth().MinHeight(8).Gap(sessionRowGap)
+	area := ui.Column(c).FillWidth().MinHeight(8).Gap(p.sessionGap)
 	_, localOver := ui.DragOver[sessionDragPayload](area)
 	_, nativeOver := ui.DataDragOver(area, sessionDropOptions())
 	over := localOver || nativeOver
@@ -938,9 +964,10 @@ func (s *appState) sessionDropArea(c *ui.Context, p palette, key, state, label s
 }
 
 func (s *appState) sessionDropPlaceholder(c *ui.Context, p palette, label string) {
-	ui.Row(c).Height(32).FillWidth().Padding(0, 8).AlignItems(ui.Center).
-		Radius(8).Border(runtimeTokens.Dimension.Border.Value, p.accent).Children(func() {
-		ui.Text(c, label).FontSize(fontCaption).TextColor(p.muted)
+	ui.Row(c).Height(p.navItemHeight).FillWidth().Padding(0, p.navPaddingX).
+		AlignItems(ui.Center).Radius(p.navRadius).
+		Border(runtimeTokens.Dimension.Border.Value, p.accent).Children(func() {
+		ui.Text(c, label).FontSize(p.captionFont).TextColor(p.muted)
 	})
 }
 
@@ -1065,8 +1092,13 @@ func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSumm
 		bg = p.text.Alpha(.10)
 		foreground = p.text
 	}
-	btn := ui.ButtonBase(c.Key("session-"+summary.Path)).Height(sessionRowHeight).FillWidth().
-		Padding(0, 8).Radius(8).Background(bg).Cursor(ui.CursorPointer).Label(title)
+	sessionPadding := p.navPaddingX
+	if p.preset == appearancePresetJAgent {
+		sessionPadding = 4
+	}
+	btn := ui.ButtonBase(c.Key("session-"+summary.Path)).Height(p.sessionRowHeight).FillWidth().
+		Padding(0, sessionPadding).Radius(p.navRadius).Background(bg).
+		Cursor(ui.CursorPointer).Label(title)
 	btn.Justify(ui.Start)
 	payload := sessionDragPayload{Key: key}
 	btn.Drag(payload).DragDataFrom(func() transfer.Data {
@@ -1087,7 +1119,7 @@ func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSumm
 	}
 	btn.Children(func() {
 		ui.Row(c).FillWidth().MinWidth(0).Gap(8).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, title).FontSize(fontBody).TextColor(foreground).SingleLine().
+			ui.Text(c, title).FontSize(p.navFont).TextColor(foreground).SingleLine().
 				Grow(1).MinWidth(0)
 			if s.piSessionsGroups.due[key] {
 				ui.Box(c).Size(7, 7).Shrink(0).Radius(4).Background(p.accent).
@@ -1119,7 +1151,7 @@ func (s *appState) sessionNavRow(c *ui.Context, p palette, summary piSessionSumm
 				ui.Box(c).Size(6, 6).Shrink(0).Radius(3).Background(p.accent).
 					Tooltip(text("chatPiWorking"))
 			} else if updated := todaySessionTime(summary.Updated); updated != "" {
-				ui.Text(c, updated).FontSize(fontCaption).TextColor(p.muted).
+				ui.Text(c, updated).FontSize(p.captionFont).TextColor(p.muted).
 					Shrink(0).SingleLine()
 			}
 		})
@@ -1238,13 +1270,14 @@ func (s *appState) collapsedNewSessionButton(c *ui.Context, p palette) {
 }
 
 func secondarySessionAction(c *ui.Context, p palette, key, label string, click func()) {
-	btn := ui.ButtonBase(c.Key(key)).Height(28).FillWidth().Padding(0, 8).Radius(8).
+	btn := ui.ButtonBase(c.Key(key)).Height(28).FillWidth().
+		Padding(0, p.navPaddingX).Radius(p.navRadius).
 		Background(ui.Color{}).Cursor(ui.CursorPointer).Label(label)
 	if btn.Hovered() {
 		btn.Background(c.Theme().SurfaceHover)
 	}
 	btn.Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).TextColor(c.Theme().TextMuted)
+		ui.Text(c, label).FontSize(p.captionFont).TextColor(c.Theme().TextMuted)
 	})
 	if btn.Clicked() {
 		click()
@@ -1267,7 +1300,7 @@ func (s *appState) integrationStatus(c *ui.Context, p palette) {
 	label := textArgs("piStatusLabel", map[string]any{"status": s.connectionStateLabel()})
 	var box ui.Element
 	if s.navigationVisuallyCollapsed(c) {
-		box = ui.ButtonBase(c.Key("pi-connection-icon")).Size(28, 28).Radius(8).Center().
+		box = ui.ButtonBase(c.Key("pi-connection-icon")).Size(28, 28).Radius(p.navRadius).Center().
 			Label(label).Tooltip(label).Cursor(ui.CursorPointer)
 		box.Children(func() {
 			ui.Row(c).Size(20, 20).Center().Children(func() {
@@ -1276,7 +1309,7 @@ func (s *appState) integrationStatus(c *ui.Context, p palette) {
 		})
 	} else {
 		box = ui.ButtonBase(c.Key("pi-connection")).Grow(1).MinWidth(0).Height(28).
-			Padding(0).Radius(8).Justify(ui.Start).AlignItems(ui.Center).Gap(4).
+			Padding(0).Radius(p.navRadius).Justify(ui.Start).AlignItems(ui.Center).Gap(4).
 			Label(label).Tooltip(label).Cursor(ui.CursorPointer)
 		if box.Hovered() {
 			box.Background(p.surfaceHover)
@@ -1295,14 +1328,14 @@ func (s *appState) integrationStatus(c *ui.Context, p palette) {
 					"status": s.connectionStateLabel(),
 				})
 			}
-			ui.Text(c, textValue).FontSize(fontCaption).TextColor(p.muted).
+			ui.Text(c, textValue).FontSize(p.captionFont).TextColor(p.muted).
 				MinWidth(0).SingleLine()
 		})
 	}
 	if box.Clicked() {
 		s.piStatusPopoverOpen = !s.piStatusPopoverOpen
 	}
-	popoverV12(c, box, &s.piStatusPopoverOpen,
+	popoverV12(c, p, box, &s.piStatusPopoverOpen,
 		s.highContrastActive(currentAppearanceHighContrast()) || currentAppearanceReduceTransparency(),
 		func(panel ui.Element) {
 			panel.Children(func() { s.piConnectionPopover(c, p) })
@@ -1350,7 +1383,7 @@ func (s *appState) settingsGearButton(c *ui.Context, p palette) {
 	if selected {
 		bg, fg = p.text.Alpha(.10), p.text
 	}
-	button := ui.ButtonBase(c.Key("nav-settings-gear")).Size(28, 28).Radius(8).
+	button := ui.ButtonBase(c.Key("nav-settings-gear")).Size(28, 28).Radius(p.navRadius).
 		Background(bg).Center().Label(label).Tooltip(label).Cursor(ui.CursorPointer)
 	if !selected && button.Hovered() {
 		button.Background(p.surfaceHover)
@@ -1364,7 +1397,7 @@ func (s *appState) settingsGearButton(c *ui.Context, p palette) {
 }
 
 func (s *appState) main(c *ui.Context, p palette) {
-	dark := currentAppearanceDark()
+	dark := s.effectiveDark()
 	high := s.highContrastActive(currentAppearanceHighContrast())
 	reduceTransparency := currentAppearanceReduceTransparency()
 	stageBackground := mainStageBackground(p, dark)
@@ -1436,9 +1469,10 @@ func (s *appState) noticeBanner(c *ui.Context, p palette) {
 
 func (s *appState) taskPanel(c *ui.Context, p palette) {
 	windowWidth, _ := c.Size()
+	spacing := s.shellSpacing()
 	target := float32(0)
 	if s.tasksOpen {
-		target = taskPanelWidth + shellGap
+		target = taskPanelWidth + spacing
 	}
 	panel := ui.Column(c)
 	duration := s.panelAnimationDuration(currentAppearanceReduceMotion())
@@ -1447,25 +1481,30 @@ func (s *appState) taskPanel(c *ui.Context, p palette) {
 		panel.Width(0).Shrink(0)
 		return
 	}
-	leftGap := min(shellGap, animatedWidth)
+	leftGap := min(spacing, animatedWidth)
 	panel.Width(animatedWidth).MinWidth(0).FillHeight().Shrink(0).Padding(0, 0, 0, leftGap)
 	if windowWidth < narrowShellWidth {
-		panel.Absolute().Top(8).Right(8).Bottom(8)
+		panel.Absolute().Top(spacing).Right(spacing).Bottom(spacing)
 	}
 	panel.Children(func() {
 		card := styleRaisedSurface(
 			ui.Column(c).FillWidth().FillHeight().MinWidth(0),
 			p,
-			shellRadius,
+			p.mainRadius,
 		)
 		if !p.dark {
 			card.BorderColor(p.text.Alpha(.10))
 		}
 		card.Children(func() {
-			ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius - .5).Clip().
+			ui.Column(c).FillHeight().FillWidth().MinHeight(0).
+				Radius(max(0, p.mainRadius-.5)).Clip().
 				Children(func() {
-					ui.Row(c).Height(48).FillWidth().Padding(0, 8, 0, 16).AlignItems(ui.Center).Children(func() {
-						ui.Text(c, text("tasksTitle")).FontSize(fontBody).FontWeight(600).
+					headerHeight := float32(48)
+					if p.preset == appearancePresetJAgent {
+						headerHeight = 56
+					}
+					ui.Row(c).Height(headerHeight).FillWidth().Padding(0, 8, 0, 16).AlignItems(ui.Center).Children(func() {
+						ui.Text(c, text("tasksTitle")).FontSize(p.bodyFont).FontWeight(600).
 							TextColor(p.text).Grow(1)
 						iconButton(c, p, "tasks-close", "x", text("titleCloseTaskPanel"), false, func() {
 							s.setTasksOpen(false)
@@ -1780,10 +1819,10 @@ func (s *appState) taskCard(c *ui.Context, p palette, title, detail, status stri
 func pageHeader(c *ui.Context, p palette, eyebrow, title, description string) {
 	ui.Column(c).FillWidth().Gap(5).Children(func() {
 		if eyebrow != "" {
-			ui.Text(c, eyebrow).FontSize(fontCaption).FontWeight(700).TextColor(p.accentText)
+			ui.Text(c, eyebrow).FontSize(p.captionFont).FontWeight(700).TextColor(p.accentText)
 		}
-		ui.Text(c, title).FontSize(fontPageTitle).FontWeight(650).TextColor(p.text)
-		ui.Text(c, description).FontSize(fontBody).LineHeight(1.45).TextColor(p.muted).MaxWidth(680)
+		ui.Text(c, title).FontSize(p.titleFont).FontWeight(650).TextColor(p.text)
+		ui.Text(c, description).FontSize(p.bodyFont).LineHeight(1.45).TextColor(p.muted).MaxWidth(680)
 	})
 }
 
@@ -1792,7 +1831,7 @@ func statusPill(c *ui.Context, p palette, label string, ccolor ui.Color) {
 		Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(p.surface).Gap(6).AlignItems(ui.Center).Children(func() {
 		ui.Box(c).Size(6, 6).Radius(3).Background(ccolor)
-		ui.Text(c, label).FontSize(fontMicro).FontWeight(700).TextColor(p.muted)
+		ui.Text(c, label).FontSize(p.captionFont).FontWeight(700).TextColor(p.muted)
 	})
 }
 
@@ -1880,7 +1919,7 @@ func primaryAction(c *ui.Context, p palette, key, label string, iconName string,
 	btn.Children(func() {
 		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icon(iconName)).Size(14, 14).TextColor(p.onAccent)
-			ui.Text(c, label).FontSize(fontSmall).FontWeight(650).TextColor(p.onAccent)
+			ui.Text(c, label).FontSize(p.controlFont()).FontWeight(650).TextColor(p.onAccent)
 		})
 	})
 	if btn.Clicked() {
@@ -1896,7 +1935,7 @@ func secondaryAction(c *ui.Context, p palette, key, label string, click func()) 
 		btn.Background(p.surfaceHover)
 	}
 	btn.Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(p.text)
+		ui.Text(c, label).FontSize(p.controlFont()).FontWeight(600).TextColor(p.text)
 	})
 	if btn.Clicked() {
 		click()

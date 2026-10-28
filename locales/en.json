@@ -1599,6 +1599,26 @@
   "@settingsAppearanceDescription": {
     "description": "Appearance settings card description."
   },
+  "settingsAppearancePresetTitle": "Interface style",
+  "@settingsAppearancePresetTitle": {
+    "description": "Label for the selectable visual preset."
+  },
+  "settingsAppearancePresetDescription": "Use BYOP's material system or the measured J Agent dark appearance.",
+  "@settingsAppearancePresetDescription": {
+    "description": "Description for the selectable visual preset."
+  },
+  "settingsAppearancePresetDarkHint": "J Agent uses its measured dark appearance. Your BYOP light or dark choice returns with the BYOP style.",
+  "@settingsAppearancePresetDarkHint": {
+    "description": "Explains that J Agent is dark-only and BYOP mode is retained."
+  },
+  "settingsAppearancePresetBYOP": "BYOP",
+  "@settingsAppearancePresetBYOP": {
+    "description": "The default BYOP visual preset."
+  },
+  "settingsAppearancePresetJAgent": "J Agent (dark)",
+  "@settingsAppearancePresetJAgent": {
+    "description": "The measured J Agent dark visual preset."
+  },
   "settingsThemeTitle": "Theme",
   "@settingsThemeTitle": {
     "description": "Label for the theme row in appearance settings."
@@ -1606,6 +1626,14 @@
   "settingsThemeDescription": "Choose a light, dark, or system appearance.",
   "@settingsThemeDescription": {
     "description": "Description for the theme row in appearance settings."
+  },
+  "settingsThemeDescriptionJAgent": "J Agent is fixed to its measured Dark appearance. Your saved BYOP Light, Dark, or System choice stays unchanged.",
+  "@settingsThemeDescriptionJAgent": {
+    "description": "Read-only theme description for the J Agent preset."
+  },
+  "settingsThemeEffectiveDark": "Effective: Dark",
+  "@settingsThemeEffectiveDark": {
+    "description": "Read-only effective theme indicator for the J Agent preset."
   },
   "settingsReduceTransparencyTitle": "Reduce transparency",
   "@settingsReduceTransparencyTitle": {
@@ -1790,6 +1818,10 @@
   "noticePreferenceSaveTheme": "Theme changed, but preferences could not be saved.",
   "@noticePreferenceSaveTheme": {
     "description": "Notice when the theme changed but could not be persisted."
+  },
+  "noticePreferenceSaveAppearance": "Interface style changed, but preferences could not be saved.",
+  "@noticePreferenceSaveAppearance": {
+    "description": "Notice when the visual preset changed but could not be persisted."
   },
   "noticePreferenceSaveNavigation": "Navigation changed, but preferences could not be saved.",
   "@noticePreferenceSaveNavigation": {
@@ -2708,6 +2740,10 @@
   "@settingsCategoryAppearanceDescription": {
     "description": "Description shown above appearance settings."
   },
+  "settingsCategoryAppearanceJAgentDescription": "J Agent keeps chat over its wallpaper with tinted glass cards; settings and tool pages use a solid neutral surface.",
+  "@settingsCategoryAppearanceJAgentDescription": {
+    "description": "J Agent-specific description shown above appearance settings."
+  },
   "settingsCategoryModels": "Models and channels",
   "@settingsCategoryModels": {
     "description": "Settings category for Pi model and provider configuration."
@@ -3354,6 +3390,10 @@
   "@settingsWallpaperDescription": {
     "description": "Explains that the wallpaper remains behind glass surfaces."
   },
+  "settingsWallpaperJAgentDescription": "Use the verified J Agent misty mountains photo, or leave an opaque dark surface.",
+  "@settingsWallpaperJAgentDescription": {
+    "description": "J Agent preset wallpaper choice description."
+  },
   "settingsWallpaperEmber": "Ember",
   "@settingsWallpaperEmber": {
     "description": "Name of the ember wallpaper."
@@ -3365,6 +3405,10 @@
   "settingsWallpaperGraphite": "Graphite",
   "@settingsWallpaperGraphite": {
     "description": "Name of the graphite wallpaper."
+  },
+  "settingsWallpaperJAgent": "J Agent misty mountains",
+  "@settingsWallpaperJAgent": {
+    "description": "The verified Misty Mountains wallpaper used by the J Agent preset."
   },
   "settingsWallpaperNone": "No wallpaper",
   "@settingsWallpaperNone": {
@@ -3401,6 +3445,10 @@
   "settingsGlassSolidFallback": "Reduce Transparency or High Contrast is on, so solid colors are used.",
   "@settingsGlassSolidFallback": {
     "description": "Status shown when appearance settings require solid fallback colors."
+  },
+  "settingsGlassJAgentFixed": "J Agent uses its measured navigation and card materials; BYOP glass settings remain saved for when you switch back.",
+  "@settingsGlassJAgentFixed": {
+    "description": "Explains why BYOP glass sliders are disabled in the J Agent preset."
   },
   "settingsGlassPreview": "Preview",
   "@settingsGlassPreview": {

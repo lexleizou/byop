@@ -1,14 +1,48 @@
 package main
 
-import "github.com/egoist/mygo/ui"
+import (
+	"github.com/egoist/mygo/plugins/glass"
+	"github.com/egoist/mygo/ui"
+)
+
+type blurredTintMaterial struct {
+	blur float32
+	tint ui.Color
+}
+
+func (m blurredTintMaterial) PaintMaterial(p *ui.Painter, box ui.Rect, radii [4]float32) {
+	if m.blur > 0 {
+		glass.Blur{Radius: m.blur}.PaintMaterial(p, box, radii)
+	}
+	p.Fill(box, m.tint, radii[0])
+}
+
+func jAgentGlassSurface(
+	element ui.Element,
+	p palette,
+	radius, blur float32,
+	tint ui.Color,
+) ui.Element {
+	element.Radius(radius).Border(0.5, p.border)
+	if p.highContrast || p.reduceTransparency {
+		return element.Background(p.surface)
+	}
+	return element.Material(blurredTintMaterial{blur: blur, tint: tint})
+}
 
 func styleRaisedSurface(element ui.Element, p palette, radius float32) ui.Element {
+	if p.preset == appearancePresetJAgent {
+		return jAgentGlassSurface(element, p, radius, 14, p.raisedSurface)
+	}
 	return element.Radius(radius).
 		Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(p.raisedSurface)
 }
 
 func styleComposerSurface(element ui.Element, p palette, radius float32) ui.Element {
+	if p.preset == appearancePresetJAgent {
+		return jAgentGlassSurface(element, p, radius, 14, p.composerSurface)
+	}
 	return element.Radius(radius).
 		Border(runtimeTokens.Dimension.Border.Value, p.border).
 		Background(p.composerSurface)
@@ -27,6 +61,9 @@ func stylePopoverOpaque(
 
 func stylePopoverGlass(element ui.Element, p palette, radius float32) ui.Element {
 	element = popoverShadow(element, p, radius)
+	if p.preset == appearancePresetJAgent {
+		return jAgentGlassSurface(element, p, radius, 16, p.popoverTint)
+	}
 	element.Material(productGlassWithTint(p.popoverTint))
 	if p.dark {
 		element.Border(runtimeTokens.Dimension.Border.Value, p.popoverBorder)

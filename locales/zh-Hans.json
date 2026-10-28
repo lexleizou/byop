@@ -1514,6 +1514,26 @@
   "@settingsAppearanceDescription": {
     "description": "Appearance settings card description."
   },
+  "settingsAppearancePresetTitle": "界面风格",
+  "@settingsAppearancePresetTitle": {
+    "description": "Label for the selectable visual preset."
+  },
+  "settingsAppearancePresetDescription": "选择 BYOP 材质体系，或按实测还原的 J Agent 深色外观。",
+  "@settingsAppearancePresetDescription": {
+    "description": "Description for the selectable visual preset."
+  },
+  "settingsAppearancePresetDarkHint": "J Agent 使用实测深色外观；切回 BYOP 后会恢复原浅色或深色选择。",
+  "@settingsAppearancePresetDarkHint": {
+    "description": "Explains that J Agent is dark-only and BYOP mode is retained."
+  },
+  "settingsAppearancePresetBYOP": "BYOP",
+  "@settingsAppearancePresetBYOP": {
+    "description": "The default BYOP visual preset."
+  },
+  "settingsAppearancePresetJAgent": "J Agent（深色）",
+  "@settingsAppearancePresetJAgent": {
+    "description": "The measured J Agent dark visual preset."
+  },
   "settingsThemeTitle": "主题",
   "@settingsThemeTitle": {
     "description": "Label for the theme row in appearance settings."
@@ -1521,6 +1541,14 @@
   "settingsThemeDescription": "选择浅色、深色或跟随系统。",
   "@settingsThemeDescription": {
     "description": "Description for the theme row in appearance settings."
+  },
+  "settingsThemeDescriptionJAgent": "J Agent 固定使用实测深色外观；已保存的 BYOP 浅色、深色或跟随系统选择保持不变。",
+  "@settingsThemeDescriptionJAgent": {
+    "description": "Read-only theme description for the J Agent preset."
+  },
+  "settingsThemeEffectiveDark": "当前：深色",
+  "@settingsThemeEffectiveDark": {
+    "description": "Read-only effective theme indicator for the J Agent preset."
   },
   "settingsReduceTransparencyTitle": "减少透明度",
   "@settingsReduceTransparencyTitle": {
@@ -1699,6 +1727,10 @@
   "noticePreferenceSaveTheme": "主题已更改，但偏好设置无法保存。",
   "@noticePreferenceSaveTheme": {
     "description": "Notice when the theme changed but could not be persisted."
+  },
+  "noticePreferenceSaveAppearance": "界面风格已更改，但偏好设置无法保存。",
+  "@noticePreferenceSaveAppearance": {
+    "description": "Notice when the visual preset changed but could not be persisted."
   },
   "noticePreferenceSaveNavigation": "导航状态已更改，但偏好设置无法保存。",
   "@noticePreferenceSaveNavigation": {
@@ -2511,6 +2543,10 @@
   "@settingsCategoryAppearanceDescription": {
     "description": "Description shown above appearance settings."
   },
+  "settingsCategoryAppearanceJAgentDescription": "J Agent 的聊天区使用壁纸和带色玻璃卡片；设置与工具页面使用实色中性表面。",
+  "@settingsCategoryAppearanceJAgentDescription": {
+    "description": "J Agent-specific description shown above appearance settings."
+  },
   "settingsCategoryModels": "模型与渠道",
   "@settingsCategoryModels": {
     "description": "Settings category for Pi model and provider configuration."
@@ -3151,6 +3187,10 @@
   "@settingsWallpaperDescription": {
     "description": "Explains that the wallpaper remains behind glass surfaces."
   },
+  "settingsWallpaperJAgentDescription": "使用已核实的 J Agent 雾山照片，或改为不透明深色背景。",
+  "@settingsWallpaperJAgentDescription": {
+    "description": "J Agent preset wallpaper choice description."
+  },
   "settingsWallpaperEmber": "余烬",
   "@settingsWallpaperEmber": {
     "description": "Name of the ember wallpaper."
@@ -3162,6 +3202,10 @@
   "settingsWallpaperGraphite": "石墨",
   "@settingsWallpaperGraphite": {
     "description": "Name of the graphite wallpaper."
+  },
+  "settingsWallpaperJAgent": "J Agent 雾山",
+  "@settingsWallpaperJAgent": {
+    "description": "The verified Misty Mountains wallpaper used by the J Agent preset."
   },
   "settingsWallpaperNone": "无壁纸",
   "@settingsWallpaperNone": {
@@ -3198,6 +3242,10 @@
   "settingsGlassSolidFallback": "系统已开启减少透明度或高对比，当前使用实色。",
   "@settingsGlassSolidFallback": {
     "description": "Status shown when appearance settings require solid fallback colors."
+  },
+  "settingsGlassJAgentFixed": "J Agent 使用实测的导航与卡片材质；BYOP 的玻璃设置会保留，切回后继续生效。",
+  "@settingsGlassJAgentFixed": {
+    "description": "Explains why BYOP glass sliders are disabled in the J Agent preset."
   },
   "settingsGlassPreview": "预览",
   "@settingsGlassPreview": {

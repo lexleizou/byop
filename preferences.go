@@ -18,10 +18,12 @@ const byopPreferencesVersion = 1
 type byopPreferences struct {
 	Version                        int                                   `json:"version"`
 	Theme                          string                                `json:"theme,omitempty"`
+	AppearancePreset               string                                `json:"appearancePreset,omitempty"`
 	Contrast                       string                                `json:"contrast,omitempty"`
 	Motion                         string                                `json:"motion,omitempty"`
 	PanelAnimationMS               int                                   `json:"panelAnimationMs,omitempty"`
 	Wallpaper                      string                                `json:"wallpaper,omitempty"`
+	JAgentWallpaper                string                                `json:"jAgentWallpaper,omitempty"`
 	NavTransparency                int                                   `json:"navTransparency"`
 	GlassBlur                      int                                   `json:"glassBlur"`
 	GlassRefraction                bool                                  `json:"glassRefraction"`
@@ -30,6 +32,7 @@ type byopPreferences struct {
 	RunningSendMode                string                                `json:"runningSendMode,omitempty"`
 	NavCollapsed                   bool                                  `json:"navCollapsed,omitempty"`
 	NavExpandedWidth               float32                               `json:"navExpandedWidth,omitempty"`
+	JAgentNavExpandedWidth         float32                               `json:"jAgentNavExpandedWidth,omitempty"`
 	TasksOpen                      bool                                  `json:"tasksOpen,omitempty"`
 	Workspace                      string                                `json:"workspace,omitempty"`
 	LegacyMigrationPromptDismissed bool                                  `json:"legacyMigrationPromptDismissed,omitempty"`
@@ -61,10 +64,12 @@ func defaultByopPreferences() byopPreferences {
 	return byopPreferences{
 		Version:                byopPreferencesVersion,
 		Theme:                  string(themeSystem),
+		AppearancePreset:       string(appearancePresetBYOP),
 		Contrast:               string(contrastSystem),
 		Motion:                 string(motionSystem),
 		PanelAnimationMS:       defaultPanelAnimationMS,
 		Wallpaper:              runtimeTokens.Glass.WallpaperDefault,
+		JAgentWallpaper:        "jagent-misty-mountains",
 		NavTransparency:        runtimeTokens.Glass.NavTransparencyDefault,
 		GlassBlur:              runtimeTokens.Glass.BlurDefault,
 		GlassRefraction:        runtimeTokens.Glass.RefractionDefault,
@@ -138,6 +143,7 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 	default:
 		preferences.Theme = string(themeSystem)
 	}
+	preferences.AppearancePreset = string(normalizeAppearancePreset(preferences.AppearancePreset))
 	preferences.UILanguage = normalizeUILanguage(preferences.UILanguage)
 	preferences.FollowUpStyle = string(normalizeFollowUpStyle(preferences.FollowUpStyle))
 	preferences.RunningSendMode = string(normalizeRunningSendMode(preferences.RunningSendMode))
@@ -145,7 +151,9 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 	preferences.Motion = string(normalizeMotionMode(preferences.Motion))
 	preferences.PanelAnimationMS = normalizePanelAnimationMS(preferences.PanelAnimationMS)
 	preferences.Wallpaper = normalizeWallpaper(preferences.Wallpaper)
+	preferences.JAgentWallpaper = normalizeJAgentWallpaper(preferences.JAgentWallpaper)
 	preferences.NavExpandedWidth = normalizeNavExpandedWidth(preferences.NavExpandedWidth)
+	preferences.JAgentNavExpandedWidth = normalizeJAgentNavExpandedWidth(preferences.JAgentNavExpandedWidth)
 	preferences.NavTransparency = min(max(preferences.NavTransparency, 0), 100)
 	preferences.GlassBlur = min(max(preferences.GlassBlur, 0), runtimeTokens.Glass.BlurMax)
 	if preferences.LastSessionByWorkspace == nil {
@@ -172,6 +180,16 @@ func normalizeWallpaper(value string) string {
 			return normalized
 		}
 		return "ember"
+	}
+}
+
+func normalizeJAgentWallpaper(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "jagent-misty-mountains", "none":
+		return value
+	default:
+		return "jagent-misty-mountains"
 	}
 }
 

@@ -15,13 +15,17 @@ var wallpaperJadeJPEG []byte
 //go:embed assets/wallpapers/graphite.jpg
 var wallpaperGraphiteJPEG []byte
 
+//go:embed assets/wallpapers/jagent-misty-mountains.webp
+var wallpaperJAgentMistyMountainsWebP []byte
+
 var wallpaperBitmaps = map[string]*ui.Bitmap{}
 
 func init() {
 	for name, data := range map[string][]byte{
-		"ember":    wallpaperEmberJPEG,
-		"jade":     wallpaperJadeJPEG,
-		"graphite": wallpaperGraphiteJPEG,
+		"ember":                  wallpaperEmberJPEG,
+		"jade":                   wallpaperJadeJPEG,
+		"graphite":               wallpaperGraphiteJPEG,
+		"jagent-misty-mountains": wallpaperJAgentMistyMountainsWebP,
 	} {
 		if bitmap, err := ui.DecodeBitmap(data); err == nil {
 			wallpaperBitmaps[name] = bitmap
@@ -30,7 +34,19 @@ func init() {
 }
 
 func wallpaperBitmap(name string) *ui.Bitmap {
-	return wallpaperBitmaps[normalizeWallpaper(name)]
+	switch name {
+	case "jagent-misty-mountains":
+		return wallpaperBitmaps[name]
+	default:
+		return wallpaperBitmaps[normalizeWallpaper(name)]
+	}
+}
+
+func (s *appState) activeWallpaper() string {
+	if s.jAgentPresetActive() {
+		return normalizeJAgentWallpaper(s.preferences.JAgentWallpaper)
+	}
+	return normalizeWallpaper(s.preferences.Wallpaper)
 }
 
 // wallpaperBackdrop paints the shell's atmospheric layer. The shell and the
@@ -41,10 +57,10 @@ func (s *appState) wallpaperBackdrop(
 	dark, high, reduceTransparency bool,
 ) bool {
 	if !deepLiquidGlassActive(dark, high, reduceTransparency) ||
-		s.preferences.Wallpaper == "none" {
+		s.activeWallpaper() == "none" {
 		return false
 	}
-	bitmap := wallpaperBitmap(s.preferences.Wallpaper)
+	bitmap := wallpaperBitmap(s.activeWallpaper())
 	if bitmap == nil {
 		return false
 	}
