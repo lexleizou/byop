@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "local.lightweight-table",
   "name": "%manifestName%",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "%manifestDescription%",
   "l10n": "l10n",
   "runtime": "node",

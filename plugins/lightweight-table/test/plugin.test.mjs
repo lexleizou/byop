@@ -119,6 +119,13 @@ test("plugin worker serves the WebView API and calls host.openChat with a fixed 
     });
     assert.equal(query.matched_count, 1);
     assert.equal(query.sum.value, "1200.50");
+    const dashboard = await plugin.message({
+      action: "table.dashboard",
+      search: "alpha",
+    });
+    assert.equal(dashboard.scope.search, "alpha");
+    assert.equal(dashboard.scope.matched_count, 1);
+    assert.equal(dashboard.totals.principal.value, "1200.50");
 
     const detail = await plugin.message({
       action: "table.detail",

@@ -24,8 +24,22 @@
       </header>
 
       <section id="dashboard" class="dashboard" aria-label="" hidden>
-        <div id="dashboard-totals" class="dashboard-totals"></div>
-        <div id="dashboard-presets" class="dashboard-presets"></div>
+        <div class="dashboard-scope-bar">
+          <div id="dashboard-scope" class="dashboard-scope"></div>
+          <div id="dashboard-inline" class="dashboard-inline" hidden></div>
+          <div class="dashboard-actions">
+            <button id="dashboard-mix-toggle" class="button quiet dashboard-toggle" type="button" data-action="toggle-dashboard-mix" aria-expanded="false" hidden></button>
+            <button id="dashboard-collapse-toggle" class="button quiet dashboard-toggle" type="button" data-action="toggle-dashboard" aria-expanded="true"></button>
+          </div>
+        </div>
+        <div id="dashboard-panel" class="dashboard-panel">
+          <div class="dashboard-top">
+            <div id="dashboard-hero" class="dashboard-hero"></div>
+            <div id="dashboard-status" class="dashboard-status"></div>
+            <div id="dashboard-attention" class="dashboard-attention"></div>
+          </div>
+          <div id="dashboard-mix" class="dashboard-mix"></div>
+        </div>
       </section>
 
       <section class="query-bar" aria-label="">

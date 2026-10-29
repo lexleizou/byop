@@ -794,14 +794,105 @@ function shiftISODate(dateText, days) {
 // DUE_WINDOW_DAYS is how far ahead the "due soon" preset looks.
 const DUE_WINDOW_DAYS = 30;
 
-// DASHBOARD_TOTAL_COLUMNS are the amount columns the summary cards total over
-// the whole table. They are the amounts a reader checks first, and each card
-// stays on its own column so the totals never add up to a made-up number.
+// DASHBOARD_TOTAL_COLUMNS are the amount columns the summary totals. They are
+// the amounts a reader checks first, and each stays on its own column so the
+// totals never add up to a made-up number.
 const DASHBOARD_TOTAL_COLUMNS = Object.freeze([
   "principal",
   "remaining_due",
   "actual_paid",
 ]);
+
+const DASHBOARD_STATUS_ORDER = Object.freeze([
+  "overdue",
+  "repaying",
+  "not_started",
+  "settled",
+]);
+
+function dashboardTotals(rows) {
+  return Object.fromEntries(
+    DASHBOARD_TOTAL_COLUMNS.map((columnID) => {
+      const column = COLUMN_BY_ID.get(columnID);
+      return [
+        columnID,
+        {
+          column_id: columnID,
+          value: decimalFromCentsString(
+            sumCents(rows.map((row) => row.values[columnID])),
+            column.config.scale ?? 2,
+          ),
+          currency: column.config.currency ?? null,
+        },
+      ];
+    }),
+  );
+}
+
+function dashboardFocusFilter(filters, columnID) {
+  const matches = filters.filter(
+    (filter) => filter.column_id === columnID && filter.op === "eq",
+  );
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function dashboardGroupEntries(rows, columnID, { focus, order = [] } = {}) {
+  const groups = new Map();
+  for (const row of rows) {
+    const value = row.values[columnID] ?? null;
+    const key = value === null ? "\u0000null" : String(value);
+    let group = groups.get(key);
+    if (!group) {
+      group = { value, row_count: 0, amounts: [] };
+      groups.set(key, group);
+    }
+    group.row_count += 1;
+    group.amounts.push(row.values.remaining_due);
+  }
+
+  const orderIndex = new Map(order.map((value, index) => [value, index]));
+  return [...groups.values()]
+    .map((group) => {
+      const remainingCents = sumCents(group.amounts);
+      return {
+        value: group.value,
+        row_count: group.row_count,
+        remaining_due: decimalFromCentsString(
+          remainingCents,
+          COLUMN_BY_ID.get("remaining_due").config.scale ?? 2,
+        ),
+        remainingCents,
+      };
+    })
+    .sort((left, right) => {
+      const leftOrder = orderIndex.get(left.value);
+      const rightOrder = orderIndex.get(right.value);
+      if (leftOrder !== undefined || rightOrder !== undefined) {
+        return (
+          (leftOrder ?? Number.MAX_SAFE_INTEGER) -
+          (rightOrder ?? Number.MAX_SAFE_INTEGER)
+        );
+      }
+      const amountDifference = BigInt(right.remainingCents) - BigInt(left.remainingCents);
+      if (amountDifference !== 0n) {
+        return amountDifference > 0n ? 1 : -1;
+      }
+      return String(left.value ?? "").localeCompare(String(right.value ?? ""));
+    })
+    .map(({ remainingCents: _remainingCents, ...entry }) => ({
+      ...entry,
+      ...(Object.hasOwn(entry, "value") && entry.value === focus
+        ? { focus: true }
+        : {}),
+    }));
+}
+
+function daysBetweenISODates(start, end) {
+  return Math.round(
+    (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) /
+      86400000,
+  );
+}
 
 // dashboardPresets are the saved queries the page shows as buttons. Every
 // preset is one filter on a column the query bar can display, so a pressed
@@ -1591,7 +1682,10 @@ export class TableStore {
   // gets its row count and the total of the amount column that matters for it.
   // Rows are read once and matched with the same filter code the query uses,
   // so a button's number and the list it opens cannot disagree.
-  dashboard() {
+  dashboard(args = {}) {
+    assertPlainObject(args, "dashboard", ["search", "filters"]);
+    const search = normalizeSearch(args.search);
+    const filters = normalizeFilters(args.filters);
     return this.read(() => {
       const workbook = workbookRecord(this.db);
       if (!workbook) {
@@ -1600,25 +1694,74 @@ export class TableStore {
       const table = tableRecord(this.db);
       const rows = this.db
         .prepare(
-          `SELECT values_json
+          `SELECT row_id, values_json
              FROM rows
             WHERE table_id = ? AND deleted_at IS NULL`,
         )
         .all(DEFAULT_TABLE_ID)
-        .map((row) => ({ values: parseJSON(row.values_json) }));
+        .map((row) => ({
+          row_id: row.row_id,
+          values: parseJSON(row.values_json),
+        }));
       const today = localToday(workbook.timezone);
-      // Amounts the summary cards show for the whole table, in cents.
-      const totals = {};
-      for (const columnID of DASHBOARD_TOTAL_COLUMNS) {
-        totals[columnID] = {
-          column_id: columnID,
-          value: decimalFromCentsString(
-            sumCents(rows.map((row) => row.values[columnID])),
-            COLUMN_BY_ID.get(columnID).config.scale ?? 2,
-          ),
-          currency: COLUMN_BY_ID.get(columnID).config.currency ?? null,
-        };
-      }
+      const searchRows = rows.filter((row) => matchesSearch(row, search));
+      const matchedRows = searchRows.filter((row) =>
+        filters.every((filter) => matchesFilter(row, filter)),
+      );
+      const statusFocus = dashboardFocusFilter(filters, "repayment_status");
+      const statusRows = statusFocus ? searchRows : matchedRows;
+      const status = dashboardGroupEntries(statusRows, "repayment_status", {
+        focus: statusFocus?.value,
+        order: DASHBOARD_STATUS_ORDER,
+      });
+      const breakdowns = Object.fromEntries(
+        ["category", "funding_source"].map((columnID) => {
+          const focus = dashboardFocusFilter(filters, columnID);
+          return [
+            columnID,
+            dashboardGroupEntries(
+              focus ? searchRows : matchedRows,
+              columnID,
+              { focus: focus?.value },
+            ),
+          ];
+        }),
+      );
+      const noPlanFocus =
+        filters.length === 1 &&
+        filters[0].column_id === "plan_status" &&
+        filters[0].op === "eq" &&
+        filters[0].value === "not_created";
+      const noPlanRows = noPlanFocus ? searchRows : matchedRows;
+      const attentionEnd = shiftISODate(today, DUE_WINDOW_DAYS + 1);
+      const attentionRows = matchedRows
+        .filter(
+          (row) =>
+            row.values.next_due !== null &&
+            row.values.next_due !== undefined &&
+            row.values.next_due < attentionEnd,
+        );
+      const attention = attentionRows
+        .map((row) => ({
+          row_id: row.row_id,
+          institution: row.values.institution ?? null,
+          name: row.values.name ?? null,
+          next_due: row.values.next_due,
+          next_due_amount:
+            row.values.next_due_amount === null ||
+            row.values.next_due_amount === undefined
+              ? null
+              : decimalFromCentsString(
+                  sumCents([row.values.next_due_amount]),
+                  COLUMN_BY_ID.get("next_due_amount").config.scale ?? 2,
+                ),
+          days: daysBetweenISODates(today, row.values.next_due),
+        }))
+        .sort(
+          (left, right) =>
+            left.next_due.localeCompare(right.next_due) ||
+            left.row_id.localeCompare(right.row_id),
+        );
       return {
         table_id: DEFAULT_TABLE_ID,
         schema_revision: table.schema_revision,
@@ -1626,15 +1769,38 @@ export class TableStore {
         row_count: rows.length,
         source_local_date: today,
         due_window_days: DUE_WINDOW_DAYS,
-        totals,
+        scope: {
+          search,
+          filters,
+          matched_count: matchedRows.length,
+          total_count: rows.length,
+          // The hero percentage needs the whole-table remaining amount even
+          // when the active query is scoped to a different dimension.
+          total_remaining_due: decimalFromCentsString(
+            sumCents(rows.map((row) => row.values.remaining_due)),
+            COLUMN_BY_ID.get("remaining_due").config.scale ?? 2,
+          ),
+        },
+        totals: dashboardTotals(matchedRows),
+        status,
+        no_plan_count: noPlanRows.filter(
+          (row) => row.values.plan_status === "not_created",
+        ).length,
+        breakdowns,
+        attention,
+        attention_total: decimalFromCentsString(
+          sumCents(attentionRows.map((row) => row.values.next_due_amount)),
+          COLUMN_BY_ID.get("next_due_amount").config.scale ?? 2,
+        ),
         presets: dashboardPresets(today).map((preset) => {
-          const filters = normalizeFilters(preset.filters);
+          const presetFilters = normalizeFilters(preset.filters);
           const matched = rows.filter(
-            (row) => filters.every((filter) => matchesFilter(row, filter)),
+            (row) =>
+              presetFilters.every((filter) => matchesFilter(row, filter)),
           );
           return {
             preset_id: preset.preset_id,
-            filters,
+            filters: presetFilters,
             row_count: matched.length,
             amount: {
               column_id: preset.amount_column_id,

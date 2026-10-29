@@ -109,6 +109,30 @@ test("en and zh-Hans expose the same complete UI locale keys", async () => {
     "column.annualized_rate",
     "column.plan_status",
     "column.next_due",
+    "dashboardScope",
+    "dashboardScopeAll",
+    "dashboardScopeSearch",
+    "dashboardScopeCount",
+    "dashboardCollapse",
+    "dashboardExpand",
+    "dashboardShare",
+    "dashboardStatusTitle",
+    "dashboardStatusBasis",
+    "dashboardNoPlan",
+    "dashboardAttentionTitle",
+    "dashboardAttentionLate",
+    "dashboardAttentionSoon",
+    "dashboardAttentionMore",
+    "dashboardAttentionCount",
+    "dashboardAttentionNone",
+    "dashboardOverdueDays",
+    "dashboardDueToday",
+    "dashboardDueInDays",
+    "dashboardMixTitle",
+    "dashboardMixExpand",
+    "dashboardMixCollapse",
+    "dashboardOverdueInline",
+    "dashboardTenThousand",
   ]) {
     assert.equal(typeof en[key], "string");
     assert.equal(typeof zh[key], "string");
@@ -236,6 +260,46 @@ test("table redraw remounts the active draft and refreshes after it closes", asy
   assert.doesNotMatch(selectPage, /renderTable\(/);
   assert.doesNotMatch(selectRow, /renderTable\(/);
   assert.match(app, /preserveDrafts: true/);
+});
+
+test("P21 dashboard follows the current query and ignores stale responses", async () => {
+  const app = await readFile(join(PLUGIN_DIR, "web", "app.js"), "utf8");
+  const html = await readFile(join(PLUGIN_DIR, "web", "index.html"), "utf8");
+  const css = await readFile(join(PLUGIN_DIR, "web", "style.css"), "utf8");
+  const load = functionSource(app, "loadDashboard");
+  const loadQuery = functionSource(app, "loadQuery");
+  const render = functionSource(app, "renderDashboard");
+  const focusKey = functionSource(app, "dashboardFocusKey");
+  const restoreFocus = functionSource(app, "restoreDashboardFocus");
+
+  assert.match(load, /const result = state\.result/);
+  assert.match(
+    load,
+    /callPlugin\("table\.dashboard", \{\s*search: result\.search,\s*filters: result\.filters \?\? \[\],/,
+  );
+  assert.doesNotMatch(load, /currentQuery\(\)/);
+  assert.match(load, /dashboardRequestSequence/);
+  assert.match(
+    loadQuery,
+    /renderTable\(\{ rebaseDrafts: preserveDrafts \}\);[\s\S]*void loadDashboard\(\)/,
+  );
+  assert.doesNotMatch(loadQuery, /state\.dashboard\?\.data_revision/);
+  assert.match(render, /const focusedControl = dashboardFocusKey\(\)/);
+  assert.match(render, /restoreDashboardFocus\(focusedControl\)/);
+  assert.match(focusKey, /active\.dataset\.presetId/);
+  assert.match(focusKey, /active\.dataset\.rowId/);
+  assert.match(restoreFocus, /focus\(\{ preventScroll: true \}\)/);
+  assert.match(app, /legend\.setAttribute\("role", "group"\)/);
+  assert.match(app, /\(preset\?\.row_count \?\? 0\) === 0 && !active/);
+  assert.match(html, /id="dashboard-scope"/);
+  assert.match(html, /id="dashboard-panel"/);
+  assert.doesNotMatch(html, /dashboard-totals|dashboard-presets/);
+  assert.doesNotMatch(css, /--byop-accent-text/);
+  assert.match(css, /\.dashboard-dim \{\s*opacity: 0\.5;/);
+  assert.match(
+    css,
+    /\.dashboard-mix-track \{[\s\S]*border-radius: var\(--byop-radius-chip, 6px\)/,
+  );
 });
 
 test("P15b.1 row selection and cell editing have separate lifecycles", async () => {

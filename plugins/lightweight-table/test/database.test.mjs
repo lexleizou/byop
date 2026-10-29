@@ -268,8 +268,12 @@ test("dashboard counts match the query for the same filter", async () => {
   try {
     const dashboard = store.dashboard();
     assert.equal(dashboard.row_count, 3);
+    assert.equal(dashboard.scope.matched_count, 3);
+    assert.equal(dashboard.scope.total_count, 3);
     assert.equal(dashboard.totals.principal.value, "1200.50");
     assert.equal(dashboard.totals.principal.currency, "CNY");
+    assert.equal(dashboard.totals.remaining_due.value, "0.00");
+    assert.equal(dashboard.totals.actual_paid.value, "0.00");
     assert.equal(dashboard.due_window_days, 30);
 
     const byID = new Map(
@@ -290,6 +294,207 @@ test("dashboard counts match the query for the same filter", async () => {
     assert.equal(byID.get("bank").amount.column_id, "remaining_due");
     assert.equal(byID.get("all").amount.column_id, "principal");
     assert.equal(byID.get("all").amount.value, "1200.50");
+
+    const statusFilter = [
+      {
+        column_id: "repayment_status",
+        op: "eq",
+        value: "overdue",
+      },
+    ];
+    const scoped = store.dashboard({
+      search: "Synthetic",
+      filters: statusFilter,
+    });
+    const query = store.query({
+      search: "Synthetic",
+      filters: statusFilter,
+      limit: 50,
+    });
+    assert.equal(scoped.scope.matched_count, query.matched_count);
+    assert.equal(scoped.scope.search, "Synthetic");
+    assert.deepEqual(scoped.scope.filters, statusFilter);
+    for (const columnID of [
+      "principal",
+      "remaining_due",
+      "actual_paid",
+    ]) {
+      const summed = store.query({
+        search: "Synthetic",
+        filters: statusFilter,
+        limit: 50,
+        sum_column_id: columnID,
+      });
+      assert.equal(scoped.totals[columnID].value, summed.sum.value);
+    }
+    assert.deepEqual(
+      scoped.status.map((entry) => entry.value),
+      ["overdue", "repaying", "not_started"],
+    );
+    assert.equal(
+      scoped.status.find((entry) => entry.value === "overdue").focus,
+      true,
+    );
+    assert.equal(
+      scoped.status.find((entry) => entry.value === "repaying").row_count,
+      1,
+    );
+    assert.throws(
+      () => store.dashboard({ unexpected: true }),
+      (error) => error.code === "invalid_arguments",
+    );
+  } finally {
+    store.close();
+  }
+});
+
+test("dashboard keeps the active dimension and bounds attention by date", async () => {
+  const directory = await makeScratch("db-dashboard-scoped");
+  const databasePath = join(directory, "tables.sqlite");
+  const store = new TableStore(databasePath);
+  try {
+    store.seed({
+      workbook_name: "Synthetic dashboard scope",
+      timezone: "Asia/Singapore",
+      rows: [
+        {
+          name: "Synthetic overdue",
+          institution: "Synthetic creditor A",
+          category: "financial",
+          funding_source: "bank",
+          principal: "1000.00",
+          repayment_status: "overdue",
+        },
+        {
+          name: "Synthetic soon",
+          institution: "Synthetic creditor B",
+          category: "friend",
+          funding_source: "non_bank",
+          principal: "500.00",
+          repayment_status: "repaying",
+        },
+        {
+          name: "Synthetic settled",
+          institution: "Synthetic creditor C",
+          category: "high_interest",
+          funding_source: "online_financial_platform",
+          principal: "300.00",
+          repayment_status: "settled",
+        },
+        {
+          name: "Synthetic later",
+          institution: "Synthetic creditor D",
+          category: "financial",
+          funding_source: "bank",
+          principal: "200.00",
+          repayment_status: "repaying",
+        },
+      ],
+    });
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Singapore",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(
+      parts.map((part) => [part.type, part.value]),
+    );
+    const today = `${values.year}-${values.month}-${values.day}`;
+    const shift = (days) => {
+      const date = new Date(`${today}T00:00:00Z`);
+      date.setUTCDate(date.getUTCDate() + days);
+      return date.toISOString().slice(0, 10);
+    };
+    const rows = store.db
+      .prepare("SELECT row_id, values_json FROM rows")
+      .all()
+      .map((row) => ({
+        row_id: row.row_id,
+        values: JSON.parse(row.values_json),
+      }));
+    const rawByName = {
+      "Synthetic overdue": {
+        plan_status: "generated",
+        remaining_due: 80000,
+        actual_paid: 20000,
+        next_due: shift(-2),
+        next_due_amount: 5000,
+      },
+      "Synthetic soon": {
+        plan_status: "not_created",
+        remaining_due: 60000,
+        actual_paid: 0,
+        next_due: shift(10),
+        next_due_amount: null,
+      },
+      "Synthetic settled": {
+        plan_status: "completed",
+        remaining_due: 0,
+        actual_paid: 30000,
+        next_due: null,
+        next_due_amount: null,
+      },
+      "Synthetic later": {
+        plan_status: "not_created",
+        remaining_due: 10000,
+        actual_paid: 0,
+        next_due: shift(31),
+        next_due_amount: 1000,
+      },
+    };
+    const update = store.db.prepare(
+      "UPDATE rows SET values_json = ? WHERE row_id = ?",
+    );
+    for (const row of rows) {
+      update.run(
+        JSON.stringify({
+          ...row.values,
+          ...rawByName[row.values.name],
+        }),
+        row.row_id,
+      );
+    }
+
+    const categoryFilter = [
+      { column_id: "category", op: "eq", value: "financial" },
+    ];
+    const scoped = store.dashboard({ filters: categoryFilter });
+    const queried = store.query({ filters: categoryFilter, limit: 50 });
+    assert.equal(scoped.scope.matched_count, queried.matched_count);
+    assert.deepEqual(
+      scoped.breakdowns.category.map((entry) => entry.value).sort(),
+      ["financial", "friend", "high_interest"],
+    );
+    assert.equal(
+      scoped.breakdowns.category.find(
+        (entry) => entry.value === "financial",
+      ).focus,
+      true,
+    );
+    assert.deepEqual(
+      scoped.breakdowns.funding_source.map((entry) => entry.value).sort(),
+      ["bank"],
+    );
+    assert.equal(scoped.no_plan_count, 1);
+
+    const dashboard = store.dashboard();
+    assert.deepEqual(
+      dashboard.attention.map((item) => item.days),
+      [-2, 10],
+    );
+    assert.equal(dashboard.attention[1].next_due_amount, null);
+    assert.equal(dashboard.attention_total, "50.00");
+    assert.ok(dashboard.attention.every((item) => item.next_due < shift(31)));
+
+    const noPlan = store.dashboard({
+      search: "Synthetic",
+      filters: [
+        { column_id: "plan_status", op: "eq", value: "not_created" },
+      ],
+    });
+    assert.equal(noPlan.scope.search, "Synthetic");
+    assert.equal(noPlan.no_plan_count, 2);
   } finally {
     store.close();
   }

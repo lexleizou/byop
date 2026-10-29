@@ -1,5 +1,6 @@
 const PAGE_SIZE = 100;
 const SUPPORTED_LOCALES = new Set(["en", "zh-Hans"]);
+const DASHBOARD_COLLAPSED_KEY = "fuyao.dashboardCollapsed";
 const MAIN_COLUMNS = Object.freeze([
   { column_id: "institution", type: "text" },
   { column_id: "category", type: "text" },
@@ -21,8 +22,15 @@ const dom = {
   title: document.querySelector("#page-title"),
   subtitle: document.querySelector("#page-subtitle"),
   dashboard: document.querySelector("#dashboard"),
-  dashboardTotals: document.querySelector("#dashboard-totals"),
-  dashboardPresets: document.querySelector("#dashboard-presets"),
+  dashboardScope: document.querySelector("#dashboard-scope"),
+  dashboardInline: document.querySelector("#dashboard-inline"),
+  dashboardMixToggle: document.querySelector("#dashboard-mix-toggle"),
+  dashboardCollapseToggle: document.querySelector("#dashboard-collapse-toggle"),
+  dashboardPanel: document.querySelector("#dashboard-panel"),
+  dashboardHero: document.querySelector("#dashboard-hero"),
+  dashboardStatus: document.querySelector("#dashboard-status"),
+  dashboardAttention: document.querySelector("#dashboard-attention"),
+  dashboardMix: document.querySelector("#dashboard-mix"),
   searchInput: document.querySelector("#search-input"),
   filterColumn: document.querySelector("#filter-column-select"),
   filterOperatorField: document.querySelector("#filter-operator-field"),
@@ -101,7 +109,27 @@ const state = {
   bulkOpening: false,
   historyCommandIds: new Map(),
   openDrawer: null,
+  dashboardCollapsed: readDashboardCollapsed(),
+  dashboardMixOpen: false,
+  dashboardNarrow: window.innerWidth < 1200,
+  dashboardRequestSequence: 0,
 };
+
+function readDashboardCollapsed() {
+  try {
+    return window.localStorage.getItem(DASHBOARD_COLLAPSED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function saveDashboardCollapsed(collapsed) {
+  try {
+    window.localStorage.setItem(DASHBOARD_COLLAPSED_KEY, String(collapsed));
+  } catch {
+    // Storage can be unavailable in a restricted WebView.
+  }
+}
 
 function newCommandId() {
   return (
@@ -324,27 +352,630 @@ function formatDecimal(value) {
   return `${negative ? "-" : ""}${grouped}${fraction ? `.${fraction}` : ""}`;
 }
 
-// The dashboard summarizes the table and offers its saved queries as buttons.
-// Every preset carries one filter, so pressing a button only writes that
-// filter into the filter bar: the list and the button count cannot diverge.
-const DASHBOARD_TOTAL_COLUMNS = ["principal", "remaining_due", "actual_paid"];
-const DASHBOARD_PRESET_LABEL_KEYS = Object.freeze({
-  all: "filterAll",
-  due_30: "dashboardPresetDueSoon",
+const DASHBOARD_STATUS_ORDER = ["overdue", "repaying", "not_started", "settled"];
+const DASHBOARD_STATUS_TONES = Object.freeze({
+  overdue: "danger",
+  repaying: "accent",
+  not_started: "muted",
+  settled: "success",
+});
+const FILTER_OPERATOR_LABEL_KEYS = Object.freeze({
+  eq: "opEquals",
+  neq: "opNotEquals",
+  contains: "opContains",
+  not_contains: "opNotContains",
+  is_null: "opIsEmpty",
+  not_null: "opNotEmpty",
+  gt: "opAfter",
+  gte: "opGreaterThanOrEqual",
+  lt: "opBefore",
+  lte: "opLessThanOrEqual",
+  between: "opBetween",
 });
 
-function presetLabel(presetID) {
-  const key = DASHBOARD_PRESET_LABEL_KEYS[presetID];
-  if (key) {
-    return message(key);
+function decimalCents(value) {
+  const raw = String(value ?? "0").trim();
+  const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(raw);
+  if (!match) {
+    return 0n;
   }
-  // The rest are one-value queries, so the button takes its text from the
-  // filter value on its own column: the same label the table and detail drawer
-  // show for that value.
-  const filter = (state.dashboard?.presets ?? [])
-    .find((preset) => preset.preset_id === presetID)
-    ?.filters[0];
-  return filter ? label(filter.column_id, filter.value) : presetID;
+  const fraction = (match[3] ?? "").padEnd(2, "0");
+  const cents = BigInt(match[2]) * 100n + BigInt(fraction || "0");
+  return match[1] === "-" ? -cents : cents;
+}
+
+function shortAmount(value) {
+  if (state.locale !== "zh-Hans") {
+    return formatDecimal(value);
+  }
+  const cents = decimalCents(value);
+  const magnitude = cents < 0n ? -cents : cents;
+  if (magnitude < 1000000n) {
+    return formatDecimal(value);
+  }
+  const roundedTenths = (magnitude + 50000n) / 100000n;
+  const sign = cents < 0n ? "-" : "";
+  return message("dashboardTenThousand", {
+    value: `${sign}${roundedTenths / 10n}.${roundedTenths % 10n}`,
+  });
+}
+
+function roundedPercent(numerator, denominator) {
+  const top = decimalCents(numerator);
+  const bottom = decimalCents(denominator);
+  if (bottom <= 0n) {
+    return 0;
+  }
+  return Number((top * 100n + bottom / 2n) / bottom);
+}
+
+function barPercent(value, maximum) {
+  const top = decimalCents(value);
+  const bottom = decimalCents(maximum);
+  if (bottom <= 0n || top <= 0n) {
+    return 0;
+  }
+  return Number((top * 10000n) / bottom) / 100;
+}
+
+function presetByID(presetID) {
+  return (state.dashboard?.presets ?? []).find(
+    (preset) => preset.preset_id === presetID,
+  );
+}
+
+function presetForDimensionValue(columnID, value) {
+  return (state.dashboard?.presets ?? []).find(
+    (preset) =>
+      preset.filters?.length === 1 &&
+      preset.filters[0].column_id === columnID &&
+      preset.filters[0].op === "eq" &&
+      preset.filters[0].value === value,
+  );
+}
+
+function hasDimensionFocus(columnID) {
+  return (state.dashboard?.scope?.filters ?? []).some(
+    (filter) => filter.column_id === columnID && filter.op === "eq",
+  );
+}
+
+function dashboardFilterText(filter) {
+  const operator =
+    message(FILTER_OPERATOR_LABEL_KEYS[filter.op] ?? "filterLabel") || filter.op;
+  const noValue = filter.op === "is_null" || filter.op === "not_null";
+  let value = "";
+  if (!noValue) {
+    if (filter.op === "between" && Array.isArray(filter.value)) {
+      value = filter.value
+        .map((entry) => dashboardFilterValue(filter.column_id, entry))
+        .join(" – ");
+    } else {
+      value = dashboardFilterValue(filter.column_id, filter.value);
+    }
+  }
+  return `${columnLabel(filter.column_id)} ${operator}${value ? ` ${value}` : ""}`;
+}
+
+function dashboardFilterValue(columnID, value) {
+  const column = columnByID(columnID);
+  if (column?.type === "number") {
+    return formatDecimal(value);
+  }
+  if (column?.type === "date") {
+    return value === null || value === undefined || value === ""
+      ? "—"
+      : String(value);
+  }
+  return localizedValue(columnID, value);
+}
+
+function dashboardScopeLabel() {
+  const filters = state.dashboard?.scope?.filters ?? [];
+  let label = filters.length
+    ? filters.map(dashboardFilterText).join(" · ")
+    : message("dashboardScopeAll");
+  const search = state.dashboard?.scope?.search;
+  if (search) {
+    label = message("dashboardScopeSearch", { label, search });
+  }
+  return label;
+}
+
+function dashboardOverdueCount() {
+  const filters = state.dashboard?.scope?.filters ?? [];
+  const statusFilters = filters.filter(
+    (filter) =>
+      filter.column_id === "repayment_status" && filter.op === "eq",
+  );
+  const overdue = (state.dashboard?.status ?? []).find(
+    (entry) => entry.value === "overdue",
+  );
+  if (statusFilters.length > 0) {
+    return statusFilters.some((filter) => filter.value === "overdue")
+      ? overdue?.row_count ?? 0
+      : 0;
+  }
+  return overdue?.row_count ?? 0;
+}
+
+function textElement(tagName, className, textValue) {
+  const element = document.createElement(tagName);
+  if (className) {
+    element.className = className;
+  }
+  if (textValue !== undefined) {
+    element.textContent = textValue;
+  }
+  return element;
+}
+
+function renderDashboardScope() {
+  const scope = state.dashboard?.scope ?? {};
+  const label = textElement(
+    "span",
+    "dashboard-scope-label",
+    message("dashboardScope"),
+  );
+  const condition = textElement(
+    "strong",
+    "dashboard-scope-condition",
+    dashboardScopeLabel(),
+  );
+  const count = textElement(
+    "span",
+    "dashboard-scope-count",
+    message("dashboardScopeCount", {
+      matched: scope.matched_count ?? 0,
+      total: scope.total_count ?? state.dashboard?.row_count ?? 0,
+    }),
+  );
+  dom.dashboardScope.replaceChildren(label, condition, count);
+}
+
+function renderDashboardInline() {
+  const totals = state.dashboard?.totals ?? {};
+  const items = [
+    ["remaining_due", totals.remaining_due?.value],
+    ["principal", totals.principal?.value],
+    ["actual_paid", totals.actual_paid?.value],
+  ].map(([columnID, value]) => {
+    const item = document.createElement("span");
+    item.append(
+      document.createTextNode(`${columnLabel(columnID)} `),
+      textElement("b", "", formatDecimal(value ?? "0.00")),
+    );
+    return item;
+  });
+  const overdue = dashboardOverdueCount();
+  if (overdue > 0) {
+    items.push(
+      textElement(
+        "span",
+        "dashboard-inline-danger",
+        message("dashboardOverdueInline", { count: overdue }),
+      ),
+    );
+  }
+  dom.dashboardInline.replaceChildren(...items);
+}
+
+function renderDashboardHero() {
+  const totals = state.dashboard?.totals ?? {};
+  const scope = state.dashboard?.scope ?? {};
+  const remaining = totals.remaining_due?.value ?? "0.00";
+  const hero = document.createElement("div");
+  hero.className = "dashboard-hero-main";
+  hero.append(
+    textElement("span", "dashboard-caption", columnLabel("remaining_due")),
+    textElement("strong", "dashboard-hero-value", formatDecimal(remaining)),
+  );
+  if (scope.matched_count !== scope.total_count) {
+    hero.append(
+      textElement(
+        "span",
+        "dashboard-caption dashboard-share",
+        message("dashboardShare", {
+          percent: roundedPercent(
+            remaining,
+            scope.total_remaining_due ?? remaining,
+          ),
+        }),
+      ),
+    );
+  }
+
+  const definition = document.createElement("dl");
+  definition.className = "dashboard-amount-list";
+  for (const columnID of ["principal", "actual_paid"]) {
+    definition.append(
+      textElement("dt", "", columnLabel(columnID)),
+      textElement(
+        "dd",
+        "dashboard-number",
+        formatDecimal(totals[columnID]?.value ?? "0.00"),
+      ),
+    );
+  }
+  hero.append(definition);
+  dom.dashboardHero.replaceChildren(hero);
+}
+
+function dashboardStatusOption(entry, activeID) {
+  const preset = presetForDimensionValue(
+    "repayment_status",
+    entry.value,
+  );
+  const element = preset
+    ? document.createElement("button")
+    : document.createElement("div");
+  element.className = "dashboard-status-option";
+  const tone = DASHBOARD_STATUS_TONES[entry.value] ?? "muted";
+  element.classList.add(`dashboard-tone-${tone}`);
+  if (!preset) {
+    element.classList.add("dashboard-static");
+  }
+  const focused = hasDimensionFocus("repayment_status");
+  if (focused && !entry.focus) {
+    element.classList.add("dashboard-dim");
+  }
+  if (preset) {
+    element.type = "button";
+    element.dataset.action = "apply-preset";
+    element.dataset.presetId = preset.preset_id;
+    const active = activeID === preset.preset_id;
+    element.setAttribute("aria-pressed", active ? "true" : "false");
+    if (active) {
+      element.classList.add("dashboard-active");
+    }
+  }
+
+  const top = document.createElement("span");
+  top.className = "dashboard-status-name";
+  const dot = textElement("i", "dashboard-dot");
+  dot.setAttribute("aria-hidden", "true");
+  top.append(
+    dot,
+    document.createTextNode(label("repayment_status", entry.value)),
+  );
+  const values = document.createElement("span");
+  values.className = "dashboard-status-values";
+  values.append(
+    textElement("b", "", String(entry.row_count)),
+    textElement("span", "", shortAmount(entry.remaining_due)),
+  );
+  element.append(top, values);
+  return element;
+}
+
+function renderDashboardStatus() {
+  const dashboard = state.dashboard;
+  const entries = [...(dashboard.status ?? [])].sort((left, right) => {
+    const leftIndex = DASHBOARD_STATUS_ORDER.indexOf(left.value);
+    const rightIndex = DASHBOARD_STATUS_ORDER.indexOf(right.value);
+    return (
+      (leftIndex < 0 ? Number.MAX_SAFE_INTEGER : leftIndex) -
+        (rightIndex < 0 ? Number.MAX_SAFE_INTEGER : rightIndex) ||
+      String(left.value ?? "").localeCompare(String(right.value ?? ""))
+    );
+  });
+  const head = document.createElement("div");
+  head.className = "dashboard-section-head";
+  head.append(
+    textElement("span", "", message("dashboardStatusTitle")),
+    textElement(
+      "span",
+      "dashboard-muted",
+      message("dashboardStatusBasis"),
+    ),
+  );
+
+  const bar = document.createElement("div");
+  bar.className = "dashboard-health-bar";
+  bar.setAttribute("role", "img");
+  bar.setAttribute(
+    "aria-label",
+    `${message("dashboardStatusTitle")} · ${message("dashboardStatusBasis")}`,
+  );
+  const statusFocus = hasDimensionFocus("repayment_status");
+  let positiveSegments = 0;
+  for (const entry of entries) {
+    const cents = decimalCents(entry.remaining_due);
+    if (cents <= 0n) {
+      continue;
+    }
+    positiveSegments += 1;
+    const segment = textElement(
+      "i",
+      `dashboard-health-segment dashboard-tone-${
+        DASHBOARD_STATUS_TONES[entry.value] ?? "muted"
+      }`,
+    );
+    if (statusFocus && !entry.focus) {
+      segment.classList.add("dashboard-dim");
+    }
+    segment.style.flexGrow = String(cents);
+    segment.title = `${label("repayment_status", entry.value)} ${formatDecimal(
+      entry.remaining_due,
+    )}`;
+    bar.append(segment);
+  }
+  if (positiveSegments === 0) {
+    bar.append(textElement("i", "dashboard-health-empty"));
+  }
+
+  const legend = document.createElement("div");
+  legend.className = "dashboard-status-legend";
+  legend.setAttribute("role", "group");
+  legend.setAttribute("aria-label", message("dashboardStatusTitle"));
+  const activeID = activePresetID();
+  for (const entry of entries) {
+    legend.append(dashboardStatusOption(entry, activeID));
+  }
+
+  const noPlan = presetByID("no_plan");
+  if (noPlan) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dashboard-status-option dashboard-no-plan";
+    button.dataset.action = "apply-preset";
+    button.dataset.presetId = noPlan.preset_id;
+    const active = activeID === noPlan.preset_id;
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    if (active) {
+      button.classList.add("dashboard-active");
+    }
+    button.disabled =
+      (dashboard.no_plan_count ?? 0) === 0 && !active;
+    const top = textElement(
+      "span",
+      "dashboard-status-name",
+      message("dashboardNoPlan"),
+    );
+    const values = document.createElement("span");
+    values.className = "dashboard-status-values";
+    values.append(
+      textElement("b", "", String(dashboard.no_plan_count ?? 0)),
+    );
+    button.append(top, values);
+    legend.append(button);
+  }
+
+  dom.dashboardStatus.replaceChildren(head, bar, legend);
+}
+
+function dashboardAttentionRow(item) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dashboard-attention-row";
+  button.dataset.action = "open-detail";
+  button.dataset.rowId = item.row_id;
+  const institution = textElement(
+    "span",
+    "dashboard-attention-name",
+    item.institution || item.name || "—",
+  );
+  institution.title = item.name || item.institution || "";
+  const when = textElement(
+    "span",
+    "dashboard-attention-when dashboard-number",
+    item.days < 0
+      ? message("dashboardOverdueDays", { days: -item.days })
+      : item.days === 0
+        ? message("dashboardDueToday")
+        : message("dashboardDueInDays", { days: item.days }),
+  );
+  const amount = textElement(
+    "span",
+    "dashboard-attention-amount dashboard-number",
+    formatDecimal(item.next_due_amount),
+  );
+  button.append(institution, when, amount);
+  return button;
+}
+
+function renderDashboardAttentionGroup(titleKey, items, tone) {
+  if (items.length === 0) {
+    return null;
+  }
+  const group = document.createElement("section");
+  group.className = `dashboard-attention-group dashboard-${tone}`;
+  group.append(textElement("em", "", message(titleKey)));
+  const list = document.createElement("ul");
+  for (const item of items.slice(0, 3)) {
+    const row = document.createElement("li");
+    row.append(dashboardAttentionRow(item));
+    list.append(row);
+  }
+  if (items.length > 3) {
+    const more = document.createElement("li");
+    more.className = "dashboard-attention-more";
+    more.textContent = message("dashboardAttentionMore", {
+      count: items.length - 3,
+    });
+    list.append(more);
+  }
+  group.append(list);
+  return group;
+}
+
+function renderDashboardAttention() {
+  const dashboard = state.dashboard;
+  const items = dashboard.attention ?? [];
+  const late = items.filter((item) => item.days < 0);
+  const soon = items.filter((item) => item.days >= 0);
+  const head = document.createElement("div");
+  head.className = "dashboard-section-head dashboard-attention-head";
+  head.append(textElement("span", "", message("dashboardAttentionTitle")));
+  const preset = presetByID("due_30");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "dashboard-link-button dashboard-number";
+  button.dataset.action = "apply-preset";
+  button.dataset.presetId = "due_30";
+  button.title = message("dashboardPresetDueSoon");
+  const active = activePresetID() === "due_30";
+  button.setAttribute("aria-pressed", active ? "true" : "false");
+  if (active) {
+    button.classList.add("dashboard-active");
+  }
+  button.disabled = (preset?.row_count ?? 0) === 0 && !active;
+  button.textContent = message("dashboardAttentionCount", {
+    count: items.length,
+    amount: shortAmount(dashboard.attention_total ?? "0.00"),
+  });
+  head.append(button);
+
+  const groups = document.createElement("div");
+  groups.className = "dashboard-attention-groups";
+  const lateGroup = renderDashboardAttentionGroup(
+    "dashboardAttentionLate",
+    late,
+    "danger",
+  );
+  const soonGroup = renderDashboardAttentionGroup(
+    "dashboardAttentionSoon",
+    soon,
+    "warning",
+  );
+  if (lateGroup) {
+    groups.append(lateGroup);
+  }
+  if (soonGroup) {
+    groups.append(soonGroup);
+  }
+  if (!lateGroup && !soonGroup) {
+    groups.append(
+      textElement(
+        "p",
+        "dashboard-empty-copy",
+        message("dashboardAttentionNone"),
+      ),
+    );
+  }
+  dom.dashboardAttention.replaceChildren(head, groups);
+}
+
+function dashboardMixEntry(entry, columnID, maximum, activeID) {
+  const preset = presetForDimensionValue(columnID, entry.value);
+  const element = preset
+    ? document.createElement("button")
+    : document.createElement("div");
+  element.className = "dashboard-mix-row";
+  if (!preset) {
+    element.classList.add("dashboard-static");
+  }
+  if (hasDimensionFocus(columnID) && !entry.focus) {
+    element.classList.add("dashboard-dim");
+  }
+  if (preset) {
+    element.type = "button";
+    element.dataset.action = "apply-preset";
+    element.dataset.presetId = preset.preset_id;
+    const active = activeID === preset.preset_id;
+    element.setAttribute("aria-pressed", active ? "true" : "false");
+    if (active) {
+      element.classList.add("dashboard-active");
+    }
+  }
+
+  const track = document.createElement("span");
+  track.className = "dashboard-mix-track";
+  const fill = textElement("b");
+  fill.style.width = `${barPercent(entry.remaining_due, maximum)}%`;
+  track.append(fill);
+  element.append(
+    textElement(
+      "span",
+      "dashboard-mix-name",
+      label(columnID, entry.value),
+    ),
+    textElement(
+      "span",
+      "dashboard-mix-count dashboard-number",
+      String(entry.row_count),
+    ),
+    track,
+    textElement(
+      "span",
+      "dashboard-mix-amount dashboard-number",
+      shortAmount(entry.remaining_due),
+    ),
+  );
+  return element;
+}
+
+function renderDashboardMix() {
+  const dashboard = state.dashboard;
+  const activeID = activePresetID();
+  const title = textElement(
+    "span",
+    "dashboard-mix-title",
+    message("dashboardMixTitle"),
+  );
+  const groups = [];
+  for (const columnID of ["category", "funding_source"]) {
+    const entries = dashboard.breakdowns?.[columnID] ?? [];
+    const group = document.createElement("section");
+    group.className = "dashboard-mix-group";
+    group.append(textElement("em", "", columnLabel(columnID)));
+    if (entries.length === 0) {
+      group.append(
+        textElement("p", "dashboard-empty-copy", message("noMatches")),
+      );
+    } else {
+      const list = document.createElement("div");
+      list.className = "dashboard-mix-list";
+      const maximum = entries.reduce(
+        (current, entry) =>
+          decimalCents(entry.remaining_due) > decimalCents(current)
+            ? entry.remaining_due
+            : current,
+        "0.00",
+      );
+      for (const entry of entries) {
+        list.append(
+          dashboardMixEntry(entry, columnID, maximum, activeID),
+        );
+      }
+      group.append(list);
+    }
+    groups.push(group);
+  }
+  dom.dashboardMix.replaceChildren(title, ...groups);
+}
+
+function dashboardFocusKey() {
+  const active = document.activeElement;
+  if (
+    !(active instanceof HTMLElement) ||
+    !dom.dashboard.contains(active) ||
+    !active.dataset.action
+  ) {
+    return null;
+  }
+  return {
+    action: active.dataset.action,
+    presetId: active.dataset.presetId ?? null,
+    rowId: active.dataset.rowId ?? null,
+  };
+}
+
+function restoreDashboardFocus(key) {
+  if (!key) {
+    return;
+  }
+  const target = [
+    ...dom.dashboard.querySelectorAll(
+      `[data-action="${CSS.escape(key.action)}"]`,
+    ),
+  ].find(
+    (element) =>
+      (key.presetId === null ||
+        element.dataset.presetId === key.presetId) &&
+      (key.rowId === null || element.dataset.rowId === key.rowId),
+  );
+  target?.focus({ preventScroll: true });
 }
 
 function renderDashboard() {
@@ -353,55 +984,60 @@ function renderDashboard() {
     dom.dashboard.hidden = true;
     return;
   }
+  const focusedControl = dashboardFocusKey();
   dom.dashboard.hidden = false;
-  dom.dashboard.setAttribute("aria-label", message("dashboardAria"));
-  dom.dashboardTotals.replaceChildren();
-  for (const columnID of DASHBOARD_TOTAL_COLUMNS) {
-    const amount = dashboard.totals?.[columnID];
-    const card = document.createElement("div");
-    card.className = "dashboard-card";
-    const label = document.createElement("span");
-    label.className = "dashboard-card-label";
-    label.textContent = columnLabel(columnID);
-    const value = document.createElement("span");
-    value.className = "dashboard-card-value";
-    value.textContent = formatDecimal(amount?.value ?? "0.00");
-    card.append(label, value);
-    dom.dashboardTotals.append(card);
-  }
-
-  const activeID = activePresetID();
-  dom.dashboardPresets.replaceChildren();
-  const heading = document.createElement("span");
-  heading.className = "dashboard-presets-label";
-  heading.textContent = message("dashboardPresetsTitle");
-  dom.dashboardPresets.append(heading);
-  for (const preset of dashboard.presets ?? []) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "button dashboard-preset";
-    button.dataset.action = "apply-preset";
-    button.dataset.presetId = preset.preset_id;
-    if (preset.preset_id === activeID) {
-      button.classList.add("primary");
-      button.setAttribute("aria-pressed", "true");
+  const width = dom.dashboard.getBoundingClientRect().width;
+  if (width > 0) {
+    const narrow = width < 1200;
+    if (narrow && !state.dashboardNarrow) {
+      state.dashboardMixOpen = false;
     }
-    button.title = `${message("dashboardPresetHint", {
-      amount: `${columnLabel(preset.amount.column_id)} ${formatDecimal(
-        preset.amount.value,
-      )}`,
-    })}`;
-    const name = document.createElement("span");
-    name.className = "dashboard-preset-name";
-    name.textContent = presetLabel(preset.preset_id);
-    const count = document.createElement("span");
-    count.className = "dashboard-preset-count";
-    count.textContent = message("dashboardPresetCount", {
-      count: preset.row_count,
-    });
-    button.append(name, count);
-    dom.dashboardPresets.append(button);
+    state.dashboardNarrow = narrow;
   }
+  dom.dashboard.classList.toggle(
+    "dashboard-narrow",
+    state.dashboardNarrow,
+  );
+  dom.dashboard.setAttribute("aria-label", message("dashboardAria"));
+  renderDashboardScope();
+  renderDashboardInline();
+  const collapsed = state.dashboardCollapsed;
+  dom.dashboardInline.hidden = !collapsed;
+  dom.dashboardPanel.hidden = collapsed;
+  dom.dashboardCollapseToggle.textContent = message(
+    collapsed ? "dashboardExpand" : "dashboardCollapse",
+  );
+  dom.dashboardCollapseToggle.setAttribute(
+    "aria-expanded",
+    collapsed ? "false" : "true",
+  );
+  dom.dashboardMixToggle.hidden =
+    collapsed || !state.dashboardNarrow;
+  dom.dashboardMixToggle.textContent = message(
+    state.dashboardMixOpen
+      ? "dashboardMixCollapse"
+      : "dashboardMixExpand",
+  );
+  dom.dashboardMixToggle.setAttribute(
+    "aria-expanded",
+    state.dashboardMixOpen ? "true" : "false",
+  );
+  if (collapsed) {
+    dom.dashboardMix.hidden = true;
+    restoreDashboardFocus(focusedControl);
+    return;
+  }
+  renderDashboardHero();
+  renderDashboardStatus();
+  renderDashboardAttention();
+  const showMix = !state.dashboardNarrow || state.dashboardMixOpen;
+  dom.dashboardMix.hidden = !showMix;
+  if (showMix) {
+    renderDashboardMix();
+  } else {
+    dom.dashboardMix.replaceChildren();
+  }
+  restoreDashboardFocus(focusedControl);
 }
 
 // activePresetID reports which preset the last query used, so its button stays
@@ -425,13 +1061,14 @@ function activePresetID() {
 }
 
 function applyPreset(presetID) {
-  const preset = (state.dashboard?.presets ?? []).find(
-    (entry) => entry.preset_id === presetID,
-  );
+  const targetID =
+    presetID !== "all" && activePresetID() === presetID
+      ? "all"
+      : presetID;
+  const preset = presetByID(targetID);
   if (!preset) {
     return;
   }
-  dom.searchInput.value = "";
   const filter = preset.filters[0];
   if (!filter) {
     dom.filterColumn.value = "";
@@ -451,10 +1088,25 @@ function applyPreset(presetID) {
 }
 
 async function loadDashboard() {
+  const result = state.result;
+  if (!result) {
+    return;
+  }
+  const requestSequence = ++state.dashboardRequestSequence;
   try {
-    state.dashboard = await callPlugin("table.dashboard");
+    const dashboard = await callPlugin("table.dashboard", {
+      search: result.search,
+      filters: result.filters ?? [],
+    });
+    if (requestSequence !== state.dashboardRequestSequence) {
+      return;
+    }
+    state.dashboard = dashboard;
     renderDashboard();
   } catch (error) {
+    if (requestSequence !== state.dashboardRequestSequence) {
+      return;
+    }
     // The summary is an extra view over the table: a failure here must not
     // hide the records, so it shows as a toast and leaves the table alone.
     showError(error);
@@ -675,11 +1327,9 @@ async function loadQuery({
     state.dataRevision = state.result.data_revision;
     state.pendingRefresh = false;
     renderTable({ rebaseDrafts: preserveDrafts });
-    // A revision the summary has not caught up with means the records changed,
-    // so the dashboard counts are refreshed alongside them.
-    if (state.dashboard?.data_revision !== state.result.data_revision) {
-      void loadDashboard();
-    }
+    // The dashboard follows the query even when the data revision did not
+    // change, because search and filters can change independently.
+    void loadDashboard();
     if (showRefreshed) {
       showToast(message("refreshed"));
     }
@@ -1531,8 +2181,7 @@ function renderDetail(data) {
 }
 
 async function openDetail(rowID) {
-  const row = rowByID(rowID);
-  if (!row) {
+  if (!rowID) {
     return;
   }
   openDrawer(dom.detailDrawer);
@@ -1962,6 +2611,39 @@ function stopPolling() {
   }
 }
 
+function dashboardResized(width) {
+  if (!Number.isFinite(width) || width <= 0) {
+    return;
+  }
+  const narrow = width < 1200;
+  if (narrow === state.dashboardNarrow) {
+    return;
+  }
+  state.dashboardNarrow = narrow;
+  if (narrow) {
+    state.dashboardMixOpen = false;
+  }
+  if (state.dashboard) {
+    renderDashboard();
+  }
+}
+
+function setupDashboardResizeObserver() {
+  if (typeof ResizeObserver === "function") {
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries.find((item) => item.target === dom.dashboard);
+      if (entry) {
+        dashboardResized(entry.contentRect.width);
+      }
+    });
+    observer.observe(dom.dashboard);
+    return;
+  }
+  window.addEventListener("resize", () => {
+    dashboardResized(dom.dashboard.getBoundingClientRect().width);
+  });
+}
+
 async function bootstrap() {
   setLoading(true);
   try {
@@ -1971,7 +2653,7 @@ async function bootstrap() {
     state.dataRevision = boot.summary.data_revision;
     updatePageSubtitle();
     renderControls();
-    await Promise.all([loadQuery(), loadDashboard()]);
+    await loadQuery();
   } catch (error) {
     showPageError(error);
   } finally {
@@ -2040,7 +2722,13 @@ document.addEventListener("click", (event) => {
       showRefreshed: true,
       preserveDrafts: true,
     });
-    void loadDashboard();
+  } else if (action === "toggle-dashboard") {
+    state.dashboardCollapsed = !state.dashboardCollapsed;
+    saveDashboardCollapsed(state.dashboardCollapsed);
+    renderDashboard();
+  } else if (action === "toggle-dashboard-mix") {
+    state.dashboardMixOpen = !state.dashboardMixOpen;
+    renderDashboard();
   } else if (action === "clear-filter") {
     resetFilterInputs();
   } else if (action === "apply-preset") {
@@ -2182,6 +2870,7 @@ async function resolveInitialLocale() {
 }
 
 async function initialize() {
+  setupDashboardResizeObserver();
   const initialLocale = await resolveInitialLocale();
   try {
     await applyLocale(initialLocale);
