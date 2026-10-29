@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/oneo-me/onevra/source/components"
 )
 
 type hudState struct {
@@ -34,6 +35,7 @@ type hudState struct {
 	currentTPSUpdatedAt   time.Time
 	streamStartedAt       time.Time
 	streamTokens          float64
+	liveTurnOutputTokens  float64
 }
 
 func (s *appState) beginPiHUD(cwd string, state *piSessionState) {
@@ -47,6 +49,7 @@ func (s *appState) beginPiHUD(cwd string, state *piSessionState) {
 	s.hud.usingSubscription = false
 	s.hud.avgOutputTokens = 0
 	s.hud.avgGenerationSeconds = 0
+	s.hud.liveTurnOutputTokens = 0
 	s.resetPiHUDSpeed()
 	s.applyPiHUDState(state)
 	s.refreshPiHUDBranch()
@@ -61,6 +64,7 @@ func (s *appState) resetPiHUDData() {
 	s.hud.extStatus = make(map[string]string)
 	s.hud.avgOutputTokens = 0
 	s.hud.avgGenerationSeconds = 0
+	s.hud.liveTurnOutputTokens = 0
 	s.resetPiHUDSpeed()
 }
 
@@ -78,6 +82,7 @@ func (s *appState) clearPiHUD() {
 	s.hud.extStatus = nil
 	s.hud.avgOutputTokens = 0
 	s.hud.avgGenerationSeconds = 0
+	s.hud.liveTurnOutputTokens = 0
 	s.resetPiHUDSpeed()
 }
 
@@ -188,6 +193,7 @@ func (s *appState) piHUDAverageTokensPerSecond() (float64, bool) {
 }
 
 func (s *appState) beginPiHUDSpeed() {
+	s.hud.liveTurnOutputTokens = 0
 	s.hud.currentTPS = 0
 	s.hud.currentTPSKnown = false
 	s.hud.currentTPSUpdatedAt = time.Time{}
@@ -196,6 +202,7 @@ func (s *appState) beginPiHUDSpeed() {
 }
 
 func (s *appState) resetPiHUDSpeed() {
+	s.hud.liveTurnOutputTokens = 0
 	s.hud.currentTPS = 0
 	s.hud.currentTPSKnown = false
 	s.hud.currentTPSUpdatedAt = time.Time{}
@@ -228,7 +235,9 @@ func (s *appState) observePiHUDSpeedAt(delta string, now time.Time) {
 	if s.hud.streamStartedAt.IsZero() {
 		s.hud.streamStartedAt = now
 	}
-	s.hud.streamTokens += piHUDEstimatedTokens(delta)
+	estimated := piHUDEstimatedTokens(delta)
+	s.hud.liveTurnOutputTokens += estimated
+	s.hud.streamTokens += estimated
 	elapsed := now.Sub(s.hud.streamStartedAt)
 	if elapsed < 250*time.Millisecond || s.hud.streamTokens <= 0 {
 		return
@@ -447,8 +456,10 @@ type hudItemKind uint8
 const (
 	hudItemMeta hudItemKind = iota
 	hudItemModel
+	hudItemTurnTokens
 	hudItemContext
 	hudItemTPS
+	hudItemContextCapacity
 )
 
 type hudItem struct {
@@ -457,11 +468,15 @@ type hudItem struct {
 	kind         hudItemKind
 }
 
-func (s *appState) piHUDItems() []hudItem {
-	if s.piConn != piConnected || s.piConnectionErrorActive() {
+func (s *appState) piHUDConnected() bool {
+	return s.piConn == piConnected && !s.piConnectionErrorActive()
+}
+
+func (s *appState) piHUDPrimaryItems() []hudItem {
+	if !s.piHUDConnected() {
 		return nil
 	}
-	items := make([]hudItem, 0, 9)
+	items := make([]hudItem, 0, 3)
 	if model := s.piHUDModelName(); model != "" {
 		items = append(items, hudItem{value: model, flexible: true, kind: hudItemModel})
 	}
@@ -474,6 +489,70 @@ func (s *appState) piHUDItems() []hudItem {
 				"speed": fmt.Sprintf("%.1f", rate),
 			}),
 			kind: hudItemTPS,
+		})
+	}
+	return items
+}
+
+func (s *appState) piHUDTurnItems(message *chatMessage) []hudItem {
+	items := s.piHUDPrimaryItems()
+	outputTokens := int64(0)
+	if message != nil {
+		outputTokens = message.outputTokens
+	}
+	if outputTokens <= 0 && s.runActive() {
+		outputTokens = int64(math.Round(s.hud.liveTurnOutputTokens))
+	}
+	if outputTokens <= 0 {
+		return items
+	}
+	withTokens := make([]hudItem, 0, len(items)+1)
+	for _, item := range items {
+		withTokens = append(withTokens, item)
+		if item.kind == hudItemModel {
+			withTokens = append(withTokens, hudItem{
+				value: "↓" + formatPiTokens(outputTokens),
+				kind:  hudItemTurnTokens,
+			})
+		}
+	}
+	if len(withTokens) == len(items) {
+		withTokens = append([]hudItem{{
+			value: "↓" + formatPiTokens(outputTokens),
+			kind:  hudItemTurnTokens,
+		}}, items...)
+	}
+	return withTokens
+}
+
+func piHUDContextCapacitySummary(
+	stats *piSessionStats,
+	fallbackWindow int,
+	autoCompact bool,
+) string {
+	window := piContextWindow(stats, fallbackWindow)
+	if window <= 0 {
+		return ""
+	}
+	body := formatContextWindow(window)
+	if autoCompact {
+		body += text("hudAutoSuffix")
+	}
+	return textArgs("hudContextUsage", map[string]any{"usage": body})
+}
+
+func (s *appState) piHUDFooterItems() []hudItem {
+	if !s.piHUDConnected() {
+		return nil
+	}
+	items := make([]hudItem, 0, 7)
+	if context := piHUDContextCapacitySummary(
+		s.hud.stats,
+		s.hud.contextWindowFallback,
+		s.hud.autoCompact,
+	); context != "" {
+		items = append(items, hudItem{
+			value: context, flexible: true, kind: hudItemContextCapacity,
 		})
 	}
 	if branch := strings.TrimSpace(s.hud.branch); branch != "" {
@@ -514,21 +593,43 @@ func (s *appState) piHUDItems() []hudItem {
 			}
 		}
 		sort.Strings(keys)
-		statuses := make([]string, 0, len(keys))
 		for _, key := range keys {
-			statuses = append(statuses, truncateHUDStatus(s.hud.extStatus[key], 40))
-		}
-		if len(statuses) > 0 {
-			for _, status := range statuses {
-				items = append(items, hudItem{value: status, flexible: true})
-			}
+			items = append(items, hudItem{
+				value: truncateHUDStatus(s.hud.extStatus[key], 40), flexible: true,
+			})
 		}
 	}
 	return items
 }
 
-func (s *appState) piHUDLabel() string {
-	items := s.piHUDItems()
+func (s *appState) piHUDItems() []hudItem {
+	if s.piConn != piConnected || s.piConnectionErrorActive() {
+		return nil
+	}
+	return mergePiHUDItems(s.piHUDPrimaryItems(), s.piHUDFooterItems())
+}
+
+func mergePiHUDItems(primary, footer []hudItem) []hudItem {
+	items := append([]hudItem(nil), primary...)
+	hasContext := false
+	for _, item := range primary {
+		if item.kind == hudItemContext {
+			hasContext = true
+			break
+		}
+	}
+	for _, item := range footer {
+		// The combined compatibility label already carries the full context
+		// usage, so it does not repeat the footer's capacity-only copy.
+		if hasContext && item.kind == hudItemContextCapacity {
+			continue
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
+func piHUDItemsLabel(items []hudItem) string {
 	parts := make([]string, 0, len(items))
 	for _, item := range items {
 		if item.label == "" {
@@ -540,62 +641,144 @@ func (s *appState) piHUDLabel() string {
 	return strings.Join(parts, "  ")
 }
 
+func (s *appState) piHUDLabel() string {
+	return piHUDItemsLabel(s.piHUDItems())
+}
+
+func (s *appState) piHUDTurnLabel(message *chatMessage) string {
+	return piHUDItemsLabel(mergePiHUDItems(
+		s.piHUDTurnItems(message),
+		s.piHUDFooterItems(),
+	))
+}
+
+func (s *appState) piHUDFooterLabel() string {
+	return piHUDItemsLabel(s.piHUDFooterItems())
+}
+
 func (s *appState) piHUDContextLabel() string {
 	return piHUDContextSummary(s.hud.stats, s.hud.contextWindowFallback, s.hud.autoCompact)
 }
 
-func (s *appState) piHUD(c *ui.Context) {
-	label := s.piHUDLabel()
-	if label == "" {
+func (s *appState) piHUDTurn(c *ui.Context, message *chatMessage) {
+	items := s.piHUDTurnItems(message)
+	if len(items) == 0 {
+		return
+	}
+	p := themePaletteForAppearance(
+		s.currentAppearancePreset(),
+		s.effectiveDark(),
+		s.highContrastActive(currentAppearanceHighContrast()),
+		currentAppearanceReduceTransparency(),
+	)
+	t := c.Theme()
+	label := s.piHUDTurnLabel(message)
+	model := s.piHUDModelName()
+	brand := modelBrand(s.piModelProvider, s.piModelID, model)
+	logo := icon("pi")
+	if brand != "" {
+		logo = icon("brand-" + brand)
+	}
+	hud := ui.Row(c).Key("conversation-hud").Label(label).
+		FillWidth().MinWidth(0).Shrink(0).MinHeight(20).Margin(-8, 0, 0, 0).
+		Gap(6).AlignItems(ui.Center).Clip().
+		Tooltip(s.piHUDTooltip()).Children(func() {
+		ui.Icon(c, logo).Key("conversation-hud-model-logo").
+			Label("conversation-hud-model-logo").Size(14, 14).
+			Shrink(0).TextColor(p.text)
+		for _, item := range items {
+			switch item.kind {
+			case hudItemModel:
+				components.Text(c, item.value).FontSize(fontSmall).LineHeight(1.2).
+					FontWeight(600).TextColor(p.text).SingleLine().
+					Shrink(1).MinWidth(0).Ellipsis("…").Tooltip(item.value)
+			case hudItemTurnTokens:
+				components.Text(c, item.value).FontSize(fontSmall).LineHeight(1.2).
+					FontWeight(500).FontFeatures("tnum").TextColor(p.muted).
+					SingleLine().Shrink(0)
+			case hudItemContext:
+				percent, ok := piContextPercent(s.hud.stats)
+				color := p.muted
+				switch hudContextSeverity(percent, ok) {
+				case 2:
+					color = p.danger
+				case 1:
+					color = p.warning
+				}
+				components.Text(c, item.value).Key("conversation-hud-context").
+					FontSize(fontSmall).LineHeight(1.2).FontWeight(500).
+					FontFeatures("tnum").TextColor(color).SingleLine().Shrink(0)
+			case hudItemTPS:
+				rate, _ := s.piHUDCurrentTPS()
+				color, background, border := piTPSStyle(t, rate)
+				ui.Row(c).Key("conversation-hud-tps").Label(item.value).
+					Height(20).Padding(0, 7).Radius(10).Shrink(0).
+					Background(background).Border(v12BorderWidth, border).
+					AlignItems(ui.Center).Children(func() {
+					components.Text(c, item.value).FontSize(fontSmall).LineHeight(1).
+						FontWeight(600).FontFeatures("tnum").TextColor(color)
+				})
+			}
+		}
+	})
+	if s.jAgentPresetActive() {
+		hud.Padding(4, 8)
+		hud = styleRaisedSurface(hud, p, 8)
+	}
+}
+
+func (s *appState) piHUDItemsRow(
+	c *ui.Context,
+	items []hudItem,
+	label string,
+	tooltip string,
+) {
+	if len(items) == 0 {
 		return
 	}
 	t := c.Theme()
 	ui.Row(c).Key("pi-hud").Label(label).Grow(1).MinWidth(0).Clip().
-		Justify(ui.Center).AlignItems(ui.Center).Gap(12).
-		Tooltip(s.piHUDTooltip()).Children(func() {
-		for _, item := range s.piHUDItems() {
-			row := ui.Row(c)
-			if item.flexible && item.kind != hudItemTPS {
-				row.Shrink(1).MinWidth(0)
-			} else {
-				row.Shrink(0)
-			}
-			row.AlignItems(ui.Center).Gap(4).Children(func() {
-				color := t.Text.Mix(t.TextMuted, .45)
-				var background, border ui.Color
-				switch item.kind {
-				case hudItemModel:
-					color = t.Text
-				case hudItemContext:
-					if percent, ok := piContextPercent(s.hud.stats); ok {
-						switch hudContextSeverity(percent, ok) {
-						case 2:
-							color = t.Danger
-						case 1:
-							color = t.Warning
+		Justify(ui.Center).AlignItems(ui.Center).Gap(12).Tooltip(tooltip).
+		Children(func() {
+			for _, item := range items {
+				row := ui.Row(c)
+				if item.flexible {
+					row.Shrink(1).MinWidth(0)
+				} else {
+					row.Shrink(0)
+				}
+				row.AlignItems(ui.Center).Gap(4).Children(func() {
+					color := t.Text.Mix(t.TextMuted, .45)
+					if item.kind == hudItemContextCapacity {
+						if percent, ok := piContextPercent(s.hud.stats); ok {
+							switch hudContextSeverity(percent, ok) {
+							case 2:
+								color = t.Danger
+							case 1:
+								color = t.Warning
+							}
 						}
 					}
-				case hudItemTPS:
-					rate, _ := s.piHUDCurrentTPS()
-					color, background, border = piTPSStyle(t, rate)
-					row.Height(18).Padding(0, 7).Radius(9).
-						Background(background).Border(v12BorderWidth, border)
-				}
-				if item.label != "" {
-					label := ui.Text(c, item.label).FontSize(fontCaption).LineHeight(1.2).
-						FontWeight(400).TextColor(t.TextMuted).SingleLine()
-					if item.flexible {
-						label.MinWidth(0).Ellipsis("…")
+					if item.label != "" {
+						label := ui.Text(c, item.label).FontSize(fontCaption).LineHeight(1.2).
+							FontWeight(400).TextColor(t.TextMuted).SingleLine()
+						if item.flexible {
+							label.MinWidth(0).Ellipsis("…")
+						}
 					}
-				}
-				value := ui.Text(c, item.value).FontSize(fontCaption).LineHeight(1.2).
-					FontWeight(500).FontFeatures("tnum").TextColor(color).SingleLine()
-				if item.flexible {
-					value.Grow(1).MinWidth(0).Ellipsis("…")
-				}
-			})
-		}
-	})
+					value := ui.Text(c, item.value).FontSize(fontCaption).LineHeight(1.2).
+						FontWeight(500).FontFeatures("tnum").TextColor(color).SingleLine()
+					if item.flexible {
+						value.Grow(1).MinWidth(0).Ellipsis("…")
+					}
+				})
+			}
+		})
+}
+
+func (s *appState) piHUDFooter(c *ui.Context) {
+	items := s.piHUDFooterItems()
+	s.piHUDItemsRow(c, items, piHUDItemsLabel(items), s.piHUDTooltip())
 }
 
 func (s *appState) piHUDTooltip() string {

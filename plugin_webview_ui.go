@@ -14,6 +14,10 @@ func (s *appState) pluginWebViewPage(c *ui.Context, p palette) {
 		s.pluginViewUnavailable(c, p, pluginID, viewID)
 		return
 	}
+	if s.pluginRestarting != nil && s.pluginRestarting[entry.ID] {
+		s.pluginWebViewRestarting(c, p, entry, view)
+		return
+	}
 
 	snapshot, ok := s.pluginWebViewSnapshot(pluginID, viewID)
 	if !ok || snapshot.webView == nil || snapshot.webView.IsDestroyed() ||
@@ -30,6 +34,23 @@ func (s *appState) pluginWebViewPage(c *ui.Context, p palette) {
 					runtimeTokens.Dimension.Radius["overlay"].Value,
 				)
 			})
+	})
+}
+
+func (s *appState) pluginWebViewRestarting(
+	c *ui.Context,
+	p palette,
+	entry pluginRegistryEntry,
+	view pluginWebViewContribution,
+) {
+	label := textArgs("pluginsRestarting", map[string]any{
+		"name": fallback(entry.Name, entry.ID),
+	})
+	ui.Column(c).Key("plugin-webview-restarting").Label("plugin-webview-restarting").
+		FillWidth().Grow(1).MinHeight(0).MinWidth(0).Center().Gap(8).
+		Tooltip(fallback(view.Title, view.ID)).Children(func() {
+		ui.Icon(c, icon("clock")).Size(18, 18).TextColor(p.muted)
+		ui.Text(c, label).FontSize(fontBody).FontWeight(600).TextColor(p.text)
 	})
 }
 

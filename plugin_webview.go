@@ -111,6 +111,12 @@ func (s *appState) openPluginWebView(entry pluginRegistryEntry, view pluginWebVi
 	s.pluginViewLoading = false
 	s.pluginViewError = ""
 	s.notice = ""
+	if s.pluginRestarting != nil && s.pluginRestarting[registeredEntry.ID] {
+		if s.window != nil {
+			s.window.Invalidate()
+		}
+		return
+	}
 	if _, err := s.ensurePluginWebView(registeredEntry, registeredView); err != nil {
 		s.markPluginWebViewFailed(registeredEntry.ID, registeredView.ID, err)
 	}
@@ -123,6 +129,9 @@ func (s *appState) ensurePluginWebView(
 	entry pluginRegistryEntry,
 	view pluginWebViewContribution,
 ) (*pluginWebViewState, error) {
+	if s.pluginRestarting != nil && s.pluginRestarting[entry.ID] {
+		return nil, errPluginRestarting
+	}
 	key := pluginViewCacheKey(entry.ID, view.ID)
 	fingerprint := pluginWebViewBindingFingerprint(entry)
 	s.pluginWebViewsMu.RLock()
@@ -317,6 +326,9 @@ func (s *appState) markPluginWebViewFailed(pluginID, viewID string, err error) {
 }
 
 func (s *appState) recreatePluginWebView(pluginID, viewID string) {
+	if s.pluginRestarting != nil && s.pluginRestarting[pluginID] {
+		return
+	}
 	entry, view, ok := s.registeredPluginWebView(pluginID, viewID)
 	if !ok {
 		s.page = pagePlugins
@@ -337,6 +349,9 @@ func (s *appState) recreatePluginWebView(pluginID, viewID string) {
 func (s *appState) refreshPluginView(pluginID, viewID string) {
 	if s.page != pagePluginView || s.pluginViewPluginID != pluginID ||
 		s.pluginViewID != viewID {
+		return
+	}
+	if s.pluginRestarting != nil && s.pluginRestarting[pluginID] {
 		return
 	}
 	switch s.pluginViewKind {

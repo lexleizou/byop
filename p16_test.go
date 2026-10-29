@@ -311,6 +311,10 @@ func TestP16ComposerHeightIncludesQueueAndHUD(t *testing.T) {
 	state.composerDraft = "Keep this response focused."
 	state.queueSteeringCount = 1
 	state.queueSteering = []string{"Keep this response focused."}
+	state.hud.contextWindowFallback = 200_000
+	state.hud.stats = &piSessionStats{
+		Tokens: piSessionTokens{Input: 12_000, Output: 3_000},
+	}
 
 	var stackHeight float32
 	ui.NewTester(func(c *ui.Context) {
@@ -327,6 +331,7 @@ func TestP16ComposerHeightIncludesQueueAndHUD(t *testing.T) {
 
 	tt := renderP16JAgentChat(t, state, 900, 500)
 	tt.Advance(500 * time.Millisecond)
+	assertInsideViewport(t, tt, "pi-hud-row", 500)
 	if state.chatView.composerHeight < stackHeight {
 		t.Fatalf("reserved composer height = %v, stack = %v",
 			state.chatView.composerHeight, stackHeight)

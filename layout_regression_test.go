@@ -122,11 +122,6 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 				assertInsideViewport(t, tt, scenario.mark(state), size.height)
 				assertInsideViewport(t, tt, text("chatMessageLabel"), size.height)
 				assertInsideViewport(t, tt, text("chatAttachmentUnavailable"), size.height)
-				if hudLabel := state.piHUDLabel(); hudLabel != "" {
-					assertInsideViewport(t, tt, hudLabel, size.height)
-				} else {
-					assertNotRendered(t, tt, "pi-hud")
-				}
 				assertComposerFooterInsideViewport(t, tt, "composer-footer", size.height)
 				assertInsideViewport(t, tt, text("chatSend"), size.height)
 				if scenario.name == "running queue" {
@@ -184,27 +179,29 @@ func TestP10cBodyAndTaskPanelLayoutInvariants(t *testing.T) {
 	}
 }
 
-func TestP10cHUDSwitchesUsingChatMainAreaWidth(t *testing.T) {
+func TestP10cTranscriptHUDRemainsVisibleInNarrowChatMainArea(t *testing.T) {
 	restoreAppearance := stableTestAppearance(t)
 	defer restoreAppearance()
 
-	state := layoutTestState(t)
+	state := p18_2HUDState(t)
 	state.tasksOpen = true
 	if got := state.chatMainWidth(1100); got >= chat.ContentWidth {
 		t.Fatalf("test chat main width = %vpx, want < %vpx", got, chat.ContentWidth)
 	}
 
 	tt := ui.NewTester(state.view, 1100, 560)
-	rect, ok := tt.Find("pi-hud-row")
+	rect, ok := tt.Find(state.piHUDTurnLabel(&state.chat[1]))
 	if !ok {
-		t.Fatal("compact HUD row was not rendered with a narrow chat main area")
+		t.Fatal("transcript HUD was not rendered with a narrow chat main area")
 	}
 	if rect.H <= 0 || rect.Y < 0 || rect.Y+rect.H > 560 {
-		t.Fatalf("compact HUD row is outside the 1100x560 viewport: %#v", rect)
+		t.Fatalf("transcript HUD is outside the 1100x560 viewport: %#v", rect)
 	}
 	if got := state.chatMainWidth(1100); got >= 720 {
-		t.Fatalf("chat main width = %vpx, want the compact-HUD path below 720px", got)
+		t.Fatalf("chat main width = %vpx, want the narrow-transcript path below 720px", got)
 	}
+	assertInsideViewport(t, tt, state.piHUDContextLabel(), 560)
+	assertInsideViewport(t, tt, textArgs("hudTokensPerSecond", map[string]any{"speed": "51.2"}), 560)
 }
 
 func TestP10cRunningSendModeControlUpdatesPreference(t *testing.T) {

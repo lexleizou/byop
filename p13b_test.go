@@ -89,21 +89,21 @@ func TestP13bNavigationWidthKeepsMainAreaWithTaskPanel(t *testing.T) {
 		t.Fatalf("settings content width = %v at %v, want a usable area", got, windowWidth)
 	}
 
-	// The rendered stage matches that width: the HUD row starts after the
-	// navigation and ends before the task panel, inside the window.
+	// The rendered stage matches that width: the transcript HUD starts after
+	// the navigation and ends before the task panel, inside the window.
 	restoreAppearance := stableTestAppearance(t)
 	defer restoreAppearance()
 	tt := ui.NewTester(state.view, int(windowWidth), 760)
-	hud, ok := tt.Find("pi-hud-row")
+	hud, ok := tt.Find(state.piHUDLabel())
 	if !ok {
-		t.Fatal("chat HUD row was not rendered")
+		t.Fatal("transcript HUD was not rendered")
 	}
 	navRight := shellGap + shown
 	if hud.X < navRight {
-		t.Fatalf("chat HUD row starts at %v, want after the %vpx navigation", hud.X, shown)
+		t.Fatalf("transcript HUD starts at %v, want after the %vpx navigation", hud.X, shown)
 	}
 	if hud.X+hud.W > windowWidth-shellGap-taskPanelWidth-shellGap {
-		t.Fatalf("chat HUD row ends at %v, want it before the task panel",
+		t.Fatalf("transcript HUD ends at %v, want it before the task panel",
 			hud.X+hud.W)
 	}
 }
@@ -385,6 +385,8 @@ func TestP13bModelListScrollsToLastRowAtMinimumWindow(t *testing.T) {
 	state.piModelProvider = "opencode-go"
 	state.piModelID = "model-0"
 	state.piModelName = "Model A"
+	// This test targets the Composer picker rather than the transcript HUD.
+	state.chat = nil
 
 	const width, height = 760, 560
 	tt := ui.NewTester(state.view, width, height)

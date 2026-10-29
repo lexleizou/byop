@@ -396,6 +396,7 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 		options.Prompt = func(c *ui.Context) { components.Text(c, text).Selectable() }
 	}
 	if message != nil {
+		showTurnHUD := latestAssistantForPrompt(s.chat, message)
 		options.Status = assistantTurnStatus(message, live)
 		elapsed := turnElapsed(c, message, live)
 		tools := 0
@@ -407,6 +408,14 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 		options.Working = textArgs("chatWorkingFor", map[string]any{"duration": elapsed})
 		plan := planAssistantTurn(message, live)
 		if live {
+			if showTurnHUD {
+				options.Steps = append(options.Steps, chat.Step{
+					ID: "turn-hud",
+					Message: func(c *ui.Context) {
+						s.piHUDTurn(c, message)
+					},
+				})
+			}
 			if strings.TrimSpace(message.thinking) != "" {
 				options.Steps = append(options.Steps, chat.Step{
 					ID: "thinking",
@@ -419,9 +428,10 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 				isLast := stepIndex == len(plan.steps)-1
 				options.Steps = append(options.Steps, s.turnStep(options.ID, message, step, isLast))
 			}
-		} else if len(plan.steps) > 0 || plan.final >= 0 || strings.TrimSpace(message.thinking) != "" {
+		} else if showTurnHUD || len(plan.steps) > 0 || plan.final >= 0 ||
+			strings.TrimSpace(message.thinking) != "" {
 			options.Final = func(c *ui.Context) {
-				s.settledTurnContentV12(c, options.ID, message, plan)
+				s.settledTurnContentV12(c, options.ID, message, plan, showTurnHUD)
 			}
 		}
 		if options.Status == chat.Failed || options.Status == chat.Cancelled {
@@ -440,8 +450,38 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 	chat.Turn(c, s.chatView.turn(index), options)
 }
 
-func (s *appState) settledTurnContentV12(c *ui.Context, turnID string, message *chatMessage, plan turnPlan) {
+func latestAssistantForPrompt(messages []chatMessage, message *chatMessage) bool {
+	if message == nil || message.role != chatAssistant {
+		return false
+	}
+	lastUser := -1
+	for i := range messages {
+		if messages[i].role == chatUser {
+			lastUser = i
+		}
+	}
+	if lastUser < 0 {
+		return false
+	}
+	for i := lastUser + 1; i < len(messages); i++ {
+		if messages[i].role == chatAssistant {
+			return &messages[i] == message
+		}
+	}
+	return false
+}
+
+func (s *appState) settledTurnContentV12(
+	c *ui.Context,
+	turnID string,
+	message *chatMessage,
+	plan turnPlan,
+	showTurnHUD bool,
+) {
 	ui.Column(c).FillWidth().MinWidth(0).Gap(12).Children(func() {
+		if showTurnHUD {
+			s.piHUDTurn(c, message)
+		}
 		if strings.TrimSpace(message.thinking) != "" {
 			s.thinkingStreamLine(c, message, false)
 		}
@@ -741,9 +781,7 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 	}
 	cardVisible := visible && style == followUpStyleCard
 	running := s.runActive() && s.run != runStopping
-	width, _ := c.Size()
-	compactHUD := s.chatMainWidth(width) < chat.ContentWidth
-	hudVisible := s.piHUDLabel() != ""
+	hudVisible := s.piHUDFooterLabel() != ""
 	composerFooter := func(c *ui.Context) {
 		switch {
 		case s.run == runStopping:
@@ -827,14 +865,10 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 		if result.Stop {
 			s.stopPrompt()
 		}
-		if hudVisible && compactHUD {
-			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
-				Padding(0).Justify(ui.Center).AlignItems(ui.Center).Children(func() { s.piHUD(c) })
-		}
-		if hudVisible && !compactHUD {
+		if hudVisible {
 			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
 				Padding(0).Justify(ui.Center).AlignItems(ui.Center).
-				Children(func() { s.piHUD(c) })
+				Children(func() { s.piHUDFooter(c) })
 		}
 	})
 }

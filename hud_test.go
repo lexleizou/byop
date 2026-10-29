@@ -101,8 +101,11 @@ func TestP10cHUDLabelOmitsUnknownContext(t *testing.T) {
 		t.Fatalf("empty HUD = %q, want no label", got)
 	}
 	state.hud.contextWindowFallback = 128000
-	if got := state.piHUDLabel(); got != "" {
-		t.Fatalf("unknown-context HUD = %q, want no label", got)
+	if got := state.piHUDLabel(); got != "Context 128K" {
+		t.Fatalf("context-capacity HUD = %q, want Context 128K", got)
+	}
+	if items := state.piHUDPrimaryItems(); len(items) != 0 {
+		t.Fatalf("capacity-only footer leaked into transcript: %#v", items)
 	}
 }
 

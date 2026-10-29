@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.18.1"
+	appVersion = "0.18.2"
 )
 
 func appBuildVersion() string {
@@ -193,6 +193,7 @@ type chatMessage struct {
 	role              chatRole
 	status            string
 	blocks            []chatBlock
+	outputTokens      int64
 	thinking          string
 	thinkingStartedAt time.Time
 	thinkingEndedAt   time.Time
@@ -2800,6 +2801,9 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		if event.OutputTokens > 0 && event.GenerationTime > 0 {
 			s.recordPiHUDSample(event.OutputTokens, event.GenerationTime.Seconds())
 		}
+		if event.OutputTokens > 0 {
+			s.addPiTurnOutputTokens(event.OutputTokens)
+		}
 		if event.Thinking != "" {
 			s.setAssistantThinkingFallback(event.Thinking)
 		}
@@ -3150,6 +3154,24 @@ func (s *appState) currentAssistant() *chatMessage {
 	}
 	s.chat = append(s.chat, chatMessage{role: chatAssistant})
 	return &s.chat[len(s.chat)-1]
+}
+
+func (s *appState) addPiTurnOutputTokens(count int64) {
+	if count <= 0 {
+		return
+	}
+	for i := len(s.chat) - 1; i >= 0; i-- {
+		if s.chat[i].role != chatUser {
+			continue
+		}
+		for j := i + 1; j < len(s.chat); j++ {
+			if s.chat[j].role == chatAssistant {
+				s.chat[j].outputTokens += count
+				return
+			}
+		}
+		return
+	}
 }
 
 func (s *appState) appendRunningUserMessage(value string) {

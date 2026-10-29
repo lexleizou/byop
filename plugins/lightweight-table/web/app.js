@@ -1,4 +1,3 @@
-const bridge = window.byop;
 const PAGE_SIZE = 100;
 const SUPPORTED_LOCALES = new Set(["en", "zh-Hans"]);
 const MAIN_COLUMNS = Object.freeze([
@@ -116,7 +115,7 @@ function message(key, variables = {}) {
 
 function parseBridgeError(error) {
   let payload = {
-    code: "generic",
+    code: error?.code ?? "generic",
     message: error?.message || String(error),
   };
   const raw = error?.message;
@@ -125,7 +124,7 @@ function parseBridgeError(error) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object") {
         payload = {
-          code: parsed.code || "generic",
+          code: parsed.code ?? "generic",
           message: parsed.message || raw,
           details: parsed.details,
         };
@@ -134,23 +133,50 @@ function parseBridgeError(error) {
       // Keep the bridge error as-is.
     }
   }
+  const numericCode = Number(payload.code);
+  if (Number.isFinite(numericCode)) {
+    payload.code = numericCode;
+  }
   return payload;
 }
 
 function localizedError(error) {
   const payload = parseBridgeError(error);
-  return message(`error.${payload.code}`) === `error.${payload.code}`
-    ? message("error.generic")
-    : message(`error.${payload.code}`);
+  const key = `error.${payload.code}`;
+  const specific = message(key);
+  const actual = typeof payload.message === "string" ? payload.message.trim() : "";
+  if (specific !== key) {
+    return specific;
+  }
+  if (actual && !actual.startsWith("error.")) {
+    return actual;
+  }
+  const generic = message("error.generic");
+  return generic !== "error.generic" ? generic : `Bridge error ${payload.code}`;
 }
 
 async function callPlugin(action, payload = {}) {
-  if (!bridge || typeof bridge.postMessage !== "function") {
-    throw Object.assign(new Error(message("previewMode")), {
-      code: "preview",
+  const messagePayload = { action, ...payload };
+  const bridge = window.byop;
+  if (bridge && typeof bridge.postMessage === "function") {
+    return bridge.postMessage(messagePayload);
+  }
+  if (window.mygo && typeof window.mygo.call === "function") {
+    return window.mygo.call("BYOPWebView.Call", "plugin.postMessage", {
+      message: messagePayload,
     });
   }
-  return bridge.postMessage({ action, ...payload });
+  const preview = message("previewMode");
+  throw Object.assign(
+    new Error(
+      preview === "previewMode"
+        ? "BYOP WebView bridge is unavailable: window.byop and window.mygo.call are missing."
+        : preview,
+    ),
+    {
+      code: "preview",
+    },
+  );
 }
 
 function setLoading(active) {
@@ -182,6 +208,18 @@ function showError(error) {
   const text = localizedError(error);
   showToast(text, "error", text);
   return parseBridgeError(error);
+}
+
+function showPageError(error) {
+  const text = localizedError(error);
+  state.loadingCount = 0;
+  dom.loading.hidden = true;
+  dom.table.hidden = true;
+  dom.empty.hidden = false;
+  dom.emptyTitle.textContent = text;
+  dom.emptyBody.textContent =
+    message("error.generic") === "error.generic" ? "" : message("refresh");
+  dom.body.dataset.ready = "true";
 }
 
 async function loadLocale(locale) {
@@ -1750,11 +1788,7 @@ async function bootstrap() {
     renderControls();
     await loadQuery();
   } catch (error) {
-    showError(error);
-    dom.table.hidden = true;
-    dom.empty.hidden = false;
-    dom.emptyTitle.textContent = message("emptyTitle");
-    dom.emptyBody.textContent = localizedError(error);
+    showPageError(error);
   } finally {
     setLoading(false);
     dom.body.dataset.ready = "true";
@@ -1933,23 +1967,42 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-if (bridge && typeof bridge.onLocale === "function") {
-  bridge.onLocale((locale) => {
+const initialBridge = window.byop;
+if (initialBridge && typeof initialBridge.onLocale === "function") {
+  initialBridge.onLocale((locale) => {
     void applyLocale(locale).catch((error) => {
-      console.error(error);
+      showPageError(error);
     });
   });
 }
 
-const initialLocale =
-  typeof bridge?.locale === "string"
-    ? bridge.locale
-    : navigator.language.toLowerCase().startsWith("zh")
-      ? "zh-Hans"
-      : "en";
+async function resolveInitialLocale() {
+  if (typeof initialBridge?.locale === "string") {
+    return initialBridge.locale;
+  }
+  if (window.mygo && typeof window.mygo.call === "function") {
+    try {
+      const result = await window.mygo.call("BYOPWebView.Call", "host.getLocale", {});
+      if (typeof result?.locale === "string") {
+        return result.locale;
+      }
+    } catch {
+      // Fall back to the renderer language when the host call is unavailable.
+    }
+  }
+  return navigator.language.toLowerCase().startsWith("zh") ? "zh-Hans" : "en";
+}
 
-void applyLocale(initialLocale)
-  .catch((error) => {
+async function initialize() {
+  const initialLocale = await resolveInitialLocale();
+  try {
+    await applyLocale(initialLocale);
+  } catch (error) {
     console.error(error);
-  })
-  .then(() => bootstrap());
+    showPageError(error);
+    return;
+  }
+  await bootstrap();
+}
+
+void initialize();

@@ -107,9 +107,7 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 	}
 	cardVisible := visible && style == followUpStyleCard
 	running := s.runActive() && s.run != runStopping
-	width, _ := c.Size()
-	compactHUD := s.chatMainWidth(width) < p.chatContentWidth
-	hudVisible := s.piHUDLabel() != ""
+	hudVisible := s.piHUDFooterLabel() != ""
 	composerFooter := func(c *ui.Context) {
 		switch {
 		case s.run == runStopping:
@@ -193,14 +191,10 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 		if result.Stop {
 			s.stopPrompt()
 		}
-		if hudVisible && compactHUD {
-			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
-				Padding(0).Justify(ui.Center).AlignItems(ui.Center).Children(func() { s.piHUD(c) })
-		}
-		if hudVisible && !compactHUD {
+		if hudVisible {
 			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
 				Padding(0).Justify(ui.Center).AlignItems(ui.Center).
-				Children(func() { s.piHUD(c) })
+				Children(func() { s.piHUDFooter(c) })
 		}
 	})
 }
@@ -410,6 +404,9 @@ func (s *appState) jAgentAssistantTurn(
 		open = state.Expanded(status, plan.final >= 0, !s.chatView.conversation.AtLatest())
 	}
 
+	if latestAssistantForPrompt(s.chat, message) {
+		s.piHUDTurn(c, message)
+	}
 	if hasSteps || status == chat.Running {
 		label := textArgs("chatWorkedFor", map[string]any{"duration": elapsed})
 		if status == chat.Running {

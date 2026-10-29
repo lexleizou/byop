@@ -7,12 +7,6 @@ import (
 	"strings"
 )
 
-type pluginRestartView struct {
-	open   bool
-	viewID string
-	kind   pluginViewKind
-}
-
 func (s *appState) restartPlugin(entry pluginRegistryEntry) {
 	entry = pluginLocalizedEntry(entry)
 	if s == nil || s.plugins == nil || entry.Status != pluginRegistered ||
@@ -24,14 +18,6 @@ func (s *appState) restartPlugin(entry pluginRegistryEntry) {
 	}
 	if s.pluginRestarting[entry.ID] {
 		return
-	}
-	view := pluginRestartView{}
-	if s.page == pagePluginView && s.pluginViewPluginID == entry.ID {
-		view = pluginRestartView{
-			open:   true,
-			viewID: s.pluginViewID,
-			kind:   s.pluginViewKind,
-		}
 	}
 	s.pluginRestarting[entry.ID] = true
 	s.plugins.beginPluginRestart(entry.ID)
@@ -65,7 +51,7 @@ func (s *appState) restartPlugin(entry pluginRegistryEntry) {
 			return
 		}
 		s.postUI(func() {
-			s.finishPluginRestart(entry, replacement, view)
+			s.finishPluginRestart(entry, replacement)
 		})
 	}()
 }
@@ -103,16 +89,12 @@ func replacePluginRegistryEntry(
 func (s *appState) finishPluginRestart(
 	previous pluginRegistryEntry,
 	replacement pluginRegistryEntry,
-	view pluginRestartView,
 ) {
 	name := fallback(pluginLocalizedEntry(replacement).Name, previous.ID)
 	if s.pluginRestarting == nil {
 		s.pluginRestarting = make(map[string]bool)
 	}
-	defer func() {
-		s.pluginRestarting[previous.ID] = false
-		s.plugins.endPluginRestart(previous.ID)
-	}()
+	defer s.completePluginRestart(previous.ID)
 
 	next, err := replacePluginRegistryEntry(
 		s.pluginRegistrySnapshot(),
@@ -120,6 +102,7 @@ func (s *appState) finishPluginRestart(
 		replacement,
 	)
 	if err != nil {
+		s.destroyPluginWebViews(previous.ID)
 		s.showNotice(textArgs("pluginsRestartFailed", map[string]any{
 			"name":  name,
 			"error": uiErrorSummary(err, text("errorUnknown"), 200),
@@ -129,7 +112,6 @@ func (s *appState) finishPluginRestart(
 
 	s.destroyPluginWebViews(previous.ID)
 	s.setPluginRegistry(next)
-	s.plugins.endPluginRestart(previous.ID)
 	s.plugins.invalidatePluginSettings(previous.ID)
 	for key := range s.pluginTasks {
 		if pluginID, _, _ := strings.Cut(key, "\x00"); pluginID == previous.ID {
@@ -152,11 +134,8 @@ func (s *appState) finishPluginRestart(
 		s.pluginPiRefreshRequired = true
 	}
 
-	if view.open {
-		s.reopenPluginAfterRestart(replacement, view)
-	}
-
 	if replacement.Status != pluginRegistered || replacement.Manifest == nil {
+		s.completePluginRestart(previous.ID)
 		s.showNotice(textArgs("pluginsRestartFailed", map[string]any{
 			"name":  name,
 			"error": fallback(replacement.Error, text("pluginsFailedFallback")),
@@ -164,49 +143,61 @@ func (s *appState) finishPluginRestart(
 		return
 	}
 	if _, err := writePluginRuntimeGeneration(s.plugins.configDir, previous.ID); err != nil {
+		s.completePluginRestart(previous.ID)
+		s.destroyPluginWebViews(previous.ID)
 		s.showNotice(textArgs("pluginsRestartFailed", map[string]any{
 			"name":  name,
 			"error": uiErrorSummary(err, text("errorUnknown"), 200),
 		}))
 		return
 	}
+	s.completePluginRestart(previous.ID)
+	s.reopenCurrentPluginAfterRestart(replacement)
 	s.showNotice(textArgs("pluginsRestarted", map[string]any{"name": name}))
 }
 
 func (s *appState) finishPluginRestartFailure(pluginID, name string, err error) {
-	if s.pluginRestarting != nil {
-		s.pluginRestarting[pluginID] = false
-	}
-	if s.plugins != nil {
-		s.plugins.endPluginRestart(pluginID)
-	}
+	s.destroyPluginWebViews(pluginID)
+	s.completePluginRestart(pluginID)
 	s.showNotice(textArgs("pluginsRestartFailed", map[string]any{
 		"name":  name,
 		"error": uiErrorSummary(err, text("errorUnknown"), 200),
 	}))
 }
 
-func (s *appState) reopenPluginAfterRestart(
-	entry pluginRegistryEntry,
-	view pluginRestartView,
-) {
+func (s *appState) completePluginRestart(pluginID string) {
+	wasRestarting := s.pluginRestarting != nil && s.pluginRestarting[pluginID]
+	if s.pluginRestarting != nil {
+		s.pluginRestarting[pluginID] = false
+	}
+	if s.plugins != nil && wasRestarting {
+		s.plugins.endPluginRestart(pluginID)
+	}
+}
+
+func (s *appState) reopenCurrentPluginAfterRestart(entry pluginRegistryEntry) {
+	if s.page != pagePluginView || s.pluginViewPluginID != entry.ID {
+		return
+	}
+	viewID := s.pluginViewID
+	kind := s.pluginViewKind
 	s.page = pagePlugins
 	s.pluginViewPluginID = ""
 	s.pluginViewID = ""
 	s.pluginViewKind = ""
 	s.pluginViewLoading = false
 	s.pluginViewError = ""
-	if !view.open || entry.Status != pluginRegistered || entry.Manifest == nil {
+	if entry.Status != pluginRegistered || entry.Manifest == nil {
 		return
 	}
-	switch view.kind {
+	switch kind {
 	case pluginViewNative:
-		contribution, ok := pluginViewByID(entry.Manifest, view.viewID)
+		contribution, ok := pluginViewByID(entry.Manifest, viewID)
 		if ok {
 			s.openPluginView(entry, contribution)
 		}
 	case pluginViewWebView:
-		contribution, ok := pluginWebViewContributionByID(entry.Manifest, view.viewID)
+		contribution, ok := pluginWebViewContributionByID(entry.Manifest, viewID)
 		if ok && contribution.Location == "main" {
 			s.openPluginWebView(entry, contribution)
 		}

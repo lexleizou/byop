@@ -120,6 +120,9 @@ func TestP11bComposerShowsCapacityWithoutStandaloneContextControl(t *testing.T) 
 		{Provider: "magpie", ID: "deepseek-256k", Name: "DeepSeek V4.1 Flash", ContextWindow: 256_000},
 		{Provider: "magpie", ID: "deepseek-1m", Name: "DeepSeek V4.1 Flash", ContextWindow: 1_000_000},
 	}
+	// This test targets the Composer model control. With transcript content,
+	// the conversation HUD intentionally renders the same model name first.
+	state.chat = nil
 
 	tt := ui.NewTester(state.view, 1180, 760)
 	capacityLabels := 0

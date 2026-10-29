@@ -18,6 +18,72 @@ function functionSource(source, name) {
   return source.slice(start, next < 0 ? undefined : next);
 }
 
+test("WebView bridge fallback and error localization use real call logic", async () => {
+  const app = await readFile(join(PLUGIN_DIR, "web", "app.js"), "utf8");
+  const source = ["parseBridgeError", "localizedError", "callPlugin"]
+    .map((name) => functionSource(app, name))
+    .join("\n");
+  const messages = {
+    "error.busy": "表格正忙",
+    "error.generic": "操作未完成",
+    previewMode: "预览模式",
+  };
+  const message = (key, variables = {}) => {
+    const template = messages[key] ?? key;
+    return template.replace(/\{(\w+)\}/g, (_match, name) =>
+      Object.hasOwn(variables, name) ? String(variables[name]) : `{${name}}`,
+    );
+  };
+  const browser = {};
+  const api = new Function(
+    "window",
+    "message",
+    `${source}
+    return { localizedError, callPlugin };`,
+  )(browser, message);
+
+  assert.equal(
+    api.localizedError(new Error(JSON.stringify({
+      code: "busy",
+      message: "host busy details",
+    }))),
+    "表格正忙",
+  );
+  assert.equal(
+    api.localizedError(new Error(JSON.stringify({
+      code: "unknown_bridge_error",
+      message: "permission denied: unknown WebView page",
+    }))),
+    "permission denied: unknown WebView page",
+  );
+
+  let hostedCall = null;
+  browser.mygo = {
+    call: async (...args) => {
+      hostedCall = args;
+      return { ok: true };
+    },
+  };
+  assert.deepEqual(await api.callPlugin("table.bootstrap", { locale: "zh-Hans" }), {
+    ok: true,
+  });
+  assert.deepEqual(hostedCall, [
+    "BYOPWebView.Call",
+    "plugin.postMessage",
+    { message: { action: "table.bootstrap", locale: "zh-Hans" } },
+  ]);
+
+  let preloadMessage = null;
+  browser.byop = {
+    postMessage: async (value) => {
+      preloadMessage = value;
+      return { source: "preload" };
+    },
+  };
+  assert.deepEqual(await api.callPlugin("table.version"), { source: "preload" });
+  assert.deepEqual(preloadMessage, { action: "table.version" });
+});
+
 test("en and zh-Hans expose the same complete UI locale keys", async () => {
   const en = await readJSON(join(PLUGIN_DIR, "l10n", "en.json"));
   const zh = await readJSON(join(PLUGIN_DIR, "l10n", "zh-Hans.json"));
