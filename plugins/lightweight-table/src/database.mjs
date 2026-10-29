@@ -768,6 +768,112 @@ function localDateForSource(source, timezone) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+// localToday is today in the workbook timezone, the same calendar the table
+// uses for its date columns, so a preset such as "already due" compares like
+// the rows it selects.
+function localToday(timezone) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function shiftISODate(dateText, days) {
+  const date = new Date(`${dateText}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+// DUE_WINDOW_DAYS is how far ahead the "due soon" preset looks.
+const DUE_WINDOW_DAYS = 30;
+
+// DASHBOARD_TOTAL_COLUMNS are the amount columns the summary cards total over
+// the whole table. They are the amounts a reader checks first, and each card
+// stays on its own column so the totals never add up to a made-up number.
+const DASHBOARD_TOTAL_COLUMNS = Object.freeze([
+  "principal",
+  "remaining_due",
+  "actual_paid",
+]);
+
+// dashboardPresets are the saved queries the page shows as buttons. Every
+// preset is one filter on a column the query bar can display, so a pressed
+// button always matches the filter controls, and each carries the amount
+// column that makes its count worth reading as money.
+function dashboardPresets(today) {
+  const dueWindowEnd = shiftISODate(today, DUE_WINDOW_DAYS);
+  const presets = [
+    { preset_id: "all", filters: [], amount_column_id: "principal" },
+    {
+      preset_id: "overdue",
+      filters: [{ column_id: "repayment_status", op: "eq", value: "overdue" }],
+      amount_column_id: "remaining_due",
+    },
+    {
+      preset_id: "repaying",
+      filters: [{ column_id: "repayment_status", op: "eq", value: "repaying" }],
+      amount_column_id: "remaining_due",
+    },
+    {
+      preset_id: "settled",
+      filters: [{ column_id: "repayment_status", op: "eq", value: "settled" }],
+      amount_column_id: "remaining_due",
+    },
+    {
+      preset_id: "no_plan",
+      filters: [{ column_id: "plan_status", op: "eq", value: "not_created" }],
+      amount_column_id: "remaining_due",
+    },
+    {
+      preset_id: "bank",
+      filters: [{ column_id: "funding_source", op: "eq", value: "bank" }],
+      amount_column_id: "remaining_due",
+    },
+    {
+      preset_id: "online_financial_platform",
+      filters: [
+        { column_id: "funding_source", op: "eq", value: "online_financial_platform" },
+      ],
+      amount_column_id: "remaining_due",
+    },
+    {
+      preset_id: "financial",
+      filters: [{ column_id: "category", op: "eq", value: "financial" }],
+      amount_column_id: "remaining_due",
+    },
+    {
+      preset_id: "high_interest",
+      filters: [{ column_id: "category", op: "eq", value: "high_interest" }],
+      amount_column_id: "remaining_due",
+    },
+    {
+      preset_id: "friend",
+      filters: [{ column_id: "category", op: "eq", value: "friend" }],
+      amount_column_id: "remaining_due",
+    },
+  ];
+  if (today !== null) {
+    // The window is one bound so the preset stays a single filter: the filter
+    // bar shows the same date the button counts by.
+    const windowEnd = shiftISODate(today, DUE_WINDOW_DAYS + 1);
+    if (windowEnd !== null) {
+      presets.splice(4, 0, {
+        preset_id: "due_30",
+        filters: [{ column_id: "next_due", op: "lt", value: windowEnd }],
+        amount_column_id: "next_due_amount",
+      });
+    }
+  }
+  return presets;
+}
+
 function parseJSON(value) {
   return value === null || value === undefined ? null : JSON.parse(value);
 }
@@ -1479,6 +1585,72 @@ export class TableStore {
       row_count: Number(count.count),
       data_source: importMetaRecord(this.db),
     };
+  }
+
+  // dashboard summarizes the table for the saved-query buttons: every preset
+  // gets its row count and the total of the amount column that matters for it.
+  // Rows are read once and matched with the same filter code the query uses,
+  // so a button's number and the list it opens cannot disagree.
+  dashboard() {
+    return this.read(() => {
+      const workbook = workbookRecord(this.db);
+      if (!workbook) {
+        throw new TableError("database_not_initialized", "The table database is empty.");
+      }
+      const table = tableRecord(this.db);
+      const rows = this.db
+        .prepare(
+          `SELECT values_json
+             FROM rows
+            WHERE table_id = ? AND deleted_at IS NULL`,
+        )
+        .all(DEFAULT_TABLE_ID)
+        .map((row) => ({ values: parseJSON(row.values_json) }));
+      const today = localToday(workbook.timezone);
+      // Amounts the summary cards show for the whole table, in cents.
+      const totals = {};
+      for (const columnID of DASHBOARD_TOTAL_COLUMNS) {
+        totals[columnID] = {
+          column_id: columnID,
+          value: decimalFromCentsString(
+            sumCents(rows.map((row) => row.values[columnID])),
+            COLUMN_BY_ID.get(columnID).config.scale ?? 2,
+          ),
+          currency: COLUMN_BY_ID.get(columnID).config.currency ?? null,
+        };
+      }
+      return {
+        table_id: DEFAULT_TABLE_ID,
+        schema_revision: table.schema_revision,
+        data_revision: table.data_revision,
+        row_count: rows.length,
+        source_local_date: today,
+        due_window_days: DUE_WINDOW_DAYS,
+        totals,
+        presets: dashboardPresets(today).map((preset) => {
+          const filters = normalizeFilters(preset.filters);
+          const matched = rows.filter(
+            (row) => filters.every((filter) => matchesFilter(row, filter)),
+          );
+          return {
+            preset_id: preset.preset_id,
+            filters,
+            row_count: matched.length,
+            amount: {
+              column_id: preset.amount_column_id,
+              value: decimalFromCentsString(
+                sumCents(
+                  matched.map((row) => row.values[preset.amount_column_id]),
+                ),
+                COLUMN_BY_ID.get(preset.amount_column_id).config.scale ?? 2,
+              ),
+              currency:
+                COLUMN_BY_ID.get(preset.amount_column_id).config.currency ?? null,
+            },
+          };
+        }),
+      };
+    });
   }
 
   seed(input, { ifEmpty = false } = {}) {

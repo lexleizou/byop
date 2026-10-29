@@ -1,4 +1,4 @@
-# BYOP Fuyao 0.4.1
+# BYOP Fuyao 0.4.2
 
 Fuyao adds a normal BYOP WebView on top of the P15a Node data layer.
 Version 0.4.0 imports a complete Fuyao v4 export into an independent SQLite
@@ -6,6 +6,10 @@ snapshot. Version 0.4.1 shows the v4 enums — funding source, plan status,
 product type, plan method, interest basis, rate period, instalment status,
 payment effect and allocation method — in the page language, in the table as
 well as in the detail drawer, and lists the rate period of a debt.
+Version 0.4.2 adds a summary panel above the query bar: three amount totals for
+the whole table and the saved queries as buttons. Every button carries exactly
+one filter, so pressing it writes that filter into the filter bar and the button
+count is the count the list then shows.
 The plugin does not connect to Fuyao PostgreSQL at runtime.
 The plugin uses native HTML and JavaScript, `window.byop.postMessage`, the
 existing theme tokens, and an independent SQLite file. It has no build step,
@@ -27,6 +31,10 @@ XLSX support.
 - Compact business table with horizontal scrolling and a narrow-window layout.
 - Server-side search, one typed filter, sorting, 100-row pages, and an exact
   principal total for every matching row.
+- Summary panel over the whole table: contract principal, remaining due, and
+  actual paid, plus saved-query buttons for overdue, repaying, settled, due
+  or due within 30 days, no plan, funding source, and category. A pressed button
+  shows the same single filter in the filter bar.
 - IME-safe inline cell editing with Enter, Tab, and Escape handling.
 - Add and delete rows.
 - Select records or use every filtered record, then set one field in a single

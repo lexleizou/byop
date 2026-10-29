@@ -262,3 +262,35 @@ test("insert dedupe, versioned A-B-A updates, dry-run, and conflict receipts", a
     store.close();
   }
 });
+
+test("dashboard counts match the query for the same filter", async () => {
+  const { store } = await seededStore("db-dashboard");
+  try {
+    const dashboard = store.dashboard();
+    assert.equal(dashboard.row_count, 3);
+    assert.equal(dashboard.totals.principal.value, "1200.50");
+    assert.equal(dashboard.totals.principal.currency, "CNY");
+    assert.equal(dashboard.due_window_days, 30);
+
+    const byID = new Map(
+      dashboard.presets.map((preset) => [preset.preset_id, preset]),
+    );
+    assert.equal(byID.get("all").row_count, 3);
+    assert.deepEqual(byID.get("all").filters, []);
+    assert.equal(byID.get("overdue").row_count, 1);
+    assert.equal(byID.get("repaying").row_count, 1);
+
+    for (const preset of dashboard.presets) {
+      // One filter per preset keeps a button and the filter bar in agreement.
+      assert.ok(preset.filters.length <= 1, preset.preset_id);
+      const queried = store.query({ filters: preset.filters, limit: 50 });
+      assert.equal(queried.matched_count, preset.row_count, preset.preset_id);
+    }
+
+    assert.equal(byID.get("bank").amount.column_id, "remaining_due");
+    assert.equal(byID.get("all").amount.column_id, "principal");
+    assert.equal(byID.get("all").amount.value, "1200.50");
+  } finally {
+    store.close();
+  }
+});

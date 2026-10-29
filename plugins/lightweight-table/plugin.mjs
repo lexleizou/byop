@@ -121,6 +121,8 @@ async function handlePageMessage(message) {
     }
     case "table.query":
       return tableStore().query(message.query ?? {});
+    case "table.dashboard":
+      return tableStore().dashboard();
     case "table.detail":
       return tableStore().detail({
         row_id: message.rowId ?? message.row_id,

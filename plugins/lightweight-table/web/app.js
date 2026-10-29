@@ -20,6 +20,9 @@ const dom = {
   body: document.body,
   title: document.querySelector("#page-title"),
   subtitle: document.querySelector("#page-subtitle"),
+  dashboard: document.querySelector("#dashboard"),
+  dashboardTotals: document.querySelector("#dashboard-totals"),
+  dashboardPresets: document.querySelector("#dashboard-presets"),
   searchInput: document.querySelector("#search-input"),
   filterColumn: document.querySelector("#filter-column-select"),
   filterOperatorField: document.querySelector("#filter-operator-field"),
@@ -72,6 +75,7 @@ const state = {
   localeCache: new Map(),
   description: null,
   summary: null,
+  dashboard: null,
   result: null,
   dataRevision: null,
   selected: new Set(),
@@ -320,6 +324,143 @@ function formatDecimal(value) {
   return `${negative ? "-" : ""}${grouped}${fraction ? `.${fraction}` : ""}`;
 }
 
+// The dashboard summarizes the table and offers its saved queries as buttons.
+// Every preset carries one filter, so pressing a button only writes that
+// filter into the filter bar: the list and the button count cannot diverge.
+const DASHBOARD_TOTAL_COLUMNS = ["principal", "remaining_due", "actual_paid"];
+const DASHBOARD_PRESET_LABEL_KEYS = Object.freeze({
+  all: "filterAll",
+  due_30: "dashboardPresetDueSoon",
+});
+
+function presetLabel(presetID) {
+  const key = DASHBOARD_PRESET_LABEL_KEYS[presetID];
+  if (key) {
+    return message(key);
+  }
+  // The rest are one-value queries, so the button takes its text from the
+  // filter value on its own column: the same label the table and detail drawer
+  // show for that value.
+  const filter = (state.dashboard?.presets ?? [])
+    .find((preset) => preset.preset_id === presetID)
+    ?.filters[0];
+  return filter ? label(filter.column_id, filter.value) : presetID;
+}
+
+function renderDashboard() {
+  const dashboard = state.dashboard;
+  if (!dashboard) {
+    dom.dashboard.hidden = true;
+    return;
+  }
+  dom.dashboard.hidden = false;
+  dom.dashboard.setAttribute("aria-label", message("dashboardAria"));
+  dom.dashboardTotals.replaceChildren();
+  for (const columnID of DASHBOARD_TOTAL_COLUMNS) {
+    const amount = dashboard.totals?.[columnID];
+    const card = document.createElement("div");
+    card.className = "dashboard-card";
+    const label = document.createElement("span");
+    label.className = "dashboard-card-label";
+    label.textContent = columnLabel(columnID);
+    const value = document.createElement("span");
+    value.className = "dashboard-card-value";
+    value.textContent = formatDecimal(amount?.value ?? "0.00");
+    card.append(label, value);
+    dom.dashboardTotals.append(card);
+  }
+
+  const activeID = activePresetID();
+  dom.dashboardPresets.replaceChildren();
+  const heading = document.createElement("span");
+  heading.className = "dashboard-presets-label";
+  heading.textContent = message("dashboardPresetsTitle");
+  dom.dashboardPresets.append(heading);
+  for (const preset of dashboard.presets ?? []) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "button dashboard-preset";
+    button.dataset.action = "apply-preset";
+    button.dataset.presetId = preset.preset_id;
+    if (preset.preset_id === activeID) {
+      button.classList.add("primary");
+      button.setAttribute("aria-pressed", "true");
+    }
+    button.title = `${message("dashboardPresetHint", {
+      amount: `${columnLabel(preset.amount.column_id)} ${formatDecimal(
+        preset.amount.value,
+      )}`,
+    })}`;
+    const name = document.createElement("span");
+    name.className = "dashboard-preset-name";
+    name.textContent = presetLabel(preset.preset_id);
+    const count = document.createElement("span");
+    count.className = "dashboard-preset-count";
+    count.textContent = message("dashboardPresetCount", {
+      count: preset.row_count,
+    });
+    button.append(name, count);
+    dom.dashboardPresets.append(button);
+  }
+}
+
+// activePresetID reports which preset the last query used, so its button stays
+// pressed while that filter is in effect. Key order is normalized because the
+// two sides build the same filter object from different code paths.
+function activePresetID() {
+  const filters = state.result?.filters ?? [];
+  const canonical = (list) =>
+    JSON.stringify(
+      list.map((filter) =>
+        Object.fromEntries(Object.entries(filter).sort(([a], [b]) => a.localeCompare(b))),
+      ),
+    );
+  const current = canonical(filters);
+  for (const preset of state.dashboard?.presets ?? []) {
+    if (canonical(preset.filters) === current) {
+      return preset.preset_id;
+    }
+  }
+  return "";
+}
+
+function applyPreset(presetID) {
+  const preset = (state.dashboard?.presets ?? []).find(
+    (entry) => entry.preset_id === presetID,
+  );
+  if (!preset) {
+    return;
+  }
+  dom.searchInput.value = "";
+  const filter = preset.filters[0];
+  if (!filter) {
+    dom.filterColumn.value = "";
+    dom.filterValue.value = "";
+  } else {
+    dom.filterColumn.value = filter.column_id;
+  }
+  // The filter controls are rebuilt before the operator and value are set, so
+  // the bar shows exactly the query the button counts by.
+  renderControls();
+  if (filter) {
+    dom.filterOperator.value = filter.op;
+    dom.filterValue.value = filter.value ?? "";
+  }
+  state.page = 1;
+  void loadQuery();
+}
+
+async function loadDashboard() {
+  try {
+    state.dashboard = await callPlugin("table.dashboard");
+    renderDashboard();
+  } catch (error) {
+    // The summary is an extra view over the table: a failure here must not
+    // hide the records, so it shows as a toast and leaves the table alone.
+    showError(error);
+  }
+}
+
 function cellText(column, value, row = null) {
   if (column.type === "number") {
     return formatDecimal(value);
@@ -534,6 +675,11 @@ async function loadQuery({
     state.dataRevision = state.result.data_revision;
     state.pendingRefresh = false;
     renderTable({ rebaseDrafts: preserveDrafts });
+    // A revision the summary has not caught up with means the records changed,
+    // so the dashboard counts are refreshed alongside them.
+    if (state.dashboard?.data_revision !== state.result.data_revision) {
+      void loadDashboard();
+    }
     if (showRefreshed) {
       showToast(message("refreshed"));
     }
@@ -755,6 +901,7 @@ function renderTable({ rebaseDrafts = false } = {}) {
   });
   dom.previous.disabled = state.page <= 1;
   dom.next.disabled = state.page >= pageCount;
+  renderDashboard();
   const bulkOpen = state.openDrawer === dom.bulkDrawer;
   dom.bulkTargetSelectedLabel.textContent = message("selectedCount", {
     count: bulkOpen ? state.bulkSelectedTargets.length : state.selected.size,
@@ -1824,7 +1971,7 @@ async function bootstrap() {
     state.dataRevision = boot.summary.data_revision;
     updatePageSubtitle();
     renderControls();
-    await loadQuery();
+    await Promise.all([loadQuery(), loadDashboard()]);
   } catch (error) {
     showPageError(error);
   } finally {
@@ -1893,8 +2040,11 @@ document.addEventListener("click", (event) => {
       showRefreshed: true,
       preserveDrafts: true,
     });
+    void loadDashboard();
   } else if (action === "clear-filter") {
     resetFilterInputs();
+  } else if (action === "apply-preset") {
+    applyPreset(actionElement.dataset.presetId);
   } else if (action === "clear-selection") {
     clearSelection();
   } else if (action === "page-previous") {

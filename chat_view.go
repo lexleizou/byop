@@ -1771,15 +1771,15 @@ func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option,
 	t := c.Theme()
 	row := ui.ButtonBase(c).Key("model-choice-"+option.ID).Label(option.Label).Selected(selected).
 		FillWidth().MinWidth(0).MinHeight(modelPopoverRowHeightV12).Padding(8, 8).
-		Radius(8).Justify(ui.Start).AlignItems(ui.Center).Gap(8).
+		Radius(8).Justify(ui.Start).AlignItems(ui.Start).Gap(8).
 		Background(ui.Color{}).TextColor(t.Text)
 	if row.Hovered() || row.Focused() {
 		row.Background(t.SurfaceHover)
 	}
 	row.Children(func() {
-		// The brand mark and the check sit on the model-name line, so the
-		// marks of every row line up with the names rather than the middle
-		// of the two-line row.
+		// The row starts rather than centers its children: the brand mark and
+		// the check each take the model-name line height, so both sit on the
+		// name line while the subtitle hangs below it.
 		if option.Leading != nil {
 			ui.Row(c).Height(modelPickerTitleLineV12).Shrink(0).
 				AlignItems(ui.Center).Children(func() {
