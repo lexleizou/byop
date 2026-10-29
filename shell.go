@@ -1335,15 +1335,20 @@ func (s *appState) integrationStatus(c *ui.Context, p palette) {
 	if box.Clicked() {
 		s.piStatusPopoverOpen = !s.piStatusPopoverOpen
 	}
-	popoverV12(c, p, box, &s.piStatusPopoverOpen,
+	popoverWidthV12(c, p, box, &s.piStatusPopoverOpen,
 		s.highContrastActive(currentAppearanceHighContrast()) || currentAppearanceReduceTransparency(),
+		piStatusPopoverWidth,
 		func(panel ui.Element) {
 			panel.Children(func() { s.piConnectionPopover(c, p) })
 		})
 }
 
+// piStatusPopoverWidth fits the widest row of the popover: the 280 content
+// column plus the panel's 6 padding on both sides.
+const piStatusPopoverWidth float32 = 292
+
 func (s *appState) piConnectionPopover(c *ui.Context, p palette) {
-	ui.Column(c).Width(280).Gap(8).Children(func() {
+	ui.Column(c).Width(piStatusPopoverWidth - 12).Gap(8).Children(func() {
 		ui.Text(c, text("piCliDetailsTitle")).FontSize(fontBody).FontWeight(650).TextColor(p.text)
 		ui.Row(c).Gap(7).AlignItems(ui.Center).Children(func() {
 			ui.Box(c).Size(8, 8).Radius(4).Background(s.piTone(p))

@@ -664,6 +664,9 @@ func (s *appState) piHUDContextLabel() string {
 }
 
 func (s *appState) piHUDTurn(c *ui.Context, message *chatMessage) {
+	// The HUD renders before this turn's markdown, so it marks the message
+	// whose output-file cards may open their preview by themselves.
+	s.chatView.previewMessage = message
 	items := s.piHUDTurnItems(message)
 	if len(items) == 0 {
 		return

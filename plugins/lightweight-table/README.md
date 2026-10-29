@@ -1,8 +1,12 @@
-# BYOP Fuyao 0.4.0
+# BYOP Fuyao 0.4.1
 
 Fuyao adds a normal BYOP WebView on top of the P15a Node data layer.
 Version 0.4.0 imports a complete Fuyao v4 export into an independent SQLite
-snapshot. The plugin does not connect to Fuyao PostgreSQL at runtime.
+snapshot. Version 0.4.1 shows the v4 enums — funding source, plan status,
+product type, plan method, interest basis, rate period, instalment status,
+payment effect and allocation method — in the page language, in the table as
+well as in the detail drawer, and lists the rate period of a debt.
+The plugin does not connect to Fuyao PostgreSQL at runtime.
 The plugin uses native HTML and JavaScript, `window.byop.postMessage`, the
 existing theme tokens, and an independent SQLite file. It has no build step,
 grid dependency, network access, approval flow, clear-all action, CSV, or

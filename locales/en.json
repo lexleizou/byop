@@ -3598,5 +3598,42 @@
   "thinkingStatusComplete": "Thought complete",
   "@thinkingStatusComplete": {
     "description": "Collapsed single-line label when reasoning finished without a measurable duration."
+  },
+  "fileCardLabel": "Output file {name}",
+  "@fileCardLabel": {
+    "description": "Accessible label for a file card in an assistant turn.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fileMenuOpen": "Open file",
+  "@fileMenuOpen": {
+    "description": "Menu item that opens an output file with the default app."
+  },
+  "fileMenuReveal": "Show in folder",
+  "@fileMenuReveal": {
+    "description": "Menu item that reveals an output file in the file manager."
+  },
+  "fileMenuCopyPath": "Copy path",
+  "@fileMenuCopyPath": {
+    "description": "Menu item that copies a file path to the clipboard."
+  },
+  "filePreviewShow": "Preview",
+  "@filePreviewShow": {
+    "description": "Button that shows an HTML output file inside the conversation."
+  },
+  "filePreviewHide": "Hide preview",
+  "@filePreviewHide": {
+    "description": "Button that hides an HTML preview already shown in the conversation."
+  },
+  "filePreviewFailed": "The preview could not be opened.",
+  "@filePreviewFailed": {
+    "description": "Notice shown when an HTML file cannot be previewed."
+  },
+  "fileOpenFailed": "The file could not be opened.",
+  "@fileOpenFailed": {
+    "description": "Toast shown when opening a file fails."
   }
 }

@@ -3395,5 +3395,42 @@
   "thinkingStatusComplete": "思考完成",
   "@thinkingStatusComplete": {
     "description": "Collapsed single-line label when reasoning finished without a measurable duration."
+  },
+  "fileCardLabel": "产出文件 {name}",
+  "@fileCardLabel": {
+    "description": "对话中产出文件卡片的无障碍标签。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fileMenuOpen": "打开文件",
+  "@fileMenuOpen": {
+    "description": "用默认应用打开产出文件的菜单项。"
+  },
+  "fileMenuReveal": "在文件夹中显示",
+  "@fileMenuReveal": {
+    "description": "在文件管理器中定位产出文件的菜单项。"
+  },
+  "fileMenuCopyPath": "复制路径",
+  "@fileMenuCopyPath": {
+    "description": "把文件路径复制到剪贴板的菜单项。"
+  },
+  "filePreviewShow": "预览",
+  "@filePreviewShow": {
+    "description": "在对话中内联显示 HTML 产出文件的按钮。"
+  },
+  "filePreviewHide": "收起预览",
+  "@filePreviewHide": {
+    "description": "收起对话中已显示的 HTML 预览的按钮。"
+  },
+  "filePreviewFailed": "无法打开预览。",
+  "@filePreviewFailed": {
+    "description": "HTML 文件无法预览时的提示。"
+  },
+  "fileOpenFailed": "无法打开文件。",
+  "@fileOpenFailed": {
+    "description": "打开文件失败时的提示。"
   }
 }

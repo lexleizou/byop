@@ -273,25 +273,37 @@ function columnLabel(columnID) {
   return message(`column.${columnID}`);
 }
 
-function localizedValue(columnID, value) {
+// LABEL_KEYS maps a v4 enum namespace to its locale prefix, so a value shows
+// in the page language the same way the v4 app shows it. An unknown value
+// keeps its source text rather than showing a broken key.
+const LABEL_KEYS = Object.freeze({
+  repayment_status: "status",
+  plan_status: "planStatus",
+  category: "category",
+  funding_source: "funding",
+  product_type: "productType",
+  method: "method",
+  interest_basis: "basis",
+  rate_period: "period",
+  installment: "installment",
+  principal_effect: "paymentEffect",
+  allocation_method: "allocation",
+});
+
+function label(namespace, value) {
   if (value === null || value === undefined || value === "") {
     return "—";
   }
-  if (columnID === "repayment_status") {
-    const key = `status.${value}`;
-    return message(key) === key ? String(value) : message(key);
+  const key = `${LABEL_KEYS[namespace]}.${value}`;
+  return message(key) === key ? String(value) : message(key);
+}
+
+function localizedValue(columnID, value) {
+  if (columnID in LABEL_KEYS) {
+    return label(columnID, value);
   }
-  if (columnID === "plan_status") {
-    const key = `planStatus.${value}`;
-    return message(key) === key ? String(value) : message(key);
-  }
-  if (columnID === "category") {
-    const key = `category.${value}`;
-    return message(key) === key ? String(value) : message(key);
-  }
-  if (columnID === "funding_source") {
-    const key = `funding.${value}`;
-    return message(key) === key ? String(value) : message(key);
+  if (value === null || value === undefined || value === "") {
+    return "—";
   }
   return String(value);
 }
@@ -1239,7 +1251,7 @@ function renderDetail(data) {
     ["name", debt.name],
     ["category", localizedValue("category", debt.category)],
     ["funding_source", localizedValue("funding_source", debt.funding_source)],
-    ["product_type", debt.product_type],
+    ["product_type", label("product_type", debt.product_type)],
     ["loan_code", debt.loan_code],
     ["contract_reference", debt.contract_reference],
     ["product_group_id", debt.product_group_id],
@@ -1254,7 +1266,8 @@ function renderDetail(data) {
     ["rate_period", debt.rate_period],
     ["manual_annualized_rate_percent", debt.manual_annualized_rate_percent],
     ["calculated_annualized_rate_percent", debt.calculated_annualized_rate_percent],
-    ["interest_basis", debt.interest_basis],
+    ["interest_basis", label("interest_basis", debt.interest_basis)],
+    ["rate_period", label("rate_period", debt.rate_period)],
     ["opening_principal", debt.opening_principal],
     ["planned_interest", debt.planned_interest],
     ["remaining_interest", debt.remaining_interest],
@@ -1268,11 +1281,11 @@ function renderDetail(data) {
   const planSection = detailSection("detailPlanSection");
   if (data.current_plan) {
     const counts = Object.entries(data.installment_counts ?? {})
-      .map(([status, count]) => `${status}: ${count}`)
+      .map(([status, count]) => `${label("installment", status)} ${count}`)
       .join(" · ");
     appendDetailFields(planSection, [
-      ["plan_status", data.current_plan.status],
-      ["plan_method", data.current_plan.method],
+      ["plan_status", label("plan_status", data.current_plan.status)],
+      ["plan_method", label("method", data.current_plan.method)],
       ["effective_on", data.current_plan.effective_on],
       ["first_due_on", data.current_plan.first_due_on],
       ["installments", data.current_plan.installments],
@@ -1280,9 +1293,31 @@ function renderDetail(data) {
       ["plan_principal", data.current_plan.plan_principal],
       ["confirmed_remaining", data.current_plan.confirmed_remaining],
       ["original_rate_value", data.current_plan.original_rate_value],
-      ["rate_period", data.current_plan.rate_period],
+      ["rate_period", label("rate_period", data.current_plan.rate_period)],
       ["source_updated_at", data.current_plan.updated_at],
     ]);
+    const rows = data.current_plan.installment_rows ?? [];
+    if (rows.length > 0) {
+      const schedule = document.createElement("div");
+      schedule.className = "detail-records";
+      for (const installment of rows) {
+        const record = document.createElement("article");
+        const title = document.createElement("strong");
+        title.textContent = message("detailInstallmentTitle", {
+          no: installment.installment_no,
+          due: installment.due_on,
+        });
+        const meta = document.createElement("span");
+        meta.textContent = message("detailInstallmentMeta", {
+          principal: formatDecimal(installment.principal),
+          interest: formatDecimal(installment.interest),
+          status: label("installment", installment.status),
+        });
+        record.append(title, meta);
+        schedule.append(record);
+      }
+      planSection.append(schedule);
+    }
   } else {
     planSection.append(detailNote(message("detailNoPlan")));
   }
@@ -1306,7 +1341,10 @@ function renderDetail(data) {
       const title = document.createElement("strong");
       title.textContent = `${payment.payment_on} · ${formatDecimal(payment.amount)}`;
       const meta = document.createElement("span");
-      meta.textContent = [payment.principal_effect, payment.note]
+      meta.textContent = [
+        payment.principal_effect ? label("principal_effect", payment.principal_effect) : "",
+        payment.note,
+      ]
         .filter(Boolean)
         .join(" · ");
       record.append(title, meta);

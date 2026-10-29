@@ -37,6 +37,15 @@ type chatPresentation struct {
 
 	thinkingPending     string
 	thinkingCommitTimer *time.Timer
+
+	// Output-file cards: per-path preview choice, the live web views, the
+	// frame counter that frees views no longer built, the message whose
+	// cards may preview on their own, and the palette the hook paints with.
+	filePreviews     map[string]bool
+	filePreviewViews map[string]*chatFilePreview
+	previewFrame     int
+	previewMessage   *chatMessage
+	fileCardPalette  palette
 }
 
 type activityPresentation struct {
@@ -217,6 +226,11 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	theme.CodeBlockRadius = p.inputRadius
 	theme.CodeBlockPadding = 12.0 / p.bodyFont
 	theme.CodeLineHeight = 1.4
+	s.chatView.fileCardPalette = p
+	// Only the latest turn's HUD marks a message, and it renders after every
+	// older message, so starting the frame clear keeps previews off them.
+	s.chatView.previewMessage = nil
+	s.dropStaleChatFilePreviews()
 	codeColors := editor.DefaultTheme(c.Theme())
 	codeColors.Background = p.raisedSurface
 	codeColors.Text = p.text
@@ -233,6 +247,16 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	s.chatView.markdown.Block = func(c *ui.Context, doc *parser.Document, index int) bool {
 		if markdownListNeedsItemGapV12(doc, index) {
 			ui.Box(c).FillWidth().Height(4)
+		}
+		if doc.Block(index).Kind == parser.Paragraph {
+			// Pi ends most answers with the files it produced. A paragraph
+			// that holds only a local path becomes a file card, so the name
+			// stays short and the path opens from its menu.
+			if path, ok := chatLocalFileFromSource(doc, index); ok {
+				autoOpen := s.chatView.previewMessage != nil && !s.runActive()
+				s.chatFileCard(c, s.chatView.fileCardPalette, path, autoOpen)
+				return true
+			}
 		}
 		return false
 	}
@@ -918,6 +942,9 @@ const (
 	modelPopoverChromeV12     float32 = 96
 	modelPopoverSideMarginV12 float32 = 16
 	modelPopoverRowHeightV12  float32 = 56
+	// modelPickerTitleLineV12 is the height of the 14px model-name line,
+	// the line the leading brand mark aligns to.
+	modelPickerTitleLineV12 float32 = 21
 )
 
 // modelPopoverWidthV12 sizes the model popover to its longest model name, so
@@ -1750,8 +1777,14 @@ func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option,
 		row.Background(t.SurfaceHover)
 	}
 	row.Children(func() {
+		// The brand mark and the check sit on the model-name line, so the
+		// marks of every row line up with the names rather than the middle
+		// of the two-line row.
 		if option.Leading != nil {
-			option.Leading(c, 16)
+			ui.Row(c).Height(modelPickerTitleLineV12).Shrink(0).
+				AlignItems(ui.Center).Children(func() {
+				option.Leading(c, 16)
+			})
 		}
 		ui.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
 			components.Text(c, option.Label).MinWidth(0).SingleLine().Ellipsis("…").
@@ -1760,7 +1793,10 @@ func (s *appState) customModelPickerRow(c *ui.Context, option chat.Option,
 				FontSize(fontSmall).LineHeight(1.3).TextColor(t.TextMuted)
 		})
 		if selected {
-			components.Icon(c, lu.Check).Size(12, 12).TextColor(t.Accent)
+			ui.Row(c).Height(modelPickerTitleLineV12).Shrink(0).
+				AlignItems(ui.Center).Children(func() {
+				components.Icon(c, lu.Check).Size(12, 12).TextColor(t.Accent)
+			})
 		}
 	})
 	return row.Clicked()

@@ -11735,3 +11735,115 @@ func ThinkingStatusComplete() string { return In(i18n.Locale()).ThinkingStatusCo
 func (msgs Messages) ThinkingStatusComplete() string {
 	return Catalog.Format(msgs.locale, "thinkingStatusComplete", nil)
 }
+
+// FileCardLabel says "Output file {name}"
+// in the language the app shows.
+//
+// Accessible label for a file card in an assistant turn.
+func FileCardLabel(name string) string { return In(i18n.Locale()).FileCardLabel(name) }
+
+// FileCardLabel says "Output file {name}"
+// in the language of msgs.
+//
+// Accessible label for a file card in an assistant turn.
+func (msgs Messages) FileCardLabel(name string) string {
+	return Catalog.Format(msgs.locale, "fileCardLabel", map[string]any{"name": name})
+}
+
+// FileMenuOpen says "Open file"
+// in the language the app shows.
+//
+// Menu item that opens an output file with the default app.
+func FileMenuOpen() string { return In(i18n.Locale()).FileMenuOpen() }
+
+// FileMenuOpen says "Open file"
+// in the language of msgs.
+//
+// Menu item that opens an output file with the default app.
+func (msgs Messages) FileMenuOpen() string {
+	return Catalog.Format(msgs.locale, "fileMenuOpen", nil)
+}
+
+// FileMenuReveal says "Show in folder"
+// in the language the app shows.
+//
+// Menu item that reveals an output file in the file manager.
+func FileMenuReveal() string { return In(i18n.Locale()).FileMenuReveal() }
+
+// FileMenuReveal says "Show in folder"
+// in the language of msgs.
+//
+// Menu item that reveals an output file in the file manager.
+func (msgs Messages) FileMenuReveal() string {
+	return Catalog.Format(msgs.locale, "fileMenuReveal", nil)
+}
+
+// FileMenuCopyPath says "Copy path"
+// in the language the app shows.
+//
+// Menu item that copies a file path to the clipboard.
+func FileMenuCopyPath() string { return In(i18n.Locale()).FileMenuCopyPath() }
+
+// FileMenuCopyPath says "Copy path"
+// in the language of msgs.
+//
+// Menu item that copies a file path to the clipboard.
+func (msgs Messages) FileMenuCopyPath() string {
+	return Catalog.Format(msgs.locale, "fileMenuCopyPath", nil)
+}
+
+// FilePreviewShow says "Preview"
+// in the language the app shows.
+//
+// Button that shows an HTML output file inside the conversation.
+func FilePreviewShow() string { return In(i18n.Locale()).FilePreviewShow() }
+
+// FilePreviewShow says "Preview"
+// in the language of msgs.
+//
+// Button that shows an HTML output file inside the conversation.
+func (msgs Messages) FilePreviewShow() string {
+	return Catalog.Format(msgs.locale, "filePreviewShow", nil)
+}
+
+// FilePreviewHide says "Hide preview"
+// in the language the app shows.
+//
+// Button that hides an HTML preview already shown in the conversation.
+func FilePreviewHide() string { return In(i18n.Locale()).FilePreviewHide() }
+
+// FilePreviewHide says "Hide preview"
+// in the language of msgs.
+//
+// Button that hides an HTML preview already shown in the conversation.
+func (msgs Messages) FilePreviewHide() string {
+	return Catalog.Format(msgs.locale, "filePreviewHide", nil)
+}
+
+// FilePreviewFailed says "The preview could not be opened."
+// in the language the app shows.
+//
+// Notice shown when an HTML file cannot be previewed.
+func FilePreviewFailed() string { return In(i18n.Locale()).FilePreviewFailed() }
+
+// FilePreviewFailed says "The preview could not be opened."
+// in the language of msgs.
+//
+// Notice shown when an HTML file cannot be previewed.
+func (msgs Messages) FilePreviewFailed() string {
+	return Catalog.Format(msgs.locale, "filePreviewFailed", nil)
+}
+
+// FileOpenFailed says "The file could not be opened."
+// in the language the app shows.
+//
+// Toast shown when opening a file fails.
+func FileOpenFailed() string { return In(i18n.Locale()).FileOpenFailed() }
+
+// FileOpenFailed says "The file could not be opened."
+// in the language of msgs.
+//
+// Toast shown when opening a file fails.
+func (msgs Messages) FileOpenFailed() string {
+	return Catalog.Format(msgs.locale, "fileOpenFailed", nil)
+}
