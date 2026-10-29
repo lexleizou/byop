@@ -12,7 +12,7 @@ Date: 2026-10-29. Base: `9b9188a`. App: `0.18.2`.
 - During plugin restart, `openPluginWebView`, `ensurePluginWebView`, `recreatePluginWebView` and view refresh do not create or load a WebView. Entering the plugin from navigation shows a dedicated lightweight localized restart state rather than the yellow unavailable warning.
 - Restart completion reads the view the user is on at completion time, not the view captured at restart start, then reopens that current view. Restart failure destroys any remaining old WebView state.
 - Page-level bridge failures show readable text; bootstrap no longer falls through with unloaded locale keys such as `emptyTitle` or `error.generic`. Localized errors remain localized without appending the English bridge message, while untranslated codes fall back to the actual bridge message.
-- Plugin manifest version, plugin settings, SQLite schema and real records were not changed.
+- Plugin version, settings, SQLite schema and row-level data were not changed.
 
 ## P18.2 automated checks
 
@@ -28,7 +28,7 @@ Date: 2026-10-29. Base: `9b9188a`. App: `0.18.2`.
 - A real Qwen3.8 Flash Next turn verified the live HUD order in the assistant body: model logo/name, estimated `↓` output tokens, context, TPS capsule, then the thinking line and answer. Light and Dark BYOP themes rendered a frameless row; J Agent rendered its theme glass.
 - The latest-turn-only rule held: completed earlier turns did not show the current model HUD, while the Composer footer continued to show context capacity, token totals, cache, and extension status.
 - `1100×560`, `1180×760`, and `1440×900` were inspected. Model, context, output tokens, and TPS remained within the HUD; the model name shrinks first on narrow widths.
-- The isolated Fuyao WebView loaded Chinese labels and all 49 copied v4 debt records. Clicking **Restart plugin** kept BYOP running and returned to the same Fuyao view with all 49 records; no `emptyTitle` or `error.generic` appeared. The dedicated restart-state rendering and restart-time WebView guards are covered by UI tests. The formal Fuyao database and plugin were not modified.
+- The isolated Fuyao WebView loaded Chinese labels and all 49 debt records from a SQLite backup copy. Clicking **Restart plugin** kept BYOP running and returned to the same Fuyao view with all 49 records; no `emptyTitle` or `error.generic` appeared. The dedicated restart-state rendering and restart-time WebView guards are covered by UI tests. The formal ledger retained its 49 rows and the same related counts; the QA run did not change row-level data, plugin settings or the plugin version.
 - Screenshots: `docs/screenshots/p18-2-hud-dark.png`, `p18-2-hud-light.png`, `p18-2-hud-jagent.png`, `p18-2-hud-jagent-1100x560.png`, `p18-2-hud-jagent-1440x900.png`.
 
 ## Implemented
