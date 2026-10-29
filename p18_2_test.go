@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"byop/locales"
+
 	"github.com/egoist/mygo/ui"
 )
 
@@ -35,6 +37,9 @@ func p18_2HUDState(t *testing.T) *appState {
 	state.hud.currentTPS = 51.2
 	state.hud.currentTPSKnown = true
 	state.hud.currentTPSUpdatedAt = time.Now()
+	state.hud.avgOutputTokens = 100
+	state.hud.avgGenerationSeconds = 2
+	state.hud.extStatus = map[string]string{"ov": "OV ✓"}
 	state.chat = []chatMessage{
 		{
 			role:   chatUser,
@@ -52,16 +57,16 @@ func p18_2HUDState(t *testing.T) *appState {
 	return state
 }
 
-func TestP18_2HUDSplitsTranscriptAndComposerFooterItems(t *testing.T) {
+func TestP18_3HUDSplitsTranscriptAndComposerFooterItems(t *testing.T) {
 	state := p18_2HUDState(t)
 
 	message := &state.chat[1]
 	transcript := state.piHUDTurnItems(message)
-	if len(transcript) != 4 {
-		t.Fatalf("turn HUD item count = %d, want model/tokens/context/TPS", len(transcript))
+	if len(transcript) != 3 {
+		t.Fatalf("turn HUD item count = %d, want model/tokens/TPS", len(transcript))
 	}
 	for index, kind := range []hudItemKind{
-		hudItemModel, hudItemTurnTokens, hudItemContext, hudItemTPS,
+		hudItemModel, hudItemTurnTokens, hudItemTPS,
 	} {
 		if transcript[index].kind != kind {
 			t.Fatalf("transcript item %d kind = %d, want %d", index, transcript[index].kind, kind)
@@ -74,9 +79,23 @@ func TestP18_2HUDSplitsTranscriptAndComposerFooterItems(t *testing.T) {
 	}
 	for _, item := range footer {
 		if item.kind == hudItemModel || item.kind == hudItemTurnTokens ||
-			item.kind == hudItemTPS || item.kind == hudItemContext {
+			item.kind == hudItemTPS {
 			t.Fatalf("primary HUD item leaked into composer footer: %#v", item)
 		}
+	}
+	left, right := splitHUDItems(footer)
+	if len(left) < 6 || len(right) != 1 {
+		t.Fatalf("footer grouping left=%#v right=%#v", left, right)
+	}
+	if left[0].kind != hudItemContextCapacity ||
+		left[0].value != piHUDContextSummary(state.hud.stats, state.hud.contextWindowFallback, state.hud.autoCompact) ||
+		left[1].value != "↑12k ↓3.0k" ||
+		left[2].label != "Cache hit" ||
+		left[3].value != textArgs("hudAverageSpeed", map[string]any{"speed": "50.0"}) ||
+		left[4].value != "main" ||
+		left[5].value != "$0.012" ||
+		right[0].value != "OV ✓" {
+		t.Fatalf("footer left order or right status = left:%#v right:%#v", left, right)
 	}
 	footerLabel := state.piHUDFooterLabel()
 	for _, unwanted := range []string{"DeepSeek V4.1 Flash", "↓152", "51.2 t/s"} {
@@ -84,10 +103,15 @@ func TestP18_2HUDSplitsTranscriptAndComposerFooterItems(t *testing.T) {
 			t.Fatalf("footer label contains primary item %q: %q", unwanted, footerLabel)
 		}
 	}
-	for _, wanted := range []string{"1M", "↑12k", "↓3.0k", "$0.012", "Cache"} {
+	for _, wanted := range []string{
+		"1M", "↑12k", "↓3.0k", "Cache hit", "Avg 50.0 t/s", "$0.012", "OV ✓",
+	} {
 		if !strings.Contains(footerLabel, wanted) {
 			t.Fatalf("footer label %q does not contain %q", footerLabel, wanted)
 		}
+	}
+	if got := locales.In("zh-Hans").HudCache("24"); got != "缓存命中 24%" {
+		t.Fatalf("Chinese cache label = %q, want 缓存命中 24%%", got)
 	}
 }
 
@@ -107,7 +131,7 @@ func TestP18_2TurnOutputTokensAttachToFirstAssistantOfPrompt(t *testing.T) {
 	}
 }
 
-func TestP18_2LiveTurnOutputTokensUseEstimateThenExactValue(t *testing.T) {
+func TestP18_3LiveTurnOutputTokensCombineExactAndNewEstimate(t *testing.T) {
 	restoreAppearance := stableTestAppearance(t)
 	defer restoreAppearance()
 
@@ -115,6 +139,17 @@ func TestP18_2LiveTurnOutputTokensUseEstimateThenExactValue(t *testing.T) {
 	message := &state.chat[1]
 	message.outputTokens = 0
 	state.run = runStreaming
+	state.addPiTurnOutputTokens(40)
+	if got := message.outputTokens; got != 40 {
+		t.Fatalf("first exact output tokens = %d, want 40", got)
+	}
+	if got := state.hud.liveTurnOutputTokens; got != 0 {
+		t.Fatalf("first exact left estimate %.1f, want 0", got)
+	}
+	if got := p18_2TurnTokenValue(state.piHUDTurnItems(message)); got != "↓40" {
+		t.Fatalf("running HUD after first exact = %q, want ↓40", got)
+	}
+
 	start := time.Unix(100, 0)
 	state.observePiHUDSpeedAt("abcd", start)
 	state.observePiHUDSpeedAt("efghijkl", start.Add(time.Second))
@@ -123,20 +158,24 @@ func TestP18_2LiveTurnOutputTokensUseEstimateThenExactValue(t *testing.T) {
 		t.Fatalf("live turn output estimate = %.1f, want 3", got)
 	}
 	liveItems := state.piHUDTurnItems(message)
-	if got := p18_2TurnTokenValue(liveItems); got != "↓3" {
-		t.Fatalf("live turn HUD tokens = %q, want ↓3", got)
+	if got := p18_2TurnTokenValue(liveItems); got != "↓43" {
+		t.Fatalf("live turn HUD tokens = %q, want ↓43", got)
 	}
 
-	state.addPiTurnOutputTokens(4)
-	state.run = runCompleted
-	for attempt := 0; attempt < 2; attempt++ {
-		exactItems := state.piHUDTurnItems(message)
-		if got := p18_2TurnTokenValue(exactItems); got != "↓4" {
-			t.Fatalf("exact turn HUD tokens attempt %d = %q, want ↓4", attempt+1, got)
-		}
+	state.addPiTurnOutputTokens(7)
+	if got := message.outputTokens; got != 47 {
+		t.Fatalf("cumulative exact output tokens = %d, want 47", got)
 	}
-	if got := state.hud.liveTurnOutputTokens; got != 3 {
-		t.Fatalf("exact token changed live estimate to %.1f", got)
+	if got := state.hud.liveTurnOutputTokens; got != 0 {
+		t.Fatalf("second exact left estimate %.1f, want 0", got)
+	}
+	if got := p18_2TurnTokenValue(state.piHUDTurnItems(message)); got != "↓47" {
+		t.Fatalf("running HUD after second exact = %q, want ↓47", got)
+	}
+
+	state.run = runCompleted
+	if got := p18_2TurnTokenValue(state.piHUDTurnItems(message)); got != "↓47" {
+		t.Fatalf("completed turn HUD tokens = %q, want exact ↓47", got)
 	}
 
 	theme, _ := nativeThemeWithContrast(false, false)
@@ -144,10 +183,10 @@ func TestP18_2LiveTurnOutputTokensUseEstimateThenExactValue(t *testing.T) {
 		c.SetTheme(theme)
 		state.piHUDTurn(c, message)
 	}, 720, 40)
-	if _, ok := tt.Find("↓4"); !ok {
+	if _, ok := tt.Find("↓47"); !ok {
 		t.Fatalf("completed HUD did not render exact tokens: %#v", tt.Texts())
 	}
-	if _, ok := tt.Find("↓3"); ok {
+	if _, ok := tt.Find("↓43"); ok {
 		t.Fatalf("completed HUD retained the live estimate: %#v", tt.Texts())
 	}
 }
@@ -161,7 +200,7 @@ func p18_2TurnTokenValue(items []hudItem) string {
 	return ""
 }
 
-func TestP18_2TranscriptHUDRendersOnceWithBrandAndFooter(t *testing.T) {
+func TestP18_3TranscriptHUDRendersOnceWithBrandTokensTPSAndFooter(t *testing.T) {
 	restoreAppearance := stableTestAppearance(t)
 	defer restoreAppearance()
 
@@ -188,11 +227,16 @@ func TestP18_2TranscriptHUDRendersOnceWithBrandAndFooter(t *testing.T) {
 	if rect, ok := tt.Find("↓152"); !ok || rect.W <= 0 || rect.H <= 0 {
 		t.Fatalf("turn output tokens did not render: %#v", rect)
 	}
-	if _, ok := tt.Find(state.piHUDContextLabel()); !ok {
-		t.Fatal("transcript context usage did not render")
+	for _, unwanted := range []string{"上下文", "Context", "45.4%", "282K / 1M"} {
+		if strings.Contains(turnLabel, unwanted) {
+			t.Fatalf("transcript HUD label %q contains footer context %q", turnLabel, unwanted)
+		}
 	}
 	if _, ok := tt.Find(textArgs("hudTokensPerSecond", map[string]any{"speed": "51.2"})); !ok {
 		t.Fatal("transcript TPS did not render")
+	}
+	if _, ok := tt.Find(piHUDContextSummary(state.hud.stats, state.hud.contextWindowFallback, state.hud.autoCompact)); !ok {
+		t.Fatal("composer footer full context usage disappeared")
 	}
 	if _, ok := tt.Find("pi-hud-row"); !ok {
 		t.Fatal("composer secondary HUD row did not render")
@@ -372,53 +416,113 @@ func TestP18_2JAgentHUDPrecedesWorkSummaryAndThinking(t *testing.T) {
 	}
 }
 
-func TestP18_2ConversationHUDKeepsContextAndTPSAtNarrowWidths(t *testing.T) {
+func TestP18_3ConversationHUDKeepsTokensAndTPSAtNarrowWidths(t *testing.T) {
 	restoreAppearance := stableTestAppearance(t)
 	defer restoreAppearance()
 
-	for _, size := range []struct {
+	appearances := []struct {
+		name   string
+		preset appearancePreset
+		dark   bool
+	}{
+		{name: "light", preset: appearancePresetBYOP, dark: false},
+		{name: "dark", preset: appearancePresetBYOP, dark: true},
+		{name: "j-agent", preset: appearancePresetJAgent, dark: true},
+	}
+	sizes := []struct {
 		width, height int
 	}{
 		{width: 1100, height: 560},
 		{width: 1180, height: 760},
 		{width: 1440, height: 900},
-	} {
-		t.Run(fmt.Sprintf("%dx%d", size.width, size.height), func(t *testing.T) {
-			state := p18_2HUDState(t)
-			state.tasksOpen = true
-			tt := ui.NewTester(state.view, size.width, size.height)
+	}
+	for _, appearance := range appearances {
+		for _, size := range sizes {
+			t.Run(fmt.Sprintf("%s-%dx%d", appearance.name, size.width, size.height), func(t *testing.T) {
+				currentAppearanceDark = func() bool { return appearance.dark }
+				state := p18_2HUDState(t)
+				state.preferences.AppearancePreset = string(appearance.preset)
+				state.tasksOpen = true
+				tt := ui.NewTester(state.view, size.width, size.height)
 
-			hud, ok := tt.Find(state.piHUDTurnLabel(&state.chat[1]))
-			if !ok || hud.W <= 0 || hud.H <= 0 {
-				t.Fatalf("conversation HUD did not render: %#v", hud)
-			}
-			if hud.X < 0 || hud.X+hud.W > float32(size.width) ||
-				hud.Y < 0 || hud.Y+hud.H > float32(size.height) {
-				t.Fatalf("conversation HUD escaped viewport: %#v", hud)
-			}
-			for _, label := range []string{
-				state.piHUDContextLabel(),
-				textArgs("hudTokensPerSecond", map[string]any{"speed": "51.2"}),
-			} {
-				rect, ok := tt.Find(label)
-				if !ok || rect.W <= 0 || rect.H <= 0 {
-					t.Fatalf("required transcript HUD item %q did not render: %#v", label, rect)
+				hud, ok := tt.Find(state.piHUDTurnLabel(&state.chat[1]))
+				if !ok || hud.W <= 0 || hud.H <= 0 {
+					t.Fatalf("conversation HUD did not render: %#v", hud)
 				}
-				if rect.X < hud.X || rect.X+rect.W > hud.X+hud.W {
-					t.Fatalf("required transcript HUD item %q escaped its row: item=%#v row=%#v",
-						label, rect, hud)
+				if hud.X < 0 || hud.X+hud.W > float32(size.width) ||
+					hud.Y < 0 || hud.Y+hud.H > float32(size.height) {
+					t.Fatalf("conversation HUD escaped viewport: %#v", hud)
 				}
-			}
-			if size.width >= 1440 {
-				if rect, ok := tt.Find("DeepSeek V4.1 Flash"); !ok || rect.W <= 0 {
-					t.Fatalf("wide layout omitted model name: %#v", rect)
+				for _, label := range []string{
+					"↓152",
+					textArgs("hudTokensPerSecond", map[string]any{"speed": "51.2"}),
+				} {
+					rect, ok := tt.Find(label)
+					if !ok || rect.W <= 0 || rect.H <= 0 {
+						t.Fatalf("required transcript HUD item %q did not render: %#v", label, rect)
+					}
+					if rect.X < hud.X || rect.X+rect.W > hud.X+hud.W {
+						t.Fatalf("required transcript HUD item %q escaped its row: item=%#v row=%#v",
+							label, rect, hud)
+					}
 				}
-			}
-		})
+				footer, ok := tt.Find("pi-hud-row")
+				if !ok {
+					t.Fatal("composer footer HUD did not render")
+				}
+				if footer.H != 20 {
+					t.Fatalf("composer footer height = %vpx, want 20px", footer.H)
+				}
+				if footer.X < 0 || footer.X+footer.W > float32(size.width) ||
+					footer.Y < 0 || footer.Y+footer.H > float32(size.height) {
+					t.Fatalf("composer footer escaped viewport: %#v", footer)
+				}
+				requiredFooter := []string{
+					piHUDContextSummary(state.hud.stats, state.hud.contextWindowFallback, state.hud.autoCompact),
+					"↑12k ↓3.0k",
+					"Cache hit",
+					textArgs("hudAverageSpeed", map[string]any{"speed": "50.0"}),
+					"$0.012",
+				}
+				previousX := footer.X - 1
+				firstFooter := ui.Rect{}
+				for _, label := range requiredFooter {
+					rect, ok := tt.Find(label)
+					if !ok || rect.W <= 0 || rect.H <= 0 {
+						t.Fatalf("required footer item %q did not render: %#v", label, rect)
+					}
+					if firstFooter.W == 0 {
+						firstFooter = rect
+					}
+					if rect.X < footer.X || rect.X+rect.W > footer.X+footer.W {
+						t.Fatalf("footer item %q escaped row: item=%#v row=%#v", label, rect, footer)
+					}
+					if rect.X < previousX {
+						t.Fatalf("footer item %q is out of order: previousX=%v item=%#v",
+							label, previousX, rect)
+					}
+					previousX = rect.X
+				}
+				ov, ok := tt.Find("OV ✓")
+				if !ok || ov.X < footer.X || ov.X+ov.W > footer.X+footer.W {
+					t.Fatalf("OV status escaped footer row: row=%#v ov=%#v", footer, ov)
+				}
+				if firstFooter.X > footer.X+1 ||
+					ov.X+ov.W < footer.X+footer.W-1 {
+					t.Fatalf("footer groups are not aligned to opposite edges: row=%#v first=%#v ov=%#v",
+						footer, firstFooter, ov)
+				}
+				if size.width >= 1440 {
+					if rect, ok := tt.Find("DeepSeek V4.1 Flash"); !ok || rect.W <= 0 {
+						t.Fatalf("wide layout omitted model name: %#v", rect)
+					}
+				}
+			})
+		}
 	}
 }
 
-func TestP18_2ConversationHUDRendersAcrossAppearanceThemes(t *testing.T) {
+func TestP18_3ConversationHUDRendersAcrossAppearanceThemes(t *testing.T) {
 	state := p18_2HUDState(t)
 	tests := []struct {
 		name   string
@@ -452,8 +556,11 @@ func TestP18_2ConversationHUDRendersAcrossAppearanceThemes(t *testing.T) {
 			if _, ok := tt.Find("conversation-hud-model-logo"); !ok {
 				t.Fatalf("%s model logo did not render", test.name)
 			}
-			if _, ok := tt.Find(state.piHUDContextLabel()); !ok {
-				t.Fatalf("%s context did not render", test.name)
+			if _, ok := tt.Find(state.piHUDContextLabel()); ok {
+				t.Fatalf("%s transcript repeated full context usage", test.name)
+			}
+			if _, ok := tt.Find("↓152"); !ok {
+				t.Fatalf("%s output tokens did not render", test.name)
 			}
 			if _, ok := tt.Find(textArgs("hudTokensPerSecond", map[string]any{"speed": "51.2"})); !ok {
 				t.Fatalf("%s TPS did not render", test.name)

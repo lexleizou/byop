@@ -94,7 +94,7 @@ func TestP13bNavigationWidthKeepsMainAreaWithTaskPanel(t *testing.T) {
 	restoreAppearance := stableTestAppearance(t)
 	defer restoreAppearance()
 	tt := ui.NewTester(state.view, int(windowWidth), 760)
-	hud, ok := tt.Find(state.piHUDLabel())
+	hud, ok := tt.Find(state.piHUDTurnLabel(&state.chat[len(state.chat)-1]))
 	if !ok {
 		t.Fatal("transcript HUD was not rendered")
 	}

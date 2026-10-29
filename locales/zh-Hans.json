@@ -2515,7 +2515,7 @@
       }
     }
   },
-  "hudCache": "缓存 {percent}%",
+  "hudCache": "缓存命中 {percent}%",
   "@hudCache": {
     "description": "HUD label for cache hit rate.",
     "placeholders": {
@@ -2560,7 +2560,7 @@
       }
     }
   },
-  "hudAverageSpeed": "平均 {speed} tok/s",
+  "hudAverageSpeed": "平均 {speed} t/s",
   "@hudAverageSpeed": {
     "description": "HUD label for client-estimated average output speed.",
     "placeholders": {

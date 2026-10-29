@@ -53,7 +53,7 @@ func TestP10cHUDLabelOmitsCwdAndKeepsBranch(t *testing.T) {
 		},
 	}
 	got := state.piHUDLabel()
-	want := "Context 50.0% · 128K  main  ↑1.2k ↓300  $0.012  Cache 24%"
+	want := "Context 50.0% · 128K  ↑1.2k ↓300  Cache hit 24%  main  $0.012"
 	if got != want {
 		t.Fatalf("HUD label = %q, want %q", got, want)
 	}

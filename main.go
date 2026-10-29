@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.18.2"
+	appVersion = "0.18.3"
 )
 
 func appBuildVersion() string {
@@ -3160,6 +3160,7 @@ func (s *appState) addPiTurnOutputTokens(count int64) {
 	if count <= 0 {
 		return
 	}
+	s.hud.liveTurnOutputTokens = 0
 	for i := len(s.chat) - 1; i >= 0; i-- {
 		if s.chat[i].role != chatUser {
 			continue

@@ -284,7 +284,7 @@ func TestP11AssistantMessageTiming(t *testing.T) {
 	}
 }
 
-func TestP11HUDLabelIncludesContextAndStatus(t *testing.T) {
+func TestP11HUDFooterLabelIncludesStatsAndStatus(t *testing.T) {
 	percent := 3.7
 	state := &appState{
 		piConn: piConnected,
@@ -301,7 +301,7 @@ func TestP11HUDLabelIncludesContextAndStatus(t *testing.T) {
 		},
 	}
 	label := state.piHUDLabel()
-	if !strings.HasPrefix(label, "Context 3.7%  main  ↑12k ↓3.0k  $0.020  ") ||
+	if !strings.HasPrefix(label, "Context 3.7%  ↑12k ↓3.0k  Cache hit 0%  Avg 48.0 t/s  main  $0.020  ") ||
 		!strings.HasSuffix(label, "  checking") {
 		t.Fatalf("HUD label order or spacing = %q", label)
 	}

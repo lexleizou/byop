@@ -8926,13 +8926,13 @@ func (msgs Messages) NoticeModelThinkingRestoreFailed(error string) string {
 	return Catalog.Format(msgs.locale, "noticeModelThinkingRestoreFailed", map[string]any{"error": error})
 }
 
-// HudCache says "Cache {percent}%"
+// HudCache says "Cache hit {percent}%"
 // in the language the app shows.
 //
 // HUD label for cache hit rate.
 func HudCache(percent string) string { return In(i18n.Locale()).HudCache(percent) }
 
-// HudCache says "Cache {percent}%"
+// HudCache says "Cache hit {percent}%"
 // in the language of msgs.
 //
 // HUD label for cache hit rate.
@@ -8998,13 +8998,13 @@ func (msgs Messages) HudCurrentSpeedTooltip(speed string) string {
 	return Catalog.Format(msgs.locale, "hudCurrentSpeedTooltip", map[string]any{"speed": speed})
 }
 
-// HudAverageSpeed says "Avg {speed} tok/s"
+// HudAverageSpeed says "Avg {speed} t/s"
 // in the language the app shows.
 //
 // HUD label for client-estimated average output speed.
 func HudAverageSpeed(speed string) string { return In(i18n.Locale()).HudAverageSpeed(speed) }
 
-// HudAverageSpeed says "Avg {speed} tok/s"
+// HudAverageSpeed says "Avg {speed} t/s"
 // in the language of msgs.
 //
 // HUD label for client-estimated average output speed.

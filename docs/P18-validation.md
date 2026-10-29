@@ -1,6 +1,31 @@
 # P18 validation
 
-Date: 2026-10-29. Base: `9b9188a`. App: `0.18.2`.
+Date: 2026-10-29. Base: `89fbd4f`. App: `0.18.3`.
+
+## P18.3 implemented
+
+- The latest-turn transcript HUD now contains only the model logo/name, this turn's output token count (`↓N`) and the live TPS capsule. Full context usage is no longer repeated in the transcript.
+- During a multi-step tool turn, every exact Pi output count is added to the logical assistant turn and clears the estimate accumulated before that exact event. While the run is active the HUD shows cumulative exact tokens plus only the estimate streamed after the latest exact event; the completed HUD uses exact tokens only.
+- The 20 px Composer footer remains separate and is now split into left and right groups. The left group starts at the left edge with the complete `piHUDContextSummary` (percentage, used/window and auto-compaction status), input/output tokens, cache-hit percentage, current-session average TPS, branch and cost. It falls back to capacity-only context text only when usage cannot be obtained; OV and subsequent `extStatus` entries are right-aligned in the right group.
+- The visible cache label is now `Cache hit {percent}%` / `缓存命中 {percent}%`. The average TPS label reuses `hudAverageSpeed` and `piHUDAverageTokensPerSecond`.
+- The footer keeps its existing tooltip, including cumulative cache hit rate, cache read/write tokens, average output speed and current speed. Flexible items shrink or ellipsize inside their group, so the 20 px row does not expand or overflow at 1100 px.
+- BYOP Light, BYOP Dark and J Agent keep their existing transcript styling. Plugin versions, plugin settings, SQLite data and Fuyao hot-restart behavior were not changed.
+
+## P18.3 automated checks
+
+- P18.3 tests cover transcript item order without context; exact `40` followed by an estimate of `3` rendering `↓43`; a second exact event accumulating to `47`, clearing the estimate and completing at exact-only `↓47`; full-context footer text and the capacity-only fallback; footer left/right grouping and left-group order; visible average TPS; the revised cache-hit label; right-aligned OV status; the fixed 20 px footer height; and all three appearances at `1100×560`, `1180×760` and `1440×900`.
+- `go test ./... -count=1 -timeout 3m`: 518 passed in 3 packages.
+- `gofmt -l .`, `go vet ./...`, `go build -o byop .` and `git diff --check` passed with no output.
+- `mygo generate` regenerated `locales/catalog_gen.go`; `mygo i18n check .` found 812 messages in `en` and `zh-Hans` with no errors.
+- No JavaScript changed, so `node --check` did not apply to P18.3.
+
+## P18.3 native QA
+
+- Built and installed BYOP `0.18.3`; the bundle version and strict code-sign verification passed.
+- A real Qwen3.8 Flash Next turn verified the transcript row contains only model logo/name, `↓22` output tokens and `40.4 t/s`, with no repeated context.
+- Footer verification showed a left group beginning with `上下文 12.1% · 31.6K / 262.1K（自动）`, followed by `↑94k ↓235`, `缓存命中 0%` and `平均 40.4 t/s`; the `OV` and remaining extension status group stayed right-aligned.
+- Light, Dark and J Agent themes were inspected. The `1100×560` layout kept the left and right footer groups separated without increasing the 20 px row height.
+- Screenshots: `docs/screenshots/p18-3-footer-light.png`, `p18-3-footer-dark.png`, `p18-3-footer-jagent.png`, `p18-3-footer-jagent-1100x560.png`.
 
 ## P18.2 implemented
 
@@ -36,7 +61,7 @@ Date: 2026-10-29. Base: `9b9188a`. App: `0.18.2`.
 - Thinking effort remains capability-driven from `GetAvailableThinkingLevels`; no model-specific level list was added.
 - The composer now shows separate model and thinking chips. The thinking chip opens a compact, theme-derived slider popover with a header, current level, segmented progress track, stop labels, hover and focus states.
 - Existing immediate pending state and debounced Pi commit/readback remain in place.
-- The HUD orders current model, context usage, and current TPS first. Context includes percentage, used tokens, window, and the auto-compaction suffix when available.
+- P18.3 supersedes the earlier transcript context item: the transcript HUD orders model, this turn's output tokens and current TPS; the Composer footer retains context capacity.
 - TPS uses a rolling live estimate during streaming and replaces it with Pi's exact final output sample. Cumulative averages remain tooltip-only.
 - `thinking_delta` and structured thinking blocks now use an independent reasoning state. The transcript renders one grey lightbulb line with live updates and a collapsed elapsed summary; assistant text, session naming, and persisted chat history remain unchanged.
 
@@ -59,6 +84,6 @@ Date: 2026-10-29. Base: `9b9188a`. App: `0.18.2`.
 ## Remaining bounds
 
 - Live TPS is estimated from streamed deltas; exact Pi output usage calibrates it at each completed assistant message.
-- A compact turn HUD ellipsizes the model name first while reserving room for context and TPS. Lower-priority Composer metadata may also ellipsize within the existing 20 px row.
+- A compact turn HUD ellipsizes the model name first while reserving room for this turn's output tokens and TPS. Lower-priority Composer metadata may also ellipsize within its left or right footer group.
 - No claim of full accessibility conformance or a fixed model list: reasoning levels still come from Pi.
 - The latest response uses the current global model/context state. If the user switches models after a completed response, that response's model label changes until a new prompt creates the next turn; persisting per-response snapshots would require a separate data change.

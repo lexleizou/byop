@@ -200,7 +200,7 @@ func TestP10cTranscriptHUDRemainsVisibleInNarrowChatMainArea(t *testing.T) {
 	if got := state.chatMainWidth(1100); got >= 720 {
 		t.Fatalf("chat main width = %vpx, want the narrow-transcript path below 720px", got)
 	}
-	assertInsideViewport(t, tt, state.piHUDContextLabel(), 560)
+	assertInsideViewport(t, tt, "↓152", 560)
 	assertInsideViewport(t, tt, textArgs("hudTokensPerSecond", map[string]any{"speed": "51.2"}), 560)
 }
 

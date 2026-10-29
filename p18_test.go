@@ -174,7 +174,7 @@ func TestP18CurrentTPSThresholdsUseSemanticThemeColors(t *testing.T) {
 	}
 }
 
-func TestP18HUDShowsCurrentModelContextAndResetsStaleSpeed(t *testing.T) {
+func TestP18HUDShowsModelFooterContextAndResetsStaleSpeed(t *testing.T) {
 	state := &appState{
 		piConn:          piConnected,
 		piModelProvider: "magpie",

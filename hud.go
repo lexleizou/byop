@@ -457,15 +457,22 @@ const (
 	hudItemMeta hudItemKind = iota
 	hudItemModel
 	hudItemTurnTokens
-	hudItemContext
 	hudItemTPS
 	hudItemContextCapacity
+)
+
+type hudItemSide uint8
+
+const (
+	hudItemLeft hudItemSide = iota
+	hudItemRight
 )
 
 type hudItem struct {
 	label, value string
 	flexible     bool
 	kind         hudItemKind
+	side         hudItemSide
 }
 
 func (s *appState) piHUDConnected() bool {
@@ -476,12 +483,9 @@ func (s *appState) piHUDPrimaryItems() []hudItem {
 	if !s.piHUDConnected() {
 		return nil
 	}
-	items := make([]hudItem, 0, 3)
+	items := make([]hudItem, 0, 2)
 	if model := s.piHUDModelName(); model != "" {
 		items = append(items, hudItem{value: model, flexible: true, kind: hudItemModel})
-	}
-	if context := piHUDContextSummary(s.hud.stats, s.hud.contextWindowFallback, s.hud.autoCompact); context != "" {
-		items = append(items, hudItem{value: context, kind: hudItemContext})
 	}
 	if rate, ok := s.piHUDCurrentTPS(); ok {
 		items = append(items, hudItem{
@@ -500,8 +504,8 @@ func (s *appState) piHUDTurnItems(message *chatMessage) []hudItem {
 	if message != nil {
 		outputTokens = message.outputTokens
 	}
-	if outputTokens <= 0 && s.runActive() {
-		outputTokens = int64(math.Round(s.hud.liveTurnOutputTokens))
+	if s.runActive() {
+		outputTokens += int64(math.Round(s.hud.liveTurnOutputTokens))
 	}
 	if outputTokens <= 0 {
 		return items
@@ -545,18 +549,23 @@ func (s *appState) piHUDFooterItems() []hudItem {
 	if !s.piHUDConnected() {
 		return nil
 	}
-	items := make([]hudItem, 0, 7)
-	if context := piHUDContextCapacitySummary(
+	items := make([]hudItem, 0, 8)
+	context := piHUDContextSummary(
 		s.hud.stats,
 		s.hud.contextWindowFallback,
 		s.hud.autoCompact,
-	); context != "" {
+	)
+	if context == "" {
+		context = piHUDContextCapacitySummary(
+			s.hud.stats,
+			s.hud.contextWindowFallback,
+			s.hud.autoCompact,
+		)
+	}
+	if context != "" {
 		items = append(items, hudItem{
 			value: context, flexible: true, kind: hudItemContextCapacity,
 		})
-	}
-	if branch := strings.TrimSpace(s.hud.branch); branch != "" {
-		items = append(items, hudItem{value: branch, flexible: true})
 	}
 	if stats := s.hud.stats; stats != nil {
 		tokens := make([]string, 0, 4)
@@ -569,13 +578,6 @@ func (s *appState) piHUDFooterItems() []hudItem {
 		if len(tokens) > 0 {
 			items = append(items, hudItem{value: strings.Join(tokens, " ")})
 		}
-		if stats.Cost > 0 || s.hud.usingSubscription {
-			cost := fmt.Sprintf("$%.3f", stats.Cost)
-			if s.hud.usingSubscription {
-				cost += text("hudSubscriptionSuffix")
-			}
-			items = append(items, hudItem{value: cost, flexible: true})
-		}
 		if rate, ok := piCacheHitRate(stats); ok {
 			value := fmt.Sprintf("%d%%", int64(math.Round(rate)))
 			label := strings.TrimSpace(strings.TrimSuffix(
@@ -584,6 +586,23 @@ func (s *appState) piHUDFooterItems() []hudItem {
 			))
 			items = append(items, hudItem{label: label, value: value, flexible: true})
 		}
+	}
+	if speed, ok := s.piHUDAverageTokensPerSecond(); ok {
+		items = append(items, hudItem{
+			value: textArgs("hudAverageSpeed", map[string]any{
+				"speed": fmt.Sprintf("%.1f", speed),
+			}),
+		})
+	}
+	if branch := strings.TrimSpace(s.hud.branch); branch != "" {
+		items = append(items, hudItem{value: branch, flexible: true})
+	}
+	if stats := s.hud.stats; stats != nil && (stats.Cost > 0 || s.hud.usingSubscription) {
+		cost := fmt.Sprintf("$%.3f", stats.Cost)
+		if s.hud.usingSubscription {
+			cost += text("hudSubscriptionSuffix")
+		}
+		items = append(items, hudItem{value: cost, flexible: true})
 	}
 	if len(s.hud.extStatus) > 0 {
 		keys := make([]string, 0, len(s.hud.extStatus))
@@ -595,7 +614,9 @@ func (s *appState) piHUDFooterItems() []hudItem {
 		sort.Strings(keys)
 		for _, key := range keys {
 			items = append(items, hudItem{
-				value: truncateHUDStatus(s.hud.extStatus[key], 40), flexible: true,
+				value:    truncateHUDStatus(s.hud.extStatus[key], 40),
+				flexible: true,
+				side:     hudItemRight,
 			})
 		}
 	}
@@ -611,22 +632,7 @@ func (s *appState) piHUDItems() []hudItem {
 
 func mergePiHUDItems(primary, footer []hudItem) []hudItem {
 	items := append([]hudItem(nil), primary...)
-	hasContext := false
-	for _, item := range primary {
-		if item.kind == hudItemContext {
-			hasContext = true
-			break
-		}
-	}
-	for _, item := range footer {
-		// The combined compatibility label already carries the full context
-		// usage, so it does not repeat the footer's capacity-only copy.
-		if hasContext && item.kind == hudItemContextCapacity {
-			continue
-		}
-		items = append(items, item)
-	}
-	return items
+	return append(items, footer...)
 }
 
 func piHUDItemsLabel(items []hudItem) string {
@@ -646,10 +652,7 @@ func (s *appState) piHUDLabel() string {
 }
 
 func (s *appState) piHUDTurnLabel(message *chatMessage) string {
-	return piHUDItemsLabel(mergePiHUDItems(
-		s.piHUDTurnItems(message),
-		s.piHUDFooterItems(),
-	))
+	return piHUDItemsLabel(s.piHUDTurnItems(message))
 }
 
 func (s *appState) piHUDFooterLabel() string {
@@ -696,18 +699,6 @@ func (s *appState) piHUDTurn(c *ui.Context, message *chatMessage) {
 				components.Text(c, item.value).FontSize(fontSmall).LineHeight(1.2).
 					FontWeight(500).FontFeatures("tnum").TextColor(p.muted).
 					SingleLine().Shrink(0)
-			case hudItemContext:
-				percent, ok := piContextPercent(s.hud.stats)
-				color := p.muted
-				switch hudContextSeverity(percent, ok) {
-				case 2:
-					color = p.danger
-				case 1:
-					color = p.warning
-				}
-				components.Text(c, item.value).Key("conversation-hud-context").
-					FontSize(fontSmall).LineHeight(1.2).FontWeight(500).
-					FontFeatures("tnum").TextColor(color).SingleLine().Shrink(0)
 			case hudItemTPS:
 				rate, _ := s.piHUDCurrentTPS()
 				color, background, border := piTPSStyle(t, rate)
@@ -737,43 +728,79 @@ func (s *appState) piHUDItemsRow(
 		return
 	}
 	t := c.Theme()
-	ui.Row(c).Key("pi-hud").Label(label).Grow(1).MinWidth(0).Clip().
-		Justify(ui.Center).AlignItems(ui.Center).Gap(12).Tooltip(tooltip).
+	left, right := splitHUDItems(items)
+	ui.Row(c).Key("pi-hud").Label(label).FillWidth().MinWidth(0).Clip().
+		AlignItems(ui.Center).Gap(12).Tooltip(tooltip).
 		Children(func() {
-			for _, item := range items {
-				row := ui.Row(c)
-				if item.flexible {
-					row.Shrink(1).MinWidth(0)
-				} else {
-					row.Shrink(0)
-				}
-				row.AlignItems(ui.Center).Gap(4).Children(func() {
-					color := t.Text.Mix(t.TextMuted, .45)
-					if item.kind == hudItemContextCapacity {
-						if percent, ok := piContextPercent(s.hud.stats); ok {
-							switch hudContextSeverity(percent, ok) {
-							case 2:
-								color = t.Danger
-							case 1:
-								color = t.Warning
-							}
-						}
-					}
-					if item.label != "" {
-						label := ui.Text(c, item.label).FontSize(fontCaption).LineHeight(1.2).
-							FontWeight(400).TextColor(t.TextMuted).SingleLine()
-						if item.flexible {
-							label.MinWidth(0).Ellipsis("…")
-						}
-					}
-					value := ui.Text(c, item.value).FontSize(fontCaption).LineHeight(1.2).
-						FontWeight(500).FontFeatures("tnum").TextColor(color).SingleLine()
-					if item.flexible {
-						value.Grow(1).MinWidth(0).Ellipsis("…")
-					}
-				})
+			if len(left) > 0 {
+				s.piHUDItemGroup(c, t, left, false)
+			} else if len(right) > 0 {
+				ui.Spacer(c).Grow(1)
+			}
+			if len(right) > 0 {
+				s.piHUDItemGroup(c, t, right, true)
 			}
 		})
+}
+
+func splitHUDItems(items []hudItem) (left, right []hudItem) {
+	for _, item := range items {
+		if item.side == hudItemRight {
+			right = append(right, item)
+		} else {
+			left = append(left, item)
+		}
+	}
+	return left, right
+}
+
+func (s *appState) piHUDItemGroup(
+	c *ui.Context,
+	t *ui.Theme,
+	items []hudItem,
+	right bool,
+) {
+	group := ui.Row(c).MinWidth(0).Clip().AlignItems(ui.Center).Gap(12)
+	if right {
+		group.Key("pi-hud-right").Shrink(1)
+	} else {
+		group.Key("pi-hud-left").Grow(1)
+	}
+	group.Children(func() {
+		for _, item := range items {
+			row := ui.Row(c)
+			if item.flexible {
+				row.Shrink(1).MinWidth(0)
+			} else {
+				row.Shrink(0)
+			}
+			row.AlignItems(ui.Center).Gap(4).Children(func() {
+				color := t.Text.Mix(t.TextMuted, .45)
+				if item.kind == hudItemContextCapacity {
+					if percent, ok := piContextPercent(s.hud.stats); ok {
+						switch hudContextSeverity(percent, ok) {
+						case 2:
+							color = t.Danger
+						case 1:
+							color = t.Warning
+						}
+					}
+				}
+				if item.label != "" {
+					label := ui.Text(c, item.label).FontSize(fontCaption).LineHeight(1.2).
+						FontWeight(400).TextColor(t.TextMuted).SingleLine()
+					if item.flexible {
+						label.MinWidth(0).Ellipsis("…")
+					}
+				}
+				value := ui.Text(c, item.value).FontSize(fontCaption).LineHeight(1.2).
+					FontWeight(500).FontFeatures("tnum").TextColor(color).SingleLine()
+				if item.flexible {
+					value.Grow(1).MinWidth(0).Ellipsis("…")
+				}
+			})
+		}
+	})
 }
 
 func (s *appState) piHUDFooter(c *ui.Context) {

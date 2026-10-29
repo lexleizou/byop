@@ -2712,7 +2712,7 @@
       }
     }
   },
-  "hudCache": "Cache {percent}%",
+  "hudCache": "Cache hit {percent}%",
   "@hudCache": {
     "description": "HUD label for cache hit rate.",
     "placeholders": {
@@ -2757,7 +2757,7 @@
       }
     }
   },
-  "hudAverageSpeed": "Avg {speed} tok/s",
+  "hudAverageSpeed": "Avg {speed} t/s",
   "@hudAverageSpeed": {
     "description": "HUD label for client-estimated average output speed.",
     "placeholders": {

@@ -867,7 +867,7 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 		}
 		if hudVisible {
 			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
-				Padding(0).Justify(ui.Center).AlignItems(ui.Center).
+				Padding(0).AlignItems(ui.Center).
 				Children(func() { s.piHUDFooter(c) })
 		}
 	})
