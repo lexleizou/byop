@@ -125,3 +125,59 @@ func TestP19PiStatusPopoverFitsReconnectButton(t *testing.T) {
 		t.Fatalf("reconnect button overflows the popover: button=%#v title=%#v", button, panel)
 	}
 }
+
+// TestP19NodeRuntimeResolvesOutsidePATH covers the plugin card that showed
+// "Node.js ≥25 not found: executable was not found in PATH" in a window opened
+// from Finder: the app PATH has no package manager folders, so Node must still
+// be found in the common install folders or the login shell PATH.
+func TestP19NodeRuntimeResolvesOutsidePATH(t *testing.T) {
+	// Tests in this group swap package variables and must not run in parallel.
+	t.Setenv("BYOP_NODE", "")
+	t.Setenv("PATH", t.TempDir())
+
+	installDir := t.TempDir()
+	nodePath := filepath.Join(installDir, "node")
+	if err := os.WriteFile(nodePath, []byte("#!/bin/sh\necho v25.0.0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	originalDirs := piCommonInstallDirectories
+	originalLoginPath := piLoginShellPATH
+	originalSync := piLoginShellPATHSync
+	installDirs := []string(nil)
+	loginPath := ""
+	piCommonInstallDirectories = func() []string { return installDirs }
+	piLoginShellPATH = func() string { return loginPath }
+	t.Cleanup(func() {
+		piCommonInstallDirectories = originalDirs
+		piLoginShellPATH = originalLoginPath
+		piLoginShellPATHSync = originalSync
+	})
+	resetCache := func() { piLoginShellPATHSync = &loginShellPATHState{} }
+
+	host := newPluginHost(pluginHostVersion, nil, pluginHostWorkspace(t.TempDir()),
+		pluginHostSettings(newPluginSettingsStore(t.TempDir())))
+	resetCache()
+	if _, err := host.nodeRuntime(); err == nil {
+		t.Fatal("node resolved with no PATH, common folders or login PATH")
+	}
+
+	// A failed lookup must stay retryable: the login shell probe may finish
+	// after the first plugin start, and "重新加载" should then succeed.
+	installDirs = []string{installDir}
+	if got, err := host.nodeRuntime(); err != nil || got != nodePath {
+		t.Fatalf("common install folder: got %q err %v, want %q", got, err, nodePath)
+	}
+	if got := host.nodeVersion; got != "v25.0.0" {
+		t.Fatalf("node version = %q, want v25.0.0", got)
+	}
+
+	host = newPluginHost(pluginHostVersion, nil, pluginHostWorkspace(t.TempDir()),
+		pluginHostSettings(newPluginSettingsStore(t.TempDir())))
+	installDirs = nil
+	loginPath = installDir
+	resetCache()
+	if got, err := host.nodeRuntime(); err != nil || got != nodePath {
+		t.Fatalf("login shell PATH: got %q err %v, want %q", got, err, nodePath)
+	}
+}

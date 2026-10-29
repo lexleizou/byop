@@ -142,7 +142,7 @@ flowchart LR
 要求：
 
 - Go 1.27.1 或更高版本；
-- Node.js 25 或更高版本（只有使用 Node 插件时需要，可用 `BYOP_NODE` 指定路径）；
+- Node.js 25 或更高版本（只有使用 Node 插件时需要）：按 `BYOP_NODE`、进程 PATH、常见安装目录、登录 shell PATH 的顺序查找；
 - 单独安装并可执行的 Pi CLI；
 - Pi 的模型登录和 provider 配置已完成。
 

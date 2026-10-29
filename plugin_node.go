@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -43,24 +44,33 @@ func nodePermissionArgsWithData(
 	return append(args, entryPath)
 }
 
+// nodeRuntime finds the Node.js executable the plugin runtime runs. A window
+// started from Finder or Launchpad inherits a short PATH without the package
+// manager folders, so the search follows the same order as the Pi CLI: the
+// explicit setting, this process PATH, the common install folders, then the
+// login shell PATH. Only a resolved runtime is cached, so a plugin retried
+// after a failed start can find Node once the login probe succeeds.
 func (h *pluginHost) nodeRuntime() (string, error) {
 	h.nodeMu.Lock()
 	defer h.nodeMu.Unlock()
 	if h.nodeChecked {
-		return h.nodePath, h.nodeErr
+		return h.nodePath, nil
 	}
-	h.nodeChecked = true
 
 	binary := strings.TrimSpace(os.Getenv("BYOP_NODE"))
-	if binary == "" {
-		resolved, err := exec.LookPath("node")
+	switch {
+	case binary == "":
+		resolved, err := resolveNodeCommand("node")
 		if err != nil {
-			h.nodeErr = errorsNodeNotFound("executable was not found in PATH")
+			h.nodeErr = errorsNodeNotFound(
+				"executable was not found in PATH or the common Node.js folders")
 			return "", h.nodeErr
 		}
 		binary = resolved
-	} else if !strings.ContainsRune(binary, '/') {
-		if resolved, err := exec.LookPath(binary); err == nil {
+	case !strings.ContainsRune(binary, '/'):
+		// A bare setting is a command name: keep it as written when it cannot
+		// be found so the version check reports what the user set.
+		if resolved, err := resolveNodeCommand(binary); err == nil {
 			binary = resolved
 		}
 	}
@@ -87,7 +97,26 @@ func (h *pluginHost) nodeRuntime() (string, error) {
 	}
 	h.nodePath = binary
 	h.nodeVersion = version
+	h.nodeChecked = true
 	return binary, nil
+}
+
+// resolveNodeCommand looks for a Node.js command in this process PATH first,
+// then in the folders where Node.js is commonly installed, and last in the
+// login shell PATH.
+func resolveNodeCommand(command string) (string, error) {
+	if resolved, err := exec.LookPath(command); err == nil {
+		return resolved, nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if found := findExecutableInDirectories(command, piCommonInstallDirectories()); found != "" {
+		return found, nil
+	}
+	if found := findExecutableInDirectories(command, filepath.SplitList(cachedPiLoginShellPATH(ctx))); found != "" {
+		return found, nil
+	}
+	return "", exec.ErrNotFound
 }
 
 func errorsNodeNotFound(detail string) error {
