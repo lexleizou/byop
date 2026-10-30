@@ -1653,6 +1653,8 @@ func (s *appState) composerModelChip(c *ui.Context, label, provider string, cont
 	}
 	chip.Children(func() {
 		components.Text(c, label).MinWidth(0).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
+		modelReleaseBadgeNode(c, s.pluginRegistry.modelLabelBadge(
+			s.piModelProvider, s.piModelID, s.piModelName))
 		if !readOnly {
 			components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).TextColor(t.TextMuted.Alpha(.7))
 		}
@@ -1665,6 +1667,21 @@ func (s *appState) composerModelChip(c *ui.Context, label, provider string, cont
 		s.chatView.modelPicker.Open = !s.chatView.modelPicker.Open
 		s.chatView.modelPicker.Query = ""
 	}
+}
+
+// modelReleaseBadgeNode draws the fixed release marker a plugin declared for
+// the current model, such as the 1017 snapshot tag on an official Flash model.
+// No claim means no node, so an unclaimed chip renders exactly as before.
+func modelReleaseBadgeNode(c *ui.Context, badge string) {
+	if badge == "" {
+		return
+	}
+	t := c.Theme()
+	ui.Row(c).Key("model-release-badge").Shrink(0).Padding(2, 6).Radius(v12ChipRadius).
+		Background(t.Surface).AlignItems(ui.Center).Children(func() {
+		components.Text(c, badge).SingleLine().FontSize(fontSmall).FontWeight(650).
+			TextColor(t.Text)
+	})
 }
 
 func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
@@ -1684,6 +1701,8 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 	chip.Children(func() {
 		components.Text(c, label).MinWidth(0).SingleLine().
 			FontSize(fontSmall).TextColor(t.TextMuted)
+		modelReleaseBadgeNode(c, s.pluginRegistry.modelLabelBadge(
+			s.piModelProvider, s.piModelID, s.piModelName))
 		components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).
 			TextColor(t.TextMuted.Alpha(.7))
 	})

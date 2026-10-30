@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "local.model-release-labels",
+  "name": "Model Release Labels",
+  "version": "0.1.0",
+  "description": "Fixed release markers after known model names, such as 1017 for the official DeepSeek Flash snapshot.",
+  "runtime": "node",
+  "entry": "plugin.mjs",
+  "icon": "plugins",
+  "compatibility": {
+    "host": ">=0.18.7 <1.0.0",
+    "pluginApi": "1"
+  },
+  "contributes": {
+    "modelLabels": [
+      {
+        "id": "deepseek-flash-1017",
+        "badge": "1017",
+        "match": {
+          "providers": [
+            "magpie",
+            "deepseek",
+            "opencode-go",
+            "workbuddy",
+            "workbuddy-ai"
+          ],
+          "modelId": "deepseek-flash"
+        }
+      },
+      {
+        "id": "deepseek-v4-1-flash-1017",
+        "badge": "1017",
+        "match": {
+          "providers": [
+            "magpie",
+            "deepseek",
+            "opencode-go",
+            "workbuddy",
+            "workbuddy-ai"
+          ],
+          "modelId": "deepseek-v4.1-flash"
+        }
+      }
+    ]
+  },
+  "activation": {
+    "events": []
+  },
+  "capabilities": {
+    "workspace": "none",
+    "files": "none",
+    "network": false,
+    "process": "none"
+  }
+}

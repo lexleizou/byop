@@ -210,6 +210,17 @@ Setting field keys are unique across the plugin. The supported field types are
 setting fields. Select fields require unique, non-empty options. Missing
 defaults resolve to `""`, `false`, `0` or the first select option.
 
+A plugin may declare `modelLabels`: fixed release markers the host renders after
+the model name in the composer, such as the `1017` snapshot marker on an official
+Flash model. Each entry needs a contribution `id`, a `badge` of 1-12 printable
+characters without surrounding space, and a `match` with at least one provider
+plus `modelId` or `modelName`. Matching is exact and case-insensitive, and an
+omitted field matches any value; a declared `modelId` also matches the part after
+the last `/` of the reported id, because Pi ids can carry a channel prefix. The
+first claim in registry order wins, a later overlapping claim still registers and
+is reported as a registry issue. The badge is the plugin's declaration: the host
+never verifies it and it does not expire.
+
 ## UI Language Packs
 
 The UI language pack directory and source language are declared in

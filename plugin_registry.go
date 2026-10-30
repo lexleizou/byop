@@ -170,6 +170,7 @@ func scanPluginRegistry(rootSpecs []pluginRootSpec) pluginRegistry {
 		}
 		return left.SourceDirectory < right.SourceDirectory
 	})
+	markModelLabelConflicts(&registry)
 	return registry
 }
 
@@ -275,7 +276,160 @@ func pluginContributionIDs(manifest *pluginManifest) []string {
 	for _, contribution := range manifest.Contributes.Automations {
 		ids = append(ids, contribution.ID)
 	}
+	for _, contribution := range manifest.Contributes.ModelLabels {
+		ids = append(ids, contribution.ID)
+	}
 	return ids
+}
+
+// modelLabelBadge returns the release marker a registered plugin declared for
+// the model the composer shows. Entries are already sorted by plugin id, so the
+// first claim wins and the result stays stable across rescans. An empty string
+// means no plugin claimed this model.
+func (registry pluginRegistry) modelLabelBadge(provider, modelID, modelName string) string {
+	for _, entry := range registry.Entries {
+		if entry.Status != pluginRegistered || entry.Manifest == nil {
+			continue
+		}
+		for _, contribution := range entry.Manifest.Contributes.ModelLabels {
+			if pluginModelLabelMatches(contribution.Match, provider, modelID, modelName) {
+				return strings.TrimSpace(contribution.Badge)
+			}
+		}
+	}
+	return ""
+}
+
+// pluginModelLabelMatches reports whether one contribution applies to a model.
+// Declared values are compared case-insensitively; an empty ModelID or
+// ModelName matches any value.
+func pluginModelLabelMatches(match pluginModelMatch, provider, modelID, modelName string) bool {
+	if !pluginModelProviderMatches(match.Providers, provider) {
+		return false
+	}
+	return pluginModelIdentifierMatches(match.ModelID, modelID) &&
+		pluginModelFieldMatches(match.ModelName, modelName)
+}
+
+func pluginModelProviderMatches(providers []string, provider string) bool {
+	for _, candidate := range providers {
+		if modelTokenEqual(candidate, provider) {
+			return true
+		}
+	}
+	return false
+}
+
+func pluginModelFieldMatches(declared, actual string) bool {
+	if strings.TrimSpace(declared) == "" {
+		return true
+	}
+	return modelTokenEqual(declared, actual)
+}
+
+// pluginModelIdentifierMatches compares model ids and also accepts a declared id
+// equal to the part after the last slash, because Pi model ids may carry a
+// channel prefix such as "opencode-go/deepseek-flash".
+func pluginModelIdentifierMatches(declared, actual string) bool {
+	if strings.TrimSpace(declared) == "" {
+		return true
+	}
+	if modelTokenEqual(declared, actual) {
+		return true
+	}
+	return modelTokenEqual(declared, modelIdentifierSuffix(actual))
+}
+
+func modelIdentifierSuffix(id string) string {
+	if index := strings.LastIndex(id, "/"); index >= 0 {
+		return id[index+1:]
+	}
+	return id
+}
+
+func modelTokenEqual(left, right string) bool {
+	return strings.EqualFold(strings.TrimSpace(left), strings.TrimSpace(right))
+}
+
+// modelLabelMatchesOverlap reports whether two match rules can select the same
+// model. It is intentionally conservative: two rules count as overlapping only
+// when every field is equal or wildcarded on one side.
+func modelLabelMatchesOverlap(left, right pluginModelMatch) bool {
+	if !modelLabelProviderSetsOverlap(left.Providers, right.Providers) {
+		return false
+	}
+	return modelLabelIdentifierCompatible(left.ModelID, right.ModelID) &&
+		modelLabelFieldCompatible(left.ModelName, right.ModelName)
+}
+
+// modelLabelIdentifierCompatible treats a channel-prefixed id as the same model
+// as its bare id, so two claims cannot silently target one model.
+func modelLabelIdentifierCompatible(left, right string) bool {
+	if strings.TrimSpace(left) == "" || strings.TrimSpace(right) == "" {
+		return true
+	}
+	if modelTokenEqual(left, right) {
+		return true
+	}
+	return modelTokenEqual(modelIdentifierSuffix(left), modelIdentifierSuffix(right))
+}
+
+func modelLabelProviderSetsOverlap(left, right []string) bool {
+	for _, candidate := range left {
+		for _, other := range right {
+			if modelTokenEqual(candidate, other) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func modelLabelFieldCompatible(left, right string) bool {
+	if strings.TrimSpace(left) == "" || strings.TrimSpace(right) == "" {
+		return true
+	}
+	return modelTokenEqual(left, right)
+}
+
+// markModelLabelConflicts records, as registry issues, the model label claims
+// that overlap an earlier claim. The earlier plugin keeps the badge; the later
+// one still registers, so its other contributions keep working.
+func markModelLabelConflicts(registry *pluginRegistry) {
+	type claim struct {
+		pluginID       string
+		contributionID string
+		match          pluginModelMatch
+	}
+	var claims []claim
+	for _, entry := range registry.Entries {
+		if entry.Status != pluginRegistered || entry.Manifest == nil {
+			continue
+		}
+		for _, contribution := range entry.Manifest.Contributes.ModelLabels {
+			var blocking claim
+			found := false
+			for _, previous := range claims {
+				if modelLabelMatchesOverlap(previous.match, contribution.Match) {
+					blocking, found = previous, true
+					break
+				}
+			}
+			if found {
+				registry.Issues = append(registry.Issues, pluginRegistryIssue{
+					Path: entry.ManifestPath,
+					Message: fmt.Sprintf("model label %q overlaps %s contribution %q; %s keeps the badge",
+						contribution.ID, blocking.pluginID, blocking.contributionID, blocking.pluginID),
+				})
+				continue
+			}
+			claims = append(claims, claim{
+				pluginID:       entry.ID,
+				contributionID: contribution.ID,
+				match:          contribution.Match,
+			})
+		}
+	}
 }
 
 func (registry pluginRegistry) registeredCount() int {

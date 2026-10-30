@@ -24,6 +24,9 @@ const (
 	maxPluginManifestBytes      = 1 << 20
 	maxPluginSettingFields      = 50
 
+	modelLabelBadgeMaxRunes = 12
+	modelLabelMatchMaxRunes = 120
+
 	automationMinIntervalMinutes        = 5
 	automationDefaultMaxDurationMinutes = 30
 	automationMaxDurationMinutes        = 1440
@@ -68,6 +71,7 @@ type pluginContributions struct {
 	Settings       []pluginSettingContribution    `json:"settings,omitempty"`
 	WebViews       []pluginWebViewContribution    `json:"webviews,omitempty"`
 	Automations    []pluginAutomationContribution `json:"automations,omitempty"`
+	ModelLabels    []pluginModelLabelContribution `json:"modelLabels,omitempty"`
 	AgentExtension string                         `json:"agentExtension,omitempty"`
 	AgentProxy     string                         `json:"agentProxy,omitempty"`
 }
@@ -139,6 +143,24 @@ type pluginAutomationRule struct {
 	At      string `json:"at,omitempty"`
 }
 
+// pluginModelLabelContribution declares a fixed release marker shown after the
+// model name in the composer, for example the 1017 snapshot of an official
+// Flash model. The host renders it; the plugin only supplies the text and the
+// match rule, mirroring how DeepSeek Harness ships its temporary label plugin.
+type pluginModelLabelContribution struct {
+	ID    string           `json:"id"`
+	Badge string           `json:"badge"`
+	Match pluginModelMatch `json:"match"`
+}
+
+// pluginModelMatch names the models a label applies to. An empty ModelID or
+// ModelName matches any value for that field; Providers always has to match.
+type pluginModelMatch struct {
+	Providers []string `json:"providers,omitempty"`
+	ModelID   string   `json:"modelId,omitempty"`
+	ModelName string   `json:"modelName,omitempty"`
+}
+
 type pluginActivation struct {
 	Events []string `json:"events,omitempty"`
 	Lazy   bool     `json:"lazy,omitempty"`
@@ -157,6 +179,7 @@ var (
 	settingKeyPattern      = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9._-]{0,63}$`)
 	pluginVersionPattern   = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 	iconPattern            = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
+	modelProviderPattern   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
 	controlCharacterFilter = regexp.MustCompile(`[\x00-\x1f\x7f]`)
 )
 
@@ -323,6 +346,47 @@ func validatePluginManifest(manifest *pluginManifest) error {
 			(contribution.MaxDurationMinutes < 1 ||
 				contribution.MaxDurationMinutes > automationMaxDurationMinutes) {
 			issues = append(issues, "automation maxDurationMinutes must be 0 or 1-1440: "+contribution.ID)
+		}
+	}
+	for _, contribution := range manifest.Contributes.ModelLabels {
+		label := "model label contribution " + fallback(contribution.ID, "<missing id>")
+		if !contributionIDPattern.MatchString(contribution.ID) {
+			issues = append(issues, label+" id is invalid")
+		} else if _, exists := seenContributions[contribution.ID]; exists {
+			issues = append(issues, "contribution id is duplicated: "+contribution.ID)
+		} else {
+			seenContributions[contribution.ID] = struct{}{}
+		}
+		if strings.TrimSpace(contribution.Badge) == "" ||
+			contribution.Badge != strings.TrimSpace(contribution.Badge) ||
+			pluginTextInvalid(contribution.Badge, modelLabelBadgeMaxRunes) {
+			issues = append(issues, label+
+				" badge must contain 1-12 printable characters without surrounding spaces")
+		}
+		if len(contribution.Match.Providers) == 0 {
+			issues = append(issues, label+" match needs at least one provider")
+		}
+		seenProviders := make(map[string]struct{}, len(contribution.Match.Providers))
+		for _, provider := range contribution.Match.Providers {
+			if !modelProviderPattern.MatchString(provider) {
+				issues = append(issues, label+" match provider is invalid: "+fallback(provider, "<empty>"))
+				continue
+			}
+			if _, exists := seenProviders[strings.ToLower(provider)]; exists {
+				issues = append(issues, label+" match provider is duplicated: "+provider)
+				continue
+			}
+			seenProviders[strings.ToLower(provider)] = struct{}{}
+		}
+		if strings.TrimSpace(contribution.Match.ModelID) == "" &&
+			strings.TrimSpace(contribution.Match.ModelName) == "" {
+			issues = append(issues, label+" match needs modelId or modelName")
+		}
+		if pluginTextInvalid(contribution.Match.ModelID, modelLabelMatchMaxRunes) {
+			issues = append(issues, label+" match modelId is invalid")
+		}
+		if pluginTextInvalid(contribution.Match.ModelName, modelLabelMatchMaxRunes) {
+			issues = append(issues, label+" match modelName is invalid")
 		}
 	}
 	for _, event := range manifest.Activation.Events {
@@ -624,7 +688,8 @@ func (manifest *pluginManifest) contributionCount() int {
 		len(manifest.Contributes.TaskPanels) +
 		len(manifest.Contributes.Settings) +
 		len(manifest.Contributes.WebViews) +
-		len(manifest.Contributes.Automations)
+		len(manifest.Contributes.Automations) +
+		len(manifest.Contributes.ModelLabels)
 }
 
 type semanticVersion struct {
