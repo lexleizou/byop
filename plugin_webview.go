@@ -39,6 +39,10 @@ type pluginWebViewState struct {
 	manifestFingerprint string
 	status              pluginWebViewStatus
 	error               string
+	// themeGeneration is the theme-resource generation the page last saw, so a
+	// selection or rescan that changes resources can push a new payload even
+	// when dark/high/preset flags stayed the same.
+	themeGeneration uint64
 }
 
 type pluginWebViewSnapshot struct {
@@ -55,6 +59,9 @@ func (s *appState) setPluginRegistry(registry pluginRegistry) {
 	s.pluginRegistryMu.Lock()
 	s.pluginRegistry = registry
 	s.pluginRegistryMu.Unlock()
+	// Every publication advances the scan sequence, including a restart replay,
+	// so an in-flight scan can see that its result is stale.
+	s.pluginScanSeq.Add(1)
 }
 
 func (s *appState) pluginRegistrySnapshot() pluginRegistry {
@@ -117,12 +124,37 @@ func (s *appState) openPluginWebView(entry pluginRegistryEntry, view pluginWebVi
 		}
 		return
 	}
-	if _, err := s.ensurePluginWebView(registeredEntry, registeredView); err != nil {
-		s.markPluginWebViewFailed(registeredEntry.ID, registeredView.ID, err)
-	}
-	if s.window != nil {
-		s.window.Invalidate()
-	}
+	s.createPluginWebViewAfterFrame(registeredEntry, registeredView)
+}
+
+// createPluginWebViewAfterFrame moves the native WebView creation outside the
+// current frame build: Window.Update runs from the main-loop source, not from a
+// drawing callback, so the first show can paint. The reopen rechecks the page
+// and contribution before creating, so a user who navigated away or a restart
+// that finished meanwhile is never disturbed.
+func (s *appState) createPluginWebViewAfterFrame(
+	entry pluginRegistryEntry,
+	view pluginWebViewContribution,
+) {
+	s.postUI(func() {
+		if s.page != pagePluginView || s.pluginViewKind != pluginViewWebView ||
+			s.pluginViewPluginID != entry.ID || s.pluginViewID != view.ID {
+			return
+		}
+		if s.pluginRestarting != nil && s.pluginRestarting[entry.ID] {
+			return
+		}
+		registeredEntry, registeredView, ok := s.registeredPluginWebView(entry.ID, view.ID)
+		if !ok || registeredView.Entry != view.Entry {
+			return
+		}
+		if _, err := s.ensurePluginWebView(registeredEntry, registeredView); err != nil {
+			s.markPluginWebViewFailed(entry.ID, view.ID, err)
+		}
+		if s.window != nil {
+			s.window.Invalidate()
+		}
+	})
 }
 
 func (s *appState) ensurePluginWebView(
@@ -228,13 +260,9 @@ func (s *appState) ensurePluginWebView(
 		preset := s.pluginWebViewPreset
 		reduceMotion := s.reducedMotionActive(currentAppearanceReduceMotion())
 		s.pluginWebViewsMu.RUnlock()
-		_ = pluginWebViewThemeEvent.EmitPage(page, currentPluginThemePayload(
-			dark,
-			high,
-			reduceTransparency,
-			reduceMotion,
-			preset,
-		))
+		payload := currentPluginThemePayload(dark, high, reduceTransparency, reduceMotion, preset)
+		payload["themeGeneration"] = currentPluginThemeGeneration()
+		_ = pluginWebViewThemeEvent.EmitPage(page, payload)
 		_ = pluginWebViewLocaleEvent.EmitPage(page, currentPluginLocalePayload(s.locale()))
 	})
 	page.OnDidFailLoad(func(loadErr *mygo.LoadError) {
@@ -338,12 +366,7 @@ func (s *appState) recreatePluginWebView(pluginID, viewID string) {
 		return
 	}
 	s.removePluginWebView(pluginViewCacheKey(pluginID, viewID), nil)
-	if _, err := s.ensurePluginWebView(entry, view); err != nil {
-		s.markPluginWebViewFailed(pluginID, viewID, err)
-	}
-	if s.window != nil {
-		s.window.Invalidate()
-	}
+	s.createPluginWebViewAfterFrame(entry, view)
 }
 
 func (s *appState) refreshPluginView(pluginID, viewID string) {
@@ -478,7 +501,8 @@ func (s *appState) syncPluginWebViewTheme(dark, high, reduceTransparency bool, e
 	cachePluginThemePreset(s.plugins, preset)
 	if s.pluginWebViewDark == dark && s.pluginWebViewHighContrast == high &&
 		s.pluginWebViewReduceTransparency == reduceTransparency &&
-		s.pluginWebViewPreset == preset {
+		s.pluginWebViewPreset == preset &&
+		s.pluginWebViewThemeGeneration == currentPluginThemeGeneration() {
 		s.pluginWebViewsMu.Unlock()
 		return
 	}
@@ -486,6 +510,7 @@ func (s *appState) syncPluginWebViewTheme(dark, high, reduceTransparency bool, e
 	s.pluginWebViewHighContrast = high
 	s.pluginWebViewReduceTransparency = reduceTransparency
 	s.pluginWebViewPreset = preset
+	s.pluginWebViewThemeGeneration = currentPluginThemeGeneration()
 	views := make([]*pluginWebViewState, 0, len(s.pluginWebViews))
 	for _, state := range s.pluginWebViews {
 		views = append(views, state)
@@ -617,6 +642,8 @@ func (s *appState) dispatchPluginWebViewCall(
 	if err != nil {
 		return nil, pluginBridgeError(pluginRPCInvalidParams, err.Error())
 	}
+	s.plugins.beginLease(entry.ID)
+	defer s.plugins.endLease(entry.ID)
 	process, err := s.plugins.ensureActive(ctx, entry, "onWebView:"+viewID)
 	if err != nil {
 		return nil, pluginBridgeError(pluginRPCOtherHostError, err.Error())
@@ -730,6 +757,8 @@ func pluginWebViewBridgeScript(
       "--byop-warning-text": colors.warningText,
       "--byop-danger-text": colors.dangerText,
       "--byop-focus": colors.focus,
+      "--byop-font-family": next.fontFamily && next.fontFamily.body || "",
+      "--byop-font-family-code": next.fontFamily && next.fontFamily.code || "",
       "--byop-font-caption": next.fontSize.caption + "px",
       "--byop-font-body": next.fontSize.body + "px",
       "--byop-font-title": next.fontSize.title + "px",
@@ -740,7 +769,16 @@ func pluginWebViewBridgeScript(
       "--byop-motion-duration": next.motion.duration + "ms",
       "--byop-motion-easing": next.motion.easing
     };
+    // The two font families must hot-unload when a theme is disabled or the
+    // built-in row is chosen: an empty value removes the variable so the
+    // WebView returns to its default instead of keeping the plugin's family.
+    // Every other variable keeps the existing set-if-truthy behavior.
     for (const [name, value] of Object.entries(variables)) {
+      if (name === "--byop-font-family" || name === "--byop-font-family-code") {
+        if (value) root.style.setProperty(name, value);
+        else root.style.removeProperty(name);
+        continue;
+      }
       if (value) root.style.setProperty(name, value);
     }
     root.style.colorScheme = next && next.mode === "dark" ? "dark" : "light";

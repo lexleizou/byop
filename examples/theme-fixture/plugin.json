@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "example.theme-fixture",
+  "name": "%manifestName%",
+  "version": "0.1.0",
+  "description": "%manifestDescription%",
+  "runtime": "node",
+  "entry": "fixture-inert.mjs",
+  "icon": "palette",
+  "compatibility": {
+    "host": ">=0.19.0 <1.0.0",
+    "pluginApi": "1"
+  },
+  "contributes": {
+    "themes": [
+      {
+        "id": "theme.fixture",
+        "title": "Fixture theme",
+        "light": "themes/light.json",
+        "dark": "themes/dark.json",
+        "fontFamily": "Helvetica Neue",
+        "codeFontFamily": "Menlo"
+      }
+    ]
+  },
+  "activation": {
+    "events": []
+  },
+  "capabilities": {
+    "workspace": "none",
+    "files": "none",
+    "network": false,
+    "process": "none"
+  },
+  "l10n": "l10n"
+}

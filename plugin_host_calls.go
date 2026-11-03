@@ -27,6 +27,7 @@ const (
 	maxPluginNoticeRunes         = 200
 	maxPluginTaskDetailRunes     = 1000
 	maxPluginTaskStatusRunes     = 80
+	maxPluginStatusItemRunes     = 60
 	pluginHostConcurrentRequests = 8
 )
 
@@ -53,6 +54,20 @@ type pluginTaskUpdate struct {
 	Tone     string
 }
 
+// pluginStatusItemUpdate is one status item value a plugin published through
+// host.setStatusItem. One plugin declares at most one item, so PluginID is
+// enough to key it, and a value with Hidden set removes it again.
+type pluginStatusItemUpdate struct {
+	PluginID string
+	// ID is the declared contribution this value belongs to, so a stored value
+	// can be checked against what the plugin declares now.
+	ID     string
+	Title  string
+	Text   string
+	Tone   string
+	Hidden bool
+}
+
 var pluginThemePresetCache sync.Map
 
 func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, params json.RawMessage) pluginHandleResult {
@@ -77,13 +92,15 @@ func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, pa
 			reduceTransparency = h.themeReduceTransparency()
 		}
 		reduceMotion := h.reducedMotion.Load()
-		return pluginHandleResult{Value: currentPluginThemePayload(
+		payload := currentPluginThemePayload(
 			dark,
 			high,
 			reduceTransparency,
 			reduceMotion,
 			currentCachedPluginThemePreset(h),
-		)}
+		)
+		payload["themeGeneration"] = currentPluginThemeGeneration()
+		return pluginHandleResult{Value: payload}
 	case "host.getLocale":
 		if err := requireEmptyPluginParams(params); err != nil {
 			return pluginHostFailure(pluginRPCInvalidParams, err.Error())
@@ -191,6 +208,44 @@ func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, pa
 		}
 		if h.onRefreshView != nil {
 			h.onRefreshView(entry.ID, request.View)
+		}
+		return pluginHandleResult{Value: map[string]any{}}
+	case "host.setStatusItem":
+		// The item must be declared so a plugin cannot keep a HUD slot it
+		// never asked for, and the value stays short because the HUD is one
+		// compact line.
+		var request struct {
+			ID     string `json:"id"`
+			Text   string `json:"text"`
+			Tone   string `json:"tone,omitempty"`
+			Hidden bool   `json:"hidden,omitempty"`
+		}
+		if err := decodePluginHostParams(params, &request); err != nil {
+			return pluginHostFailure(pluginRPCInvalidParams, err.Error())
+		}
+		contribution, ok := pluginStatusItemByID(entry.Manifest, request.ID)
+		if !ok {
+			return h.denied(entry.ID, "status item is not declared: "+request.ID)
+		}
+		tone := fallback(request.Tone, "info")
+		if !validPluginTone(tone) {
+			return pluginHostFailure(pluginRPCInvalidParams, "tone must be info, success, warning, or danger")
+		}
+		text := truncateRunes(controlCharacterFilter.ReplaceAllString(
+			strings.TrimSpace(request.Text), ""), maxPluginStatusItemRunes)
+		if text == "" && !request.Hidden {
+			return pluginHostFailure(pluginRPCInvalidParams, "text is required unless hidden")
+		}
+		update := pluginStatusItemUpdate{
+			PluginID: entry.ID,
+			ID:       contribution.ID,
+			Title:    pluginLocalizedText(entry.Manifest, contribution.Title),
+			Tone:     tone,
+			Text:     text,
+			Hidden:   request.Hidden,
+		}
+		if h.onStatusItem != nil {
+			h.onStatusItem(update)
 		}
 		return pluginHandleResult{Value: map[string]any{}}
 	case "host.getWorkspace":
@@ -343,6 +398,15 @@ func pluginViewByID(manifest *pluginManifest, id string) (pluginViewContribution
 	return pluginViewContribution{}, false
 }
 
+func pluginStatusItemByID(manifest *pluginManifest, id string) (pluginStatusContribution, bool) {
+	for _, item := range manifest.Contributes.StatusItems {
+		if item.ID == id {
+			return item, true
+		}
+	}
+	return pluginStatusContribution{}, false
+}
+
 func pluginWorkspaceAllowed(manifest *pluginManifest) bool {
 	return manifest.Capabilities.Workspace == "read" || manifest.Capabilities.Workspace == "write"
 }
@@ -460,10 +524,16 @@ func currentPluginThemePayload(
 	if palette.dark {
 		mode = "dark"
 	}
+	bodyFont, codeFont := themeFontsForSelection(currentPluginThemeOverlay())
 	return map[string]any{
 		"mode":               mode,
 		"highContrast":       high,
 		"reduceTransparency": reduceTransparency,
+		"themeGeneration":    currentPluginThemeGeneration(),
+		"fontFamily": map[string]string{
+			"body": bodyFont,
+			"code": codeFont,
+		},
 		"colors": map[string]string{
 			"background":   pluginColorHex(palette.background),
 			"surface":      pluginColorHex(palette.surface),

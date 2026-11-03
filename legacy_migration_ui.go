@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 
-	"byop/locales"
-
 	"github.com/egoist/mygo/ui"
 	"github.com/oneo-me/onevra/source/components/chat"
 )
@@ -257,21 +255,21 @@ func (s *appState) diagnosticsSettingsCard(
 				LineHeight(1.4).TextColor(p.warningText)
 		}
 		ui.Column(c).Gap(8).Children(func() {
-			settingsValue(c, p, locales.SettingsNativeRuntime(),
-				locales.SettingsNativeRuntimeValue())
-			settingsValue(c, p, locales.SettingsRpcTransport(),
-				locales.SettingsRpcTransportValue())
-			settingsValue(c, p, locales.SettingsPiOwnership(),
-				locales.SettingsPiOwnershipValue())
-			settingsValue(c, p, locales.SettingsPluginRegistry(),
+			settingsValue(c, p, text("settingsNativeRuntime"),
+				text("settingsNativeRuntimeValue"))
+			settingsValue(c, p, text("settingsRpcTransport"),
+				text("settingsRpcTransportValue"))
+			settingsValue(c, p, text("settingsPiOwnership"),
+				text("settingsPiOwnershipValue"))
+			settingsValue(c, p, text("settingsPluginRegistry"),
 				textArgs("settingsPluginRegistryValue", map[string]any{
 					"registered":    registry.registeredCount(),
 					"contributions": registry.contributionCount(),
 				}))
-			settingsValue(c, p, locales.SettingsPluginRuntime(),
-				locales.SettingsPluginRuntimeValue())
-			settingsValue(c, p, locales.SettingsWebViewBoundary(),
-				locales.SettingsWebViewBoundaryValue())
+			settingsValue(c, p, text("settingsPluginRuntime"),
+				text("settingsPluginRuntimeValue"))
+			settingsValue(c, p, text("settingsWebViewBoundary"),
+				text("settingsWebViewBoundaryValue"))
 		})
 	})
 }

@@ -121,7 +121,7 @@ func TestP10aComposerControlsStayInsideViewport(t *testing.T) {
 
 				assertInsideViewport(t, tt, scenario.mark(state), size.height)
 				assertInsideViewport(t, tt, text("chatMessageLabel"), size.height)
-				assertInsideViewport(t, tt, text("chatAttachmentUnavailable"), size.height)
+				assertInsideViewport(t, tt, text("chatAttachmentButton"), size.height)
 				assertComposerFooterInsideViewport(t, tt, "composer-footer", size.height)
 				assertInsideViewport(t, tt, text("chatSend"), size.height)
 				if scenario.name == "running queue" {

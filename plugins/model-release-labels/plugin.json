@@ -3,12 +3,12 @@
   "id": "local.model-release-labels",
   "name": "Model Release Labels",
   "version": "0.1.0",
-  "description": "Fixed release markers after known model names, such as 1017 for the official DeepSeek Flash snapshot.",
+  "description": "Choose an exact provider and model, then add your own model capsule. Saved labels stay on this device.",
   "runtime": "node",
   "entry": "plugin.mjs",
   "icon": "plugins",
   "compatibility": {
-    "host": ">=0.18.7 <1.0.0",
+    "host": ">=0.19.0 <1.0.0",
     "pluginApi": "1"
   },
   "contributes": {
@@ -39,6 +39,16 @@
             "workbuddy-ai"
           ],
           "modelId": "deepseek-v4.1-flash"
+        }
+      },
+      {
+        "id": "deepseek-v4-1-flash-iq2xs-1017",
+        "badge": "1017",
+        "match": {
+          "providers": [
+            "magpie"
+          ],
+          "modelId": "DeepSeek-V4.1-Flash-1017-IQ2_XS"
         }
       }
     ]

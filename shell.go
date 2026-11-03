@@ -52,6 +52,21 @@ func (s *appState) view(c *ui.Context) {
 	c.OnShortcut(ui.Cmd|ui.Alt, ui.KeyB, func() {
 		s.setTasksOpen(!s.tasksOpen)
 	})
+	// The workspace toggle advertises this shortcut in its tooltip, so the
+	// binding is registered next to the other panel shortcuts.
+	workspaceMods := ui.Ctrl | ui.Alt
+	if runtime.GOOS == "darwin" {
+		workspaceMods = ui.Cmd | ui.Alt
+	}
+	c.OnShortcut(workspaceMods, ui.KeyG, func() {
+		s.toggleWorkspaceChanges()
+	})
+	// The command palette is available on every page in both appearances, so the
+	// binding sits with the other panel shortcuts. Cmd is the platform's own
+	// modifier, which is ⌘ on macOS and Ctrl elsewhere.
+	c.OnShortcut(ui.Cmd, ui.KeyK, func() {
+		s.toggleCommandPalette()
+	})
 
 	if s.jAgentPresetActive() {
 		s.jAgentShell(c, p, dark, high, reduceTransparency)
@@ -114,6 +129,9 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 			right.Material(productGlassWithTint(p.glassTint))
 		}
 		right.Children(func() {
+			s.workspaceChangesToggleButton(c, p, s.workspaceChangesOpen, func() {
+				s.toggleWorkspaceChanges()
+			})
 			taskPanelToggleButton(c, p, s.tasksOpen, func() {
 				s.setTasksOpen(!s.tasksOpen)
 			})
@@ -302,6 +320,16 @@ func taskPanelToggleButton(c *ui.Context, p palette, open bool, click func()) {
 	}
 	panelToggleButton(c, p, "tasks-toggle", "panel-right",
 		textArgs("titleToggleTaskPanelShortcut", map[string]any{"shortcut": shortcut}),
+		open, click)
+}
+
+func (s *appState) workspaceChangesToggleButton(c *ui.Context, p palette, open bool, click func()) {
+	shortcut := "Ctrl+Alt+G"
+	if runtime.GOOS == "darwin" {
+		shortcut = panelShortcutModifier() + "⌥G"
+	}
+	panelToggleButton(c, p, "workspace-changes-toggle", "git",
+		textArgs("titleToggleWorkspaceChanges", map[string]any{"shortcut": shortcut}),
 		open, click)
 }
 

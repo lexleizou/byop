@@ -50,7 +50,10 @@ func pluginLocaleTranslations(manifest *pluginManifest, locale string) map[strin
 	if manifest == nil || manifest.L10n == "" || manifest.localization == nil {
 		return nil
 	}
-	tag := i18n.Match([]string{locale}, locales.Catalog.Languages())
+	// The match uses the languages the app can show now, not only the built-in
+	// ones, so a plugin language that a locale resource published can also pick
+	// this plugin's own %key% translations.
+	tag := i18n.Match([]string{locale}, availableUILanguages())
 	if tag == "" {
 		return nil
 	}

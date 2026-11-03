@@ -32,7 +32,7 @@ func (s *appState) restartPlugin(entry pluginRegistryEntry) {
 			})
 			return
 		}
-		refreshed := scanPluginRegistry(defaultPluginRoots())
+		refreshed := scanPluginRegistryForRuntime()
 		replacement, ok := pluginEntryBySourceDirectory(refreshed, entry.SourceDirectory)
 		if !ok {
 			s.postUI(func() {
@@ -111,7 +111,10 @@ func (s *appState) finishPluginRestart(
 	}
 
 	s.destroyPluginWebViews(previous.ID)
-	s.setPluginRegistry(next)
+	s.setPluginRegistry(withPluginLocaleResources(withPluginThemeResources(next)))
+	// A restart is another registry publish point, so edited locale resources
+	// and their language list follow the replacement like a scan would.
+	s.reconcileUILanguage()
 	s.plugins.invalidatePluginSettings(previous.ID)
 	for key := range s.pluginTasks {
 		if pluginID, _, _ := strings.Cut(key, "\x00"); pluginID == previous.ID {
@@ -123,16 +126,29 @@ func (s *appState) finishPluginRestart(
 			delete(s.pluginViewModels, key)
 		}
 	}
+	// The replacement process publishes its own status item again, so the old
+	// value is released with the process that set it.
+	delete(s.pluginStatusItems, previous.ID)
+	// Cached message renders of this plugin are released too, and only this
+	// plugin's: other plugins keep their cached renders and stay idle.
+	s.invalidatePluginRenderers(previous.ID)
 	s.syncPluginSettingForms()
 	if s.automations != nil {
 		s.automations.refreshSessionLoopKeys(registeredSessionLoopKeys(next))
 	}
 
-	if previousSignature, currentSignature :=
-		registeredPluginPiEntrySignature(previous),
-		registeredPluginPiEntrySignature(replacement); previousSignature != currentSignature {
+	// The restart reloads the worker, not Pi: only the extension set the running
+	// Pi does not have yet requires a Pi refresh. The decision uses the same
+	// loaded snapshot as a scan, so a replacement that newly adds or drops an
+	// extension is covered, not only a changed file on a plugin that had one.
+	if s.piLoadedExtensionsKnown &&
+		pluginRefreshNeededForExtensions(s.piLoadedExtensions, next) {
 		s.pluginPiRefreshRequired = true
 	}
+	// A replacement can also take a loaded cooperative extension out of the
+	// registry (review X5 edge R1), so the marker follows the published set
+	// here exactly as a scan would.
+	s.reconcileLoadedCooperativeMarkers(next)
 
 	if replacement.Status != pluginRegistered || replacement.Manifest == nil {
 		s.completePluginRestart(previous.ID)
@@ -150,6 +166,13 @@ func (s *appState) finishPluginRestart(
 			"error": uiErrorSummary(err, text("errorUnknown"), 200),
 		}))
 		return
+	}
+	// The folder is in place, so the runtime is deliberately enabled again.
+	if err := writePluginRuntimeStateMarker(s.plugins.configDir, previous.ID, true); err != nil {
+		s.showNotice(textArgs("pluginsRuntimeStateFailed", map[string]any{
+			"name":  name,
+			"error": uiErrorSummary(err, text("errorUnknown"), 200),
+		}))
 	}
 	s.completePluginRestart(previous.ID)
 	s.reopenCurrentPluginAfterRestart(replacement)

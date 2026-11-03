@@ -6,7 +6,7 @@ import { createInterface } from "node:readline";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { DEFAULT_DRAIN_TIMEOUT_MS } from "../mcp-proxy.mjs";
+import { DEFAULT_DRAIN_TIMEOUT_MS, DEFAULT_IDLE_TIMEOUT_MS, ReloadingMcpProxy } from "../mcp-proxy.mjs";
 import { makeScratch } from "./support.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -21,6 +21,8 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const version = readFileSync(join(HERE, "backend-version.txt"), "utf8").trim();
 const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
+
+appendFileSync(join(HERE, "backend-pids.txt"), process.pid + "\n");
 
 function write(message) {
   process.stdout.write(JSON.stringify(message) + "\n");
@@ -455,6 +457,163 @@ test("proxy stops a failed candidate backend and exits nonzero", { timeout: 1000
     for (const pid of pids) {
       assert.equal(processIsRunning(pid), false, `backend ${pid} leaked`);
     }
+  } finally {
+    if (child.exitCode === null) {
+      child.kill("SIGTERM");
+    }
+  }
+});
+
+test("generation change before first initialize respawns without sending initialized", { timeout: 15000 }, async () => {
+  const paths = await createProxyFixture("p17-preinit");
+  const { child, client } = launchProxy(paths);
+  try {
+    await writeFile(join(paths.directory, "backend-version.txt"), "two\n", "utf8");
+    await writeFile(
+      paths.generationPath,
+      `${JSON.stringify({ version: 1, generation: 1 })}\n`,
+      "utf8",
+    );
+    const initialized = await client.request("initialize", {
+      protocolVersion: "2025-11-25",
+      capabilities: {},
+      clientInfo: { name: "p17-preinit", version: "1" },
+    });
+    assert.equal(initialized.capabilities.tools.listChanged, true);
+    const tools = await client.request("tools/list", {});
+    assert.match(tools.tools[0].description, /two/);
+  } finally {
+    await client.close();
+  }
+});
+test("proxy reclaims an idle backend, respawns lazily, and stays silent", { timeout: 15000 }, async () => {
+  const paths = await createProxyFixture("p17-idle");
+  const { child, client } = launchProxy(paths, {
+    BYOP_MCP_BACKEND_IDLE_MS: "80",
+  });
+  try {
+    const initializeParams = {
+      protocolVersion: "2025-11-25",
+      capabilities: {},
+      clientInfo: { name: "p17-idle-test", version: "1" },
+    };
+    await client.request("initialize", initializeParams);
+    const firstState = await client.tool("fixture_state");
+    const firstPID = firstState.structuredContent.pid;
+    assert.equal(child.pid !== null, true);
+    await waitFor(async () => processIsRunning(firstPID) === false);
+    assert.equal(processIsRunning(child.pid), true);
+    const secondState = await client.tool("fixture_state");
+    assert.equal(secondState.structuredContent.version, "one");
+    assert.notEqual(secondState.structuredContent.pid, firstPID);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(
+      client.notifications.some(
+        (notification) =>
+          notification.method === "notifications/tools/list_changed",
+      ),
+      false,
+    );
+  } finally {
+    await client.close();
+  }
+});
+
+test("proxy uses the configured idle delay", { timeout: 5000 }, async () => {
+  const configured = new ReloadingMcpProxy({
+    databasePath: "/tmp/byop-proxy-test-config.sqlite",
+    idleMs: 123,
+  });
+  const fallback = new ReloadingMcpProxy({
+    databasePath: "/tmp/byop-proxy-test-default.sqlite",
+  });
+  assert.equal(configured.idleMs, 123);
+  assert.equal(fallback.idleMs, DEFAULT_IDLE_TIMEOUT_MS);
+  assert.equal(DEFAULT_IDLE_TIMEOUT_MS, 60000);
+});
+
+test("proxy does not reclaim while a request is in flight", { timeout: 15000 }, async () => {
+  const paths = await createProxyFixture("p17-busy");
+  const { child, client } = launchProxy(paths, {
+    BYOP_MCP_BACKEND_IDLE_MS: "80",
+  });
+  try {
+    await client.request("initialize", {
+      protocolVersion: "2025-11-25",
+      capabilities: {},
+      clientInfo: { name: "p17-busy-test", version: "1" },
+    });
+    const slow = client.tool("fixture_slow");
+    const started = Date.now();
+    const result = await slow;
+    assert.equal(result.structuredContent.version, "one");
+    const pids = (
+      await readFile(join(paths.directory, "backend-pids.txt"), "utf8")
+    )
+      .trim()
+      .split("\n")
+      .map(Number)
+      .filter((pid) => pid > 0);
+    assert.ok(pids.length >= 1);
+    assert.equal(pids.length, 1, "backend was reclaimed during in-flight call");
+    assert.ok(Date.now() - started >= 900, "slow call finished too early");
+  } finally {
+    await client.close();
+  }
+});
+
+test("proxy reclaims after a cancelled request", { timeout: 15000 }, async () => {
+  const paths = await createProxyFixture("p17-cancel-idle");
+  const { child, client } = launchProxy(paths, {
+    BYOP_MCP_BACKEND_IDLE_MS: "80",
+  });
+  try {
+    await client.request("initialize", {
+      protocolVersion: "2025-11-25",
+      capabilities: {},
+      clientInfo: { name: "p17-cancel-idle", version: "1" },
+    });
+    const stuck = client.startRequest("tools/call", {
+      name: "fixture_slow",
+      arguments: {},
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    client.notify("notifications/cancelled", { requestId: stuck.id });
+    await client.close();
+    const pids = (
+      await readFile(join(paths.directory, "backend-pids.txt"), "utf8")
+    )
+      .trim()
+      .split("\n")
+      .map(Number)
+      .filter((pid) => pid > 0);
+    await waitFor(async () => processIsRunning(pids[0]) === false, 3000);
+  } finally {
+    await client.close();
+  }
+});
+test("queued initialize replay is bounded by initialize timeout", { timeout: 15000 }, async () => {
+  const paths = await createProxyFixture(
+    "p17-replay-hang",
+    failingInitializeBackendSource,
+  );
+  const { child, client } = launchProxy(paths, {
+    BYOP_MCP_PROXY_INITIALIZE_MS: "150",
+  });
+  try {
+    await client.request("initialize", {
+      protocolVersion: "2025-11-25",
+      capabilities: {},
+      clientInfo: { name: "p17-replay-hang", version: "1" },
+    });
+    await writeFile(join(paths.directory, "hang-initialize"), "1\n", "utf8");
+    await writeFile(
+      paths.generationPath,
+      `${JSON.stringify({ version: 1, generation: 5 })}\n`,
+      "utf8",
+    );
+    const list = client.request("tools/list", {});
+    await assert.rejects(list, /timed out|initialize failed|restart failed/i);
   } finally {
     if (child.exitCode === null) {
       child.kill("SIGTERM");

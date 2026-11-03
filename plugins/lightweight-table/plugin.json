@@ -14,6 +14,7 @@
   },
   "contributes": {
     "agentExtension": "pi-extension.mjs",
+    "agentExtensionLifecycle": "cooperative",
     "agentProxy": "mcp-proxy.mjs",
     "navigation": [
       {

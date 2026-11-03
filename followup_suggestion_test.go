@@ -329,6 +329,51 @@ func TestFollowUpPreferenceNormalization(t *testing.T) {
 	}
 }
 
+func TestFollowUpOffCancelsPendingAndLaunchesNoRunner(t *testing.T) {
+	state := followUpTestState()
+	ctx, cancel := context.WithCancel(context.Background())
+	state.followUpCancel = cancel
+	state.followUpSuggestion = "Old suggestion"
+	state.followUpAdoptionPending = true
+	state.followUpAdoptionFocus = true
+	state.preferences.FollowUpStyle = string(followUpStyleOff)
+	called := false
+	state.followUpRunner = func(context.Context, string, string, []string, string) (string, error) {
+		called = true
+		return "unexpected", nil
+	}
+
+	state.startFollowUpSuggestion("prompt", "reply")
+
+	if called {
+		t.Fatal("runner was launched while Off was selected")
+	}
+	select {
+	case <-ctx.Done():
+	default:
+		t.Fatal("pending in-flight generation was not cancelled when Off was selected")
+	}
+	if state.followUpCancel != nil || state.followUpSuggestion != "" ||
+		state.followUpAdoptionPending || state.followUpAdoptionFocus {
+		t.Fatalf("Off left stale state: %#v", state)
+	}
+}
+
+func TestFollowUpOffDoesNotChangeExplicitGhostAndCardChoices(t *testing.T) {
+	for value, want := range map[string]followUpStyle{
+		string(followUpStyleGhost): followUpStyleGhost,
+		string(followUpStyleCard):  followUpStyleCard,
+		string(followUpStyleOff):   followUpStyleOff,
+	} {
+		preferences := defaultByopPreferences()
+		preferences.FollowUpStyle = value
+		normalizeByopPreferences(&preferences)
+		if got := followUpStyle(preferences.FollowUpStyle); got != want {
+			t.Fatalf("normalize(%q) = %q, want %q", value, got, want)
+		}
+	}
+}
+
 func TestInjectableFollowUpRunnerAndSettledTrigger(t *testing.T) {
 	state := followUpTestState()
 	const stalePrompt = "stale active prompt"

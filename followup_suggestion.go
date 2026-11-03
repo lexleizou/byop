@@ -18,6 +18,7 @@ import (
 const (
 	followUpStyleGhost followUpStyle = "ghost"
 	followUpStyleCard  followUpStyle = "card"
+	followUpStyleOff   followUpStyle = "off"
 
 	followUpContextRunes = 3000
 	followUpOutputRunes  = 120
@@ -33,6 +34,8 @@ func normalizeFollowUpStyle(value string) followUpStyle {
 	switch followUpStyle(strings.ToLower(strings.TrimSpace(value))) {
 	case followUpStyleCard:
 		return followUpStyleCard
+	case followUpStyleOff:
+		return followUpStyleOff
 	default:
 		return followUpStyleGhost
 	}
@@ -45,6 +48,9 @@ func (s *appState) currentFollowUpStyle() followUpStyle {
 func (s *appState) setFollowUpStyle(style followUpStyle) {
 	style = normalizeFollowUpStyle(string(style))
 	s.preferences.FollowUpStyle = string(style)
+	if style == followUpStyleOff {
+		s.resetFollowUpSuggestion()
+	}
 	if err := s.persistPreferences(); err != nil {
 		s.showNotice(text("noticePreferenceSaveFollowUp"))
 	}
@@ -239,6 +245,9 @@ func (s *appState) handleFollowUpComposerInput(ev ui.InputEvent, composing bool)
 
 func (s *appState) startFollowUpSuggestion(prompt, reply string) {
 	s.resetFollowUpSuggestion()
+	if s.currentFollowUpStyle() == followUpStyleOff {
+		return
+	}
 	if s.closed.Load() || s.piConn != piConnected || followUpConnectionDisabled() {
 		return
 	}

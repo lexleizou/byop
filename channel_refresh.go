@@ -591,14 +591,21 @@ func (s *appState) commitChannelRefresh(snapshot channelRefreshSnapshot, outcome
 	tuples := s.modelTuples
 
 	s.invalidateSessionNaming()
+	// A dialog the old process asked for cannot be answered after it is
+	// replaced, so it is cancelled with that process.
+	s.cancelExtensionDialogsFor(oldClient)
 	s.pi = newClient
+	// The replacement Pi process carries its own launch snapshot, captured from
+	// the exact registry its arguments were built from, which replaces the
+	// baseline recorded before the refresh.
+	s.setPiLoadedExtensions(newClient)
 	s.piEpoch = newEpoch
 	s.sessionGen++
 	s.piConnectGeneration++
 	s.piConn = piConnected
 	s.piConnecting = false
 	s.piPath = snapshot.path
-	s.piCwd = snapshot.cwd
+	s.setPiCwd(snapshot.cwd)
 	s.piVersion = snapshot.version
 	s.modelTuples = tuples
 	s.piModelProvider = snapshot.provider

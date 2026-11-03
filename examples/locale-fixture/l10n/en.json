@@ -1,0 +1,4 @@
+{
+  "manifestName": "Locale Fixture",
+  "manifestDescription": "Contract fixture for a plugin-provided language; it never starts a worker."
+}

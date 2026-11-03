@@ -212,7 +212,7 @@ func TestP9cRunningComposerEnterQueuesWithoutSend(t *testing.T) {
 			SendLabel:   "Stop",
 			StopLabel:   "Stop",
 			Running:     true,
-		})
+		}, false, nil)
 		if result.Input.Focused() && strings.TrimSpace(draft) != "" {
 			composing := result.Input.Composing()
 			result.Input.HandleInput(func(ev ui.InputEvent) bool {

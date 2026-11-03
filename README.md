@@ -2,13 +2,15 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本 0.18.7：扶摇汇总区已改为跟随当前搜索和筛选的看板，见 [P21 验证记录](docs/P21-validation.md)。0.18.6：扶摇页面查询栏上方新增汇总面板，显示合同本金、剩余应还、实际已付三张合计卡与 11 个常用查询按钮；每个按钮只带一个筛选条件，按下后写入原筛选栏，按钮条数与列表“匹配 N 条”同源，样式全部沿用 BYOP 主题变量。模型选择器每行的品牌图标改为与模型名首行对齐。见 [P20 验证记录](docs/P20-validation.md)。0.18.5 修复从访达启动时插件找不到 Node.js 的问题（GUI 进程 PATH 不含常见安装目录），查找顺序与 Pi 一致且失败可重试；见 [P19.1 验证记录](docs/P19.1-validation.md)。0.18.4 的产出文件卡片与 HTML 内联预览、扶摇 0.4.1 枚举中文标签继续保留，见 [P19 验证记录](docs/P19-validation.md)。0.18.3：最新 user prompt 对应的首个助手内容顶部显示一次模型 Logo/名称、本次输出 tokens 和实时 TPS，随后才显示 thinking 和工具；历史回复不显示当前状态，避免切换模型后误标旧回复。BYOP Light/Dark 使用无框正文行，J Agent 使用主题玻璃。Composer 下方持续保留 20 px 的左右分组状态行：左侧显示完整上下文使用、tokens、缓存命中、会话平均 TPS、分支和费用，无 usage 时上下文回退为容量；右侧显示 OV 等扩展状态，并保留完整 tooltip，不与正文状态行重复。扶摇插件热重启由宿主统一拦截 WebView 创建、显示轻量重启状态，并在完成后按用户当前视图重建；页面保留动态 preload 和 `window.mygo.call` 兼容桥，不执行前端自动重载。见 [P18 验证记录](docs/P18-validation.md)。0.18.1 的运行中插话与后续消息队列继续保留，见 [P18.1 验证记录](docs/P18.1-validation.md)。0.18.0 的思考等级滑杆和独立 Pi 思考流继续保留。0.17.0 的插件级热重载、Pi 进程/会话与其他插件的隔离继续保留。见 [P17 验证记录](docs/P17-validation.md)。0.16.2 修复 J Agent 山景壁纸上新对话提示难以辨认的问题，仅调整亮色壁纸上两行提示的前景颜色，保持无框布局；见 [P16b 验证记录](docs/P16b-empty-chat-validation.md)。0.16.1 已完成：轻量表格显示名改为“扶摇”，修复行选择/取消与单格编辑，金额去掉币种后缀并右对齐，主表按 v4 十列显示；未导入字段明确标注，原数据保持。插件颜色与语义指标随 BYOP/J Agent 预设自动更新。见 [扶摇修复及 v4 差距说明](docs/P15b1-fuyao-validation.md)。0.16.0 已完成：Appearance 新增可切换的 BYOP / J Agent（深色）视觉预设。J Agent 使用独立 261 px 导航、768 px 阅读列、实测玻璃 tints、125 ms 微交互近似和已核实的雾山壁纸；切回 BYOP 会恢复原浅色/深色模式、导航宽度、玻璃设置与壁纸。见 [P16 验证记录](docs/P16-validation.md)。P15b 的轻量表格插件、固定上下文发送、历史撤销和会话 MCP 集成继续保留，见 [P15b 验证记录](docs/P15b-validation.md) 和 [插件说明](plugins/lightweight-table/README.md)。P14 已统一 BYOP 深色材质层级，壁纸作为根背景，导航玻璃继续直接采样壁纸；阅读区保持不透明深底，Composer、卡片、任务栏和浮层使用分层表面与一致的玻璃边缘。见 [P14 验证记录](docs/P14-validation.md)。P13b 的窗口拖动、侧栏调宽和列表间距继续保留，见 [P13b 验证记录](docs/P13b-validation.md)。P13 深色液态玻璃主题已加入壁纸、导航透明度、模糊和边缘折射可调，高对比与减少透明度回退规则保持不变；具体证据和限制见 [P13 验证记录](docs/P13-validation.md)。P12 完整界面、BYOP Radix 产品 token、分组设置与模型渠道流程继续保留。BYOP 预设继续使用 12/14/18 px、0.5 px 边框和 250 ms 过渡；J Agent 预设按其快照使用 13/15/18 px、实测圆角和 125 ms 近似。主题、视觉预设、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
+当前版本 0.19.0：P23–P26 已完成的功能进入正式版本，包括手动模型胶囊、插件生命周期与本地包管理、空闲资源回收、主题/语言/命令/提及/状态/内容渲染扩展接口、附件发送与重试、Pi 扩展四类原生对话框和只读 Git 变更面板；剩余 P25 原生窗口走查继续搁置，见 [P23–P26 验证记录](docs/P23-P26-validation.md)。0.18.7：扶摇汇总区已改为跟随当前搜索和筛选的看板，见 [P21 验证记录](docs/P21-validation.md)。0.18.6：扶摇页面查询栏上方新增汇总面板，显示合同本金、剩余应还、实际已付三张合计卡与 11 个常用查询按钮；每个按钮只带一个筛选条件，按下后写入原筛选栏，按钮条数与列表“匹配 N 条”同源，样式全部沿用 BYOP 主题变量。模型选择器每行的品牌图标改为与模型名首行对齐。见 [P20 验证记录](docs/P20-validation.md)。0.18.5 修复从访达启动时插件找不到 Node.js 的问题（GUI 进程 PATH 不含常见安装目录），查找顺序与 Pi 一致且失败可重试；见 [P19.1 验证记录](docs/P19.1-validation.md)。0.18.4 的产出文件卡片与 HTML 内联预览、扶摇 0.4.1 枚举中文标签继续保留，见 [P19 验证记录](docs/P19-validation.md)。0.18.3：最新 user prompt 对应的首个助手内容顶部显示一次模型 Logo/名称、本次输出 tokens 和实时 TPS，随后才显示 thinking 和工具；历史回复不显示当前状态，避免切换模型后误标旧回复。BYOP Light/Dark 使用无框正文行，J Agent 使用主题玻璃。Composer 下方持续保留 20 px 的左右分组状态行：左侧显示完整上下文使用、tokens、缓存命中、会话平均 TPS、分支和费用，无 usage 时上下文回退为容量；右侧显示 OV 等扩展状态，并保留完整 tooltip，不与正文状态行重复。扶摇插件热重启由宿主统一拦截 WebView 创建、显示轻量重启状态，并在完成后按用户当前视图重建；页面保留动态 preload 和 `window.mygo.call` 兼容桥，不执行前端自动重载。见 [P18 验证记录](docs/P18-validation.md)。0.18.1 的运行中插话与后续消息队列继续保留，见 [P18.1 验证记录](docs/P18.1-validation.md)。0.18.0 的思考等级滑杆和独立 Pi 思考流继续保留。0.17.0 的插件级热重载、Pi 进程/会话与其他插件的隔离继续保留。见 [P17 验证记录](docs/P17-validation.md)。0.16.2 修复 J Agent 山景壁纸上新对话提示难以辨认的问题，仅调整亮色壁纸上两行提示的前景颜色，保持无框布局；见 [P16b 验证记录](docs/P16b-empty-chat-validation.md)。0.16.1 已完成：轻量表格显示名改为“扶摇”，修复行选择/取消与单格编辑，金额去掉币种后缀并右对齐，主表按 v4 十列显示；未导入字段明确标注，原数据保持。插件颜色与语义指标随 BYOP/J Agent 预设自动更新。见 [扶摇修复及 v4 差距说明](docs/P15b1-fuyao-validation.md)。0.16.0 已完成：Appearance 新增可切换的 BYOP / J Agent（深色）视觉预设。J Agent 使用独立 261 px 导航、768 px 阅读列、实测玻璃 tints、125 ms 微交互近似和已核实的雾山壁纸；切回 BYOP 会恢复原浅色/深色模式、导航宽度、玻璃设置与壁纸。见 [P16 验证记录](docs/P16-validation.md)。P15b 的轻量表格插件、固定上下文发送、历史撤销和会话 MCP 集成继续保留，见 [P15b 验证记录](docs/P15b-validation.md) 和 [插件说明](plugins/lightweight-table/README.md)。P14 已统一 BYOP 深色材质层级，壁纸作为根背景，导航玻璃继续直接采样壁纸；阅读区保持不透明深底，Composer、卡片、任务栏和浮层使用分层表面与一致的玻璃边缘。见 [P14 验证记录](docs/P14-validation.md)。P13b 的窗口拖动、侧栏调宽和列表间距继续保留，见 [P13b 验证记录](docs/P13b-validation.md)。P13 深色液态玻璃主题已加入壁纸、导航透明度、模糊和边缘折射可调，高对比与减少透明度回退规则保持不变；具体证据和限制见 [P13 验证记录](docs/P13-validation.md)。P12 完整界面、BYOP Radix 产品 token、分组设置与模型渠道流程继续保留。BYOP 预设继续使用 12/14/18 px、0.5 px 边框和 250 ms 过渡；J Agent 预设按其快照使用 13/15/18 px、实测圆角和 125 ms 近似。主题、视觉预设、语言、会话整理、发送方式、导航、任务栏、工作区、最近 Pi 会话关联、草稿与迁移偏好保存在 `<BYOP_CONFIG_DIR 或 ~/.byop>/preferences.json`。BYOP 不内置 Pi SDK、不直接改写 Pi 会话 JSONL，也不复制模型凭据。
 
 ![BYOP Onevra chat](docs/screenshots/p3-2a-onevra-chat.png)
 
 ![BYOP Node plugin view and host calls](docs/screenshots/p42-host-calls.png)
 
 ![BYOP Settings](docs/screenshots/p2-settings-connected.png)
+
+本工作副本的 P23–P26 代码与自动检查已完成：手动模型胶囊、插件生命周期与资源回收、扩展消费者、附件及只读改动审阅。剩余 P25 原生验收尚未完成，未发布。发布状态与验证边界见 [实施状态](docs/P23-P26-status.md) 和 [验证记录](docs/P23-P26-validation.md)。以下涉及这些能力的说明描述开发中的工作副本。
 
 ## 当前能力
 
@@ -43,7 +45,7 @@
 - 原生会话时间线按“文字 → 工具 → 文字”的真实顺序保留内容块；
 - `tool_execution_start/update/end` 按 `toolCallId` 原位更新，不改变工具卡位置；
 - Chat 使用 Onevra transcript primitives 渲染时间线，并由 BYOP token wrapper 统一产品视觉；Composer 背景不透明，Glass 只用于 chrome、导航和必要浮层；
-- 正常完成的轮次会以独立、无会话、无工具的 Pi one-shot 进程生成一条后续消息建议；默认显示为 ghost text，也可在 Settings 切换为输入框上方的卡片；
+- 正常完成的轮次会以独立、无会话、无工具的 Pi one-shot 进程生成一条后续消息建议；默认显示为 ghost text，也可在 Settings 切换为输入框上方的卡片或关闭；关闭会取消待生成建议并停止新的建议推理；
 - 建议只提供 `Tab` / `Use` 采纳和 `Esc` / dismiss 关闭，不会自动发送；采纳后清空输入框会重新显示，发送、新一轮、会话切换和关闭都会取消或移除旧建议；
 - 连续工具合并为可折叠的活动组，运行中显示最新动作，完成后显示“Ran N tools”；
 - 运行中显示“Working · 耗时”，结束后折叠为“Worked for 耗时”，保留最终回复可见；
@@ -67,7 +69,7 @@
 - 固定 20 px 导航图标槽位，展开与收起状态保持左边缘对齐；
 - 扫描 `~/.byop/plugins` 与 `<cwd>/.byop/plugins`，也可通过 `BYOP_PLUGINS_DIR` 指定一个或多个目录；
 - 严格解析 schema 1 `plugin.json`，拒绝未知字段、尾随 JSON、超过 1 MiB 的清单和不安全 entry 路径；
-- 检查宿主版本 `0.9.0` 与 Plugin API `1` 兼容性；
+- 检查当前宿主版本与 Plugin API `1` 兼容性；
 - 插件可通过可选 `l10n` 目录把 manifest 和插件视图里的 `%key%` 解析为当前语言；先查当前语言，再回退英文，最后保留原字符串；
 - 标记插件 ID、跨插件贡献 ID 和同插件内重复贡献 ID；
 - Plugins 页面支持搜索、空状态、问题提示、重新扫描，以及 navigation、command、view、task panel、setting 和 WebView 元数据预览；
@@ -85,8 +87,10 @@
 - WebView bridge 通过 `mygo.CallerPage(ctx)` 反查唯一的插件视图，不信任页面传入的插件 ID；每次调用都重新检查当前 URL、插件注册状态、视图声明以及清单/根目录指纹；
 - `host.*` 与 Node/native 插件共用同一套能力检查；`plugin.postMessage` 限制 64 KiB，并按插件限制并发；
 - WebView 提供 Light/Dark CSS 变量、运行时主题事件和 12/14/18 px 字号，正文与代码为 14 px；主题包含 `onAccent`、`dangerText`、`warningText`、`successText` 和 `focus`，高对比或减少透明度时使用不透明 Radix 实色；页面可调用 `host.getLocale`，读取 `window.byop.locale`，并用 `window.byop.onLocale` 订阅运行时语言变化；加载或渲染进程失败时显示原生错误卡，可 Reload 或返回 Plugins；
-- 重新扫描、停用、进程停止和关闭窗口时销毁相关 WebView；离开页面只隐藏实例；
-- 重新扫描和关闭窗口前会停用全部插件进程；插件意外退出时标记为 failed 并保留 stderr 尾部摘要。
+- 重新扫描按插件差异更新；停用、移除、更新或关闭窗口时释放对应资源，不因普通扫描停止未变化的插件；
+- 隐藏且无活动调用/任务的插件默认60秒后回收工作进程与WebView；资源需要时重新创建。原生WebView首次打开及回收后恢复已通过隔离窗口验证，见验证记录；
+- 停用状态持久化，插件数据与设置保留；普通Pi扩展需要Pi刷新，声明协作式生命周期的扩展可在现有会话中撤销自有工具；
+- 插件意外退出时标记为 failed 并保留 stderr 尾部摘要。
 - 插件可声明 manual、once、scheduledLoop 和 sessionLoop 自动化；自动化命令必须同时是插件已声明的 command，并出现在 `activation.events` 的精确 `onCommand:<command>` 项中；
 - Automations 页面显示注册项、kind 与规则、READY / PAUSED / AUTO-PAUSED / RUNNING 状态、连续失败数和最近 5 次运行；
 - Run now 只允许已启用且未在运行的自动化；调用超时按 `timeLimit` 记录，其他插件错误按 `pluginError` 记录；
@@ -96,7 +100,7 @@
 - 插件因重扫、停用或窗口关闭而主动停止时，待处理运行记录为 `aborted/stopped`，不计入连续失败数；
 - P7 没有定时 scheduler、ticker 或运行计时刷新，P12 也不新增 Loop 调度器或解析 `/loop`；所有运行都由 Run now 手动触发，`trigger` 固定为 `manual`。既有登记、运行历史、暂停/恢复和失败自动暂停行为保留。
 
-插件安装与附件仍属于后续阶段。模型、上下文与 Thinking chip 在运行、压缩或会话操作期间切为只读；模型元数据未加载时，模型 chip 仍为只读。Pi 1.4.0 未开放快速模式 RPC，因此不渲染闪电开关。P6a 已提供会话历史与切换。
+本地文件夹/ZIP插件安装、更新和卸载已加入管理页面；更新与卸载把旧代码移入系统废纸篓并保留插件数据。Composer支持图片与普通文件附件，Pi扩展的选择、确认、输入和编辑请求使用原生对话框。工作区变更面板只读显示Git差异，支持 `⌘⌥G` / `Ctrl+Alt+G`。模型胶囊在 Model Release Labels 详情中手动选择精确渠道/模型并填写，属于个人标记。模型、上下文与 Thinking chip 在运行、压缩或会话操作期间切为只读；模型元数据未加载时，模型 chip 仍为只读。Pi 1.4.0 未开放快速模式 RPC，因此不渲染闪电开关。P6a 已提供会话历史与切换。
 
 **Plugin development hold：** P5 后插件平台功能已就绪，但在 Lex 明确要求前不开发功能插件。Library 与 Document 是冻结候选，不属于当前页面或导航入口；当前入口为 Chat、Plugins、Automations、Settings。`examples/` 只放契约 fixture。
 
@@ -233,7 +237,7 @@ go run github.com/egoist/mygo/cmd/mygo@v0.5.5 generate .
 go build -o byop .
 ```
 
-Settings 自动列出 `locales/Catalog.Languages()` 中的标签。测试可用 MyGo 已有的 `MYGO_LOCALE=en` 或 `MYGO_LOCALE=zh-Hans` 覆盖当前进程语言。
+Settings 列出内置语言及已启用插件的 `contributes.locales` 资源。插件语言使用可替换目录，不永久注册到内置 Catalog；停用或移除时立即回退并保留用户选择，重新启用后恢复。内置语言不会被插件区域变体覆盖。测试可用 MyGo 已有的 `MYGO_LOCALE=en` 或 `MYGO_LOCALE=zh-Hans` 覆盖当前进程语言。
 
 插件清单的 `%key%` 按当前界面语言从 `<plugin>/<l10n>/<tag>.json` 读取，再尝试 `en.json`，最后显示原始字符串。语言目录必须留在插件根目录内，每个语言文件上限 256 KiB；重新扫描会丢弃缓存。
 

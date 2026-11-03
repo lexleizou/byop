@@ -43,6 +43,9 @@ const (
 	piEventExtensionErr    piEventKind = "extension_error"
 	piEventExtensionStatus piEventKind = "extension_status"
 	piEventExtensionNotify piEventKind = "extension_notify"
+	// piEventExtensionDialog carries a select/confirm/input/editor request that
+	// the app answers with a native dialog.
+	piEventExtensionDialog piEventKind = "extension_dialog"
 	piEventProcessExit     piEventKind = "process_exit"
 	piEventParseError      piEventKind = "parse_error"
 )
@@ -125,6 +128,14 @@ func (m piModelWire) model() piModel {
 	}
 }
 
+// piImage is one entry of the RPC `images` array, which prompt, steer and
+// follow_up all accept. The field names follow the installed Pi SDK types.
+type piImage struct {
+	Type     string `json:"type"`
+	Data     string `json:"data"`
+	MimeType string `json:"mimeType"`
+}
+
 type piEvent struct {
 	Kind            piEventKind
 	Source          *piClient
@@ -168,8 +179,15 @@ type piEvent struct {
 	StatusKey      string
 	StatusText     *string
 	NotifyType     string
-	GenerationTime time.Duration
-	OutputTokens   int64
+	// Extension dialog fields, filled only for piEventExtensionDialog.
+	ExtensionMethod      string
+	ExtensionOptions     []string
+	ExtensionMessage     string
+	ExtensionPlaceholder string
+	ExtensionPrefill     string
+	ExtensionTimeoutMS   int64
+	GenerationTime       time.Duration
+	OutputTokens         int64
 }
 
 type piStopResult struct {
@@ -198,6 +216,13 @@ type piClient struct {
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
 	events func(piEvent)
+
+	// loadedExtensions is the immutable extension snapshot of this Pi process:
+	// the set recorded from the exact registry its launch arguments were built
+	// from. It never changes for the life of the client, so a refresh decision
+	// always compares against what this process actually loaded.
+	loadedExtensions      map[string]piLoadedExtension
+	loadedExtensionsKnown bool
 
 	mu      sync.Mutex
 	pending map[string]chan piRPCResponse
@@ -238,7 +263,7 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 		cwd = resolved
 	}
 
-	registry := scanPluginRegistry(defaultPluginRoots())
+	registry := scanPluginRegistryForRuntime()
 	args := piClientArgsForRegistry(registry, os.Getenv("BYOP_PI_EXTENSIONS"))
 	configDir, err := pluginConfigDir()
 	if err != nil {
@@ -252,6 +277,9 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	// H2: the extensions Pi is about to load are enabled, so repair their
+	// runtime-state markers here, in the launch path only. Scans stay read-only.
+	selfHealPluginRuntimeStateMarkers(configDir, registry)
 	cmd := exec.Command(path, args...)
 	cmd.Dir = cwd
 	cmd.Env = mergeProcessEnv(piProcessEnv(path, os.Environ()),
@@ -274,15 +302,17 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 	}
 
 	client := &piClient{
-		path:          path,
-		cwd:           cwd,
-		cmd:           cmd,
-		stdin:         stdin,
-		events:        events,
-		pending:       make(map[string]chan piRPCResponse),
-		waitDone:      make(chan struct{}),
-		streamParts:   make(map[int]string),
-		thinkingParts: make(map[int]string),
+		path:                  path,
+		cwd:                   cwd,
+		cmd:                   cmd,
+		stdin:                 stdin,
+		events:                events,
+		pending:               make(map[string]chan piRPCResponse),
+		waitDone:              make(chan struct{}),
+		streamParts:           make(map[int]string),
+		thinkingParts:         make(map[int]string),
+		loadedExtensions:      piLoadedExtensionSet(registry),
+		loadedExtensionsKnown: true,
 	}
 
 	var readers sync.WaitGroup
@@ -312,7 +342,7 @@ func startPiClient(path, cwd string, events func(piEvent)) (*piClient, error) {
 
 func piClientArgs() []string {
 	return piClientArgsForRegistry(
-		scanPluginRegistry(defaultPluginRoots()),
+		scanPluginRegistryForRuntime(),
 		os.Getenv("BYOP_PI_EXTENSIONS"),
 	)
 }
@@ -638,6 +668,12 @@ func (p *piClient) SetThinkingLevel(ctx context.Context, level string) error {
 }
 
 func (p *piClient) Prompt(message, streamingBehavior string) (string, error) {
+	return p.PromptWithImages(message, streamingBehavior, nil)
+}
+
+// PromptWithImages sends a prompt whose images ride in the RPC `images` array
+// rather than in the text, so a model that accepts image input receives them.
+func (p *piClient) PromptWithImages(message, streamingBehavior string, images []piImage) (string, error) {
 	id := p.newRequestID("prompt")
 	payload := map[string]any{
 		"id":      id,
@@ -646,12 +682,22 @@ func (p *piClient) Prompt(message, streamingBehavior string) (string, error) {
 	}
 	if streamingBehavior != "" {
 		payload["streamingBehavior"] = streamingBehavior
+	}
+	if len(images) > 0 {
+		payload["images"] = images
 	}
 	_, err := p.send(payload)
 	return id, err
 }
 
 func (p *piClient) PromptRequest(ctx context.Context, message, streamingBehavior string) (piPromptResult, error) {
+	return p.PromptRequestWithImages(ctx, message, streamingBehavior, nil)
+}
+
+// PromptRequestWithImages is PromptRequest for a message carrying images.
+func (p *piClient) PromptRequestWithImages(ctx context.Context, message, streamingBehavior string,
+	images []piImage,
+) (piPromptResult, error) {
 	id := p.newRequestID("prompt")
 	payload := map[string]any{
 		"id":      id,
@@ -660,6 +706,9 @@ func (p *piClient) PromptRequest(ctx context.Context, message, streamingBehavior
 	}
 	if streamingBehavior != "" {
 		payload["streamingBehavior"] = streamingBehavior
+	}
+	if len(images) > 0 {
+		payload["images"] = images
 	}
 	data, err := p.requestWithID(ctx, payload, id)
 	if err != nil {
@@ -701,6 +750,24 @@ func (p *piClient) ClearQueue(ctx context.Context) ([]string, []string, error) {
 		return nil, nil, fmt.Errorf("parse cleared queue: %w", err)
 	}
 	return append([]string(nil), queue.Steering...), append([]string(nil), queue.FollowUp...), nil
+}
+
+// GetCommands asks the connected Pi process for the slash commands it can run,
+// which is how a Pi-side extension, prompt, or skill becomes visible to the
+// composer. The reply belongs to this process only: a refresh of Pi extensions
+// can change the set, so callers key the result on the Pi epoch.
+func (p *piClient) GetCommands(ctx context.Context) ([]piCommand, error) {
+	data, err := p.request(ctx, map[string]any{"type": "get_commands"})
+	if err != nil {
+		return nil, err
+	}
+	var result struct {
+		Commands []piCommand `json:"commands"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("parse Pi commands: %w", err)
+	}
+	return append([]piCommand(nil), result.Commands...), nil
 }
 
 func (p *piClient) Stop(ctx context.Context, abortRetry bool) (piStopResult, error) {
@@ -1033,12 +1100,17 @@ func (p *piClient) handleRecord(line []byte) {
 
 func (p *piClient) handleExtensionUIRequest(line []byte) {
 	var request struct {
-		ID         string  `json:"id"`
-		Method     string  `json:"method"`
-		StatusKey  string  `json:"statusKey"`
-		StatusText *string `json:"statusText"`
-		Message    string  `json:"message"`
-		NotifyType string  `json:"notifyType"`
+		ID          string   `json:"id"`
+		Method      string   `json:"method"`
+		StatusKey   string   `json:"statusKey"`
+		StatusText  *string  `json:"statusText"`
+		Message     string   `json:"message"`
+		NotifyType  string   `json:"notifyType"`
+		Title       string   `json:"title"`
+		Options     []string `json:"options"`
+		Placeholder string   `json:"placeholder"`
+		Prefill     string   `json:"prefill"`
+		Timeout     *float64 `json:"timeout"`
 	}
 	if err := json.Unmarshal(line, &request); err != nil {
 		p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi extension UI request: " + err.Error()})
@@ -1071,8 +1143,47 @@ func (p *piClient) handleExtensionUIRequest(line []byte) {
 			p.emit(piEvent{Kind: piEventParseError, Error: "Pi extension UI request has an empty ID"})
 			return
 		}
-		_, _ = p.send(extensionUICancelledResponse(request.ID))
+		// Dialog requests wait for the app: the event carries everything the
+		// native dialog shows, and the app answers with the same ID. Pi
+		// auto-resolves a request whose timeout expires, so the app only has to
+		// retire its own stale dialog.
+		event := piEvent{
+			Kind:                 piEventExtensionDialog,
+			RequestID:            request.ID,
+			ExtensionMethod:      request.Method,
+			Text:                 strings.TrimSpace(request.Title),
+			ExtensionOptions:     append([]string(nil), request.Options...),
+			ExtensionMessage:     request.Message,
+			ExtensionPlaceholder: request.Placeholder,
+			ExtensionPrefill:     request.Prefill,
+		}
+		if request.Timeout != nil && *request.Timeout > 0 {
+			// The SDK types timeout as a number, so a fractional value must
+			// parse; it rounds up to whole milliseconds so the app never
+			// retires the dialog before Pi resolves its own default.
+			ms := int64(*request.Timeout)
+			if float64(ms) < *request.Timeout {
+				ms++
+			}
+			event.ExtensionTimeoutMS = ms
+		}
+		p.emit(event)
 	}
+}
+
+// SendExtensionUIResponse answers one dialog request with the exact SDK
+// contract: `value` for select/input/editor, `confirmed` for confirm, or
+// `cancelled: true` for any of them. The ID is the request's own ID.
+func (p *piClient) SendExtensionUIResponse(response map[string]any) error {
+	if p == nil {
+		return errors.New("Pi RPC is closed")
+	}
+	payload := map[string]any{"type": "extension_ui_response"}
+	for key, value := range response {
+		payload[key] = value
+	}
+	_, err := p.send(payload)
+	return err
 }
 
 func extensionUICancelledResponse(id string) map[string]any {

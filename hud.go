@@ -473,6 +473,9 @@ type hudItem struct {
 	flexible     bool
 	kind         hudItemKind
 	side         hudItemSide
+	// tone is a plugin status tone, "" or one of the plugin tones, and colours
+	// the value the way the task panel colours its status.
+	tone string
 }
 
 func (s *appState) piHUDConnected() bool {
@@ -620,7 +623,41 @@ func (s *appState) piHUDFooterItems() []hudItem {
 			})
 		}
 	}
+	// Plugin status items sit beside the Pi extension statuses and share their
+	// visibility: the HUD is the status line of the running session. Each
+	// enabled plugin may hold one item, keyed by plugin id so the order is
+	// stable and a plugin cannot duplicate a slot.
+	for _, key := range s.pluginStatusItemKeys() {
+		item := s.pluginStatusItems[key]
+		if strings.TrimSpace(item.Text) == "" {
+			continue
+		}
+		items = append(items, hudItem{
+			label:    truncateHUDStatus(item.Title, 24),
+			value:    truncateHUDStatus(item.Text, 40),
+			flexible: true,
+			side:     hudItemRight,
+			tone:     item.Tone,
+		})
+	}
 	return items
+}
+
+// pluginStatusItemKeys lists the plugins that currently hold a status item, in
+// a stable order.
+func (s *appState) pluginStatusItemKeys() []string {
+	if len(s.pluginStatusItems) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(s.pluginStatusItems))
+	for key, item := range s.pluginStatusItems {
+		if item.Hidden || strings.TrimSpace(item.Text) == "" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func (s *appState) piHUDItems() []hudItem {
@@ -788,6 +825,14 @@ func (s *appState) piHUDItemGroup(
 							color = t.Warning
 						}
 					}
+				}
+				switch item.tone {
+				case "success":
+					color = t.Success
+				case "warning":
+					color = t.Warning
+				case "danger":
+					color = t.Danger
 				}
 				if item.label != "" {
 					label := ui.Text(c, item.label).FontSize(fontCaption).LineHeight(1.2).

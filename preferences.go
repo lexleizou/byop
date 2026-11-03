@@ -28,6 +28,8 @@ type byopPreferences struct {
 	GlassBlur                      int                                   `json:"glassBlur"`
 	GlassRefraction                bool                                  `json:"glassRefraction"`
 	UILanguage                     string                                `json:"uiLanguage,omitempty"`
+	PluginThemePluginID            string                                `json:"pluginThemePluginId,omitempty"`
+	PluginThemeResourceID          string                                `json:"pluginThemeResourceId,omitempty"`
 	FollowUpStyle                  string                                `json:"followUpStyle,omitempty"`
 	RunningSendMode                string                                `json:"runningSendMode,omitempty"`
 	NavCollapsed                   bool                                  `json:"navCollapsed,omitempty"`
@@ -144,7 +146,7 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 		preferences.Theme = string(themeSystem)
 	}
 	preferences.AppearancePreset = string(normalizeAppearancePreset(preferences.AppearancePreset))
-	preferences.UILanguage = normalizeUILanguage(preferences.UILanguage)
+	preferences.UILanguage = savedUILanguage(preferences.UILanguage)
 	preferences.FollowUpStyle = string(normalizeFollowUpStyle(preferences.FollowUpStyle))
 	preferences.RunningSendMode = string(normalizeRunningSendMode(preferences.RunningSendMode))
 	preferences.Contrast = string(normalizeContrastMode(preferences.Contrast))

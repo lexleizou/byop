@@ -1,0 +1,7 @@
+{
+  "@@locale": "fr",
+  "appWindowTitle": "Atelier Pi",
+  "settingsLanguageTitle": "Langue",
+  "pluginScanFound": "{registered, plural, one {# module enregistré} other {# modules enregistrés}}, {contributions, plural, one {# contribution} other {# contributions}}",
+  "fixtureOnlyKey": "Traduction du fixture"
+}

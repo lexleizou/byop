@@ -14,6 +14,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
+
+	"golang.org/x/text/language"
 )
 
 const (
@@ -23,6 +26,7 @@ const (
 	pluginManifestFilename      = "plugin.json"
 	maxPluginManifestBytes      = 1 << 20
 	maxPluginSettingFields      = 50
+	pluginPromptMaxRunes        = 8000
 
 	modelLabelBadgeMaxRunes = 12
 	modelLabelMatchMaxRunes = 120
@@ -64,17 +68,36 @@ type pluginCompatibility struct {
 }
 
 type pluginContributions struct {
-	Navigation     []pluginNavigationContribution `json:"navigation,omitempty"`
-	Commands       []pluginCommandContribution    `json:"commands,omitempty"`
-	Views          []pluginViewContribution       `json:"views,omitempty"`
-	TaskPanels     []pluginTaskPanelContribution  `json:"taskPanels,omitempty"`
-	Settings       []pluginSettingContribution    `json:"settings,omitempty"`
-	WebViews       []pluginWebViewContribution    `json:"webviews,omitempty"`
-	Automations    []pluginAutomationContribution `json:"automations,omitempty"`
-	ModelLabels    []pluginModelLabelContribution `json:"modelLabels,omitempty"`
-	AgentExtension string                         `json:"agentExtension,omitempty"`
-	AgentProxy     string                         `json:"agentProxy,omitempty"`
+	Navigation       []pluginNavigationContribution      `json:"navigation,omitempty"`
+	Commands         []pluginCommandContribution         `json:"commands,omitempty"`
+	Views            []pluginViewContribution            `json:"views,omitempty"`
+	TaskPanels       []pluginTaskPanelContribution       `json:"taskPanels,omitempty"`
+	Settings         []pluginSettingContribution         `json:"settings,omitempty"`
+	WebViews         []pluginWebViewContribution         `json:"webviews,omitempty"`
+	Automations      []pluginAutomationContribution      `json:"automations,omitempty"`
+	ModelLabels      []pluginModelLabelContribution      `json:"modelLabels,omitempty"`
+	Themes           []pluginThemeContribution           `json:"themes,omitempty"`
+	Locales          []pluginLocaleContribution          `json:"locales,omitempty"`
+	SlashCommands    []pluginSlashCommandContribute      `json:"slashCommands,omitempty"`
+	MentionProviders []pluginQueryContribution           `json:"mentionProviders,omitempty"`
+	PaletteProviders []pluginQueryContribution           `json:"paletteProviders,omitempty"`
+	StatusItems      []pluginStatusContribution          `json:"statusItems,omitempty"`
+	MessageRenderers []pluginMessageRendererContribution `json:"messageRenderers,omitempty"`
+	AgentExtension   string                              `json:"agentExtension,omitempty"`
+	AgentProxy       string                              `json:"agentProxy,omitempty"`
+	// AgentExtensionLifecycle is the author's opt-in statement about how the
+	// Pi extension reacts to a disable. "cooperative" means it reads the
+	// runtime-state marker and revokes or restores its own contributions at a
+	// turn boundary — revoked in place when the host can write that marker,
+	// otherwise the host raises a Pi refresh. The empty default is
+	// non-cooperative: only a Pi refresh takes its tools away.
+	AgentExtensionLifecycle string `json:"agentExtensionLifecycle,omitempty"`
 }
+
+// pluginAgentExtensionLifecycleCooperative is the only lifecycle value a
+// manifest may declare; anything else is a manifest error so a typo cannot
+// silently mean cooperative.
+const pluginAgentExtensionLifecycleCooperative = "cooperative"
 
 type pluginNavigationContribution struct {
 	ID    string `json:"id"`
@@ -161,6 +184,50 @@ type pluginModelMatch struct {
 	ModelName string   `json:"modelName,omitempty"`
 }
 
+type pluginThemeContribution struct {
+	ID             string `json:"id"`
+	Title          string `json:"title"`
+	Light          string `json:"light"`
+	Dark           string `json:"dark"`
+	FontFamily     string `json:"fontFamily,omitempty"`
+	CodeFontFamily string `json:"codeFontFamily,omitempty"`
+}
+
+type pluginLocaleContribution struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Tag   string `json:"tag"`
+	Entry string `json:"entry"`
+}
+
+type pluginSlashCommandContribute struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Command     string `json:"command,omitempty"`
+	Prompt      string `json:"prompt,omitempty"`
+}
+
+type pluginQueryContribution struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Command string `json:"command"`
+}
+
+type pluginStatusContribution struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+type pluginMessageRendererContribution struct {
+	ID        string   `json:"id"`
+	Title     string   `json:"title"`
+	Command   string   `json:"command"`
+	Languages []string `json:"languages,omitempty"`
+	MimeTypes []string `json:"mimeTypes,omitempty"`
+}
+
 type pluginActivation struct {
 	Events []string `json:"events,omitempty"`
 	Lazy   bool     `json:"lazy,omitempty"`
@@ -180,6 +247,7 @@ var (
 	pluginVersionPattern   = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 	iconPattern            = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
 	modelProviderPattern   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
+	pluginMimeTypePattern  = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9!#$&\^_.-]*/[a-zA-Z0-9][a-zA-Z0-9!#$&\^_.+-]*$`)
 	controlCharacterFilter = regexp.MustCompile(`[\x00-\x1f\x7f]`)
 )
 
@@ -241,6 +309,12 @@ func validatePluginManifest(manifest *pluginManifest) error {
 		(!safePluginRelativePath(manifest.Contributes.AgentExtension) ||
 			path.Clean(manifest.Contributes.AgentExtension) != manifest.Contributes.AgentExtension),
 		"contributes.agentExtension must be a safe relative path inside the plugin folder")
+	add(manifest.Contributes.AgentExtensionLifecycle != "" &&
+		manifest.Contributes.AgentExtensionLifecycle != pluginAgentExtensionLifecycleCooperative,
+		"contributes.agentExtensionLifecycle must be empty or cooperative")
+	add(manifest.Contributes.AgentExtensionLifecycle == pluginAgentExtensionLifecycleCooperative &&
+		manifest.Contributes.AgentExtension == "",
+		"contributes.agentExtensionLifecycle cooperative requires contributes.agentExtension")
 	add(!pluginVersionPattern.MatchString(manifest.Version), "version must be semantic versioning such as 0.1.0")
 	add(manifest.Runtime != "node" && manifest.Runtime != "native",
 		"runtime must be node or native")
@@ -389,6 +463,41 @@ func validatePluginManifest(manifest *pluginManifest) error {
 			issues = append(issues, label+" match modelName is invalid")
 		}
 	}
+	validatePluginResourceContributions(manifest, &issues, seenContributions)
+	validatePluginSlashCommands(manifest, &issues, seenContributions)
+	validatePluginQueryProviders(manifest, manifest.Contributes.MentionProviders, "mention provider", &issues, seenContributions)
+	validatePluginQueryProviders(manifest, manifest.Contributes.PaletteProviders, "palette provider", &issues, seenContributions)
+	statusCount := len(manifest.Contributes.StatusItems)
+	if statusCount > 1 {
+		issues = append(issues, fmt.Sprintf("plugin declares %d status items; maximum is 1", statusCount))
+	}
+	for _, contribution := range manifest.Contributes.StatusItems {
+		validateContributionWithSeen("status item", contribution.ID, contribution.Title, seenContributions, &issues)
+	}
+	for _, contribution := range manifest.Contributes.MessageRenderers {
+		validateContributionWithSeen("message renderer", contribution.ID, contribution.Title, seenContributions, &issues)
+		if !pluginDeclaresCommand(manifest, contribution.Command) {
+			issues = append(issues, "message renderer command is not declared: "+contribution.ID)
+		}
+		if !pluginDeclaresActivationEvent(manifest, "onCommand:"+contribution.Command) {
+			issues = append(issues, "message renderer command lacks activation event: "+contribution.ID)
+		}
+		if len(contribution.Languages) == 0 && len(contribution.MimeTypes) == 0 {
+			issues = append(issues, "message renderer needs at least one language or mimeType: "+contribution.ID)
+		}
+		for _, language := range contribution.Languages {
+			if language == "" || pluginTextInvalid(language, 80) {
+				issues = append(issues, "message renderer language is invalid: "+contribution.ID)
+				break
+			}
+		}
+		for _, mimeType := range contribution.MimeTypes {
+			if !pluginMimeTypeValid(mimeType) {
+				issues = append(issues, "message renderer mimeType is invalid: "+contribution.ID)
+				break
+			}
+		}
+	}
 	for _, event := range manifest.Activation.Events {
 		if pluginTextInvalid(event, 180) || !strings.Contains(event, ":") {
 			issues = append(issues, "activation event must contain a printable type and value")
@@ -466,6 +575,146 @@ func validatePluginSettingFields(manifest *pluginManifest, issues *[]string) {
 	if fieldCount > maxPluginSettingFields {
 		*issues = append(*issues, fmt.Sprintf("plugin declares %d setting fields; maximum is %d",
 			fieldCount, maxPluginSettingFields))
+	}
+}
+
+func validatePluginResourceContributions(manifest *pluginManifest, issues *[]string, seenContributions map[string]struct{}) {
+	for _, contribution := range manifest.Contributes.Themes {
+		validateContributionWithSeen("theme", contribution.ID, contribution.Title, seenContributions, issues)
+		if pluginRequiredTextInvalid(contribution.Light, 0) ||
+			!safePluginRelativePath(contribution.Light) ||
+			path.Clean(contribution.Light) != contribution.Light {
+			*issues = append(*issues, "theme contribution light file is invalid: "+contribution.ID)
+		}
+		if pluginRequiredTextInvalid(contribution.Dark, 0) ||
+			!safePluginRelativePath(contribution.Dark) ||
+			path.Clean(contribution.Dark) != contribution.Dark {
+			*issues = append(*issues, "theme contribution dark file is invalid: "+contribution.ID)
+		}
+		if contribution.FontFamily != "" && pluginTextInvalid(contribution.FontFamily, 120) {
+			*issues = append(*issues, "theme contribution fontFamily is invalid: "+contribution.ID)
+		}
+		if contribution.CodeFontFamily != "" && pluginTextInvalid(contribution.CodeFontFamily, 120) {
+			*issues = append(*issues, "theme contribution codeFontFamily is invalid: "+contribution.ID)
+		}
+	}
+	seenLocaleTags := make(map[string]struct{})
+	for _, contribution := range manifest.Contributes.Locales {
+		validateContributionWithSeen("locale", contribution.ID, contribution.Title, seenContributions, issues)
+		canonical, tagErr := pluginLocaleTagCanonical(contribution.Tag)
+		if tagErr != nil {
+			*issues = append(*issues, "locale contribution tag is invalid: "+contribution.ID)
+		}
+		if tagErr == nil {
+			if _, exists := seenLocaleTags[canonical]; exists {
+				*issues = append(*issues, "locale tag is duplicated: "+contribution.Tag)
+			}
+			seenLocaleTags[canonical] = struct{}{}
+		}
+		if !safePluginRelativePath(contribution.Entry) ||
+			path.Clean(contribution.Entry) != contribution.Entry {
+			*issues = append(*issues, "locale contribution entry is invalid: "+contribution.ID)
+		}
+	}
+}
+
+func validatePluginSlashCommands(manifest *pluginManifest, issues *[]string, seenContributions map[string]struct{}) {
+	seenNames := make(map[string]struct{})
+	for _, contribution := range manifest.Contributes.SlashCommands {
+		validateContributionWithSeen("slash command", contribution.ID, contribution.Title, seenContributions, issues)
+		if (contribution.Command == "") == (contribution.Prompt == "") {
+			*issues = append(*issues, "slash command needs exactly one command or prompt: "+contribution.ID)
+		}
+		if contribution.Command != "" && !pluginDeclaresCommand(manifest, contribution.Command) {
+			*issues = append(*issues, "slash command is not declared: "+contribution.ID)
+		}
+		if contribution.Command != "" &&
+			!pluginDeclaresActivationEvent(manifest, "onCommand:"+contribution.Command) {
+			*issues = append(*issues, "slash command lacks activation event: "+contribution.ID)
+		}
+		if contribution.Prompt != "" && pluginPromptInvalid(contribution.Prompt) {
+			*issues = append(*issues, "slash command prompt is invalid: "+contribution.ID)
+		}
+		if contribution.Description != "" && pluginTextInvalid(contribution.Description, 300) {
+			*issues = append(*issues, "slash command description is invalid: "+contribution.ID)
+		}
+		if !slashCommandNameValid(contribution.Name) {
+			*issues = append(*issues, "slash command name is invalid: "+contribution.ID)
+		}
+		if _, exists := seenNames[contribution.Name]; exists {
+			*issues = append(*issues, "slash command name is duplicated: "+contribution.Name)
+		} else {
+			seenNames[contribution.Name] = struct{}{}
+		}
+	}
+}
+
+func validatePluginQueryProviders(manifest *pluginManifest, contributions []pluginQueryContribution, kind string, issues *[]string, seenContributions map[string]struct{}) {
+	for _, contribution := range contributions {
+		validateContributionWithSeen(kind, contribution.ID, contribution.Title, seenContributions, issues)
+		if !pluginDeclaresCommand(manifest, contribution.Command) {
+			*issues = append(*issues, kind+" command is not declared: "+contribution.ID)
+		}
+		if !pluginDeclaresActivationEvent(manifest, "onCommand:"+contribution.Command) {
+			*issues = append(*issues, kind+" command lacks activation event: "+contribution.ID)
+		}
+	}
+}
+
+func slashCommandNameValid(name string) bool {
+	if len(name) == 0 || len(name) > 32 {
+		return false
+	}
+	for _, char := range name {
+		if char >= 'a' && char <= 'z' || char >= '0' && char <= '9' || char == '-' || char == '_' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+// pluginPromptInvalid accepts the LF, CR and TAB that multi-line prompt
+// templates use and caps the template like other long text fields.
+func pluginPromptInvalid(prompt string) bool {
+	if utf8.RuneCountInString(prompt) > pluginPromptMaxRunes {
+		return true
+	}
+	for _, char := range prompt {
+		if char == '\n' || char == '\r' || char == '\t' {
+			continue
+		}
+		if char == 0 || char < ' ' || char == 0x7f {
+			return true
+		}
+	}
+	return false
+}
+
+func pluginLocaleTagCanonical(tag string) (string, error) {
+	parsed, err := language.Parse(tag)
+	if err != nil || parsed == language.Und {
+		return "", fmt.Errorf("invalid locale tag")
+	}
+	return parsed.String(), nil
+}
+
+func pluginMimeTypeValid(value string) bool {
+	return pluginMimeTypePattern.MatchString(value)
+}
+
+func validateContributionWithSeen(kind, id, title string, seenContributions map[string]struct{}, issues *[]string) {
+	label := kind + " contribution"
+	if !contributionIDPattern.MatchString(id) {
+		*issues = append(*issues, label+" id is invalid")
+	}
+	if pluginRequiredTextInvalid(title, 80) {
+		*issues = append(*issues, label+" title must contain 1-80 printable characters")
+	}
+	if _, exists := seenContributions[id]; id != "" && exists {
+		*issues = append(*issues, "contribution id is duplicated: "+id)
+	} else if id != "" {
+		seenContributions[id] = struct{}{}
 	}
 }
 
@@ -689,7 +938,14 @@ func (manifest *pluginManifest) contributionCount() int {
 		len(manifest.Contributes.Settings) +
 		len(manifest.Contributes.WebViews) +
 		len(manifest.Contributes.Automations) +
-		len(manifest.Contributes.ModelLabels)
+		len(manifest.Contributes.ModelLabels) +
+		len(manifest.Contributes.Themes) +
+		len(manifest.Contributes.Locales) +
+		len(manifest.Contributes.SlashCommands) +
+		len(manifest.Contributes.MentionProviders) +
+		len(manifest.Contributes.PaletteProviders) +
+		len(manifest.Contributes.StatusItems) +
+		len(manifest.Contributes.MessageRenderers)
 }
 
 type semanticVersion struct {

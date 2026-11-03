@@ -36,6 +36,8 @@ func (s *appState) pluginsPage(c *ui.Context, p palette) {
 					})
 				})
 
+				s.pluginInstallActions(c, p)
+
 				ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 					ui.Column(c).Width(300).MinWidth(180).Children(func() {
 						searchField(c, p, "plugin-search", &s.pluginSearch, text("pluginsSearch"))
@@ -372,6 +374,21 @@ func (s *appState) pluginCard(
 							s.runPluginCommand(entry, command)
 						})
 				}
+			case pluginCardActionNone:
+				// A disabled plugin declares nothing usable, so the card offers
+				// the one action that applies: enable it again.
+				if entry.Status == pluginDisabled {
+					s.pluginCardPrimaryButton(c, p, "plugin-enable-primary-"+entryKey,
+						text("pluginsEnable"), "check", busy, func() {
+							s.setPluginEnabled(entry, true)
+						})
+				}
+			}
+			if entry.Status == pluginRegistered && entry.Manifest != nil {
+				pluginSecondaryActionDisabled(c, p, "plugin-disable-"+entryKey,
+					text("pluginsDisable"), busy, func() {
+						s.setPluginEnabled(entry, false)
+					})
 			}
 			ui.Spacer(c)
 			detailsButton = ui.ButtonBase(c.Key("plugin-details-"+entryKey)).
@@ -496,6 +513,10 @@ func (s *appState) pluginDetailsPanel(
 					}
 				})
 
+				s.pluginPackageActions(c, p, entry)
+				s.modelLabelEditorSection(c, p, entry)
+				s.pluginThemePickerRow(c, p, entry)
+
 				if registered && len(entry.Manifest.Contributes.Commands) > 0 {
 					pluginDetailsSection(c, p, text("pluginsDetailsCommands"))
 					ui.Row(c).Wrap().GapX(6).GapY(6).Children(func() {
@@ -516,10 +537,18 @@ func (s *appState) pluginDetailsPanel(
 						})
 				}
 
-				if registered && runtime.State == pluginStateActive {
-					secondaryAction(c, p, "plugin-details-stop-"+entryKey,
-						text("pluginsDeactivate"), func() {
-							s.deactivatePlugin(entry)
+				// The enable choice is persistent and applies without a restart:
+				// disabling revokes every contribution now, enabling stays lazy.
+				if registered {
+					pluginSecondaryActionDisabled(c, p, "plugin-details-disable-"+entryKey,
+						text("pluginsDisable"), busy, func() {
+							s.setPluginEnabled(entry, false)
+						})
+				}
+				if entry.Status == pluginDisabled {
+					pluginSecondaryActionDisabled(c, p, "plugin-details-enable-"+entryKey,
+						text("pluginsEnable"), busy, func() {
+							s.setPluginEnabled(entry, true)
 						})
 				}
 
@@ -724,24 +753,6 @@ func (s *appState) runPluginCommandWithArgs(
 	}()
 }
 
-func (s *appState) deactivatePlugin(entry pluginRegistryEntry) {
-	name := fallback(entry.Name, entry.ID)
-	s.destroyPluginWebViews(entry.ID)
-	go func() {
-		err := s.plugins.deactivate(entry.ID)
-		s.postUI(func() {
-			if err != nil {
-				s.showNotice(textArgs("pluginsStoppedWithError", map[string]any{
-					"name":  name,
-					"error": uiErrorSummary(err, text("errorUnknown"), 200),
-				}))
-				return
-			}
-			s.showNotice(textArgs("pluginsDeactivated", map[string]any{"name": name}))
-		})
-	}()
-}
-
 func pluginRuntimeLabel(state pluginRuntimeState) string {
 	switch state {
 	case pluginStateInactive:
@@ -754,6 +765,8 @@ func pluginRuntimeLabel(state pluginRuntimeState) string {
 		return text("pluginsStatusRunning")
 	case pluginStateStopping:
 		return text("pluginsStatusStopping")
+	case pluginStateStopped:
+		return text("pluginsStatusStopped")
 	case pluginStateFailed:
 		return text("pluginsStatusFailed")
 	default:
@@ -786,6 +799,8 @@ func pluginStatusLabel(status pluginRegistryStatus) string {
 		return text("pluginsStatusDuplicateID")
 	case pluginDuplicateContribution:
 		return text("pluginsStatusConflict")
+	case pluginDisabled:
+		return text("pluginsStatusDisabled")
 	default:
 		return text("pluginsStatusUnknown")
 	}
@@ -797,6 +812,8 @@ func (s *appState) pluginStatusTone(p palette, status pluginRegistryStatus) ui.C
 		return p.success
 	case pluginIncompatible:
 		return p.warning
+	case pluginDisabled:
+		return p.muted
 	default:
 		return p.danger
 	}
@@ -817,6 +834,14 @@ func pluginContributionSummary(manifest *pluginManifest) string {
 	appendPart(len(manifest.Contributes.Settings), "pluginsSummarySetting")
 	appendPart(len(manifest.Contributes.WebViews), "pluginsSummaryWebView")
 	appendPart(len(manifest.Contributes.Automations), "pluginsSummaryAutomation")
+	appendPart(len(manifest.Contributes.ModelLabels), "pluginsSummaryModelLabel")
+	appendPart(len(manifest.Contributes.Themes), "pluginsSummaryTheme")
+	appendPart(len(manifest.Contributes.Locales), "pluginsSummaryLocale")
+	appendPart(len(manifest.Contributes.SlashCommands), "pluginsSummarySlashCommand")
+	appendPart(len(manifest.Contributes.MentionProviders), "pluginsSummaryMentionProvider")
+	appendPart(len(manifest.Contributes.PaletteProviders), "pluginsSummaryPaletteProvider")
+	appendPart(len(manifest.Contributes.StatusItems), "pluginsSummaryStatusItem")
+	appendPart(len(manifest.Contributes.MessageRenderers), "pluginsSummaryMessageRenderer")
 	if len(parts) == 0 {
 		return textArgs("pluginsContributionCount", map[string]any{"count": 0})
 	}
@@ -1523,4 +1548,42 @@ func (s *appState) choiceButton(c *ui.Context, p palette, key, iconName, label s
 	if button.Clicked() {
 		click()
 	}
+}
+
+// pluginThemePickerRow renders the theme resources one plugin contributes, with
+// the selected resource highlighted and a system fallback row. Selecting a row
+// persists the choice; selecting system clears the resource but keeps the
+// stored choice for a later re-enable.
+func (s *appState) pluginThemePickerRow(
+	c *ui.Context,
+	p palette,
+	entry pluginRegistryEntry,
+) {
+	choices := pluginThemeChoicesForEntry(entry)
+	if len(choices) == 0 {
+		return
+	}
+	selection := pluginThemeOverlaySelected()
+	selectedPlugin, selectedResource := "", ""
+	if selection != nil {
+		selectedPlugin, selectedResource = selection.PluginID, selection.ResourceID
+	}
+	ui.Column(c).FillWidth().Gap(6).Children(func() {
+		pluginDetailsSection(c, p, text("pluginsThemeTitle"))
+		pluginSecondaryActionDisabled(c, p, "plugin-theme-system-"+entry.ID,
+			text("pluginsThemeSystem"), selectedPlugin == "", func() {
+				s.setPluginThemeResource(nil)
+			})
+		for _, choice := range choices {
+			choice := choice
+			selected := selectedPlugin == entry.ID && selectedResource == choice.ID
+			pluginSecondaryActionDisabled(c, p, "plugin-theme-"+entry.ID+"-"+choice.ID,
+				fallback(choice.Title, choice.ID), selected, func() {
+					s.setPluginThemeResource(&pluginThemeSelection{
+						PluginID:   entry.ID,
+						ResourceID: choice.ID,
+					})
+				})
+		}
+	})
 }

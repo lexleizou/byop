@@ -11847,3 +11847,1615 @@ func FileOpenFailed() string { return In(i18n.Locale()).FileOpenFailed() }
 func (msgs Messages) FileOpenFailed() string {
 	return Catalog.Format(msgs.locale, "fileOpenFailed", nil)
 }
+
+// ModelLabelEditorTitle says "Model badges"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorTitle() string { return In(i18n.Locale()).ModelLabelEditorTitle() }
+
+// ModelLabelEditorTitle says "Model badges"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorTitle() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorTitle", nil)
+}
+
+// ModelLabelEditorDescription says "Choose a provider and model, then enter your own badge. Badges are personal labels, not verified model versions."
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorDescription() string { return In(i18n.Locale()).ModelLabelEditorDescription() }
+
+// ModelLabelEditorDescription says "Choose a provider and model, then enter your own badge. Badges are personal labels, not verified model versions."
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorDescription() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorDescription", nil)
+}
+
+// ModelLabelEditorSearch says "Search provider or model"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorSearch() string { return In(i18n.Locale()).ModelLabelEditorSearch() }
+
+// ModelLabelEditorSearch says "Search provider or model"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorSearch() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorSearch", nil)
+}
+
+// ModelLabelEditorSelected says "Selected: {provider} · {model}"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorSelected(provider string, model string) string {
+	return In(i18n.Locale()).ModelLabelEditorSelected(provider, model)
+}
+
+// ModelLabelEditorSelected says "Selected: {provider} · {model}"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorSelected(provider string, model string) string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorSelected", map[string]any{"provider": provider, "model": model})
+}
+
+// ModelLabelEditorBadge says "Badge text"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorBadge() string { return In(i18n.Locale()).ModelLabelEditorBadge() }
+
+// ModelLabelEditorBadge says "Badge text"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorBadge() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorBadge", nil)
+}
+
+// ModelLabelEditorBadgePlaceholder says "For example: IQ2 or 1017"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorBadgePlaceholder() string {
+	return In(i18n.Locale()).ModelLabelEditorBadgePlaceholder()
+}
+
+// ModelLabelEditorBadgePlaceholder says "For example: IQ2 or 1017"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorBadgePlaceholder() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorBadgePlaceholder", nil)
+}
+
+// ModelLabelEditorSave says "Save badge"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorSave() string { return In(i18n.Locale()).ModelLabelEditorSave() }
+
+// ModelLabelEditorSave says "Save badge"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorSave() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorSave", nil)
+}
+
+// ModelLabelEditorRemove says "Remove badge"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorRemove() string { return In(i18n.Locale()).ModelLabelEditorRemove() }
+
+// ModelLabelEditorRemove says "Remove badge"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorRemove() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorRemove", nil)
+}
+
+// ModelLabelEditorSaved says "Badge saved."
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorSaved() string { return In(i18n.Locale()).ModelLabelEditorSaved() }
+
+// ModelLabelEditorSaved says "Badge saved."
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorSaved() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorSaved", nil)
+}
+
+// ModelLabelEditorRemoved says "Badge removed."
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorRemoved() string { return In(i18n.Locale()).ModelLabelEditorRemoved() }
+
+// ModelLabelEditorRemoved says "Badge removed."
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorRemoved() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorRemoved", nil)
+}
+
+// ModelLabelEditorMissingModel says "Select a model first."
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorMissingModel() string { return In(i18n.Locale()).ModelLabelEditorMissingModel() }
+
+// ModelLabelEditorMissingModel says "Select a model first."
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorMissingModel() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorMissingModel", nil)
+}
+
+// ModelLabelEditorInvalidBadge says "Enter 1–12 printable characters."
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorInvalidBadge() string { return In(i18n.Locale()).ModelLabelEditorInvalidBadge() }
+
+// ModelLabelEditorInvalidBadge says "Enter 1–12 printable characters."
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorInvalidBadge() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorInvalidBadge", nil)
+}
+
+// ModelLabelEditorDataError says "Badge settings could not be read. The saved file was kept."
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorDataError() string { return In(i18n.Locale()).ModelLabelEditorDataError() }
+
+// ModelLabelEditorDataError says "Badge settings could not be read. The saved file was kept."
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorDataError() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorDataError", nil)
+}
+
+// ModelLabelEditorStoreError says "Badge settings could not be saved."
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func ModelLabelEditorStoreError() string { return In(i18n.Locale()).ModelLabelEditorStoreError() }
+
+// ModelLabelEditorStoreError says "Badge settings could not be saved."
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) ModelLabelEditorStoreError() string {
+	return Catalog.Format(msgs.locale, "modelLabelEditorStoreError", nil)
+}
+
+// PluginsDisable says "Disable"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func PluginsDisable() string { return In(i18n.Locale()).PluginsDisable() }
+
+// PluginsDisable says "Disable"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) PluginsDisable() string {
+	return Catalog.Format(msgs.locale, "pluginsDisable", nil)
+}
+
+// PluginsEnable says "Enable"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func PluginsEnable() string { return In(i18n.Locale()).PluginsEnable() }
+
+// PluginsEnable says "Enable"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) PluginsEnable() string {
+	return Catalog.Format(msgs.locale, "pluginsEnable", nil)
+}
+
+// PluginsStatusDisabled says "Disabled"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func PluginsStatusDisabled() string { return In(i18n.Locale()).PluginsStatusDisabled() }
+
+// PluginsStatusDisabled says "Disabled"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) PluginsStatusDisabled() string {
+	return Catalog.Format(msgs.locale, "pluginsStatusDisabled", nil)
+}
+
+// PluginsDisabled says "{name} is disabled. Its data is retained."
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func PluginsDisabled(name string) string { return In(i18n.Locale()).PluginsDisabled(name) }
+
+// PluginsDisabled says "{name} is disabled. Its data is retained."
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) PluginsDisabled(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsDisabled", map[string]any{"name": name})
+}
+
+// PluginsEnabled says "{name} is enabled and will start when needed."
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func PluginsEnabled(name string) string { return In(i18n.Locale()).PluginsEnabled(name) }
+
+// PluginsEnabled says "{name} is enabled and will start when needed."
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) PluginsEnabled(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsEnabled", map[string]any{"name": name})
+}
+
+// PluginsEnableFailed says "Could not change the enabled state of {name}: {error}"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func PluginsEnableFailed(name string, error string) string {
+	return In(i18n.Locale()).PluginsEnableFailed(name, error)
+}
+
+// PluginsEnableFailed says "Could not change the enabled state of {name}: {error}"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) PluginsEnableFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "pluginsEnableFailed", map[string]any{"name": name, "error": error})
+}
+
+// PluginsRuntimeStateFailed says "Could not synchronize the runtime state of {name}: {error}"
+// in the language the app shows.
+//
+// Plugin lifecycle or manual model badge interface.
+func PluginsRuntimeStateFailed(name string, error string) string {
+	return In(i18n.Locale()).PluginsRuntimeStateFailed(name, error)
+}
+
+// PluginsRuntimeStateFailed says "Could not synchronize the runtime state of {name}: {error}"
+// in the language of msgs.
+//
+// Plugin lifecycle or manual model badge interface.
+func (msgs Messages) PluginsRuntimeStateFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "pluginsRuntimeStateFailed", map[string]any{"name": name, "error": error})
+}
+
+// PluginsAddFromFolder says "Add from folder"
+// in the language the app shows.
+//
+// Local plugin package action: install from a folder.
+func PluginsAddFromFolder() string { return In(i18n.Locale()).PluginsAddFromFolder() }
+
+// PluginsAddFromFolder says "Add from folder"
+// in the language of msgs.
+//
+// Local plugin package action: install from a folder.
+func (msgs Messages) PluginsAddFromFolder() string {
+	return Catalog.Format(msgs.locale, "pluginsAddFromFolder", nil)
+}
+
+// PluginsAddFromZip says "Add from zip"
+// in the language the app shows.
+//
+// Local plugin package action: install from a zip package.
+func PluginsAddFromZip() string { return In(i18n.Locale()).PluginsAddFromZip() }
+
+// PluginsAddFromZip says "Add from zip"
+// in the language of msgs.
+//
+// Local plugin package action: install from a zip package.
+func (msgs Messages) PluginsAddFromZip() string {
+	return Catalog.Format(msgs.locale, "pluginsAddFromZip", nil)
+}
+
+// PluginsInstallFolderDialog says "Choose a plugin folder"
+// in the language the app shows.
+//
+// Title of the folder picker for a plugin package.
+func PluginsInstallFolderDialog() string { return In(i18n.Locale()).PluginsInstallFolderDialog() }
+
+// PluginsInstallFolderDialog says "Choose a plugin folder"
+// in the language of msgs.
+//
+// Title of the folder picker for a plugin package.
+func (msgs Messages) PluginsInstallFolderDialog() string {
+	return Catalog.Format(msgs.locale, "pluginsInstallFolderDialog", nil)
+}
+
+// PluginsInstallZipDialog says "Choose a plugin package (.zip)"
+// in the language the app shows.
+//
+// Title of the zip picker for a plugin package.
+func PluginsInstallZipDialog() string { return In(i18n.Locale()).PluginsInstallZipDialog() }
+
+// PluginsInstallZipDialog says "Choose a plugin package (.zip)"
+// in the language of msgs.
+//
+// Title of the zip picker for a plugin package.
+func (msgs Messages) PluginsInstallZipDialog() string {
+	return Catalog.Format(msgs.locale, "pluginsInstallZipDialog", nil)
+}
+
+// PluginsPackageUpdate says "Update"
+// in the language the app shows.
+//
+// Details-panel action: update an installed plugin from a package.
+func PluginsPackageUpdate() string { return In(i18n.Locale()).PluginsPackageUpdate() }
+
+// PluginsPackageUpdate says "Update"
+// in the language of msgs.
+//
+// Details-panel action: update an installed plugin from a package.
+func (msgs Messages) PluginsPackageUpdate() string {
+	return Catalog.Format(msgs.locale, "pluginsPackageUpdate", nil)
+}
+
+// PluginsPackageUninstall says "Uninstall"
+// in the language the app shows.
+//
+// Details-panel action: move an installed plugin folder to the Trash.
+func PluginsPackageUninstall() string { return In(i18n.Locale()).PluginsPackageUninstall() }
+
+// PluginsPackageUninstall says "Uninstall"
+// in the language of msgs.
+//
+// Details-panel action: move an installed plugin folder to the Trash.
+func (msgs Messages) PluginsPackageUninstall() string {
+	return Catalog.Format(msgs.locale, "pluginsPackageUninstall", nil)
+}
+
+// PluginsInstallFailed says "The plugin package could not be installed."
+// in the language the app shows.
+//
+// Header of the install error line; the detail is shown next to it.
+func PluginsInstallFailed() string { return In(i18n.Locale()).PluginsInstallFailed() }
+
+// PluginsInstallFailed says "The plugin package could not be installed."
+// in the language of msgs.
+//
+// Header of the install error line; the detail is shown next to it.
+func (msgs Messages) PluginsInstallFailed() string {
+	return Catalog.Format(msgs.locale, "pluginsInstallFailed", nil)
+}
+
+// PluginsUpdateFailed says "The plugin could not be updated."
+// in the language the app shows.
+//
+// Header of the update error line; the detail is shown next to it.
+func PluginsUpdateFailed() string { return In(i18n.Locale()).PluginsUpdateFailed() }
+
+// PluginsUpdateFailed says "The plugin could not be updated."
+// in the language of msgs.
+//
+// Header of the update error line; the detail is shown next to it.
+func (msgs Messages) PluginsUpdateFailed() string {
+	return Catalog.Format(msgs.locale, "pluginsUpdateFailed", nil)
+}
+
+// PluginsUninstallFailed says "The plugin could not be uninstalled."
+// in the language the app shows.
+//
+// Header of the uninstall error line; the detail is shown next to it.
+func PluginsUninstallFailed() string { return In(i18n.Locale()).PluginsUninstallFailed() }
+
+// PluginsUninstallFailed says "The plugin could not be uninstalled."
+// in the language of msgs.
+//
+// Header of the uninstall error line; the detail is shown next to it.
+func (msgs Messages) PluginsUninstallFailed() string {
+	return Catalog.Format(msgs.locale, "pluginsUninstallFailed", nil)
+}
+
+// PluginsInstalled says "{name} was installed."
+// in the language the app shows.
+//
+// Notice after installing a plugin package.
+func PluginsInstalled(name string) string { return In(i18n.Locale()).PluginsInstalled(name) }
+
+// PluginsInstalled says "{name} was installed."
+// in the language of msgs.
+//
+// Notice after installing a plugin package.
+func (msgs Messages) PluginsInstalled(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsInstalled", map[string]any{"name": name})
+}
+
+// PluginsUpdated says "{name} was updated."
+// in the language the app shows.
+//
+// Notice after updating a plugin from a package.
+func PluginsUpdated(name string) string { return In(i18n.Locale()).PluginsUpdated(name) }
+
+// PluginsUpdated says "{name} was updated."
+// in the language of msgs.
+//
+// Notice after updating a plugin from a package.
+func (msgs Messages) PluginsUpdated(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsUpdated", map[string]any{"name": name})
+}
+
+// PluginsUninstalled says "{name} was uninstalled. Its data is retained and the folder was kept at {path}."
+// in the language the app shows.
+//
+// Notice after uninstalling a plugin; data is retained.
+func PluginsUninstalled(name string, path string) string {
+	return In(i18n.Locale()).PluginsUninstalled(name, path)
+}
+
+// PluginsUninstalled says "{name} was uninstalled. Its data is retained and the folder was kept at {path}."
+// in the language of msgs.
+//
+// Notice after uninstalling a plugin; data is retained.
+func (msgs Messages) PluginsUninstalled(name string, path string) string {
+	return Catalog.Format(msgs.locale, "pluginsUninstalled", map[string]any{"name": name, "path": path})
+}
+
+// PluginsPackageKept says "The previous version was kept at {path}."
+// in the language the app shows.
+//
+// Appended notice naming the retained previous version.
+func PluginsPackageKept(path string) string { return In(i18n.Locale()).PluginsPackageKept(path) }
+
+// PluginsPackageKept says "The previous version was kept at {path}."
+// in the language of msgs.
+//
+// Appended notice naming the retained previous version.
+func (msgs Messages) PluginsPackageKept(path string) string {
+	return Catalog.Format(msgs.locale, "pluginsPackageKept", map[string]any{"path": path})
+}
+
+// PluginsPackageSkippedLinks says "{count} links were skipped during the copy."
+// in the language the app shows.
+//
+// Appended notice when symbolic links were skipped during the copy.
+func PluginsPackageSkippedLinks(count int) string {
+	return In(i18n.Locale()).PluginsPackageSkippedLinks(count)
+}
+
+// PluginsPackageSkippedLinks says "{count} links were skipped during the copy."
+// in the language of msgs.
+//
+// Appended notice when symbolic links were skipped during the copy.
+func (msgs Messages) PluginsPackageSkippedLinks(count int) string {
+	return Catalog.Format(msgs.locale, "pluginsPackageSkippedLinks", map[string]any{"count": count})
+}
+
+// ChatAttachmentButton says "Add files to this message"
+// in the language the app shows.
+//
+// Accessible label and tooltip for the composer attachment picker.
+func ChatAttachmentButton() string { return In(i18n.Locale()).ChatAttachmentButton() }
+
+// ChatAttachmentButton says "Add files to this message"
+// in the language of msgs.
+//
+// Accessible label and tooltip for the composer attachment picker.
+func (msgs Messages) ChatAttachmentButton() string {
+	return Catalog.Format(msgs.locale, "chatAttachmentButton", nil)
+}
+
+// ChatAttachmentRemove says "Remove attachment"
+// in the language the app shows.
+//
+// Accessible label for removing one selected attachment.
+func ChatAttachmentRemove() string { return In(i18n.Locale()).ChatAttachmentRemove() }
+
+// ChatAttachmentRemove says "Remove attachment"
+// in the language of msgs.
+//
+// Accessible label for removing one selected attachment.
+func (msgs Messages) ChatAttachmentRemove() string {
+	return Catalog.Format(msgs.locale, "chatAttachmentRemove", nil)
+}
+
+// ChatAttachmentPickerTitle says "Choose files to attach"
+// in the language the app shows.
+//
+// Title of the native file picker for chat attachments.
+func ChatAttachmentPickerTitle() string { return In(i18n.Locale()).ChatAttachmentPickerTitle() }
+
+// ChatAttachmentPickerTitle says "Choose files to attach"
+// in the language of msgs.
+//
+// Title of the native file picker for chat attachments.
+func (msgs Messages) ChatAttachmentPickerTitle() string {
+	return Catalog.Format(msgs.locale, "chatAttachmentPickerTitle", nil)
+}
+
+// ChatImageUnsupported says "This model does not accept images. The image was added as a file reference."
+// in the language the app shows.
+//
+// Notice shown when an image is dropped while the active model cannot
+// accept images.
+func ChatImageUnsupported() string { return In(i18n.Locale()).ChatImageUnsupported() }
+
+// ChatImageUnsupported says "This model does not accept images. The image was added as a file reference."
+// in the language of msgs.
+//
+// Notice shown when an image is dropped while the active model cannot
+// accept images.
+func (msgs Messages) ChatImageUnsupported() string {
+	return Catalog.Format(msgs.locale, "chatImageUnsupported", nil)
+}
+
+// ChatAttachmentTooLarge says "{name} exceeds the {limit} inline image limit and was added as a file reference."
+// in the language the app shows.
+//
+// Notice shown when a selected file exceeds the inline image limit.
+func ChatAttachmentTooLarge(name string, limit string) string {
+	return In(i18n.Locale()).ChatAttachmentTooLarge(name, limit)
+}
+
+// ChatAttachmentTooLarge says "{name} exceeds the {limit} inline image limit and was added as a file reference."
+// in the language of msgs.
+//
+// Notice shown when a selected file exceeds the inline image limit.
+func (msgs Messages) ChatAttachmentTooLarge(name string, limit string) string {
+	return Catalog.Format(msgs.locale, "chatAttachmentTooLarge", map[string]any{"name": name, "limit": limit})
+}
+
+// ChatAttachmentSkipped says "{count} items were not added. Check that they are readable files and the attachment limit has not been reached."
+// in the language the app shows.
+//
+// Notice shown when dropped or picked items cannot be attached.
+func ChatAttachmentSkipped(count int) string { return In(i18n.Locale()).ChatAttachmentSkipped(count) }
+
+// ChatAttachmentSkipped says "{count} items were not added. Check that they are readable files and the attachment limit has not been reached."
+// in the language of msgs.
+//
+// Notice shown when dropped or picked items cannot be attached.
+func (msgs Messages) ChatAttachmentSkipped(count int) string {
+	return Catalog.Format(msgs.locale, "chatAttachmentSkipped", map[string]any{"count": count})
+}
+
+// ChatFileReferencePrefix says "Attached files"
+// in the language the app shows.
+//
+// Heading before the local file references added to a prompt.
+func ChatFileReferencePrefix() string { return In(i18n.Locale()).ChatFileReferencePrefix() }
+
+// ChatFileReferencePrefix says "Attached files"
+// in the language of msgs.
+//
+// Heading before the local file references added to a prompt.
+func (msgs Messages) ChatFileReferencePrefix() string {
+	return Catalog.Format(msgs.locale, "chatFileReferencePrefix", nil)
+}
+
+// ChatAttachmentImageLabel says "Image"
+// in the language the app shows.
+//
+// Kind label for an image attachment chip.
+func ChatAttachmentImageLabel() string { return In(i18n.Locale()).ChatAttachmentImageLabel() }
+
+// ChatAttachmentImageLabel says "Image"
+// in the language of msgs.
+//
+// Kind label for an image attachment chip.
+func (msgs Messages) ChatAttachmentImageLabel() string {
+	return Catalog.Format(msgs.locale, "chatAttachmentImageLabel", nil)
+}
+
+// ChatAttachmentFileLabel says "File"
+// in the language the app shows.
+//
+// Kind label for a non-image attachment chip.
+func ChatAttachmentFileLabel() string { return In(i18n.Locale()).ChatAttachmentFileLabel() }
+
+// ChatAttachmentFileLabel says "File"
+// in the language of msgs.
+//
+// Kind label for a non-image attachment chip.
+func (msgs Messages) ChatAttachmentFileLabel() string {
+	return Catalog.Format(msgs.locale, "chatAttachmentFileLabel", nil)
+}
+
+// ExtensionUIDialogCancel says "Cancel"
+// in the language the app shows.
+//
+// Cancel button in a Pi extension dialog.
+func ExtensionUIDialogCancel() string { return In(i18n.Locale()).ExtensionUIDialogCancel() }
+
+// ExtensionUIDialogCancel says "Cancel"
+// in the language of msgs.
+//
+// Cancel button in a Pi extension dialog.
+func (msgs Messages) ExtensionUIDialogCancel() string {
+	return Catalog.Format(msgs.locale, "extensionUIDialogCancel", nil)
+}
+
+// ExtensionUIDialogConfirm says "Confirm"
+// in the language the app shows.
+//
+// Confirm button in a Pi extension dialog.
+func ExtensionUIDialogConfirm() string { return In(i18n.Locale()).ExtensionUIDialogConfirm() }
+
+// ExtensionUIDialogConfirm says "Confirm"
+// in the language of msgs.
+//
+// Confirm button in a Pi extension dialog.
+func (msgs Messages) ExtensionUIDialogConfirm() string {
+	return Catalog.Format(msgs.locale, "extensionUIDialogConfirm", nil)
+}
+
+// ExtensionUIPromptMissing says "Pi asked for input, but the request has no text."
+// in the language the app shows.
+//
+// Notice shown when a Pi extension dialog request carries no title.
+func ExtensionUIPromptMissing() string { return In(i18n.Locale()).ExtensionUIPromptMissing() }
+
+// ExtensionUIPromptMissing says "Pi asked for input, but the request has no text."
+// in the language of msgs.
+//
+// Notice shown when a Pi extension dialog request carries no title.
+func (msgs Messages) ExtensionUIPromptMissing() string {
+	return Catalog.Format(msgs.locale, "extensionUIPromptMissing", nil)
+}
+
+// ExtensionUIDialogDecline says "No"
+// in the language the app shows.
+//
+// Decline button in a Pi extension confirm dialog; answers confirmed:
+// false.
+func ExtensionUIDialogDecline() string { return In(i18n.Locale()).ExtensionUIDialogDecline() }
+
+// ExtensionUIDialogDecline says "No"
+// in the language of msgs.
+//
+// Decline button in a Pi extension confirm dialog; answers confirmed:
+// false.
+func (msgs Messages) ExtensionUIDialogDecline() string {
+	return Catalog.Format(msgs.locale, "extensionUIDialogDecline", nil)
+}
+
+// PluginsPackageKeptInTrash says "The previous plugin folder is in Trash."
+// in the language the app shows.
+//
+// System Trash retained the plugin without returning its final path.
+func PluginsPackageKeptInTrash() string { return In(i18n.Locale()).PluginsPackageKeptInTrash() }
+
+// PluginsPackageKeptInTrash says "The previous plugin folder is in Trash."
+// in the language of msgs.
+//
+// System Trash retained the plugin without returning its final path.
+func (msgs Messages) PluginsPackageKeptInTrash() string {
+	return Catalog.Format(msgs.locale, "pluginsPackageKeptInTrash", nil)
+}
+
+// PluginsUninstalledInTrash says "Uninstalled {name}. The plugin folder is in Trash; its data was retained."
+// in the language the app shows.
+//
+// Uninstalled package retained in system Trash, data preserved.
+func PluginsUninstalledInTrash(name string) string {
+	return In(i18n.Locale()).PluginsUninstalledInTrash(name)
+}
+
+// PluginsUninstalledInTrash says "Uninstalled {name}. The plugin folder is in Trash; its data was retained."
+// in the language of msgs.
+//
+// Uninstalled package retained in system Trash, data preserved.
+func (msgs Messages) PluginsUninstalledInTrash(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsUninstalledInTrash", map[string]any{"name": name})
+}
+
+// TitleToggleWorkspaceChanges says "Toggle workspace changes ({shortcut})"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func TitleToggleWorkspaceChanges(shortcut string) string {
+	return In(i18n.Locale()).TitleToggleWorkspaceChanges(shortcut)
+}
+
+// TitleToggleWorkspaceChanges says "Toggle workspace changes ({shortcut})"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) TitleToggleWorkspaceChanges(shortcut string) string {
+	return Catalog.Format(msgs.locale, "titleToggleWorkspaceChanges", map[string]any{"shortcut": shortcut})
+}
+
+// WorkspaceChangesTitle says "Workspace changes"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesTitle() string { return In(i18n.Locale()).WorkspaceChangesTitle() }
+
+// WorkspaceChangesTitle says "Workspace changes"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesTitle() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesTitle", nil)
+}
+
+// WorkspaceChangesReadOnly says "Read-only"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesReadOnly() string { return In(i18n.Locale()).WorkspaceChangesReadOnly() }
+
+// WorkspaceChangesReadOnly says "Read-only"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesReadOnly() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesReadOnly", nil)
+}
+
+// WorkspaceChangesRefresh says "Refresh"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesRefresh() string { return In(i18n.Locale()).WorkspaceChangesRefresh() }
+
+// WorkspaceChangesRefresh says "Refresh"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesRefresh() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesRefresh", nil)
+}
+
+// WorkspaceChangesClose says "Close"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesClose() string { return In(i18n.Locale()).WorkspaceChangesClose() }
+
+// WorkspaceChangesClose says "Close"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesClose() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesClose", nil)
+}
+
+// WorkspaceChangesBack says "Back"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesBack() string { return In(i18n.Locale()).WorkspaceChangesBack() }
+
+// WorkspaceChangesBack says "Back"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesBack() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesBack", nil)
+}
+
+// WorkspaceChangesNotGit says "This workspace is not a Git repository; no changes are shown."
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesNotGit() string { return In(i18n.Locale()).WorkspaceChangesNotGit() }
+
+// WorkspaceChangesNotGit says "This workspace is not a Git repository; no changes are shown."
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesNotGit() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesNotGit", nil)
+}
+
+// WorkspaceChangesGitFailed says "Could not read workspace changes: {error}"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesGitFailed(error string) string {
+	return In(i18n.Locale()).WorkspaceChangesGitFailed(error)
+}
+
+// WorkspaceChangesGitFailed says "Could not read workspace changes: {error}"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesGitFailed(error string) string {
+	return Catalog.Format(msgs.locale, "workspaceChangesGitFailed", map[string]any{"error": error})
+}
+
+// WorkspaceChangesRepository says "Repository: {path}"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesRepository(path string) string {
+	return In(i18n.Locale()).WorkspaceChangesRepository(path)
+}
+
+// WorkspaceChangesRepository says "Repository: {path}"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesRepository(path string) string {
+	return Catalog.Format(msgs.locale, "workspaceChangesRepository", map[string]any{"path": path})
+}
+
+// WorkspaceChangesStaged says "Staged"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesStaged() string { return In(i18n.Locale()).WorkspaceChangesStaged() }
+
+// WorkspaceChangesStaged says "Staged"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesStaged() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesStaged", nil)
+}
+
+// WorkspaceChangesUnstaged says "Unstaged"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesUnstaged() string { return In(i18n.Locale()).WorkspaceChangesUnstaged() }
+
+// WorkspaceChangesUnstaged says "Unstaged"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesUnstaged() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesUnstaged", nil)
+}
+
+// WorkspaceChangesUntracked says "Untracked"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesUntracked() string { return In(i18n.Locale()).WorkspaceChangesUntracked() }
+
+// WorkspaceChangesUntracked says "Untracked"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesUntracked() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesUntracked", nil)
+}
+
+// WorkspaceChangesSelectFile says "Select a file to view its diff."
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesSelectFile() string { return In(i18n.Locale()).WorkspaceChangesSelectFile() }
+
+// WorkspaceChangesSelectFile says "Select a file to view its diff."
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesSelectFile() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesSelectFile", nil)
+}
+
+// WorkspaceChangesBinary says "Binary file; diff preview unavailable."
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesBinary() string { return In(i18n.Locale()).WorkspaceChangesBinary() }
+
+// WorkspaceChangesBinary says "Binary file; diff preview unavailable."
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesBinary() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesBinary", nil)
+}
+
+// WorkspaceChangesLarge says "Content is too large; only part of the result is shown."
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesLarge() string { return In(i18n.Locale()).WorkspaceChangesLarge() }
+
+// WorkspaceChangesLarge says "Content is too large; only part of the result is shown."
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesLarge() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesLarge", nil)
+}
+
+// WorkspaceChangesNoDiff says "No readable diff for this file."
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesNoDiff() string { return In(i18n.Locale()).WorkspaceChangesNoDiff() }
+
+// WorkspaceChangesNoDiff says "No readable diff for this file."
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesNoDiff() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesNoDiff", nil)
+}
+
+// WorkspaceChangesUntrackedPreview says "Untracked file content (read-only)."
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesUntrackedPreview() string {
+	return In(i18n.Locale()).WorkspaceChangesUntrackedPreview()
+}
+
+// WorkspaceChangesUntrackedPreview says "Untracked file content (read-only)."
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesUntrackedPreview() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesUntrackedPreview", nil)
+}
+
+// WorkspaceChangesStagedDiff says "Staged diff"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesStagedDiff() string { return In(i18n.Locale()).WorkspaceChangesStagedDiff() }
+
+// WorkspaceChangesStagedDiff says "Staged diff"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesStagedDiff() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesStagedDiff", nil)
+}
+
+// WorkspaceChangesUnstagedDiff says "Unstaged diff"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesUnstagedDiff() string { return In(i18n.Locale()).WorkspaceChangesUnstagedDiff() }
+
+// WorkspaceChangesUnstagedDiff says "Unstaged diff"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesUnstagedDiff() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesUnstagedDiff", nil)
+}
+
+// WorkspaceChangesLoading says "Loading workspace changes…"
+// in the language the app shows.
+//
+// Read-only workspace changes interface.
+func WorkspaceChangesLoading() string { return In(i18n.Locale()).WorkspaceChangesLoading() }
+
+// WorkspaceChangesLoading says "Loading workspace changes…"
+// in the language of msgs.
+//
+// Read-only workspace changes interface.
+func (msgs Messages) WorkspaceChangesLoading() string {
+	return Catalog.Format(msgs.locale, "workspaceChangesLoading", nil)
+}
+
+// PluginsDisabledRefreshRequired says "{name} is disabled in the workbench. Refresh Pi to unload its extension."
+// in the language the app shows.
+//
+// Non-cooperative loaded extension needs the existing Pi refresh to finish
+// disabling.
+func PluginsDisabledRefreshRequired(name string) string {
+	return In(i18n.Locale()).PluginsDisabledRefreshRequired(name)
+}
+
+// PluginsDisabledRefreshRequired says "{name} is disabled in the workbench. Refresh Pi to unload its extension."
+// in the language of msgs.
+//
+// Non-cooperative loaded extension needs the existing Pi refresh to finish
+// disabling.
+func (msgs Messages) PluginsDisabledRefreshRequired(name string) string {
+	return Catalog.Format(msgs.locale, "pluginsDisabledRefreshRequired", map[string]any{"name": name})
+}
+
+// PluginsPiUnloadRefreshHint says "Refresh Pi to unload its extension."
+// in the language the app shows.
+//
+// An uninstalled extension remains loaded until Pi refreshes.
+func PluginsPiUnloadRefreshHint() string { return In(i18n.Locale()).PluginsPiUnloadRefreshHint() }
+
+// PluginsPiUnloadRefreshHint says "Refresh Pi to unload its extension."
+// in the language of msgs.
+//
+// An uninstalled extension remains loaded until Pi refreshes.
+func (msgs Messages) PluginsPiUnloadRefreshHint() string {
+	return Catalog.Format(msgs.locale, "pluginsPiUnloadRefreshHint", nil)
+}
+
+// ChatAttachmentOnlyFallback says "(see attached files)"
+// in the language the app shows.
+//
+// User-visible text for an explicit attachment-only send because Pi
+// requires a non-empty message.
+func ChatAttachmentOnlyFallback() string { return In(i18n.Locale()).ChatAttachmentOnlyFallback() }
+
+// ChatAttachmentOnlyFallback says "(see attached files)"
+// in the language of msgs.
+//
+// User-visible text for an explicit attachment-only send because Pi
+// requires a non-empty message.
+func (msgs Messages) ChatAttachmentOnlyFallback() string {
+	return Catalog.Format(msgs.locale, "chatAttachmentOnlyFallback", nil)
+}
+
+// PluginsStatusStopped says "IDLE"
+// in the language the app shows.
+//
+// Plugin contribution summary or idle resource state.
+func PluginsStatusStopped() string { return In(i18n.Locale()).PluginsStatusStopped() }
+
+// PluginsStatusStopped says "IDLE"
+// in the language of msgs.
+//
+// Plugin contribution summary or idle resource state.
+func (msgs Messages) PluginsStatusStopped() string {
+	return Catalog.Format(msgs.locale, "pluginsStatusStopped", nil)
+}
+
+// PluginsSummaryTheme says "{count, plural, one {# theme} other {# themes}}"
+// in the language the app shows.
+//
+// Plugin contribution summary or idle resource state.
+func PluginsSummaryTheme(count int) string { return In(i18n.Locale()).PluginsSummaryTheme(count) }
+
+// PluginsSummaryTheme says "{count, plural, one {# theme} other {# themes}}"
+// in the language of msgs.
+//
+// Plugin contribution summary or idle resource state.
+func (msgs Messages) PluginsSummaryTheme(count int) string {
+	return Catalog.Format(msgs.locale, "pluginsSummaryTheme", map[string]any{"count": count})
+}
+
+// PluginsSummaryLocale says "{count, plural, one {# locale} other {# locales}}"
+// in the language the app shows.
+//
+// Plugin contribution summary or idle resource state.
+func PluginsSummaryLocale(count int) string { return In(i18n.Locale()).PluginsSummaryLocale(count) }
+
+// PluginsSummaryLocale says "{count, plural, one {# locale} other {# locales}}"
+// in the language of msgs.
+//
+// Plugin contribution summary or idle resource state.
+func (msgs Messages) PluginsSummaryLocale(count int) string {
+	return Catalog.Format(msgs.locale, "pluginsSummaryLocale", map[string]any{"count": count})
+}
+
+// PluginsSummarySlashCommand says "{count, plural, one {# slash command} other {# slash commands}}"
+// in the language the app shows.
+//
+// Plugin contribution summary or idle resource state.
+func PluginsSummarySlashCommand(count int) string {
+	return In(i18n.Locale()).PluginsSummarySlashCommand(count)
+}
+
+// PluginsSummarySlashCommand says "{count, plural, one {# slash command} other {# slash commands}}"
+// in the language of msgs.
+//
+// Plugin contribution summary or idle resource state.
+func (msgs Messages) PluginsSummarySlashCommand(count int) string {
+	return Catalog.Format(msgs.locale, "pluginsSummarySlashCommand", map[string]any{"count": count})
+}
+
+// PluginsSummaryMentionProvider says "{count, plural, one {# mention provider} other {# mention providers}}"
+// in the language the app shows.
+//
+// Plugin contribution summary or idle resource state.
+func PluginsSummaryMentionProvider(count int) string {
+	return In(i18n.Locale()).PluginsSummaryMentionProvider(count)
+}
+
+// PluginsSummaryMentionProvider says "{count, plural, one {# mention provider} other {# mention providers}}"
+// in the language of msgs.
+//
+// Plugin contribution summary or idle resource state.
+func (msgs Messages) PluginsSummaryMentionProvider(count int) string {
+	return Catalog.Format(msgs.locale, "pluginsSummaryMentionProvider", map[string]any{"count": count})
+}
+
+// PluginsSummaryPaletteProvider says "{count, plural, one {# palette provider} other {# palette providers}}"
+// in the language the app shows.
+//
+// Plugin contribution summary or idle resource state.
+func PluginsSummaryPaletteProvider(count int) string {
+	return In(i18n.Locale()).PluginsSummaryPaletteProvider(count)
+}
+
+// PluginsSummaryPaletteProvider says "{count, plural, one {# palette provider} other {# palette providers}}"
+// in the language of msgs.
+//
+// Plugin contribution summary or idle resource state.
+func (msgs Messages) PluginsSummaryPaletteProvider(count int) string {
+	return Catalog.Format(msgs.locale, "pluginsSummaryPaletteProvider", map[string]any{"count": count})
+}
+
+// PluginsSummaryStatusItem says "{count, plural, one {# status item} other {# status items}}"
+// in the language the app shows.
+//
+// Plugin contribution summary or idle resource state.
+func PluginsSummaryStatusItem(count int) string {
+	return In(i18n.Locale()).PluginsSummaryStatusItem(count)
+}
+
+// PluginsSummaryStatusItem says "{count, plural, one {# status item} other {# status items}}"
+// in the language of msgs.
+//
+// Plugin contribution summary or idle resource state.
+func (msgs Messages) PluginsSummaryStatusItem(count int) string {
+	return Catalog.Format(msgs.locale, "pluginsSummaryStatusItem", map[string]any{"count": count})
+}
+
+// PluginsSummaryMessageRenderer says "{count, plural, one {# message renderer} other {# message renderers}}"
+// in the language the app shows.
+//
+// Plugin contribution summary or idle resource state.
+func PluginsSummaryMessageRenderer(count int) string {
+	return In(i18n.Locale()).PluginsSummaryMessageRenderer(count)
+}
+
+// PluginsSummaryMessageRenderer says "{count, plural, one {# message renderer} other {# message renderers}}"
+// in the language of msgs.
+//
+// Plugin contribution summary or idle resource state.
+func (msgs Messages) PluginsSummaryMessageRenderer(count int) string {
+	return Catalog.Format(msgs.locale, "pluginsSummaryMessageRenderer", map[string]any{"count": count})
+}
+
+// SlashMenuLabel says "Slash commands"
+// in the language the app shows.
+//
+// Slash command menu and source label.
+func SlashMenuLabel() string { return In(i18n.Locale()).SlashMenuLabel() }
+
+// SlashMenuLabel says "Slash commands"
+// in the language of msgs.
+//
+// Slash command menu and source label.
+func (msgs Messages) SlashMenuLabel() string {
+	return Catalog.Format(msgs.locale, "slashMenuLabel", nil)
+}
+
+// SlashKindPlugin says "Plugin command"
+// in the language the app shows.
+//
+// Slash command menu and source label.
+func SlashKindPlugin() string { return In(i18n.Locale()).SlashKindPlugin() }
+
+// SlashKindPlugin says "Plugin command"
+// in the language of msgs.
+//
+// Slash command menu and source label.
+func (msgs Messages) SlashKindPlugin() string {
+	return Catalog.Format(msgs.locale, "slashKindPlugin", nil)
+}
+
+// SlashKindPluginPrompt says "Plugin prompt"
+// in the language the app shows.
+//
+// Slash command menu and source label.
+func SlashKindPluginPrompt() string { return In(i18n.Locale()).SlashKindPluginPrompt() }
+
+// SlashKindPluginPrompt says "Plugin prompt"
+// in the language of msgs.
+//
+// Slash command menu and source label.
+func (msgs Messages) SlashKindPluginPrompt() string {
+	return Catalog.Format(msgs.locale, "slashKindPluginPrompt", nil)
+}
+
+// SlashKindPiExtension says "Pi extension"
+// in the language the app shows.
+//
+// Slash command menu and source label.
+func SlashKindPiExtension() string { return In(i18n.Locale()).SlashKindPiExtension() }
+
+// SlashKindPiExtension says "Pi extension"
+// in the language of msgs.
+//
+// Slash command menu and source label.
+func (msgs Messages) SlashKindPiExtension() string {
+	return Catalog.Format(msgs.locale, "slashKindPiExtension", nil)
+}
+
+// SlashKindPiPrompt says "Pi prompt"
+// in the language the app shows.
+//
+// Slash command menu and source label.
+func SlashKindPiPrompt() string { return In(i18n.Locale()).SlashKindPiPrompt() }
+
+// SlashKindPiPrompt says "Pi prompt"
+// in the language of msgs.
+//
+// Slash command menu and source label.
+func (msgs Messages) SlashKindPiPrompt() string {
+	return Catalog.Format(msgs.locale, "slashKindPiPrompt", nil)
+}
+
+// SlashKindPiSkill says "Pi skill"
+// in the language the app shows.
+//
+// Slash command menu and source label.
+func SlashKindPiSkill() string { return In(i18n.Locale()).SlashKindPiSkill() }
+
+// SlashKindPiSkill says "Pi skill"
+// in the language of msgs.
+//
+// Slash command menu and source label.
+func (msgs Messages) SlashKindPiSkill() string {
+	return Catalog.Format(msgs.locale, "slashKindPiSkill", nil)
+}
+
+// PluginsThemeTitle says "Plugin themes"
+// in the language the app shows.
+//
+// Plugin theme selection interface.
+func PluginsThemeTitle() string { return In(i18n.Locale()).PluginsThemeTitle() }
+
+// PluginsThemeTitle says "Plugin themes"
+// in the language of msgs.
+//
+// Plugin theme selection interface.
+func (msgs Messages) PluginsThemeTitle() string {
+	return Catalog.Format(msgs.locale, "pluginsThemeTitle", nil)
+}
+
+// PluginsThemeSystem says "Built-in theme"
+// in the language the app shows.
+//
+// Plugin theme selection interface.
+func PluginsThemeSystem() string { return In(i18n.Locale()).PluginsThemeSystem() }
+
+// PluginsThemeSystem says "Built-in theme"
+// in the language of msgs.
+//
+// Plugin theme selection interface.
+func (msgs Messages) PluginsThemeSystem() string {
+	return Catalog.Format(msgs.locale, "pluginsThemeSystem", nil)
+}
+
+// PaletteSectionCore says "App actions"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteSectionCore() string { return In(i18n.Locale()).PaletteSectionCore() }
+
+// PaletteSectionCore says "App actions"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteSectionCore() string {
+	return Catalog.Format(msgs.locale, "paletteSectionCore", nil)
+}
+
+// PaletteDetailNewSession says "Start a new Pi conversation"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteDetailNewSession() string { return In(i18n.Locale()).PaletteDetailNewSession() }
+
+// PaletteDetailNewSession says "Start a new Pi conversation"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteDetailNewSession() string {
+	return Catalog.Format(msgs.locale, "paletteDetailNewSession", nil)
+}
+
+// PaletteOpenPlugins says "Open plugins"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteOpenPlugins() string { return In(i18n.Locale()).PaletteOpenPlugins() }
+
+// PaletteOpenPlugins says "Open plugins"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteOpenPlugins() string {
+	return Catalog.Format(msgs.locale, "paletteOpenPlugins", nil)
+}
+
+// PaletteDetailPlugins says "Manage installed plugins"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteDetailPlugins() string { return In(i18n.Locale()).PaletteDetailPlugins() }
+
+// PaletteDetailPlugins says "Manage installed plugins"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteDetailPlugins() string {
+	return Catalog.Format(msgs.locale, "paletteDetailPlugins", nil)
+}
+
+// PaletteOpenAutomations says "Open automations"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteOpenAutomations() string { return In(i18n.Locale()).PaletteOpenAutomations() }
+
+// PaletteOpenAutomations says "Open automations"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteOpenAutomations() string {
+	return Catalog.Format(msgs.locale, "paletteOpenAutomations", nil)
+}
+
+// PaletteDetailAutomations says "View registered automations and run history"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteDetailAutomations() string { return In(i18n.Locale()).PaletteDetailAutomations() }
+
+// PaletteDetailAutomations says "View registered automations and run history"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteDetailAutomations() string {
+	return Catalog.Format(msgs.locale, "paletteDetailAutomations", nil)
+}
+
+// PaletteDetailSettings says "Open app settings"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteDetailSettings() string { return In(i18n.Locale()).PaletteDetailSettings() }
+
+// PaletteDetailSettings says "Open app settings"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteDetailSettings() string {
+	return Catalog.Format(msgs.locale, "paletteDetailSettings", nil)
+}
+
+// PaletteToggleNavigation says "Toggle navigation"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteToggleNavigation() string { return In(i18n.Locale()).PaletteToggleNavigation() }
+
+// PaletteToggleNavigation says "Toggle navigation"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteToggleNavigation() string {
+	return Catalog.Format(msgs.locale, "paletteToggleNavigation", nil)
+}
+
+// PaletteDetailNavigation says "Show or hide the navigation sidebar"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteDetailNavigation() string { return In(i18n.Locale()).PaletteDetailNavigation() }
+
+// PaletteDetailNavigation says "Show or hide the navigation sidebar"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteDetailNavigation() string {
+	return Catalog.Format(msgs.locale, "paletteDetailNavigation", nil)
+}
+
+// PaletteToggleTasks says "Toggle task panel"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteToggleTasks() string { return In(i18n.Locale()).PaletteToggleTasks() }
+
+// PaletteToggleTasks says "Toggle task panel"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteToggleTasks() string {
+	return Catalog.Format(msgs.locale, "paletteToggleTasks", nil)
+}
+
+// PaletteDetailTasks says "Show or hide the task panel"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteDetailTasks() string { return In(i18n.Locale()).PaletteDetailTasks() }
+
+// PaletteDetailTasks says "Show or hide the task panel"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteDetailTasks() string {
+	return Catalog.Format(msgs.locale, "paletteDetailTasks", nil)
+}
+
+// PaletteWorkspaceChanges says "Workspace changes"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteWorkspaceChanges() string { return In(i18n.Locale()).PaletteWorkspaceChanges() }
+
+// PaletteWorkspaceChanges says "Workspace changes"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteWorkspaceChanges() string {
+	return Catalog.Format(msgs.locale, "paletteWorkspaceChanges", nil)
+}
+
+// PaletteDetailChanges says "View file changes and diffs"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteDetailChanges() string { return In(i18n.Locale()).PaletteDetailChanges() }
+
+// PaletteDetailChanges says "View file changes and diffs"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteDetailChanges() string {
+	return Catalog.Format(msgs.locale, "paletteDetailChanges", nil)
+}
+
+// PaletteReconnectPi says "Reconnect Pi"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteReconnectPi() string { return In(i18n.Locale()).PaletteReconnectPi() }
+
+// PaletteReconnectPi says "Reconnect Pi"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteReconnectPi() string {
+	return Catalog.Format(msgs.locale, "paletteReconnectPi", nil)
+}
+
+// PaletteDetailReconnect says "Restart the connection to Pi"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteDetailReconnect() string { return In(i18n.Locale()).PaletteDetailReconnect() }
+
+// PaletteDetailReconnect says "Restart the connection to Pi"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteDetailReconnect() string {
+	return Catalog.Format(msgs.locale, "paletteDetailReconnect", nil)
+}
+
+// PaletteConnectPi says "Connect Pi"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteConnectPi() string { return In(i18n.Locale()).PaletteConnectPi() }
+
+// PaletteConnectPi says "Connect Pi"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteConnectPi() string {
+	return Catalog.Format(msgs.locale, "paletteConnectPi", nil)
+}
+
+// PaletteDetailConnect says "Connect to the installed Pi CLI"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteDetailConnect() string { return In(i18n.Locale()).PaletteDetailConnect() }
+
+// PaletteDetailConnect says "Connect to the installed Pi CLI"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteDetailConnect() string {
+	return Catalog.Format(msgs.locale, "paletteDetailConnect", nil)
+}
+
+// PaletteSectionSessions says "Conversations"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteSectionSessions() string { return In(i18n.Locale()).PaletteSectionSessions() }
+
+// PaletteSectionSessions says "Conversations"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteSectionSessions() string {
+	return Catalog.Format(msgs.locale, "paletteSectionSessions", nil)
+}
+
+// PaletteSectionCommands says "Plugin commands"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteSectionCommands() string { return In(i18n.Locale()).PaletteSectionCommands() }
+
+// PaletteSectionCommands says "Plugin commands"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteSectionCommands() string {
+	return Catalog.Format(msgs.locale, "paletteSectionCommands", nil)
+}
+
+// PaletteSectionProvider says "Plugin results"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteSectionProvider() string { return In(i18n.Locale()).PaletteSectionProvider() }
+
+// PaletteSectionProvider says "Plugin results"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteSectionProvider() string {
+	return Catalog.Format(msgs.locale, "paletteSectionProvider", nil)
+}
+
+// PalettePlaceholder says "Search actions, conversations, and plugins…"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PalettePlaceholder() string { return In(i18n.Locale()).PalettePlaceholder() }
+
+// PalettePlaceholder says "Search actions, conversations, and plugins…"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PalettePlaceholder() string {
+	return Catalog.Format(msgs.locale, "palettePlaceholder", nil)
+}
+
+// PaletteNoResults says "No matching results"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func PaletteNoResults() string { return In(i18n.Locale()).PaletteNoResults() }
+
+// PaletteNoResults says "No matching results"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) PaletteNoResults() string {
+	return Catalog.Format(msgs.locale, "paletteNoResults", nil)
+}
+
+// MentionMenuLabel says "Mention suggestions"
+// in the language the app shows.
+//
+// Command palette or mention menu interface.
+func MentionMenuLabel() string { return In(i18n.Locale()).MentionMenuLabel() }
+
+// MentionMenuLabel says "Mention suggestions"
+// in the language of msgs.
+//
+// Command palette or mention menu interface.
+func (msgs Messages) MentionMenuLabel() string {
+	return Catalog.Format(msgs.locale, "mentionMenuLabel", nil)
+}

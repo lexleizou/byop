@@ -17,6 +17,9 @@ const (
 	pluginIncompatible          pluginRegistryStatus = "incompatible"
 	pluginDuplicateID           pluginRegistryStatus = "duplicate-plugin"
 	pluginDuplicateContribution pluginRegistryStatus = "duplicate-contribution"
+	// pluginDisabled is a persistent user choice, not a scan problem: the
+	// manifest stays readable, but every contribution is withheld.
+	pluginDisabled pluginRegistryStatus = "disabled"
 )
 
 type pluginRootSpec struct {
@@ -88,6 +91,13 @@ func uniquePluginRoots(specs []pluginRootSpec) []pluginRootSpec {
 }
 
 func scanPluginRegistry(rootSpecs []pluginRootSpec) pluginRegistry {
+	return scanPluginRegistryWithDisabled(rootSpecs, "")
+}
+
+// scanPluginRegistryWithDisabled reads manifests and then withholds the
+// contributions of plugins the user disabled in that config directory, so every
+// scan path, including the Pi CLI launch, sees the same enabled set.
+func scanPluginRegistryWithDisabled(rootSpecs []pluginRootSpec, configDir string) pluginRegistry {
 	registry := pluginRegistry{
 		HostVersion: pluginHostVersion,
 		PluginAPI:   pluginAPIVersion,
@@ -171,7 +181,25 @@ func scanPluginRegistry(rootSpecs []pluginRootSpec) pluginRegistry {
 		return left.SourceDirectory < right.SourceDirectory
 	})
 	markModelLabelConflicts(&registry)
+	applyPluginDisabledStates(&registry, pluginDisabledIDSetForConfigDir(configDir))
 	return registry
+}
+
+// pluginDisabledIDSetForConfigDir reads the persistent disable set for one
+// config directory. A damaged or unreadable file falls back to the last set
+// read successfully from that directory, so a scan never re-enables plugins the
+// user had disabled; an empty config directory still means all enabled.
+func pluginDisabledIDSetForConfigDir(configDir string) map[string]bool {
+	if strings.TrimSpace(configDir) == "" {
+		return nil
+	}
+	store := newPluginDisabledStore(configDir)
+	ids, readable := store.loadChecked()
+	if !readable {
+		return pluginDisabledIDSet(pluginDisabledLastKnownIDs(configDir))
+	}
+	rememberPluginDisabledIDs(configDir, ids)
+	return pluginDisabledIDSet(ids)
 }
 
 func validatePluginAgentExtension(entry pluginRegistryEntry) string {
@@ -277,6 +305,27 @@ func pluginContributionIDs(manifest *pluginManifest) []string {
 		ids = append(ids, contribution.ID)
 	}
 	for _, contribution := range manifest.Contributes.ModelLabels {
+		ids = append(ids, contribution.ID)
+	}
+	for _, contribution := range manifest.Contributes.Themes {
+		ids = append(ids, contribution.ID)
+	}
+	for _, contribution := range manifest.Contributes.Locales {
+		ids = append(ids, contribution.ID)
+	}
+	for _, contribution := range manifest.Contributes.SlashCommands {
+		ids = append(ids, contribution.ID)
+	}
+	for _, contribution := range manifest.Contributes.MentionProviders {
+		ids = append(ids, contribution.ID)
+	}
+	for _, contribution := range manifest.Contributes.PaletteProviders {
+		ids = append(ids, contribution.ID)
+	}
+	for _, contribution := range manifest.Contributes.StatusItems {
+		ids = append(ids, contribution.ID)
+	}
+	for _, contribution := range manifest.Contributes.MessageRenderers {
 		ids = append(ids, contribution.ID)
 	}
 	return ids
@@ -455,7 +504,9 @@ func (registry pluginRegistry) contributionCount() int {
 func (registry pluginRegistry) problemCount() int {
 	count := len(registry.Issues)
 	for _, entry := range registry.Entries {
-		if entry.Status != pluginRegistered {
+		// A deliberate disable is a user choice, not a scan problem, so it is
+		// never counted as an issue.
+		if entry.Status != pluginRegistered && entry.Status != pluginDisabled {
 			count++
 		}
 	}

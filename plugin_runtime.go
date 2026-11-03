@@ -64,6 +64,7 @@ type pluginHost struct {
 	onChange                func()
 	onNotice                func(pluginID, pluginName, text, tone string)
 	onTaskUpdate            func(update pluginTaskUpdate)
+	onStatusItem            func(update pluginStatusItemUpdate)
 	onRefreshView           func(pluginID, viewID string)
 	onOpenChat              func(pluginID string, request pluginOpenChatRequest)
 	themeDark               func() bool
@@ -75,12 +76,27 @@ type pluginHost struct {
 	workspaceRoot string
 	configDir     string
 	settings      *pluginSettingsStore
+	disabled      *pluginDisabledStore
+	// idleReclaimDelay is resolved once at construction. A stored zero means
+	// reclaim is off, so a caller that asks for zero is never overridden by the
+	// env default later.
+	idleReclaimDelay time.Duration
 
-	mu               sync.Mutex
-	processes        map[string]*pluginProcess
-	statuses         map[string]pluginRuntimeStatus
-	starting         map[string]*sync.Mutex
-	restarting       map[string]bool
+	mu         sync.Mutex
+	processes  map[string]*pluginProcess
+	statuses   map[string]pluginRuntimeStatus
+	starting   map[string]*sync.Mutex
+	restarting map[string]bool
+	// leases counts host-initiated work per plugin, incremented before a call
+	// may start a process and released after it returns, so reclaim and disable
+	// never detach a worker between lookup and use.
+	leases map[string]int
+	// disabledIDs is the in-memory mirror of the persistent disabled set, kept
+	// under mu so a disable takes effect inside a start that is already running.
+	disabledIDs map[string]bool
+	// stopping blocks starts for plugins an incremental scan or disable has
+	// selected for a stop, so the stop window cannot spawn a new generation.
+	stopping         map[string]bool
 	settingsMu       sync.Mutex
 	settingsByPlugin map[string]map[string]any
 
@@ -117,6 +133,12 @@ func pluginHostTaskHandler(handler func(update pluginTaskUpdate)) pluginHostOpti
 	}
 }
 
+func pluginHostStatusItemHandler(handler func(update pluginStatusItemUpdate)) pluginHostOption {
+	return func(host *pluginHost) {
+		host.onStatusItem = handler
+	}
+}
+
 func pluginHostRefreshHandler(handler func(pluginID, viewID string)) pluginHostOption {
 	return func(host *pluginHost) {
 		host.onRefreshView = handler
@@ -145,6 +167,48 @@ func pluginHostReduceTransparency(reduce func() bool) pluginHostOption {
 	return func(host *pluginHost) {
 		host.themeReduceTransparency = reduce
 	}
+}
+
+func pluginHostLifecycleStore(store *pluginDisabledStore) pluginHostOption {
+	return func(host *pluginHost) {
+		host.disabled = store
+	}
+}
+
+// pluginHostIdleReclaimDelay sets the idle window for reclaim. A stored zero
+// turns reclaim off and is never overridden by the env default.
+func pluginHostIdleReclaimDelay(delay time.Duration) pluginHostOption {
+	return func(host *pluginHost) {
+		host.idleReclaimDelay = delay
+	}
+}
+
+// beginLease and endLease bracket host-initiated work for one plugin. The lease
+// starts before a call that may spawn a process and ends after it returns, so a
+// reclaim or disable can never detach a worker between lookup and use.
+func (h *pluginHost) beginLease(pluginID string) {
+	if h == nil || pluginID == "" {
+		return
+	}
+	h.mu.Lock()
+	if h.leases == nil {
+		h.leases = make(map[string]int)
+	}
+	h.leases[pluginID]++
+	h.mu.Unlock()
+}
+
+func (h *pluginHost) endLease(pluginID string) {
+	if h == nil || pluginID == "" {
+		return
+	}
+	h.mu.Lock()
+	if h.leases[pluginID] > 1 {
+		h.leases[pluginID]--
+	} else {
+		delete(h.leases, pluginID)
+	}
+	h.mu.Unlock()
 }
 
 func pluginHostLocale(locale func() string) pluginHostOption {
@@ -178,9 +242,14 @@ func newPluginHost(hostVersion string, onChange func(), options ...pluginHostOpt
 		statuses:                make(map[string]pluginRuntimeStatus),
 		starting:                make(map[string]*sync.Mutex),
 		restarting:              make(map[string]bool),
+		leases:                  make(map[string]int),
+		disabledIDs:             make(map[string]bool),
+		stopping:                make(map[string]bool),
 		workspaceRoot:           workspace,
 		configDir:               configDir,
 		settings:                newPluginSettingsStore(configDir),
+		disabled:                newPluginDisabledStore(configDir),
+		idleReclaimDelay:        pluginIdleReclaimDefault(),
 		settingsByPlugin:        make(map[string]map[string]any),
 		themeDark:               func() bool { return false },
 		themeHighContrast:       func() bool { return false },
@@ -192,6 +261,9 @@ func newPluginHost(hostVersion string, onChange func(), options ...pluginHostOpt
 			option(host)
 		}
 	}
+	// Mirror the persistent disabled set once, so the activation fast path never
+	// reads the file and a disable is visible to a start already in progress.
+	host.syncDisabledIDs()
 	if host.workspaceRoot != "" {
 		if absolute, absoluteErr := filepath.Abs(host.workspaceRoot); absoluteErr == nil {
 			host.workspaceRoot = absolute
@@ -314,6 +386,8 @@ func (h *pluginHost) invokeCommandTimeout(
 	if !pluginDeclaresCommand(entry.Manifest, commandID) {
 		return nil, fmt.Errorf("command %s is not declared by plugin %s", commandID, entry.ID)
 	}
+	h.beginLease(entry.ID)
+	defer h.endLease(entry.ID)
 	process, err := h.ensureActive(ctx, entry, "onCommand:"+commandID)
 	if err != nil {
 		return nil, err
@@ -350,8 +424,14 @@ func (h *pluginHost) invokeCommandTimeout(
 }
 
 func (h *pluginHost) ensureActive(ctx context.Context, entry pluginRegistryEntry, reason string) (*pluginProcess, error) {
+	if h.isPluginDisabled(entry.ID) {
+		return nil, fmt.Errorf("plugin %s is disabled", entry.ID)
+	}
 	if h.pluginRestartInProgress(entry.ID) {
 		return nil, fmt.Errorf("plugin %s is restarting: %w", entry.ID, errPluginRestarting)
+	}
+	if h.pluginStopRequested(entry.ID) {
+		return nil, fmt.Errorf("plugin %s is stopping: %w", entry.ID, errPluginRestarting)
 	}
 	if process := h.process(entry.ID); process != nil && !process.exited() {
 		return process, nil
@@ -364,6 +444,14 @@ func (h *pluginHost) ensureActive(ctx context.Context, entry pluginRegistryEntry
 	}
 	if h.pluginRestartInProgress(entry.ID) {
 		return nil, fmt.Errorf("plugin %s is restarting: %w", entry.ID, errPluginRestarting)
+	}
+	// A disable or a scan stop that landed while this call waited for the lock
+	// must win, otherwise the plugin would come back to life after it stopped.
+	if h.isPluginDisabled(entry.ID) {
+		return nil, fmt.Errorf("plugin %s is disabled", entry.ID)
+	}
+	if h.pluginStopRequested(entry.ID) {
+		return nil, fmt.Errorf("plugin %s is stopping: %w", entry.ID, errPluginRestarting)
 	}
 	if !pluginActivatesOn(entry.Manifest, reason) {
 		return nil, fmt.Errorf("plugin %s does not declare activation event %s", entry.ID, reason)
@@ -381,6 +469,13 @@ func (h *pluginHost) ensureActive(ctx context.Context, entry pluginRegistryEntry
 		return nil, err
 	}
 	h.mu.Lock()
+	// Last gate before the process becomes reachable: a disable that arrived
+	// while the child was spawning must not leave a disabled worker running.
+	if h.disabledIDs[entry.ID] || h.stopping[entry.ID] {
+		h.mu.Unlock()
+		h.abortStart(entry.ID, process, fmt.Errorf("plugin %s is disabled", entry.ID))
+		return nil, fmt.Errorf("plugin %s is disabled", entry.ID)
+	}
 	h.processes[entry.ID] = process
 	h.mu.Unlock()
 	go h.watchExit(entry.ID, process)
@@ -574,6 +669,194 @@ func (h *pluginHost) stopAll() {
 		}(id)
 	}
 	wg.Wait()
+}
+
+// isPluginDisabled reports the in-memory enable state, which mirrors the
+// persistent disabled set. A plugin that is disabled keeps its folder and user
+// data but contributes nothing and starts no process until it is enabled again.
+// The mirror is guarded by mu, so a disable is visible to a start that already
+// passed the fast path check and the activation path needs no file read.
+func (h *pluginHost) isPluginDisabled(pluginID string) bool {
+	if h == nil {
+		return false
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.disabledIDs[pluginID]
+}
+
+// syncDisabledIDs refreshes the in-memory mirror from the persistent store and
+// reports whether the read succeeded. A failed read keeps the previous mirror,
+// so a damaged file can never re-enable a plugin that was disabled on purpose.
+func (h *pluginHost) syncDisabledIDs() bool {
+	if h == nil || h.disabled == nil {
+		return true
+	}
+	ids, ok := h.disabled.loadChecked()
+	if !ok {
+		return false
+	}
+	h.mu.Lock()
+	h.disabledIDs = pluginDisabledIDSet(ids)
+	h.mu.Unlock()
+	return true
+}
+
+// setPluginDisabledState updates the mirror first and then the persistent set,
+// so no start can slip in between the two.
+func (h *pluginHost) setPluginDisabledState(pluginID string, disabled bool) error {
+	if h == nil {
+		return errors.New("plugin host is unavailable")
+	}
+	h.mu.Lock()
+	if h.disabledIDs == nil {
+		h.disabledIDs = make(map[string]bool)
+	}
+	if disabled {
+		h.disabledIDs[pluginID] = true
+	} else {
+		delete(h.disabledIDs, pluginID)
+	}
+	h.mu.Unlock()
+	if err := h.setPluginDisabled(pluginID, disabled); err != nil {
+		// Roll the mirror back so the in-memory state matches the file.
+		h.mu.Lock()
+		if disabled {
+			delete(h.disabledIDs, pluginID)
+		} else {
+			h.disabledIDs[pluginID] = true
+		}
+		h.mu.Unlock()
+		return err
+	}
+	return nil
+}
+
+// pluginCallInFlight reports host-initiated work for one plugin: a live lease
+// (work that may be about to use the process) or an outstanding RPC pending on
+// the current process.
+func (h *pluginHost) pluginCallInFlight(pluginID string) bool {
+	if h == nil {
+		return false
+	}
+	h.mu.Lock()
+	if h.leases[pluginID] > 0 {
+		h.mu.Unlock()
+		return true
+	}
+	process := h.processes[pluginID]
+	h.mu.Unlock()
+	if process == nil || process.exited() {
+		return false
+	}
+	process.mu.Lock()
+	pending := len(process.pending)
+	process.mu.Unlock()
+	return pending > 0
+}
+
+// beginPluginStop marks a plugin as stopping, so ensureActive refuses to spawn
+// a new generation while the old one is being released. It is the same gate as
+// a restart and is released with endPluginStop once the new registry is applied.
+func (h *pluginHost) beginPluginStop(pluginID string) {
+	if h == nil || pluginID == "" {
+		return
+	}
+	h.mu.Lock()
+	if h.stopping == nil {
+		h.stopping = make(map[string]bool)
+	}
+	h.stopping[pluginID] = true
+	h.mu.Unlock()
+}
+
+func (h *pluginHost) endPluginStop(pluginID string) {
+	if h == nil || pluginID == "" {
+		return
+	}
+	h.mu.Lock()
+	delete(h.stopping, pluginID)
+	h.mu.Unlock()
+}
+
+func (h *pluginHost) pluginStopRequested(pluginID string) bool {
+	if h == nil {
+		return false
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.stopping[pluginID]
+}
+
+// detachIfIdle releases map ownership of one specific process, never a later
+// generation with the same id. The process must still be the registered one,
+// the plugin must be idle — no lease, no pending call — and the caller must
+// already hold the per-plugin start lock, so a new generation cannot be
+// inserted between the checks and the delete.
+func (h *pluginHost) detachIfIdle(pluginID string, expected *pluginProcess) bool {
+	if h == nil || expected == nil {
+		return false
+	}
+	h.mu.Lock()
+	if h.processes[pluginID] != expected || h.leases[pluginID] > 0 {
+		h.mu.Unlock()
+		return false
+	}
+	expected.mu.Lock()
+	pending := len(expected.pending)
+	expected.mu.Unlock()
+	if pending > 0 {
+		h.mu.Unlock()
+		return false
+	}
+	delete(h.processes, pluginID)
+	h.mu.Unlock()
+	return true
+}
+
+// stopPluginGeneration releases one specific process and reports whether it was
+// the one stopped. The caller captures the process when it decides to reclaim,
+// so a generation that started in the meantime is left alone. Holding the
+// per-plugin start lock for the whole stop also keeps ensureActive from starting
+// an overlapping generation on the same plugin-data directory.
+func (h *pluginHost) stopPluginGeneration(pluginID string, expected *pluginProcess) bool {
+	if h == nil || expected == nil {
+		return false
+	}
+	lock := h.startLock(pluginID)
+	lock.Lock()
+	defer lock.Unlock()
+	if !h.detachIfIdle(pluginID, expected) {
+		return false
+	}
+	h.stopDetached(pluginID, expected)
+	return true
+}
+
+// stopDetached performs the graceful shutdown of a process that is no longer
+// registered. deactivate and the generation stop share it.
+func (h *pluginHost) stopDetached(pluginID string, process *pluginProcess) {
+	process.stopPending(fmt.Errorf("plugin %s stopped: %w", pluginID, errPluginStopped))
+	h.updateStatusIfProcessAbsent(pluginID, func(status *pluginRuntimeStatus) {
+		status.State = pluginStateStopping
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), pluginStopTimeout)
+	_, callErr := process.call(ctx, "deactivate", map[string]any{})
+	cancel()
+	process.closeInput()
+	select {
+	case <-process.done:
+	case <-time.After(pluginStopTimeout):
+		process.kill()
+		<-process.done
+	}
+	h.updateStatusIfProcessAbsent(pluginID, func(status *pluginRuntimeStatus) {
+		status.State = pluginStateStopped
+		status.PID = 0
+		if callErr != nil {
+			status.LastError = "deactivate: " + callErr.Error()
+		}
+	})
 }
 
 func pluginDeclaresCommand(manifest *pluginManifest, commandID string) bool {

@@ -527,6 +527,25 @@ func TestMessageErrorStaysOutOfAssistantBody(t *testing.T) {
 	}
 }
 
+// TestSettledReleasesInFlightRunningSend covers review finding C7: when the
+// turn settles while a running send is still in flight, its attachments are
+// released with the rest of the running-send state, so a late ack cannot put
+// chips back for a second send and image bytes do not linger.
+func TestSettledReleasesInFlightRunningSend(t *testing.T) {
+	state := projectionTestState()
+	state.run = runStreaming
+	state.runningSendPending = true
+	state.runningSendPrompt = "wire"
+	state.runningSendAttachments = []composerAttachment{{path: "/tmp/a.png", name: "a.png"}}
+
+	state.handlePiEvent(piEvent{Kind: piEventSettled}, 0)
+
+	if state.runningSendPending || state.runningSendAttachments != nil {
+		t.Fatalf("settled kept the in-flight send: pending=%v attachments=%#v",
+			state.runningSendPending, state.runningSendAttachments)
+	}
+}
+
 func TestSettledOnlyAdvancesSessionGenerationForActiveRun(t *testing.T) {
 	state := projectionTestState()
 	state.run = runCompleted

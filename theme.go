@@ -139,6 +139,7 @@ func themePaletteForAppearance(
 		p.popoverTint = p.surface
 		p.popoverBorder = p.border
 	}
+	applyPluginThemeOverlay(&p)
 	return p
 }
 
@@ -196,7 +197,61 @@ func jAgentThemePalette(high, reduceTransparency bool) palette {
 		p.popoverTint = p.surfaceSubtle
 		p.popoverBorder = p.border
 	}
+	applyPluginThemeOverlay(&p)
 	return p
+}
+
+// applyPluginThemeOverlay overwrites only the semantic fields a selected theme
+// resource declares. Fallbacks above keep their token values everywhere else,
+// so high-contrast and reduced-transparency still win where the resource is
+// silent.
+func applyPluginThemeOverlay(p *palette) {
+	if p.highContrast {
+		// The contrast block above owns these fields; a plugin theme never
+		// replaces the accessible palette.
+		return
+	}
+	for name, color := range themeColorsForOverlay(currentPluginThemeOverlay(), *p) {
+		if p.reduceTransparency {
+			color.A = 255
+		}
+		switch name {
+		case "background":
+			p.background = color
+		case "surface":
+			p.surface = color
+		case "text":
+			p.text = color
+		case "muted":
+			p.muted = color
+		case "accent":
+			p.accent = color
+		case "onAccent":
+			p.onAccent = color
+		case "border":
+			p.border = color
+		case "focus":
+			p.focus = color
+		case "danger":
+			p.danger = color
+		case "warning":
+			p.warning = color
+		case "success":
+			p.success = color
+		case "dangerText":
+			p.dangerText = color
+		case "warningText":
+			p.warningText = color
+		case "successText":
+			p.successText = color
+		case "readingSurface":
+			p.readingSurface = color
+		case "raisedSurface":
+			p.raisedSurface = color
+		case "composerSurface":
+			p.composerSurface = color
+		}
+	}
 }
 
 func nativeTheme(dark bool) (*ui.Theme, palette) {
@@ -237,6 +292,11 @@ func nativeThemeForAppearance(
 	t.Radius = p.inputRadius
 	t.Spacing = 4
 	t.FontSize = p.uiFont
+	// A theme resource may set the body and code families without touching any
+	// size: the metric fields above keep the 12/14/18 rule intact.
+	if bodyFont, _ := themeFontsForSelection(currentPluginThemeOverlay()); bodyFont != "" {
+		t.Font = bodyFont
+	}
 	return t, p
 }
 
@@ -277,3 +337,7 @@ func appearanceReduceTransparency() bool {
 	}
 	return mygo.Theme.Preferences().ReduceTransparency
 }
+
+// themeCodeFontOverride carries the code family a selected theme resource set,
+// so configureMarkdownV12 can apply it without changing the code size.
+var themeCodeFontOverride string

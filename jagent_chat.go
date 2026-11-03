@@ -133,6 +133,7 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 		if !s.runActive() && !s.retrying && !s.compacting {
 			footer = nil
 		}
+		s.composerMenusWithRefresh(c, p)
 		result := jAgentComposerV12(c, p, &s.composerDraft, chat.ComposerOptions{
 			Label:        text("chatMessageLabel"),
 			Placeholder:  placeholder,
@@ -140,10 +141,15 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 			StopLabel:    text("chatStop"),
 			Running:      running,
 			SendDisabled: !running && (s.piConn != piConnected || s.piSessionBusy || s.modelStateUnconfirmed),
+			Attachments:  func(c *ui.Context) { s.composerAttachmentChips(c, p) },
+			// The card is a drop target (review C8): drops on it highlight the
+			// card and add the files; the window handler stays as the fallback
+			// for drops elsewhere on the chat page.
+			AcceptFiles: true,
 			Accessory: func(c *ui.Context) {
 				ui.Row(c).FillWidth().MinWidth(0).Wrap().AlignItems(ui.Start).Gap(8).Children(func() {
 					if jAgentComposerAddButton(c, p).Clicked() {
-						s.showNotice(text("chatAttachmentNotice"))
+						s.pickComposerAttachments()
 					}
 					s.composerChoices(c)
 					s.composerTableContextChip(c)
@@ -155,14 +161,23 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 				})
 			},
 			Footer: footer,
-		}, placeholderOverlay...)
+		}, len(s.composerAttachments) > 0, s.composerMenuHooksFor(), placeholderOverlay...)
 		result.Root.Key("chat-composer")
 		result.Input.FontSize(p.bodyFont)
+		// Drops the card took are added here; the window handler sees only the
+		// ones it did not take.
+		if len(result.Dropped) > 0 {
+			s.addComposerAttachmentPaths(result.Dropped)
+		}
 		if !cardVisible {
 			s.applyPendingFollowUpAdoption(result.Input)
 		}
+		s.applyPendingComposerMenus(result.Input)
 		if result.Input.Focused() {
 			result.Input.OnTextKey(func(k ui.TextKey) bool {
+				if s.handleComposerMenuTextKey(k.Key, k.Mods) {
+					return true
+				}
 				return s.handleComposerTextKey(k)
 			})
 		}
@@ -174,6 +189,9 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 		} else if running && result.Input.Focused() && strings.TrimSpace(s.composerDraft) != "" {
 			composing := result.Input.Composing()
 			result.Input.HandleInput(func(ev ui.InputEvent) bool {
+				if s.handleComposerMenuInput(ev, composing) {
+					return true
+				}
 				return handleRunningComposerInput(
 					ev,
 					composing,
@@ -204,12 +222,14 @@ func jAgentComposerV12(
 	p palette,
 	draft *string,
 	options chat.ComposerOptions,
+	allowEmptySend bool,
+	menu *composerMenuHooks,
 	placeholderOverlays ...func(*ui.Context),
 ) chat.ComposerResult {
 	var result chat.ComposerResult
 	t := c.Theme()
 	empty := strings.TrimSpace(*draft) == ""
-	canSend := !empty && !options.SendDisabled
+	canSend := (!empty || allowEmptySend) && !options.SendDisabled
 	result.Root = ui.Column(c).FillWidth().MinWidth(0).Shrink(0).Children(func() {
 		card := ui.Column(c).FillWidth().MinWidth(0).MinHeight(p.composerMinHeight).
 			Padding(p.composerPadding, p.composerPadding, p.composerPadding, p.composerPadding).
@@ -275,7 +295,11 @@ func jAgentComposerV12(
 		})
 		if *pending {
 			*pending = false
-			result.Send = result.Send || canSend && !composing
+			// A suggestion menu takes plain Enter, so choosing a row never sends
+			// the half-typed token. The Send button still sends.
+			if !menu.takeEnter() {
+				result.Send = result.Send || canSend && !composing
+			}
 		}
 		if options.AcceptFiles {
 			result.Dropped = card.DroppedFiles()
@@ -326,7 +350,7 @@ func jAgentComposerAction(
 }
 
 func jAgentComposerAddButton(c *ui.Context, p palette) ui.Element {
-	label := text("chatAttachmentUnavailable")
+	label := text("chatAttachmentButton")
 	button := ui.ButtonBase(c).Size(28, 28).Shrink(0).Radius(10).
 		Center().Background(ui.Color{}).Label(label)
 	if button.Hovered() || button.Focused() {
@@ -354,25 +378,35 @@ func (s *appState) jAgentTurnView(
 	ui.Column(c).Key(fmt.Sprintf("j-agent-turn-%d", index)).
 		FillWidth().MinWidth(0).Shrink(0).Gap(12).Children(func() {
 		promptText := ""
+		var promptAttachments []chatAttachmentMeta
 		if prompt != nil {
-			s.jAgentPromptPill(c, p, prompt)
+			s.jAgentPromptPill(c, p, index, prompt)
 			promptText = messageText(prompt)
+			promptAttachments = prompt.attachments
 		}
 		if message != nil {
-			s.jAgentAssistantTurn(c, p, index, message, promptText, live)
+			s.jAgentAssistantTurn(c, p, index, message, promptText, promptAttachments, live)
 		}
 	})
 }
 
-func (s *appState) jAgentPromptPill(c *ui.Context, p palette, prompt *chatMessage) {
+func (s *appState) jAgentPromptPill(c *ui.Context, p palette, index int, prompt *chatMessage) {
 	textValue := messageText(prompt)
-	ui.Row(c).FillWidth().Justify(ui.End).Children(func() {
-		pill := ui.Column(c).MinWidth(0).MaxWidth(540).
-			Padding(10, 16, 10, 16).Gap(0)
-		pill = jAgentGlassSurface(pill, p, 28, 14, ui.RGBA(27, 27, 27, .58))
-		pill.Children(func() {
-			components.Text(c, textValue).Selectable().FontSize(p.bodyFont).
-				LineHeight(1.5).TextColor(p.text)
+	ui.Column(c).FillWidth().MinWidth(0).Gap(6).Children(func() {
+		if len(prompt.attachments) > 0 {
+			ui.Row(c).FillWidth().Justify(ui.End).MinWidth(0).Children(func() {
+				s.chatAttachmentChipRow(c, prompt.attachments,
+					fmt.Sprintf("j-agent-turn-%d-attachments", index))
+			})
+		}
+		ui.Row(c).FillWidth().Justify(ui.End).Children(func() {
+			pill := ui.Column(c).MinWidth(0).MaxWidth(540).
+				Padding(10, 16, 10, 16).Gap(0)
+			pill = jAgentGlassSurface(pill, p, 28, 14, ui.RGBA(27, 27, 27, .58))
+			pill.Children(func() {
+				components.Text(c, textValue).Selectable().FontSize(p.bodyFont).
+					LineHeight(1.5).TextColor(p.text)
+			})
 		})
 	})
 }
@@ -383,6 +417,7 @@ func (s *appState) jAgentAssistantTurn(
 	index int,
 	message *chatMessage,
 	promptText string,
+	promptAttachments []chatAttachmentMeta,
 	live bool,
 ) {
 	status := assistantTurnStatus(message, live)
@@ -445,7 +480,7 @@ func (s *appState) jAgentAssistantTurn(
 				label, failed := turnEndLabel(message.status), status == chat.Failed
 				turnFooter(c, label+" - "+elapsed, failed)
 			} else if status == chat.Completed {
-				s.turnCompletionFooter(c, message, elapsed, tools, promptText)
+				s.turnCompletionFooter(c, message, elapsed, tools, promptText, promptAttachments)
 			}
 		})
 	}

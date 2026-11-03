@@ -77,6 +77,7 @@ type channelSettingsUIState struct {
 	overrideName string
 
 	sourcePath        string
+	pickerBusy        bool
 	sourceInventory   ChannelInventory
 	sourceProviderID  string
 	sourceErr         string
@@ -1035,12 +1036,36 @@ func (s *channelSettingsUIState) switchMode(mode channelSettingsSourceMode) {
 	s.sourceErr = ""
 }
 
+// chooseModelsFile opens the picker off the UI thread; without a window,
+// focused tests drive the picker synchronously.
 func (s *channelSettingsUIState) chooseModelsFile(app *appState) {
 	if s.picker == nil {
 		s.sourceErr = text("channelPickerUnavailable")
 		return
 	}
-	path, err := s.picker(app.window)
+	if s.pickerBusy {
+		return
+	}
+	picker := s.picker
+	parent := app.window
+	if parent == nil {
+		path, err := picker(parent)
+		s.applyModelsFilePick(path, err)
+		return
+	}
+	s.pickerBusy = true
+	go func() {
+		path, err := picker(parent)
+		app.postUI(func() {
+			s.pickerBusy = false
+			s.applyModelsFilePick(path, err)
+		})
+	}()
+}
+
+// applyModelsFilePick continues the original picker result on the UI thread.
+// Cancelling leaves the current selection untouched.
+func (s *channelSettingsUIState) applyModelsFilePick(path string, err error) {
 	if err != nil {
 		s.sourceErr = err.Error()
 		return

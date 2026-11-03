@@ -3635,5 +3635,588 @@
   "fileOpenFailed": "The file could not be opened.",
   "@fileOpenFailed": {
     "description": "Toast shown when opening a file fails."
+  },
+  "modelLabelEditorTitle": "Model badges",
+  "@modelLabelEditorTitle": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorDescription": "Choose a provider and model, then enter your own badge. Badges are personal labels, not verified model versions.",
+  "@modelLabelEditorDescription": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorSearch": "Search provider or model",
+  "@modelLabelEditorSearch": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorSelected": "Selected: {provider} · {model}",
+  "@modelLabelEditorSelected": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "modelLabelEditorBadge": "Badge text",
+  "@modelLabelEditorBadge": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorBadgePlaceholder": "For example: IQ2 or 1017",
+  "@modelLabelEditorBadgePlaceholder": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorSave": "Save badge",
+  "@modelLabelEditorSave": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorRemove": "Remove badge",
+  "@modelLabelEditorRemove": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorSaved": "Badge saved.",
+  "@modelLabelEditorSaved": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorRemoved": "Badge removed.",
+  "@modelLabelEditorRemoved": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorMissingModel": "Select a model first.",
+  "@modelLabelEditorMissingModel": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorInvalidBadge": "Enter 1–12 printable characters.",
+  "@modelLabelEditorInvalidBadge": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorDataError": "Badge settings could not be read. The saved file was kept.",
+  "@modelLabelEditorDataError": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorStoreError": "Badge settings could not be saved.",
+  "@modelLabelEditorStoreError": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "pluginsDisable": "Disable",
+  "@pluginsDisable": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "pluginsEnable": "Enable",
+  "@pluginsEnable": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "pluginsStatusDisabled": "Disabled",
+  "@pluginsStatusDisabled": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "pluginsDisabled": "{name} is disabled. Its data is retained.",
+  "@pluginsDisabled": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsEnabled": "{name} is enabled and will start when needed.",
+  "@pluginsEnabled": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsEnableFailed": "Could not change the enabled state of {name}: {error}",
+  "@pluginsEnableFailed": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsRuntimeStateFailed": "Could not synchronize the runtime state of {name}: {error}",
+  "@pluginsRuntimeStateFailed": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsAddFromFolder": "Add from folder",
+  "@pluginsAddFromFolder": {
+    "description": "Local plugin package action: install from a folder."
+  },
+  "pluginsAddFromZip": "Add from zip",
+  "@pluginsAddFromZip": {
+    "description": "Local plugin package action: install from a zip package."
+  },
+  "pluginsInstallFolderDialog": "Choose a plugin folder",
+  "@pluginsInstallFolderDialog": {
+    "description": "Title of the folder picker for a plugin package."
+  },
+  "pluginsInstallZipDialog": "Choose a plugin package (.zip)",
+  "@pluginsInstallZipDialog": {
+    "description": "Title of the zip picker for a plugin package."
+  },
+  "pluginsPackageUpdate": "Update",
+  "@pluginsPackageUpdate": {
+    "description": "Details-panel action: update an installed plugin from a package."
+  },
+  "pluginsPackageUninstall": "Uninstall",
+  "@pluginsPackageUninstall": {
+    "description": "Details-panel action: move an installed plugin folder to the Trash."
+  },
+  "pluginsInstallFailed": "The plugin package could not be installed.",
+  "@pluginsInstallFailed": {
+    "description": "Header of the install error line; the detail is shown next to it."
+  },
+  "pluginsUpdateFailed": "The plugin could not be updated.",
+  "@pluginsUpdateFailed": {
+    "description": "Header of the update error line; the detail is shown next to it."
+  },
+  "pluginsUninstallFailed": "The plugin could not be uninstalled.",
+  "@pluginsUninstallFailed": {
+    "description": "Header of the uninstall error line; the detail is shown next to it."
+  },
+  "pluginsInstalled": "{name} was installed.",
+  "@pluginsInstalled": {
+    "description": "Notice after installing a plugin package.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsUpdated": "{name} was updated.",
+  "@pluginsUpdated": {
+    "description": "Notice after updating a plugin from a package.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsUninstalled": "{name} was uninstalled. Its data is retained and the folder was kept at {path}.",
+  "@pluginsUninstalled": {
+    "description": "Notice after uninstalling a plugin; data is retained.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsPackageKept": "The previous version was kept at {path}.",
+  "@pluginsPackageKept": {
+    "description": "Appended notice naming the retained previous version.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsPackageSkippedLinks": "{count} links were skipped during the copy.",
+  "@pluginsPackageSkippedLinks": {
+    "description": "Appended notice when symbolic links were skipped during the copy.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatAttachmentButton": "Add files to this message",
+  "chatAttachmentRemove": "Remove attachment",
+  "chatAttachmentPickerTitle": "Choose files to attach",
+  "chatImageUnsupported": "This model does not accept images. The image was added as a file reference.",
+  "chatAttachmentTooLarge": "{name} exceeds the {limit} inline image limit and was added as a file reference.",
+  "chatAttachmentSkipped": "{count} items were not added. Check that they are readable files and the attachment limit has not been reached.",
+  "chatFileReferencePrefix": "Attached files",
+  "chatAttachmentImageLabel": "Image",
+  "chatAttachmentFileLabel": "File",
+  "extensionUIDialogCancel": "Cancel",
+  "extensionUIDialogConfirm": "Confirm",
+  "extensionUIPromptMissing": "Pi asked for input, but the request has no text.",
+  "extensionUIDialogDecline": "No",
+  "@chatAttachmentButton": {
+    "description": "Accessible label and tooltip for the composer attachment picker."
+  },
+  "@chatAttachmentRemove": {
+    "description": "Accessible label for removing one selected attachment."
+  },
+  "@chatAttachmentPickerTitle": {
+    "description": "Title of the native file picker for chat attachments."
+  },
+  "@chatImageUnsupported": {
+    "description": "Notice shown when an image is dropped while the active model cannot accept images."
+  },
+  "@chatAttachmentTooLarge": {
+    "description": "Notice shown when a selected file exceeds the inline image limit.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "@chatAttachmentSkipped": {
+    "description": "Notice shown when dropped or picked items cannot be attached.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@chatFileReferencePrefix": {
+    "description": "Heading before the local file references added to a prompt."
+  },
+  "@chatAttachmentImageLabel": {
+    "description": "Kind label for an image attachment chip."
+  },
+  "@chatAttachmentFileLabel": {
+    "description": "Kind label for a non-image attachment chip."
+  },
+  "@extensionUIDialogCancel": {
+    "description": "Cancel button in a Pi extension dialog."
+  },
+  "@extensionUIDialogConfirm": {
+    "description": "Confirm button in a Pi extension dialog."
+  },
+  "@extensionUIPromptMissing": {
+    "description": "Notice shown when a Pi extension dialog request carries no title."
+  },
+  "@extensionUIDialogDecline": {
+    "description": "Decline button in a Pi extension confirm dialog; answers confirmed: false."
+  },
+  "pluginsPackageKeptInTrash": "The previous plugin folder is in Trash.",
+  "pluginsUninstalledInTrash": "Uninstalled {name}. The plugin folder is in Trash; its data was retained.",
+  "@pluginsPackageKeptInTrash": {
+    "description": "System Trash retained the plugin without returning its final path."
+  },
+  "@pluginsUninstalledInTrash": {
+    "description": "Uninstalled package retained in system Trash, data preserved.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "titleToggleWorkspaceChanges": "Toggle workspace changes ({shortcut})",
+  "workspaceChangesTitle": "Workspace changes",
+  "workspaceChangesReadOnly": "Read-only",
+  "workspaceChangesRefresh": "Refresh",
+  "workspaceChangesClose": "Close",
+  "workspaceChangesBack": "Back",
+  "workspaceChangesNotGit": "This workspace is not a Git repository; no changes are shown.",
+  "workspaceChangesGitFailed": "Could not read workspace changes: {error}",
+  "workspaceChangesRepository": "Repository: {path}",
+  "workspaceChangesStaged": "Staged",
+  "workspaceChangesUnstaged": "Unstaged",
+  "workspaceChangesUntracked": "Untracked",
+  "workspaceChangesSelectFile": "Select a file to view its diff.",
+  "workspaceChangesBinary": "Binary file; diff preview unavailable.",
+  "workspaceChangesLarge": "Content is too large; only part of the result is shown.",
+  "workspaceChangesNoDiff": "No readable diff for this file.",
+  "workspaceChangesUntrackedPreview": "Untracked file content (read-only).",
+  "workspaceChangesStagedDiff": "Staged diff",
+  "workspaceChangesUnstagedDiff": "Unstaged diff",
+  "workspaceChangesLoading": "Loading workspace changes…",
+  "@titleToggleWorkspaceChanges": {
+    "description": "Read-only workspace changes interface.",
+    "placeholders": {
+      "shortcut": {
+        "type": "String"
+      }
+    }
+  },
+  "@workspaceChangesTitle": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesReadOnly": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesRefresh": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesClose": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesBack": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesNotGit": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesGitFailed": {
+    "description": "Read-only workspace changes interface.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@workspaceChangesRepository": {
+    "description": "Read-only workspace changes interface.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@workspaceChangesStaged": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesUnstaged": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesUntracked": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesSelectFile": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesBinary": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesLarge": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesNoDiff": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesUntrackedPreview": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesStagedDiff": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesUnstagedDiff": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesLoading": {
+    "description": "Read-only workspace changes interface."
+  },
+  "pluginsDisabledRefreshRequired": "{name} is disabled in the workbench. Refresh Pi to unload its extension.",
+  "pluginsPiUnloadRefreshHint": "Refresh Pi to unload its extension.",
+  "@pluginsDisabledRefreshRequired": {
+    "description": "Non-cooperative loaded extension needs the existing Pi refresh to finish disabling.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@pluginsPiUnloadRefreshHint": {
+    "description": "An uninstalled extension remains loaded until Pi refreshes."
+  },
+  "chatAttachmentOnlyFallback": "(see attached files)",
+  "@chatAttachmentOnlyFallback": {
+    "description": "User-visible text for an explicit attachment-only send because Pi requires a non-empty message."
+  },
+  "pluginsStatusStopped": "IDLE",
+  "@pluginsStatusStopped": {
+    "description": "Plugin contribution summary or idle resource state."
+  },
+  "pluginsSummaryTheme": "{count, plural, one {# theme} other {# themes}}",
+  "@pluginsSummaryTheme": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pluginsSummaryLocale": "{count, plural, one {# locale} other {# locales}}",
+  "@pluginsSummaryLocale": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pluginsSummarySlashCommand": "{count, plural, one {# slash command} other {# slash commands}}",
+  "@pluginsSummarySlashCommand": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pluginsSummaryMentionProvider": "{count, plural, one {# mention provider} other {# mention providers}}",
+  "@pluginsSummaryMentionProvider": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pluginsSummaryPaletteProvider": "{count, plural, one {# palette provider} other {# palette providers}}",
+  "@pluginsSummaryPaletteProvider": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pluginsSummaryStatusItem": "{count, plural, one {# status item} other {# status items}}",
+  "@pluginsSummaryStatusItem": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pluginsSummaryMessageRenderer": "{count, plural, one {# message renderer} other {# message renderers}}",
+  "@pluginsSummaryMessageRenderer": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "slashMenuLabel": "Slash commands",
+  "@slashMenuLabel": {
+    "description": "Slash command menu and source label."
+  },
+  "slashKindPlugin": "Plugin command",
+  "@slashKindPlugin": {
+    "description": "Slash command menu and source label."
+  },
+  "slashKindPluginPrompt": "Plugin prompt",
+  "@slashKindPluginPrompt": {
+    "description": "Slash command menu and source label."
+  },
+  "slashKindPiExtension": "Pi extension",
+  "@slashKindPiExtension": {
+    "description": "Slash command menu and source label."
+  },
+  "slashKindPiPrompt": "Pi prompt",
+  "@slashKindPiPrompt": {
+    "description": "Slash command menu and source label."
+  },
+  "slashKindPiSkill": "Pi skill",
+  "@slashKindPiSkill": {
+    "description": "Slash command menu and source label."
+  },
+  "pluginsThemeTitle": "Plugin themes",
+  "pluginsThemeSystem": "Built-in theme",
+  "@pluginsThemeTitle": {
+    "description": "Plugin theme selection interface."
+  },
+  "@pluginsThemeSystem": {
+    "description": "Plugin theme selection interface."
+  },
+  "paletteSectionCore": "App actions",
+  "@paletteSectionCore": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteDetailNewSession": "Start a new Pi conversation",
+  "@paletteDetailNewSession": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteOpenPlugins": "Open plugins",
+  "@paletteOpenPlugins": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteDetailPlugins": "Manage installed plugins",
+  "@paletteDetailPlugins": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteOpenAutomations": "Open automations",
+  "@paletteOpenAutomations": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteDetailAutomations": "View registered automations and run history",
+  "@paletteDetailAutomations": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteDetailSettings": "Open app settings",
+  "@paletteDetailSettings": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteToggleNavigation": "Toggle navigation",
+  "@paletteToggleNavigation": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteDetailNavigation": "Show or hide the navigation sidebar",
+  "@paletteDetailNavigation": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteToggleTasks": "Toggle task panel",
+  "@paletteToggleTasks": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteDetailTasks": "Show or hide the task panel",
+  "@paletteDetailTasks": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteWorkspaceChanges": "Workspace changes",
+  "@paletteWorkspaceChanges": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteDetailChanges": "View file changes and diffs",
+  "@paletteDetailChanges": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteReconnectPi": "Reconnect Pi",
+  "@paletteReconnectPi": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteDetailReconnect": "Restart the connection to Pi",
+  "@paletteDetailReconnect": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteConnectPi": "Connect Pi",
+  "@paletteConnectPi": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteDetailConnect": "Connect to the installed Pi CLI",
+  "@paletteDetailConnect": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteSectionSessions": "Conversations",
+  "@paletteSectionSessions": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteSectionCommands": "Plugin commands",
+  "@paletteSectionCommands": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteSectionProvider": "Plugin results",
+  "@paletteSectionProvider": {
+    "description": "Command palette or mention menu interface."
+  },
+  "palettePlaceholder": "Search actions, conversations, and plugins…",
+  "@palettePlaceholder": {
+    "description": "Command palette or mention menu interface."
+  },
+  "paletteNoResults": "No matching results",
+  "@paletteNoResults": {
+    "description": "Command palette or mention menu interface."
+  },
+  "mentionMenuLabel": "Mention suggestions",
+  "@mentionMenuLabel": {
+    "description": "Command palette or mention menu interface."
   }
 }

@@ -50,6 +50,8 @@ func (h *pluginHost) renderView(ctx context.Context, entry pluginRegistryEntry, 
 	if contribution.Location != "main" {
 		return pluginViewModel{}, fmt.Errorf("view %s is not a main view", viewID)
 	}
+	h.beginLease(entry.ID)
+	defer h.endLease(entry.ID)
 	process, err := h.ensureActive(ctx, entry, "onView:"+viewID)
 	if err != nil {
 		return pluginViewModel{}, err

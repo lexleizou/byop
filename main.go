@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.18.7"
+	appVersion = "0.19.0"
 )
 
 func appBuildVersion() string {
@@ -54,6 +54,8 @@ var setMygoThemeSource = mygo.Theme.SetSource
 func main() {
 	configureFontSmoothing()
 	state := newAppState()
+	appStateRef = state
+	applyStartupPluginThemeSelection()
 	mygo.Theme.SetSource(state.effectiveThemeSource())
 	if err := mygo.Protocol.Handle(pluginWebViewScheme, newPluginWebViewSchemeHandler(state)); err != nil {
 		log.Fatal(err)
@@ -70,7 +72,7 @@ func main() {
 		state.syncPluginWebViewTheme(state.effectiveDark(), state.highContrastActive(currentAppearanceHighContrast()), currentAppearanceReduceTransparency())
 		state.syncPluginWebViewLocale()
 		win := mygo.NewWindow(mygo.WindowOptions{
-			Title:         locales.AppWindowTitle(),
+			Title:         text("appWindowTitle"),
 			Width:         1180,
 			Height:        760,
 			MinWidth:      760,
@@ -82,12 +84,16 @@ func main() {
 			},
 			BackgroundColor: "light-dark(#fcfbf9, #111110)",
 			StateKey:        "byop-p2-pi-rpc",
-			Content:         ui.View(state.view),
+			Content:         ui.View(state.rootView),
 		})
 		state.window = win
 		state.setAppIcon(win)
 		win.OnClosed(state.shutdownPi)
+		// Files dropped anywhere the composer card does not take land here, and
+		// the handler keeps them to the chat page so plugin views stay alone.
+		win.OnFileDrop(state.handleFileDrop)
 		state.scanLegacyMigration()
+		state.startPluginReclaim()
 		switch strings.ToLower(os.Getenv("BYOP_PI_CONNECT")) {
 		case "0", "false", "off":
 		default:
@@ -190,9 +196,12 @@ type chatBlock struct {
 }
 
 type chatMessage struct {
-	role              chatRole
-	status            string
-	blocks            []chatBlock
+	role   chatRole
+	status string
+	blocks []chatBlock
+	// attachments keeps names and kinds only, so history rows never retain
+	// image bytes after a send.
+	attachments       []chatAttachmentMeta
 	outputTokens      int64
 	thinking          string
 	thinkingStartedAt time.Time
@@ -202,69 +211,187 @@ type chatMessage struct {
 }
 
 type appState struct {
-	page                            pageID
-	themeMode                       themeMode
-	uiLanguage                      string
-	effectiveLocale                 atomic.Pointer[string]
-	navCollapsed                    bool
-	navWidth                        float32
-	jAgentNavWidth                  float32
-	navResizeDragging               bool
-	tasksOpen                       bool
-	channelRefresh                  channelRefreshCoordinator
-	configDir                       string
-	preferences                     byopPreferences
-	preferencesStore                *byopPreferencesStore
-	preferencesWarning              string
-	settingsPageState               SettingsPageState
-	savedWorkspaceMiss              bool
-	legacySources                   legacyMigrationSources
-	legacyScan                      legacyScan
-	legacyScanned                   bool
-	legacyScanning                  bool
-	legacyScanFailed                bool
-	diagnosticsOpen                 bool
-	notice                          string
-	noticeActionLabel               string
-	noticeAction                    func()
-	navGlassPopoverOpen             bool
-	navTransparencySlider           float64
-	glassBlurSlider                 float64
-	navTransparencyDragOwner        string
-	navTransparencyDragBase         int
-	glassBlurDragOwner              string
-	glassBlurDragBase               int
-	composerDraft                   string
-	composerTableContext            *tableContextAttachment
-	pluginSearch                    string
-	pluginDetailsOpenID             string
-	pluginRegistry                  pluginRegistry
-	pluginRegistryMu                sync.RWMutex
-	plugins                         *pluginHost
-	pluginRestarting                map[string]bool
-	pluginPiRefreshRequired         bool
-	pluginSettingForms              map[string]*pluginSettingForm
-	pluginTasks                     map[string]pluginTaskUpdate
-	pluginViewPluginID              string
-	pluginViewID                    string
-	pluginViewKind                  pluginViewKind
-	pluginViewModels                map[string]pluginViewModel
-	pluginViewLoading               bool
-	pluginViewError                 string
-	pluginViewEpoch                 uint64
+	page                     pageID
+	themeMode                themeMode
+	uiLanguage               string
+	effectiveLocale          atomic.Pointer[string]
+	navCollapsed             bool
+	navWidth                 float32
+	jAgentNavWidth           float32
+	navResizeDragging        bool
+	tasksOpen                bool
+	channelRefresh           channelRefreshCoordinator
+	configDir                string
+	preferences              byopPreferences
+	preferencesStore         *byopPreferencesStore
+	preferencesWarning       string
+	settingsPageState        SettingsPageState
+	savedWorkspaceMiss       bool
+	legacySources            legacyMigrationSources
+	legacyScan               legacyScan
+	legacyScanned            bool
+	legacyScanning           bool
+	legacyScanFailed         bool
+	diagnosticsOpen          bool
+	notice                   string
+	noticeActionLabel        string
+	noticeAction             func()
+	navGlassPopoverOpen      bool
+	navTransparencySlider    float64
+	glassBlurSlider          float64
+	navTransparencyDragOwner string
+	navTransparencyDragBase  int
+	glassBlurDragOwner       string
+	glassBlurDragBase        int
+	composerDraft            string
+	composerTableContext     *tableContextAttachment
+	// Slash and mention composer state. The slash fields hold only what the
+	// visible menu needs — the selected row and an Escape dismissal for the
+	// current token — and the cached Pi command list belongs to one Pi process,
+	// so a reconnect drops it. The caret flag places the caret after the menu
+	// inserts a prompt or command name, the same way a follow-up suggestion
+	// does. Mention fields track the @ token the user is typing and the query
+	// results declared providers returned for it.
+	pluginSlashSelection      int
+	pluginSlashDismissed      bool
+	pluginSlashLastDraft      string
+	composerSlashCaretPending bool
+	piCommands                []piCommand
+	piCommandsFetching        bool
+	// piCommandsEpoch is the Pi process the cached command list belongs to, so
+	// an empty result is not fetched again on every frame and a reconnect fetches
+	// once for the new process.
+	piCommandsEpoch  uint64
+	mentionSelection int
+	mentionDismissed bool
+	// mentionDismissedStart and mentionDismissedQuery remember the @ token an
+	// Escape dismissal was raised on, so starting or editing a different token —
+	// or having none at all — raises a fresh list, the way a slash dismissal
+	// resets when the draft changes.
+	mentionDismissedStart int
+	mentionDismissedQuery string
+	mentionRequest        uint64
+	// mentionCancel cancels the current provider round as a whole, one cancel set
+	// shared by every provider asked in that round.
+	mentionCancel context.CancelFunc
+	// mentionResults holds the merged items of the current round, each kept with
+	// the plugin and provider that returned it.
+	mentionResults []mentionResult
+	// mentionQuery is what the cached results were asked about and
+	// mentionTokenStart where that token begins, so results are shown only while
+	// the draft still ends in the token they describe. -1 means no round yet.
+	mentionQuery         string
+	mentionTokenStart    int
+	composerMentionCaret bool
+	// commandPaletteOpen and commandPaletteState hold the command palette, which
+	// one shortcut opens on any page. The state lives together so closing drops
+	// the query, the results, and any running provider call at once.
+	commandPaletteOpen  bool
+	commandPaletteState paletteOpenState
+	// paletteRequest is a monotonic round counter that is never reset, unlike the
+	// palette state which is dropped on close. A provider reply carries the value
+	// it started with, so a reply from before a close cannot match a quick reopen
+	// and write old results into fresh state or clear the new round's cancel.
+	paletteRequest uint64
+	// composerAttachments holds the items picked or dropped for the next
+	// message; image items carry their bytes only until the send completes.
+	composerAttachments []composerAttachment
+	// composerAttachmentsPickerOverride lets tests replace the native picker.
+	composerAttachmentsPickerOverride composerAttachmentPicker
+	// composerAttachmentPicking keeps one picker sheet at a time.
+	composerAttachmentPicking bool
+	// extensionDialogs queues pending Pi extension dialog requests in arrival
+	// order, and extensionDialogDraft edits the dialog the panel shows.
+	extensionDialogs     []extensionUIDialog
+	extensionDialogDraft string
+	// workspaceChangesPanel tracks the read-only diff overlay state.
+	workspaceChangesOpen        bool
+	workspaceChangesDetail      string
+	workspaceChangesRepo        string
+	workspaceChangesFiles       []workspaceFileChange
+	workspaceChangesErrorKind   string
+	workspaceChangesErrorText   string
+	workspaceChangesCancel      context.CancelFunc
+	workspaceChangesRequestID   uint64
+	workspaceChangesLoading     bool
+	workspaceDetailLoading      bool
+	workspaceDetailStagedDiff   string
+	workspaceDetailUnstagedDiff string
+	workspaceDetailUntracked    string
+	workspaceDetailErrorKind    string
+	workspaceDetailErrorText    string
+	workspaceDetailCancel       context.CancelFunc
+	workspaceDetailRequestID    uint64
+	workspaceChangesTruncated   bool
+	workspaceDetailTruncated    bool
+	workspaceDetailBinary       bool
+	pluginSearch                string
+	modelLabels                 *modelLabelStore
+	pluginDetailsOpenID         string
+	pluginRegistry              pluginRegistry
+	pluginRegistryMu            sync.RWMutex
+	// pluginScanSeq counts registry publications (scans and restart replays) so
+	// an asynchronous scan can detect that a newer registry landed while it was
+	// stopping targets, and rescan instead of overwriting it.
+	pluginScanSeq           atomic.Uint64
+	plugins                 *pluginHost
+	pluginRestarting        map[string]bool
+	pluginPiRefreshRequired bool
+	pluginSettingForms      map[string]*pluginSettingForm
+	pluginTasks             map[string]pluginTaskUpdate
+	// pluginStatusItems holds the last value each plugin published through
+	// host.setStatusItem, keyed by plugin id. A cached value may stay after an
+	// idle worker exits; it is released when the plugin is unregistered or
+	// disabled, or when the plugin replaces or hides it.
+	pluginStatusItems  map[string]pluginStatusItemUpdate
+	pluginViewPluginID string
+	pluginViewID       string
+	pluginViewKind     pluginViewKind
+	pluginViewModels   map[string]pluginViewModel
+	// pluginRendererResults caches plugin message renders keyed by the owning
+	// plugin, contribution, and content. pendingPluginRenderers records the
+	// keys with a task in flight together with its cancel, so one key never
+	// schedules two and a release can stop the worker call. A result also
+	// carries the request that wrote it, so an older reply cannot overwrite a
+	// newer same-key request. pluginRendererGeneration and
+	// pluginRendererSignatures keep invalidation per plugin, so a render is
+	// stale only when its own plugin restarted or changed its declaration.
+	// pluginRendererRequest issues those request tokens.
+	pluginRendererResults    map[string]pluginRendererResult
+	pendingPluginRenderers   map[string]context.CancelFunc
+	pluginRendererGeneration map[string]uint64
+	pluginRendererSignatures map[string]string
+	pluginRendererRequest    uint64
+	pluginViewLoading        bool
+	pluginViewError          string
+	pluginViewEpoch          uint64
+	// Idle reclaim keeps its own lock because the timer fires off the UI thread
+	// while plugin view fields belong to the UI thread. A round is decided and
+	// applied on the UI thread, so visibility and cached WebViews stay coherent.
+	pluginReclaimMu                 sync.Mutex
+	pluginReclaimTimer              *time.Timer
+	pluginReclaimStop               bool
+	pluginReclaimRounds             atomic.Uint64
+	pluginHiddenSinceByPlugin       map[string]time.Time
 	pluginWebViews                  map[string]*pluginWebViewState
 	pluginWebViewsMu                sync.RWMutex
 	pluginWebViewDark               bool
 	pluginWebViewHighContrast       bool
 	pluginWebViewReduceTransparency bool
 	pluginWebViewPreset             appearancePreset
+	pluginWebViewThemeGeneration    uint64
 	pluginBridgeSlots               map[string]chan struct{}
 	pluginBridgeMu                  sync.Mutex
 	automations                     *automationStore
 
-	window                  *mygo.Window
-	closed                  atomic.Bool
-	pi                      *piClient
+	window *mygo.Window
+	closed atomic.Bool
+	pi     *piClient
+	// piLoadedExtensions is the loaded set from preflight H4: the extension
+	// files the running Pi process was started with. piLoadedExtensionsKnown
+	// keeps the decision silent until the first snapshot lands.
+	piLoadedExtensions      map[string]piLoadedExtension
+	piLoadedExtensionsKnown bool
 	piConn                  piConnectionState
 	piPath                  string
 	piCwd                   string
@@ -325,32 +452,43 @@ type appState struct {
 	sessionNamingCancel          context.CancelFunc
 	autoNamingAttemptedBySession map[string]bool
 
-	queueSteeringCount  int
-	queueFollowUpCount  int
-	queueSteering       []string
-	queueFollowUp       []string
-	queueClearPending   bool
-	runningSendPending  bool
-	runningSendPrompt   string
-	runningSendDisplay  string
-	runningSendContext  *tableContextAttachment
-	runningSendEchoSeen bool
-	pendingPiUserEcho   string
-	compacting          bool
-	compactionReason    string
-	compactionResult    string
-	compactionError     string
-	retrying            bool
-	retryAttempt        int
-	retryMax            int
-	retryDelayMS        int64
-	retryStartedAt      time.Time
-	retryError          string
-	extensionError      string
-	extensionPath       string
-	extensionEvent      string
-	agentWillRetry      bool
-	hud                 hudState
+	queueSteeringCount int
+	queueFollowUpCount int
+	queueSteering      []string
+	queueFollowUp      []string
+	queueClearPending  bool
+	runningSendPending bool
+	runningSendPrompt  string
+	runningSendDisplay string
+	runningSendContext *tableContextAttachment
+	// runningSendAttachments are the items that went with the queued or steered
+	// message, cleared only once Pi accepts it.
+	runningSendAttachments []composerAttachment
+	runningSendEchoSeen    bool
+	pendingPiUserEcho      string
+	// pendingEchoAttachments keeps the timeline metas of sends Pi accepted as
+	// queued or handled but echoes only later, when that turn starts:
+	// completeRunningSend has already released the running-send fields by
+	// then, so the names wait here, keyed by the exact wire payload. Values
+	// are FIFO per key so identical payloads keep their own attachments in
+	// order. Cleared with the other runtime state, on process exit, and when
+	// the session changes.
+	pendingEchoAttachments map[string][][]chatAttachmentMeta
+	compacting             bool
+	compactionReason       string
+	compactionResult       string
+	compactionError        string
+	retrying               bool
+	retryAttempt           int
+	retryMax               int
+	retryDelayMS           int64
+	retryStartedAt         time.Time
+	retryError             string
+	extensionError         string
+	extensionPath          string
+	extensionEvent         string
+	agentWillRetry         bool
+	hud                    hudState
 
 	piSessionsOrgWorkspace string
 	piSessionsGroups       sessionGroups
@@ -366,26 +504,40 @@ func newAppState() *appState {
 	if configErr != nil {
 		configDir = filepath.Join(os.TempDir(), "byop-config")
 	}
+	// Publish the plugin locale resources before any language is normalised or
+	// matched, so a saved or system preference for a plugin language survives
+	// startup instead of being rewritten to "system". The same scanned registry
+	// is published below, so startup reads the manifests once.
+	startupRegistry := withPluginLocaleResources(withPluginThemeResources(scanPluginRegistryForRuntime()))
 	preferencesStore := newByopPreferencesStore(configDir)
 	preferences, preferencesWarning := preferencesStore.load()
 	var s *appState
 	s = &appState{
-		page:                  configuredPage(),
-		themeMode:             themeMode(preferences.Theme),
-		uiLanguage:            normalizeUILanguage(preferences.UILanguage),
-		navCollapsed:          preferences.NavCollapsed,
-		navWidth:              normalizeNavExpandedWidth(preferences.NavExpandedWidth),
-		jAgentNavWidth:        normalizeJAgentNavExpandedWidth(preferences.JAgentNavExpandedWidth),
-		tasksOpen:             preferences.TasksOpen,
-		configDir:             configDir,
-		preferences:           preferences,
-		preferencesStore:      preferencesStore,
-		preferencesWarning:    preferencesWarning,
-		piConn:                piDisconnected,
-		run:                   runIdle,
-		pluginSettingForms:    make(map[string]*pluginSettingForm),
-		pluginTasks:           make(map[string]pluginTaskUpdate),
-		pluginRestarting:      make(map[string]bool),
+		page:                     configuredPage(),
+		themeMode:                themeMode(preferences.Theme),
+		uiLanguage:               savedUILanguage(preferences.UILanguage),
+		navCollapsed:             preferences.NavCollapsed,
+		navWidth:                 normalizeNavExpandedWidth(preferences.NavExpandedWidth),
+		jAgentNavWidth:           normalizeJAgentNavExpandedWidth(preferences.JAgentNavExpandedWidth),
+		tasksOpen:                preferences.TasksOpen,
+		configDir:                configDir,
+		modelLabels:              newModelLabelStore(configDir),
+		preferences:              preferences,
+		preferencesStore:         preferencesStore,
+		preferencesWarning:       preferencesWarning,
+		piConn:                   piDisconnected,
+		run:                      runIdle,
+		pluginSettingForms:       make(map[string]*pluginSettingForm),
+		pluginTasks:              make(map[string]pluginTaskUpdate),
+		pluginStatusItems:        make(map[string]pluginStatusItemUpdate),
+		pluginRendererResults:    make(map[string]pluginRendererResult),
+		pendingPluginRenderers:   make(map[string]context.CancelFunc),
+		pluginRendererGeneration: make(map[string]uint64),
+		pluginRendererSignatures: make(map[string]string),
+		pluginRestarting:         make(map[string]bool),
+		// A mention token at the very start of the draft has start 0, so the round guard
+		// needs an explicit "no round yet" sentinel.
+		mentionTokenStart:     -1,
 		pluginViewModels:      make(map[string]pluginViewModel),
 		pluginWebViews:        make(map[string]*pluginWebViewState),
 		pluginBridgeSlots:     make(map[string]chan struct{}),
@@ -436,6 +588,9 @@ func newAppState() *appState {
 				s.pluginTasks[update.PluginID+"\x00"+update.TaskID] = update
 			})
 		}),
+		pluginHostStatusItemHandler(func(update pluginStatusItemUpdate) {
+			s.postUI(func() { s.storePluginStatusItem(update) })
+		}),
 		pluginHostRefreshHandler(func(pluginID, viewID string) {
 			s.postUI(func() {
 				if s.page == pagePluginView && s.pluginViewPluginID == pluginID &&
@@ -450,7 +605,7 @@ func newAppState() *appState {
 			})
 		}),
 	)
-	s.setPluginRegistry(scanPluginRegistry(defaultPluginRoots()))
+	s.setPluginRegistry(startupRegistry)
 	s.automations = newAutomationStore(configDir, registeredSessionLoopKeys(s.pluginRegistrySnapshot()))
 	s.plugins.invalidateSettingsCache()
 	s.syncPluginSettingForms()
@@ -491,20 +646,77 @@ func parsePreferenceBool(value string, trueValues ...string) (bool, bool) {
 	}
 }
 
+// scanPlugins rescans plugin folders incrementally. Only plugins that
+// disappeared, changed, or became disabled stop; an unrelated active worker, its
+// cached WebView and the Pi session keep running, so a scan no longer pauses the
+// plugin the user is working with.
 func (s *appState) scanPlugins(announce bool) {
-	if s.plugins != nil && s.plugins.activeCount() > 0 {
-		s.notice = text("pluginScanStopping")
-		go func() {
-			s.plugins.stopAll()
-			s.postUI(func() { s.scanPlugins(announce) })
-		}()
+	previous := s.pluginRegistrySnapshot()
+	seq := s.pluginScanSeq.Load()
+	fresh := scanPluginRegistryForRuntime()
+	plan := planPluginScan(previous, fresh)
+	if !plan.stopsAny() {
+		s.applyPluginScan(previous, fresh, plan, announce)
 		return
 	}
-	pluginRuntimeBefore := registeredPiPluginSignature(s.pluginRegistrySnapshot())
-	s.setPluginRegistry(scanPluginRegistry(defaultPluginRoots()))
-	pluginRuntimeAfter := registeredPiPluginSignature(s.pluginRegistrySnapshot())
+	s.notice = text("pluginScanStopping")
+	go func() {
+		s.plugins.stopPluginsForScan(plan.Stop)
+		s.postUI(func() {
+			// The stop window is over, so these ids may start again on demand.
+			for _, target := range plan.Stop {
+				s.plugins.endPluginStop(target.pluginID)
+			}
+			// A scan, a restart replay, or a disable may have published a newer
+			// registry while this stop was running. Applying then would revive a
+			// plugin that was just disabled or drop a restart replacement, so
+			// rescan against the current registry instead.
+			if s.pluginScanSeq.Load() != seq {
+				s.scanPlugins(announce)
+				return
+			}
+			s.applyPluginScan(previous, fresh, plan, announce)
+		})
+	}()
+}
+
+// applyPluginScan publishes a scanned registry and refreshes every derived
+// state. previous and fresh drive the Pi extension refresh decision.
+func (s *appState) applyPluginScan(
+	previous, fresh pluginRegistry,
+	plan pluginScanPlan,
+	announce bool,
+) {
+	// The refresh decision uses the extension-file signature, so a re-enable of
+	// unchanged code needs no prompt; a first or changed extension file does.
+	// The locale resources are replaced in the same step as the registry, so a
+	// plugin that is gone, disabled, or whose file turned invalid loses its
+	// translations here and its keys fall back to the built-in catalog at once.
+	s.setPluginRegistry(withPluginLocaleResources(withPluginThemeResources(fresh)))
+	// The supported language list may have lost the language the app shows, so
+	// the choice and the shown locale are recomputed against the new list.
+	s.reconcileUILanguage()
+	// The refresh decision compares against the immutable snapshot the running
+	// Pi process started with — recorded at its launch, never here — so a
+	// re-enabling a plugin whose extension is still loaded with an unchanged
+	// file stays quiet, while disabling or removing a loaded non-cooperative
+	// extension raises the prompt, because only the refresh takes its tools
+	// away. A cooperative extension is revoked in place when the marker below
+	// can be written.
+	s.refreshPiForExtensionSet(fresh)
+	// The marker for a loaded cooperative extension must follow the published
+	// registry even when no deliberate toggle ran (review X5): a folder removed
+	// outside the app or an invalid manifest would otherwise leave the
+	// extension contributing in memory. A failed marker write falls back to the
+	// existing Pi refresh prompt inside the reconcile; no new notice or gate.
+	s.reconcileLoadedCooperativeMarkers(fresh)
 	s.reconcilePluginWebViews()
 	s.prunePluginState()
+	// A changed or removed plugin must not keep serving renders made by its old
+	// code. The signature check alone misses an update whose declaration is
+	// identical, and a render that failed during the stop window would stay
+	// failed, so both groups are invalidated here (review R2).
+	s.invalidatePluginRenderersForPlan(plan)
 	s.plugins.invalidateSettingsCache()
 	s.syncPluginSettingForms()
 	if s.page == pagePluginView && !s.pluginViewStillRegistered() {
@@ -519,7 +731,9 @@ func (s *appState) scanPlugins(announce bool) {
 	if s.automations != nil {
 		s.automations.refreshSessionLoopKeys(registeredSessionLoopKeys(s.pluginRegistrySnapshot()))
 	}
-	s.refreshPiPluginRuntimeAfterScan(pluginRuntimeBefore, pluginRuntimeAfter)
+	for _, target := range plan.Stop {
+		s.clearPluginHiddenSince(target.pluginID)
+	}
 	if !announce {
 		return
 	}
@@ -544,11 +758,48 @@ func (s *appState) scanPlugins(announce bool) {
 	}
 }
 
+// storePluginStatusItem keeps one published status item, and only while the
+// plugin still deserves the HUD slot. A host call is dispatched off the UI
+// thread, so its reply can land after a scan that already disabled or removed
+// the plugin; storing it then would revive an item the prune just took away, so
+// the live registry decides (review S1). The update carries its declared item id,
+// so a manifest that renamed the item also stops a stale value from showing.
+func (s *appState) storePluginStatusItem(update pluginStatusItemUpdate) {
+	if s.pluginStatusItems == nil {
+		s.pluginStatusItems = make(map[string]pluginStatusItemUpdate)
+	}
+	if update.Hidden {
+		delete(s.pluginStatusItems, update.PluginID)
+		return
+	}
+	entry, ok := pluginRegistryEntryByID(s.pluginRegistrySnapshot(), update.PluginID)
+	if !ok || entry.Status != pluginRegistered {
+		return
+	}
+	if _, declared := pluginStatusItemByID(entry.Manifest, update.ID); !declared {
+		return
+	}
+	s.pluginStatusItems[update.PluginID] = update
+}
+
+// invalidatePluginRenderersForPlan drops the cached renders of every plugin the
+// scan changed or removed. The signature check alone misses an update whose
+// declaration is identical, and a render that failed during the stop window would
+// otherwise stay failed, so the plan itself drives the invalidation (review R2).
+func (s *appState) invalidatePluginRenderersForPlan(plan pluginScanPlan) {
+	for _, pluginID := range plan.Changed {
+		s.invalidatePluginRenderers(pluginID)
+	}
+	for _, pluginID := range plan.Removed {
+		s.invalidatePluginRenderers(pluginID)
+	}
+}
+
 func (s *appState) prunePluginState() {
-	registered := make(map[string]struct{})
+	registered := make(map[string]pluginRegistryEntry)
 	for _, entry := range s.pluginRegistrySnapshot().Entries {
 		if entry.Status == pluginRegistered {
-			registered[entry.ID] = struct{}{}
+			registered[entry.ID] = entry
 		}
 	}
 	for key := range s.pluginTasks {
@@ -563,6 +814,16 @@ func (s *appState) prunePluginState() {
 			delete(s.pluginViewModels, key)
 		}
 	}
+	// A status item is keyed by plugin id. It is released when its entry is no
+	// longer registered — removed, invalid, or disabled — or when the current
+	// manifest no longer declares one, which covers an updated package.
+	for pluginID := range s.pluginStatusItems {
+		entry, ok := registered[pluginID]
+		if !ok || entry.Manifest == nil || len(entry.Manifest.Contributes.StatusItems) == 0 {
+			delete(s.pluginStatusItems, pluginID)
+		}
+	}
+	s.prunePluginRenderers()
 }
 
 func (s *appState) seedToolDemo() {
@@ -921,30 +1182,56 @@ func (s *appState) setUILanguage(value string) {
 	}
 }
 
+// applyUILanguage asks the application to show the chosen language and records
+// the language it shows. MYGO_LOCALE chooses the language for one run, so it is
+// left alone. The shown language is only read once the application is ready:
+// before that App.Locale waits for the main thread, which a process without an
+// event loop never drains, so the choice is resolved against the languages the
+// app can show instead.
 func (s *appState) applyUILanguage() {
-	if strings.TrimSpace(os.Getenv("MYGO_LOCALE")) != "" {
-		s.setEffectiveLocale(mygo.App.Locale())
+	envLocale := strings.TrimSpace(os.Getenv("MYGO_LOCALE"))
+	if envLocale == "" {
+		// A saved tag the resources no longer offer still stays saved; the
+		// application follows the system until the tag is offered again.
+		mygo.App.SetLocale(availableUILanguage(s.uiLanguage))
+	}
+	if !mygo.App.IsReady() {
+		// The application's own language is not readable yet, so the same rule is
+		// applied here: MYGO_LOCALE wins for one run, otherwise the saved choice
+		// resolves against the languages the app can show.
+		if tag := i18n.Match([]string{envLocale}, availableUILanguages()); tag != "" {
+			s.setEffectiveLocale(tag)
+			return
+		}
+		s.setEffectiveLocale(effectiveUILanguage(s.uiLanguage))
 		return
 	}
-	tag := s.uiLanguage
-	if tag == uiLanguageSystem {
-		tag = ""
-	}
-	mygo.App.SetLocale(tag)
 	s.setEffectiveLocale(mygo.App.Locale())
 }
 
 func (s *appState) setEffectiveLocale(locale string) {
-	if tag := i18n.Match([]string{locale}, locales.Catalog.Languages()); tag != "" {
+	if tag := i18n.Match([]string{locale}, availableUILanguages()); tag != "" {
 		s.storeEffectiveLocale(tag)
 	} else {
 		s.storeEffectiveLocale(effectiveUILanguage(s.uiLanguage))
 	}
 	if s.window != nil {
-		s.window.SetTitle(locales.AppWindowTitle())
+		s.window.SetTitle(text("appWindowTitle"))
 		s.window.Invalidate()
 	}
 	s.syncPluginWebViewLocale()
+}
+
+// reconcileUILanguage re-checks the saved language choice against the languages
+// the app can show now. A plugin resource that disappeared takes its language
+// with it, so a choice that referred to it falls back to following the system
+// like any other unusable choice; a choice that survived is re-applied so the
+// window and the plugin WebViews pick up the new resource.
+func (s *appState) reconcileUILanguage() {
+	// A temporarily unavailable language stays saved; only the shown language
+	// resolves against the list the resources currently offer, so a re-enable
+	// brings the choice back without a preference write.
+	s.applyUILanguage()
 }
 
 func (s *appState) storeEffectiveLocale(locale string) {
@@ -1309,6 +1596,7 @@ func (s *appState) cancelThinkingCommit() {
 func (s *appState) newPiSession() {
 	s.resetFollowUpSuggestion()
 	s.cancelThinkingPending()
+	s.cancelExtensionDialogs()
 	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeSession"))
 	if !ok {
 		return
@@ -1364,6 +1652,7 @@ func (s *appState) switchPiSession(summary piSessionSummary) {
 	}
 	s.resetFollowUpSuggestion()
 	s.cancelThinkingPending()
+	s.cancelExtensionDialogs()
 	client, epoch, gen, ok := s.beginPiSessionOperation(text("noticeCurrentChangeSession"))
 	if !ok {
 		return
@@ -1442,6 +1731,13 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			s.cancelThinkingPending()
 			s.chatView = chatPresentation{}
 			s.chat = chat
+			// The transcript now comes from the restored session, so metas kept
+			// for a delayed echo of the previous one can never be matched.
+			s.pendingEchoAttachments = nil
+			// The old transcript is gone, so plugin message renders made from
+			// it are released too, which keeps the cache bounded to the session
+			// on screen. Renderers stay installed and refill on demand.
+			s.releasePluginRenderers()
 			s.localSessionTitle = firstUserSessionTitle(chat)
 			s.sessionRenameEditing = false
 			s.sessionRenameDraft = ""
@@ -2193,9 +2489,16 @@ func (s *appState) connectPi() {
 	s.piEpoch++
 	s.sessionGen++
 	epoch := s.piEpoch
+	// The cached Pi command list belongs to the process it came from, so a new
+	// process starts with none. The in-flight flag is cleared here too: a reply
+	// from the old process is dropped by its own epoch guard and would otherwise
+	// leave the flag set, which would block the first fetch for the new process.
+	s.piCommands = nil
+	s.piCommandsFetching = false
+	s.piCommandsEpoch = 0
 	s.piConnecting = true
 	s.piConn = piConnecting
-	s.piCwd = ""
+	s.resetPiCwd()
 	s.piPath = ""
 	s.piError = ""
 	s.showNotice(text("noticePiConnecting"))
@@ -2326,7 +2629,7 @@ func (s *appState) connectPi() {
 			}
 			s.pi = client
 			s.piPath = path
-			s.piCwd = client.cwd
+			s.setPiCwd(client.cwd)
 			s.piConnecting = false
 			s.piConn = piConnected
 			s.piVersion = version
@@ -2340,6 +2643,9 @@ func (s *appState) connectPi() {
 				s.piThinkingLevelsKnown = true
 			}
 			s.recordModelTuple()
+			// The loaded set comes from this client's launch snapshot, captured
+			// from the exact registry startPiClient built its arguments from.
+			s.setPiLoadedExtensions(client)
 			s.piError = ""
 			s.piErrorCode = ""
 			s.piErrorDetailsOpen = false
@@ -2387,6 +2693,8 @@ func (s *appState) reconnectPi() {
 	s.clearPiHUD()
 	if s.pi != nil {
 		old := s.pi
+		// Answer open dialogs before that process is replaced.
+		s.cancelExtensionDialogs()
 		s.pi = nil
 		old.Close()
 	}
@@ -2394,7 +2702,7 @@ func (s *appState) reconnectPi() {
 	s.piErrorCode = ""
 	s.piErrorDetailsOpen = false
 	s.piStatusPopoverOpen = false
-	s.piCwd = ""
+	s.resetPiCwd()
 	s.piSessionFile = ""
 	s.piSessionID = ""
 	s.piSessionName = ""
@@ -2418,6 +2726,7 @@ func (s *appState) reconnectPi() {
 
 func (s *appState) shutdownPi() {
 	s.closed.Store(true)
+	s.stopPluginReclaim()
 	s.piConnectGeneration++
 	if s.piConnectCancel != nil {
 		s.piConnectCancel()
@@ -2439,7 +2748,10 @@ func (s *appState) shutdownPi() {
 	}
 	s.piSessionsRefresh.Add(1)
 	s.destroyAllPluginWebViews()
+	// No git subprocess outlives the app: both workspace requests are stopped.
+	s.cancelWorkspaceChanges()
 	if s.pi != nil {
+		s.cancelExtensionDialogs()
 		s.pi.Close()
 		s.pi = nil
 	}
@@ -2455,8 +2767,16 @@ func (s *appState) sendPrompt() {
 func (s *appState) sendPromptWithMode(mode runningSendMode) {
 	prompt := strings.TrimSpace(s.composerDraft)
 	if prompt == "" {
-		s.showNotice(text("noticeMessageEmpty"))
-		return
+		// Review C10: an explicit send may carry attachments alone. Pi's
+		// message field needs a non-empty string, so one localized fallback
+		// line stands in; it appears in the timeline and history like any
+		// other message text.
+		if len(s.composerAttachments) > 0 {
+			prompt = text("chatAttachmentOnlyFallback")
+		} else {
+			s.showNotice(text("noticeMessageEmpty"))
+			return
+		}
 	}
 	if s.pi == nil || s.piConn != piConnected {
 		s.showNotice(text("noticePiDisconnected"))
@@ -2484,13 +2804,15 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 	}
 
 	attachment := cloneTableContext(s.composerTableContext)
-	wirePrompt := tableContextPrompt(prompt, attachment)
+	sendingAttachments := s.sendAttachments(cloneComposerAttachments(s.composerAttachments))
+	wirePrompt := tableContextPrompt(
+		attachmentPromptText(prompt, sendingAttachments), attachment)
 	s.resetFollowUpSuggestion()
 	s.cancelThinkingPending()
 	s.sessionGen++
 	gen := s.sessionGen
 	s.piSessionBusy = true
-	requestID, err := s.pi.Prompt(wirePrompt, "")
+	requestID, err := s.pi.PromptWithImages(wirePrompt, "", attachmentImages(sendingAttachments))
 	if err != nil {
 		if gen == s.sessionGen {
 			s.piSessionBusy = false
@@ -2503,6 +2825,7 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 	s.resetRuntimeDiagnostics()
 	s.composerDraft = ""
 	s.clearTableContextIfMatches(attachment)
+	s.clearComposerAttachments(sendingAttachments)
 	s.clearPiConnectingNotice()
 	if s.piSessionName == "" && s.localSessionTitle == "" {
 		s.localSessionTitle = localTemporarySessionTitle(prompt)
@@ -2513,10 +2836,10 @@ func (s *appState) sendPromptWithMode(mode runningSendMode) {
 	s.activeRequest = requestID
 	s.activePrompt = prompt
 	s.piSessionBusy = false
-	s.startAssistantPrompt(wirePrompt)
+	s.startAssistantPrompt(wirePrompt, chatAttachmentMetas(sendingAttachments))
 }
 
-func (s *appState) startAssistantPrompt(prompt string) {
+func (s *appState) startAssistantPrompt(prompt string, attachments []chatAttachmentMeta) {
 	displayPrompt := displayTableContextPrompt(prompt)
 	s.beginPiHUDSpeed()
 	s.chat = append(s.chat,
@@ -2526,7 +2849,8 @@ func (s *appState) startAssistantPrompt(prompt string) {
 				kind: chatBlockText,
 				text: displayPrompt,
 			}},
-			status: text("chatStatusSent"),
+			attachments: attachments,
+			status:      text("chatStatusSent"),
 		},
 		chatMessage{role: chatAssistant, status: text("assistantWaiting"), startedAt: time.Now()},
 	)
@@ -2536,8 +2860,15 @@ func (s *appState) startAssistantPrompt(prompt string) {
 func (s *appState) sendRunningPrompt(prompt string, mode runningSendMode) {
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {
-		s.showNotice(text("noticeMessageEmpty"))
-		return
+		// Same rule as sendPromptWithMode (review C10): with files selected the
+		// send button is enabled even with no text, so a steer or follow-up
+		// carries the localized fallback line instead of an empty string.
+		if len(s.composerAttachments) > 0 {
+			prompt = text("chatAttachmentOnlyFallback")
+		} else {
+			s.showNotice(text("noticeMessageEmpty"))
+			return
+		}
 	}
 	if s.pi == nil || s.piConn != piConnected {
 		s.showNotice(text("noticePiDisconnected"))
@@ -2563,7 +2894,9 @@ func (s *appState) sendRunningPrompt(prompt string, mode runningSendMode) {
 		return
 	}
 	attachment := cloneTableContext(s.composerTableContext)
-	wirePrompt := tableContextPrompt(prompt, attachment)
+	sendingAttachments := s.sendAttachments(cloneComposerAttachments(s.composerAttachments))
+	wirePrompt := tableContextPrompt(
+		attachmentPromptText(prompt, sendingAttachments), attachment)
 	mode = normalizeRunningSendMode(string(mode))
 	behavior := runningSendBehavior(mode)
 	client := s.pi
@@ -2576,12 +2909,14 @@ func (s *appState) sendRunningPrompt(prompt string, mode runningSendMode) {
 	s.runningSendPrompt = wirePrompt
 	s.runningSendDisplay = prompt
 	s.runningSendContext = attachment
+	s.runningSendAttachments = sendingAttachments
 	s.runningSendEchoSeen = false
 	s.composerDraft = ""
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		result, err := client.PromptRequest(ctx, wirePrompt, behavior)
+		result, err := client.PromptRequestWithImages(ctx, wirePrompt, behavior,
+			attachmentImages(sendingAttachments))
 		s.postUI(func() {
 			s.completeRunningSend(client, wirePrompt, mode, epoch, gen,
 				requestBefore, runBefore, runStateBefore, result, err)
@@ -2601,16 +2936,19 @@ func (s *appState) completeRunningSend(client *piClient, prompt string, mode run
 		displayPrompt = displayTableContextPrompt(prompt)
 	}
 	attachment := cloneTableContext(s.runningSendContext)
+	sendingAttachments := cloneComposerAttachments(s.runningSendAttachments)
 	s.runningSendPending = false
 	echoSeen := s.runningSendEchoSeen
 	s.runningSendPrompt = ""
 	s.runningSendDisplay = ""
 	s.runningSendContext = nil
+	s.runningSendAttachments = nil
 	s.runningSendEchoSeen = false
 	if err != nil {
 		if strings.TrimSpace(s.composerDraft) == "" {
 			s.composerDraft = displayPrompt
 		}
+		s.restoreComposerAttachments(sendingAttachments)
 		if epoch == s.piEpoch && s.pi == client && gen == s.sessionGen &&
 			s.runActive() && s.activeRequest == requestBefore && s.runID == runBefore {
 			s.run = runStateBefore
@@ -2627,7 +2965,7 @@ func (s *appState) completeRunningSend(client *piClient, prompt string, mode run
 	switch disposition {
 	case "started":
 		if !echoSeen {
-			s.startAssistantPrompt(prompt)
+			s.startAssistantPrompt(prompt, chatAttachmentMetas(sendingAttachments))
 		}
 		s.run = runStreaming
 		s.runID = result.RequestID
@@ -2642,10 +2980,40 @@ func (s *appState) completeRunningSend(client *piClient, prompt string, mode run
 		return false
 	}
 	s.clearTableContextIfMatches(attachment)
+	s.clearComposerAttachments(sendingAttachments)
+	// Only a queued message that has not already echoed is picked up by Pi and
+	// echoed later, after the running-send fields are gone, so its attachment
+	// names wait here keyed by the exact wire payload Pi will echo. A started
+	// ack already emitted its row (or de-duplicated an echo), and a handled ack
+	// is never echoed, so recording either would leave a stale entry that shifts
+	// the FIFO and mislabels the next identical payload.
+	if metas := chatAttachmentMetas(sendingAttachments); len(metas) > 0 && disposition == "queued" && !echoSeen {
+		if s.pendingEchoAttachments == nil {
+			s.pendingEchoAttachments = make(map[string][][]chatAttachmentMeta)
+		}
+		s.pendingEchoAttachments[prompt] = append(s.pendingEchoAttachments[prompt], metas)
+	}
 	s.notice = textArgs("noticeRunningSendAccepted", map[string]any{
 		"mode": runningSendModeLabel(mode),
 	})
 	return true
+}
+
+// takePendingEchoAttachments removes and returns the oldest metas kept for one
+// exact wire payload, so an echo shows the files of its own send even when
+// identical payloads are queued.
+func (s *appState) takePendingEchoAttachments(payload string) []chatAttachmentMeta {
+	queue := s.pendingEchoAttachments[payload]
+	if len(queue) == 0 {
+		return nil
+	}
+	metas := queue[0]
+	if len(queue) == 1 {
+		delete(s.pendingEchoAttachments, payload)
+	} else {
+		s.pendingEchoAttachments[payload] = queue[1:]
+	}
+	return metas
 }
 
 func runningSendModeLabel(mode runningSendMode) string {
@@ -2708,8 +3076,10 @@ func (s *appState) resetRuntimeDiagnostics() {
 	s.runningSendPrompt = ""
 	s.runningSendDisplay = ""
 	s.runningSendContext = nil
+	s.runningSendAttachments = nil
 	s.runningSendEchoSeen = false
 	s.pendingPiUserEcho = ""
+	s.pendingEchoAttachments = nil
 	s.compacting = false
 	s.compactionReason = ""
 	s.compactionResult = ""
@@ -2904,6 +3274,10 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		if message := strings.TrimSpace(event.Text); message != "" {
 			s.showNotice(message)
 		}
+	case piEventExtensionDialog:
+		// select/confirm/input/editor wait for a native dialog. Nothing is
+		// approved on the user's behalf, and the request keeps its own ID.
+		s.queueExtensionDialog(event, epoch)
 	case piEventToolStart:
 		s.run = runStreaming
 		s.startToolCall(event)
@@ -2914,6 +3288,9 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.run = runStreaming
 		s.endToolCall(event)
 	case piEventSettled:
+		if s.workspaceChangesOpen {
+			s.refreshWorkspaceChanges()
+		}
 		prompt := s.activePrompt
 		for i := len(s.chat) - 1; i >= 0; i-- {
 			if s.chat[i].role != chatUser {
@@ -2937,6 +3314,10 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.runningSendPending = false
 		s.runningSendPrompt = ""
 		s.runningSendEchoSeen = false
+		// A settled turn ends the in-flight running send as far as the UI is
+		// concerned: its attachments must be released here too, or a late ack
+		// could put chips back into the composer for a second send.
+		s.runningSendAttachments = nil
 		s.pendingPiUserEcho = ""
 		s.queueSteering = nil
 		s.queueFollowUp = nil
@@ -2972,6 +3353,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.piError = uiErrorFromText(event.Error, text("errorProtocolWarning"))
 		s.notice = textArgs("noticePiProtocolWarning", map[string]any{"error": s.piError})
 	case piEventProcessExit:
+		s.discardExtensionDialogs()
 		s.resetFollowUpSuggestion()
 		s.invalidateSessionNaming()
 		s.sessionGen++
@@ -2981,9 +3363,15 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.clearPiConnectingNotice()
 		s.pi = nil
 		s.clearPiHUD()
-		s.piCwd = ""
+		s.resetPiCwd()
 		s.piConnecting = false
 		s.piConn = piDisconnected
+		// The cached command list belongs to the process that just exited, so it is
+		// dropped here rather than only on the next connect, otherwise a slash menu
+		// keeps offering rows from a process that is gone.
+		s.piCommands = nil
+		s.piCommandsFetching = false
+		s.piCommandsEpoch = 0
 		s.piErrorCode = piErrorCodeExited
 		s.piError = uiErrorFromText(fallback(event.StderrTail, event.Error), text("errorPiDisconnected"))
 		s.piErrorDetailsOpen = false
@@ -3038,7 +3426,7 @@ func (s *appState) setAssistantText(value, status string) {
 		})
 		message = &s.chat[len(s.chat)-1]
 	}
-	wasWaiting := message.status == locales.AssistantWaiting()
+	wasWaiting := message.status == text("assistantWaiting")
 	message.status = status
 	if strings.TrimSpace(value) == "" {
 		return
@@ -3184,8 +3572,21 @@ func (s *appState) appendRunningUserMessage(value string) {
 		s.pendingPiUserEcho = ""
 		return
 	}
+	var attachments []chatAttachmentMeta
 	if s.runningSendPending && s.runningSendPrompt == value {
 		s.runningSendEchoSeen = true
+		// The echo carries the file names too, so a queued or steered message
+		// shows its attachments like a plain send does.
+		attachments = chatAttachmentMetas(s.runningSendAttachments)
+	} else if kept := s.takePendingEchoAttachments(value); len(kept) > 0 {
+		// The ack released the running-send state before this delayed echo
+		// arrived; the names kept under the exact wire payload go on the row.
+		attachments = kept
+	} else if _, paths := splitAttachmentBlock(value); len(paths) > 0 {
+		// No saved metas survived (a reset happened in between): rebuild the
+		// names from the path block itself, so the timeline never silently
+		// loses the files it can still read.
+		attachments = attachmentMetasFromPaths(paths)
 	}
 	value = displayTableContextPrompt(value)
 	if len(s.chat) > 0 && s.chat[len(s.chat)-1].role == chatAssistant {
@@ -3193,9 +3594,10 @@ func (s *appState) appendRunningUserMessage(value string) {
 	}
 	s.chat = append(s.chat,
 		chatMessage{
-			role:   chatUser,
-			status: text("chatStatusSent"),
-			blocks: []chatBlock{{kind: chatBlockText, text: value}},
+			role:        chatUser,
+			status:      text("chatStatusSent"),
+			attachments: attachments,
+			blocks:      []chatBlock{{kind: chatBlockText, text: value}},
 		},
 		chatMessage{role: chatAssistant, status: text("assistantWaiting"), startedAt: time.Now()},
 	)
@@ -3489,4 +3891,21 @@ func (s *appState) piPathLabel() string {
 
 func (s *appState) DebugSummary() string {
 	return fmt.Sprintf("%s:%s:nav=%t:tasks=%t:pi=%s:run=%s", appShort, s.page, !s.navCollapsed, s.tasksOpen, s.piConn, s.run)
+}
+
+// persistPluginThemeSelection writes the chosen plugin theme to preferences
+// without touching the rest of the saved state. A nil selection clears both
+// fields but never rewrites any other value.
+func (s *appState) persistPluginThemeSelection(selection *pluginThemeSelection) error {
+	if s.preferencesStore == nil {
+		return nil
+	}
+	pluginID, resourceID := "", ""
+	if selection != nil {
+		pluginID, resourceID = selection.PluginID, selection.ResourceID
+	}
+	return s.persistPreferencePatch(func(preferences *byopPreferences) {
+		preferences.PluginThemePluginID = pluginID
+		preferences.PluginThemeResourceID = resourceID
+	})
 }

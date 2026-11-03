@@ -3432,5 +3432,588 @@
   "fileOpenFailed": "无法打开文件。",
   "@fileOpenFailed": {
     "description": "打开文件失败时的提示。"
+  },
+  "modelLabelEditorTitle": "模型胶囊",
+  "@modelLabelEditorTitle": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorDescription": "选择渠道和模型，再填写自己的胶囊文字。胶囊是个人标记，不代表已核实的模型版本。",
+  "@modelLabelEditorDescription": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorSearch": "搜索渠道或模型",
+  "@modelLabelEditorSearch": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorSelected": "已选择：{provider} · {model}",
+  "@modelLabelEditorSelected": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "modelLabelEditorBadge": "胶囊文字",
+  "@modelLabelEditorBadge": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorBadgePlaceholder": "例如：IQ2 或 1017",
+  "@modelLabelEditorBadgePlaceholder": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorSave": "保存胶囊",
+  "@modelLabelEditorSave": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorRemove": "移除胶囊",
+  "@modelLabelEditorRemove": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorSaved": "胶囊已保存。",
+  "@modelLabelEditorSaved": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorRemoved": "胶囊已移除。",
+  "@modelLabelEditorRemoved": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorMissingModel": "请先选择模型。",
+  "@modelLabelEditorMissingModel": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorInvalidBadge": "请输入 1–12 个可显示字符。",
+  "@modelLabelEditorInvalidBadge": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorDataError": "无法读取胶囊配置，已保留原文件。",
+  "@modelLabelEditorDataError": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "modelLabelEditorStoreError": "胶囊配置保存失败。",
+  "@modelLabelEditorStoreError": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "pluginsDisable": "停用",
+  "@pluginsDisable": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "pluginsEnable": "启用",
+  "@pluginsEnable": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "pluginsStatusDisabled": "已停用",
+  "@pluginsStatusDisabled": {
+    "description": "Plugin lifecycle or manual model badge interface."
+  },
+  "pluginsDisabled": "{name} 已停用，数据已保留。",
+  "@pluginsDisabled": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsEnabled": "{name} 已启用，将在需要时启动。",
+  "@pluginsEnabled": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsEnableFailed": "无法更改 {name} 的启停状态：{error}",
+  "@pluginsEnableFailed": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsRuntimeStateFailed": "无法同步 {name} 的运行状态：{error}",
+  "@pluginsRuntimeStateFailed": {
+    "description": "Plugin lifecycle or manual model badge interface.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsAddFromFolder": "从文件夹添加",
+  "@pluginsAddFromFolder": {
+    "description": "本地插件包操作：从文件夹安装。"
+  },
+  "pluginsAddFromZip": "从 zip 添加",
+  "@pluginsAddFromZip": {
+    "description": "本地插件包操作：从 zip 包安装。"
+  },
+  "pluginsInstallFolderDialog": "选择插件文件夹",
+  "@pluginsInstallFolderDialog": {
+    "description": "插件包文件夹选择器标题。"
+  },
+  "pluginsInstallZipDialog": "选择插件安装包（.zip）",
+  "@pluginsInstallZipDialog": {
+    "description": "插件包 zip 选择器标题。"
+  },
+  "pluginsPackageUpdate": "更新",
+  "@pluginsPackageUpdate": {
+    "description": "详情面板操作：用安装包更新已装插件。"
+  },
+  "pluginsPackageUninstall": "卸载",
+  "@pluginsPackageUninstall": {
+    "description": "详情面板操作：将已装插件文件夹移入废纸篓。"
+  },
+  "pluginsInstallFailed": "无法安装该插件包。",
+  "@pluginsInstallFailed": {
+    "description": "安装错误行标题；详情在其旁显示。"
+  },
+  "pluginsUpdateFailed": "无法更新该插件。",
+  "@pluginsUpdateFailed": {
+    "description": "更新错误行标题；详情在其旁显示。"
+  },
+  "pluginsUninstallFailed": "无法卸载该插件。",
+  "@pluginsUninstallFailed": {
+    "description": "卸载错误行标题；详情在其旁显示。"
+  },
+  "pluginsInstalled": "{name} 已安装。",
+  "@pluginsInstalled": {
+    "description": "安装插件包后的通知。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsUpdated": "{name} 已更新。",
+  "@pluginsUpdated": {
+    "description": "用安装包更新插件后的通知。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsUninstalled": "{name} 已卸载，数据已保留，文件夹已存至 {path}。",
+  "@pluginsUninstalled": {
+    "description": "卸载插件后的通知；数据保留。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsPackageKept": "旧版本已存至 {path}。",
+  "@pluginsPackageKept": {
+    "description": "附带通知：旧版本的保留位置。",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginsPackageSkippedLinks": "复制时跳过了 {count} 个链接。",
+  "@pluginsPackageSkippedLinks": {
+    "description": "附带通知：复制过程中跳过的符号链接数量。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatAttachmentButton": "为这条消息添加文件",
+  "chatAttachmentRemove": "移除附件",
+  "chatAttachmentPickerTitle": "选择要添加的文件",
+  "chatImageUnsupported": "当前模型不支持图片，已改为添加文件引用。",
+  "chatAttachmentTooLarge": "{name} 超过 {limit} 的图片内联上限，已改为添加文件引用。",
+  "chatAttachmentSkipped": "{count} 个项目未添加。请检查文件是否可读，以及附件数量是否已达上限。",
+  "chatFileReferencePrefix": "附件文件",
+  "chatAttachmentImageLabel": "图片",
+  "chatAttachmentFileLabel": "文件",
+  "extensionUIDialogCancel": "取消",
+  "extensionUIDialogConfirm": "确认",
+  "extensionUIPromptMissing": "Pi 请求输入，但该请求没有文字。",
+  "extensionUIDialogDecline": "否",
+  "@chatAttachmentButton": {
+    "description": "输入框附件选择按钮的无障碍标签与提示。"
+  },
+  "@chatAttachmentRemove": {
+    "description": "移除单个已选附件的无障碍标签。"
+  },
+  "@chatAttachmentPickerTitle": {
+    "description": "聊天附件原生文件选择框标题。"
+  },
+  "@chatImageUnsupported": {
+    "description": "当前模型不支持图片时，添加图片后的提示。"
+  },
+  "@chatAttachmentTooLarge": {
+    "description": "所选文件超过内联图片上限时的提示。",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "@chatAttachmentSkipped": {
+    "description": "拖入或选择的条目无法添加时的提示。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@chatFileReferencePrefix": {
+    "description": "提示词中本地文件引用段落的小标题。"
+  },
+  "@chatAttachmentImageLabel": {
+    "description": "图片附件标签的类型文字。"
+  },
+  "@chatAttachmentFileLabel": {
+    "description": "非图片附件标签的类型文字。"
+  },
+  "@extensionUIDialogCancel": {
+    "description": "Pi 扩展对话框的取消按钮。"
+  },
+  "@extensionUIDialogConfirm": {
+    "description": "Pi 扩展对话框的确认按钮。"
+  },
+  "@extensionUIPromptMissing": {
+    "description": "Pi 扩展对话框请求缺少标题时的提示。"
+  },
+  "@extensionUIDialogDecline": {
+    "description": "Pi 扩展确认对话框的“不允许”按钮，回答 confirmed: false。"
+  },
+  "pluginsPackageKeptInTrash": "旧插件文件夹已移入废纸篓。",
+  "pluginsUninstalledInTrash": "已卸载 {name}。插件文件夹已移入废纸篓，插件数据已保留。",
+  "@pluginsPackageKeptInTrash": {
+    "description": "System Trash retained the plugin without returning its final path."
+  },
+  "@pluginsUninstalledInTrash": {
+    "description": "Uninstalled package retained in system Trash, data preserved.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "titleToggleWorkspaceChanges": "切换工作区变更（{shortcut}）",
+  "workspaceChangesTitle": "工作区变更",
+  "workspaceChangesReadOnly": "只读",
+  "workspaceChangesRefresh": "刷新",
+  "workspaceChangesClose": "关闭",
+  "workspaceChangesBack": "返回",
+  "workspaceChangesNotGit": "当前工作区不是 Git 仓库，不显示变更。",
+  "workspaceChangesGitFailed": "无法读取工作区变更：{error}",
+  "workspaceChangesRepository": "仓库：{path}",
+  "workspaceChangesStaged": "已暂存",
+  "workspaceChangesUnstaged": "未暂存",
+  "workspaceChangesUntracked": "未跟踪",
+  "workspaceChangesSelectFile": "选择一个文件查看差异。",
+  "workspaceChangesBinary": "二进制文件；无法预览差异。",
+  "workspaceChangesLarge": "内容较多，仅显示部分结果。",
+  "workspaceChangesNoDiff": "该文件没有可读取的差异。",
+  "workspaceChangesUntrackedPreview": "未跟踪文件内容（只读）。",
+  "workspaceChangesStagedDiff": "已暂存差异",
+  "workspaceChangesUnstagedDiff": "未暂存差异",
+  "workspaceChangesLoading": "正在读取工作区变更…",
+  "@titleToggleWorkspaceChanges": {
+    "description": "Read-only workspace changes interface.",
+    "placeholders": {
+      "shortcut": {
+        "type": "String"
+      }
+    }
+  },
+  "@workspaceChangesTitle": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesReadOnly": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesRefresh": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesClose": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesBack": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesNotGit": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesGitFailed": {
+    "description": "Read-only workspace changes interface.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@workspaceChangesRepository": {
+    "description": "Read-only workspace changes interface.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@workspaceChangesStaged": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesUnstaged": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesUntracked": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesSelectFile": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesBinary": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesLarge": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesNoDiff": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesUntrackedPreview": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesStagedDiff": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesUnstagedDiff": {
+    "description": "Read-only workspace changes interface."
+  },
+  "@workspaceChangesLoading": {
+    "description": "Read-only workspace changes interface."
+  },
+  "pluginsDisabledRefreshRequired": "{name} 已在工作台停用；刷新 Pi 后，它的扩展才会完全退出。",
+  "pluginsPiUnloadRefreshHint": "刷新 Pi 后，它的扩展才会完全退出。",
+  "@pluginsDisabledRefreshRequired": {
+    "description": "Non-cooperative loaded extension needs the existing Pi refresh to finish disabling.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@pluginsPiUnloadRefreshHint": {
+    "description": "An uninstalled extension remains loaded until Pi refreshes."
+  },
+  "chatAttachmentOnlyFallback": "（见附件）",
+  "@chatAttachmentOnlyFallback": {
+    "description": "User-visible text for an explicit attachment-only send because Pi requires a non-empty message."
+  },
+  "pluginsStatusStopped": "空闲",
+  "pluginsSummaryTheme": "{count} 个主题",
+  "pluginsSummaryLocale": "{count} 个语言包",
+  "pluginsSummarySlashCommand": "{count} 条斜杠命令",
+  "pluginsSummaryMentionProvider": "{count} 个提及提供者",
+  "pluginsSummaryPaletteProvider": "{count} 个命令面板提供者",
+  "pluginsSummaryStatusItem": "{count} 个状态项",
+  "pluginsSummaryMessageRenderer": "{count} 个消息渲染器",
+  "slashMenuLabel": "斜杠命令",
+  "slashKindPlugin": "插件命令",
+  "slashKindPluginPrompt": "插件提示词",
+  "slashKindPiExtension": "Pi 扩展",
+  "slashKindPiPrompt": "Pi 提示词",
+  "slashKindPiSkill": "Pi 技能",
+  "pluginsThemeTitle": "插件主题",
+  "pluginsThemeSystem": "内置主题",
+  "paletteSectionCore": "应用操作",
+  "paletteDetailNewSession": "开始新的 Pi 对话",
+  "paletteOpenPlugins": "打开插件",
+  "paletteDetailPlugins": "管理已安装的插件",
+  "paletteOpenAutomations": "打开自动化",
+  "paletteDetailAutomations": "查看已登记的自动化和运行历史",
+  "paletteDetailSettings": "打开应用设置",
+  "paletteToggleNavigation": "切换导航栏",
+  "paletteDetailNavigation": "显示或收起导航侧栏",
+  "paletteToggleTasks": "切换任务面板",
+  "paletteDetailTasks": "显示或收起任务面板",
+  "paletteWorkspaceChanges": "工作区变更",
+  "paletteDetailChanges": "查看文件变更和差异",
+  "paletteReconnectPi": "重新连接 Pi",
+  "paletteDetailReconnect": "重新建立与 Pi 的连接",
+  "paletteConnectPi": "连接 Pi",
+  "paletteDetailConnect": "连接已安装的 Pi CLI",
+  "paletteSectionSessions": "对话",
+  "paletteSectionCommands": "插件命令",
+  "paletteSectionProvider": "插件结果",
+  "palettePlaceholder": "搜索操作、对话和插件…",
+  "paletteNoResults": "没有匹配的结果",
+  "mentionMenuLabel": "提及建议",
+  "@pluginsStatusStopped": {
+    "description": "Plugin contribution summary or idle resource state."
+  },
+  "@pluginsSummaryTheme": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@pluginsSummaryLocale": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@pluginsSummarySlashCommand": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@pluginsSummaryMentionProvider": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@pluginsSummaryPaletteProvider": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@pluginsSummaryStatusItem": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@pluginsSummaryMessageRenderer": {
+    "description": "Plugin contribution summary or idle resource state.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@slashMenuLabel": {
+    "description": "Slash command menu and source label."
+  },
+  "@slashKindPlugin": {
+    "description": "Slash command menu and source label."
+  },
+  "@slashKindPluginPrompt": {
+    "description": "Slash command menu and source label."
+  },
+  "@slashKindPiExtension": {
+    "description": "Slash command menu and source label."
+  },
+  "@slashKindPiPrompt": {
+    "description": "Slash command menu and source label."
+  },
+  "@slashKindPiSkill": {
+    "description": "Slash command menu and source label."
+  },
+  "@pluginsThemeTitle": {
+    "description": "Plugin theme selection interface."
+  },
+  "@pluginsThemeSystem": {
+    "description": "Plugin theme selection interface."
+  },
+  "@paletteSectionCore": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteDetailNewSession": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteOpenPlugins": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteDetailPlugins": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteOpenAutomations": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteDetailAutomations": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteDetailSettings": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteToggleNavigation": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteDetailNavigation": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteToggleTasks": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteDetailTasks": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteWorkspaceChanges": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteDetailChanges": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteReconnectPi": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteDetailReconnect": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteConnectPi": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteDetailConnect": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteSectionSessions": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteSectionCommands": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteSectionProvider": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@palettePlaceholder": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@paletteNoResults": {
+    "description": "Command palette or mention menu interface."
+  },
+  "@mentionMenuLabel": {
+    "description": "Command palette or mention menu interface."
   }
 }

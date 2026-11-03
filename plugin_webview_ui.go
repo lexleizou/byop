@@ -22,6 +22,15 @@ func (s *appState) pluginWebViewPage(c *ui.Context, p palette) {
 	snapshot, ok := s.pluginWebViewSnapshot(pluginID, viewID)
 	if !ok || snapshot.webView == nil || snapshot.webView.IsDestroyed() ||
 		snapshot.status == pluginWebViewFailed {
+		if !ok {
+			// The creation runs just outside this frame, so the first render
+			// shows the header with an empty body instead of the unavailable
+			// card that would flash for one frame.
+			ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
+				s.pluginWebViewHeader(c, p, entry, view)
+			})
+			return
+		}
 		s.pluginWebViewFallback(c, p, entry, view, snapshot.error)
 		return
 	}

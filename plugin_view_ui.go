@@ -171,12 +171,12 @@ func (s *appState) pluginViewPage(c *ui.Context, p palette) {
 						text("pluginsViewRefresh"), func() {
 							s.loadPluginViewByID(entry.ID, view.ID)
 						})
-					if s.plugins.status(entry.ID).State == pluginStateActive {
-						pluginSecondaryAction(c, p, "plugin-view-stop-"+entry.ID,
-							text("pluginsDeactivate"), func() {
-								s.deactivatePlugin(entry)
-							})
-					}
+					// The one stop action is the persistent disable, so the view
+					// header cannot offer a second, temporary stop.
+					pluginSecondaryAction(c, p, "plugin-view-disable-"+entry.ID,
+						text("pluginsDisable"), func() {
+							s.setPluginEnabled(entry, false)
+						})
 				})
 				switch {
 				case s.pluginViewLoading:

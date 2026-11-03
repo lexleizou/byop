@@ -4,8 +4,6 @@ import (
 	"runtime"
 	"strings"
 
-	"byop/locales"
-
 	"github.com/egoist/mygo/i18n"
 	"github.com/egoist/mygo/ui"
 )
@@ -400,10 +398,13 @@ func (s *appState) settingsCategoryContentV12(
 
 func (s *appState) settingsGeneralV12(c *ui.Context, p palette) {
 	ui.Column(c).FillWidth().Gap(16).Children(func() {
-		settingsCardV12(c, p, locales.SettingsLanguageTitle(), "", func() {
+		settingsCardV12(c, p, text("settingsLanguageTitle"), "", func() {
 			ui.Row(c).Gap(8).Wrap().Children(func() {
-				s.languageButton(c, p, uiLanguageSystem, locales.SettingsLanguageSystem())
-				for _, tag := range locales.Catalog.Languages() {
+				s.languageButton(c, p, uiLanguageSystem, text("settingsLanguageSystem"))
+				// The choices are the languages the app can show now, so a
+				// published plugin language appears here and a removed one
+				// disappears with it.
+				for _, tag := range availableUILanguages() {
 					s.languageButton(c, p, tag, i18n.Autonym(tag))
 				}
 			})
@@ -507,11 +508,11 @@ func settingsRowV12(
 func (s *appState) settingsThemeSegmentV12(c *ui.Context, p palette) {
 	settingsSegmentV12(c, p, func() {
 		s.settingsThemeSegmentButtonV12(c, p, themeLight,
-			locales.SettingsAppearanceLight())
+			text("settingsAppearanceLight"))
 		s.settingsThemeSegmentButtonV12(c, p, themeDark,
-			locales.SettingsAppearanceDark())
+			text("settingsAppearanceDark"))
 		s.settingsThemeSegmentButtonV12(c, p, themeSystem,
-			locales.SettingsAppearanceSystem())
+			text("settingsAppearanceSystem"))
 	})
 }
 
@@ -626,12 +627,14 @@ func (s *appState) settingsChoiceSegmentButtonV12(
 }
 
 func (s *appState) settingsConversationV12(c *ui.Context, p palette) {
-	settingsCardV12(c, p, locales.SettingsFollowUpTitle(), "", func() {
+	settingsCardV12(c, p, text("settingsFollowUpTitle"), "", func() {
 		ui.Row(c).Gap(8).Wrap().Children(func() {
 			s.followUpStyleButton(c, p, followUpStyleGhost, "chat",
-				locales.SettingsFollowUpGhost())
+				text("settingsFollowUpGhost"))
 			s.followUpStyleButton(c, p, followUpStyleCard, "document",
-				locales.SettingsFollowUpCard())
+				text("settingsFollowUpCard"))
+			s.followUpStyleButton(c, p, followUpStyleOff, "stop",
+				text("thinkingOff"))
 		})
 		ui.Text(c, text("settingsFollowUpKeyboardHint")).FontSize(fontSmall).
 			TextColor(p.muted)
@@ -662,7 +665,7 @@ func (s *appState) settingsExtensionsV12(c *ui.Context, p palette) {
 }
 
 func (s *appState) settingsDataV12(c *ui.Context, p palette) {
-	settingsCardV12(c, p, locales.SettingsPiTitle(), "", func() {
+	settingsCardV12(c, p, text("settingsPiTitle"), "", func() {
 		ui.Row(c).Gap(9).AlignItems(ui.Center).Children(func() {
 			ui.Box(c).Size(8, 8).Radius(4).Background(s.piTone(p))
 			statusLabel := s.piConnectionLabel()
@@ -671,18 +674,18 @@ func (s *appState) settingsDataV12(c *ui.Context, p palette) {
 			}
 			ui.Text(c, statusLabel).FontSize(fontSmall).TextColor(p.text).Grow(1).
 				MinWidth(0).MaxLines(2).Tooltip(statusLabel)
-			label := locales.SettingsConnect()
+			label := text("settingsConnect")
 			if s.piConn == piConnected {
-				label = locales.SettingsReconnect()
+				label = text("settingsReconnect")
 			}
 			secondaryAction(c, p, "settings-pi-connect", label, func() {
 				s.reconnectPi()
 			})
 		})
 		ui.Column(c).Gap(8).Children(func() {
-			settingsValueV12(c, p, locales.SettingsCliPath(), s.piPathLabel())
-			settingsValueV12(c, p, locales.SettingsVersion(),
-				fallback(s.piVersion, locales.SettingsPendingHandshake()))
+			settingsValueV12(c, p, text("settingsCliPath"), s.piPathLabel())
+			settingsValueV12(c, p, text("settingsVersion"),
+				fallback(s.piVersion, text("settingsPendingHandshake")))
 		})
 		if s.piConnectionErrorActive() {
 			label := text("settingsShowPiDetails")
@@ -721,7 +724,7 @@ func (s *appState) settingsAboutV12(c *ui.Context, p palette) {
 			ui.Column(c).Gap(3).Children(func() {
 				ui.Text(c, appShort).FontSize(fontTitle).FontWeight(650).
 					TextColor(p.text)
-				ui.Text(c, locales.SettingsVersion()+" "+appVersion).
+				ui.Text(c, text("settingsVersion")+" "+appVersion).
 					FontSize(fontSmall).TextColor(p.muted)
 				ui.Text(c, text("settingsBuild")+" "+appBuildVersion()).
 					FontSize(fontSmall).TextColor(p.muted)

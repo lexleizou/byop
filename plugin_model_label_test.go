@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -13,7 +14,7 @@ func modelLabelManifestMap(pluginID string) map[string]any {
 		"version":       "0.1.0",
 		"runtime":       "node",
 		"entry":         "plugin.mjs",
-		"compatibility": map[string]any{"host": ">=0.18.7 <1.0.0", "pluginApi": "1"},
+		"compatibility": map[string]any{"host": ">=0.19.0 <1.0.0", "pluginApi": "1"},
 		"contributes":   map[string]any{"modelLabels": []any{}},
 		"activation":    map[string]any{"events": []any{}},
 		"capabilities": map[string]any{
@@ -277,5 +278,180 @@ func TestScanPluginRegistryIgnoresLabelsOfUnregisteredPlugins(t *testing.T) {
 	}
 	if badge := registry.modelLabelBadge("magpie", "deepseek-flash", ""); badge != "" {
 		t.Fatalf("badge = %q, want an incompatible plugin ignored", badge)
+	}
+}
+
+func TestManualModelLabelStoreExactIdentityAndPersistence(t *testing.T) {
+	dir := t.TempDir()
+	store := newModelLabelStore(dir)
+	if _, err := store.set("Magpie", "deepseek/deepseek-flash", "M"); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	if badge := store.badge("Magpie", "deepseek/deepseek-flash"); badge != "M" {
+		t.Fatalf("badge = %q", badge)
+	}
+	if badge := store.badge("magpie", "deepseek/deepseek-flash"); badge != "" {
+		t.Fatal("lookup must not lowercase ids")
+	}
+	reloaded := newModelLabelStore(dir)
+	if badge := reloaded.badge("Magpie", "deepseek/deepseek-flash"); badge != "M" {
+		t.Fatal("label not persisted")
+	}
+	if _, err := reloaded.remove("Magpie", "deepseek/deepseek-flash"); err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	if badge := newModelLabelStore(dir).badge("Magpie", "deepseek/deepseek-flash"); badge != "" {
+		t.Fatal("removal must not fall back to manifest")
+	}
+}
+
+func TestManualModelLabelBadgeRequiresRegisteredPlugin(t *testing.T) {
+	dir := t.TempDir()
+	store := newModelLabelStore(dir)
+	if _, err := store.set("Magpie", "deepseek/deepseek-flash", "M"); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	app := &appState{modelLabels: store}
+	if badge := app.manualModelLabelBadge("Magpie", "deepseek/deepseek-flash"); badge != "" {
+		t.Fatal("badge must require registered model-release plugin")
+	}
+	registry := pluginRegistry{Entries: []pluginRegistryEntry{{
+		ID:     modelLabelEditorPluginID,
+		Status: pluginDisabled,
+	}}}
+	app.pluginRegistry = registry
+	if badge := app.manualModelLabelBadge("Magpie", "deepseek/deepseek-flash"); badge != "" {
+		t.Fatal("disabled plugin must not supply badges")
+	}
+}
+
+func TestManualModelLabelValidation(t *testing.T) {
+	for _, badge := range []string{"", "M\t", "M\n", "1234567890123"} {
+		if modelLabelBadgeValid(badge) {
+			t.Fatalf("badge %q should be invalid", badge)
+		}
+	}
+	if !modelLabelBadgeValid("1017") || !modelLabelBadgeValid("v4.1⚡") {
+		t.Fatal("printable badges should be valid")
+	}
+	labels, warning := readManualModelLabels(t.TempDir())
+	if len(labels) != 0 || warning != "" {
+		t.Fatal("missing file should return no labels and no warning")
+	}
+}
+
+func TestModelLabelEditorSaveRemove(t *testing.T) {
+	dir := t.TempDir()
+	app := &appState{
+		modelLabels: newModelLabelStore(dir),
+		pluginRegistry: pluginRegistry{Entries: []pluginRegistryEntry{{
+			ID:     modelLabelEditorPluginID,
+			Status: pluginRegistered,
+		}}},
+	}
+	state := &modelLabelEditorState{provider: "Magpie", modelID: "deepseek/deepseek-flash", badge: "  M "}
+	state.save(app)
+	if state.statusErr || state.badge != "M" {
+		t.Fatalf("save status %#v badge %q", state.status, state.badge)
+	}
+	if badge := app.manualModelLabelBadge("Magpie", "deepseek/deepseek-flash"); badge != "M" {
+		t.Fatal("saved badge not visible")
+	}
+	state.remove(app)
+	if state.statusErr || state.badge != "" {
+		t.Fatalf("remove status %#v", state.status)
+	}
+	if badge := app.manualModelLabelBadge("Magpie", "deepseek/deepseek-flash"); badge != "" {
+		t.Fatal("removed badge still visible")
+	}
+}
+
+func TestManualModelLabelEditorNoOwnManifestFallbackAfterRemoval(t *testing.T) {
+	manifest, err := loadPluginManifest(filepath.Join("plugins", "model-release-labels", "plugin.json"))
+	if err != nil {
+		t.Fatalf("load shipped model-release-labels manifest: %v", err)
+	}
+	dir := t.TempDir()
+	store := newModelLabelStore(dir)
+	if _, err := store.set("Magpie", "deepseek/deepseek-flash", "M"); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	app := &appState{
+		modelLabels: store,
+		pluginRegistry: pluginRegistry{Entries: []pluginRegistryEntry{{
+			ID:       modelLabelEditorPluginID,
+			Status:   pluginRegistered,
+			Manifest: manifest,
+		}}},
+	}
+	if badge := app.composerModelLabelBadge("Magpie", "deepseek/deepseek-flash", ""); badge != "M" {
+		t.Fatal("manual badge missing")
+	}
+	if _, err := store.remove("Magpie", "deepseek/deepseek-flash"); err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	if badge := app.composerModelLabelBadge("Magpie", "deepseek/deepseek-flash", ""); badge != "" {
+		t.Fatal("removed manual badge must not fall back to manifest")
+	}
+}
+
+func TestManualModelLabelSameIDDifferentProviderCase(t *testing.T) {
+	dir := t.TempDir()
+	store := newModelLabelStore(dir)
+	if _, err := store.set("Magpie", "deepseek/deepseek-flash", "M"); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	if _, err := store.set("magpie", "DeepSeek/DeepSeek-Flash", "D"); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	if badge := store.badge("Magpie", "deepseek/deepseek-flash"); badge != "M" {
+		t.Fatalf("badge = %q", badge)
+	}
+	if badge := store.badge("magpie", "DeepSeek/DeepSeek-Flash"); badge != "D" {
+		t.Fatalf("badge = %q", badge)
+	}
+	if badge := store.badge("Magpie", "DeepSeek/DeepSeek-Flash"); badge != "" {
+		t.Fatal("different provider+case must not collide")
+	}
+}
+
+func TestManualModelLabelDisabledPluginNoBadge(t *testing.T) {
+	dir := t.TempDir()
+	store := newModelLabelStore(dir)
+	if _, err := store.set("Magpie", "deepseek/deepseek-flash", "M"); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	app := &appState{
+		modelLabels: store,
+		pluginRegistry: pluginRegistry{Entries: []pluginRegistryEntry{{
+			ID:     modelLabelEditorPluginID,
+			Status: pluginDisabled,
+		}}},
+	}
+	if badge := app.manualModelLabelBadge("Magpie", "deepseek/deepseek-flash"); badge != "" {
+		t.Fatal("disabled plugin must not supply badge")
+	}
+}
+
+func TestManualModelLabelNilWindowSaveRemove(t *testing.T) {
+	dir := t.TempDir()
+	app := &appState{
+		modelLabels: newModelLabelStore(dir),
+		pluginRegistry: pluginRegistry{Entries: []pluginRegistryEntry{{
+			ID:     modelLabelEditorPluginID,
+			Status: pluginRegistered,
+		}}},
+	}
+	state := &modelLabelEditorState{provider: "Magpie", modelID: "deepseek/deepseek-flash", badge: "M"}
+	state.save(app)
+	if state.statusErr {
+		t.Fatal("save with nil window should not error")
+	}
+	state.remove(app)
+	if state.statusErr {
+		t.Fatal("remove with nil window should not error")
+	}
+	if badge := newModelLabelStore(dir).badge("Magpie", "deepseek/deepseek-flash"); badge != "" {
+		t.Fatal("label not removed")
 	}
 }

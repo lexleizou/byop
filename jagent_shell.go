@@ -202,6 +202,12 @@ func (s *appState) jAgentTitleBar(c *ui.Context, p palette) {
 			DragWindow().Children(func() {
 			s.titleBarHeading(c, p)
 		})
+		// Workspace changes is a shared feature, so the JAgent title bar carries
+		// the same toggle in the same order as the BYOP one: same icon, tooltip
+		// and action.
+		s.workspaceChangesToggleButton(c, p, s.workspaceChangesOpen, func() {
+			s.toggleWorkspaceChanges()
+		})
 		taskPanelToggleButton(c, p, s.tasksOpen, func() {
 			s.setTasksOpen(!s.tasksOpen)
 		})

@@ -402,6 +402,38 @@ type piMessageContentBlock struct {
 	ToolName  string          `json:"toolName"`
 }
 
+// restoredUserMessageDisplay turns one stored Pi user message into the
+// timeline text plus the attachment metas it can still prove: the path block
+// carries real file names through the same marker the composer writes, and
+// every image part becomes one image meta. Pi stores no file name for image
+// parts, so those rows honestly show the kind label with an index instead of
+// inventing a name. The table-context marker keeps its existing display rule.
+func restoredUserMessageDisplay(raw json.RawMessage) (string, []chatAttachmentMeta) {
+	content := contentText(raw)
+	// The display text follows the existing rule exactly, including the
+	// table-context marker; the paths are read from the same content for the
+	// metas only.
+	display := displayTableContextPrompt(content)
+	_, paths := splitAttachmentBlock(content)
+	metas := attachmentMetasFromPaths(paths)
+	var blocks []piMessageContentBlock
+	if json.Unmarshal(raw, &blocks) == nil {
+		var images int
+		for _, block := range blocks {
+			if block.Type == "image" {
+				images++
+			}
+		}
+		for index := 1; index <= images; index++ {
+			metas = append(metas, chatAttachmentMeta{
+				Name: fmt.Sprintf("%s %d", text("chatAttachmentImageLabel"), index),
+				Kind: attachmentImage,
+			})
+		}
+	}
+	return display, metas
+}
+
 type piAgentMessage struct {
 	Role         string                  `json:"role"`
 	Content      json.RawMessage         `json:"content"`
@@ -432,14 +464,15 @@ func rebuildChatFromPiMessages(rawMessages []json.RawMessage) ([]chatMessage, er
 		timestamp := piMessageTime(message.Timestamp)
 		switch message.Role {
 		case "user":
-			userText := displayTableContextPrompt(contentText(message.Content))
-			if strings.TrimSpace(userText) == "" {
+			userText, attachments := restoredUserMessageDisplay(message.Content)
+			if strings.TrimSpace(userText) == "" && len(attachments) == 0 {
 				continue
 			}
 			chat = append(chat, chatMessage{
-				role:   chatUser,
-				status: text("chatStatusSent"),
-				blocks: []chatBlock{{kind: chatBlockText, text: userText}},
+				role:        chatUser,
+				status:      text("chatStatusSent"),
+				attachments: attachments,
+				blocks:      []chatBlock{{kind: chatBlockText, text: userText}},
 			})
 			lastAssistant = nil
 		case "assistant":

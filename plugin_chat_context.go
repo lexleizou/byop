@@ -39,9 +39,9 @@ func displayTableContextPrompt(prompt string) string {
 	last := strings.TrimSpace(lines[len(lines)-1])
 	if !strings.HasPrefix(last, tableContextPrefix) || !strings.HasSuffix(last, "]") ||
 		len(last) <= len(tableContextPrefix)+1 {
-		return prompt
+		return displayAttachmentPrompt(prompt)
 	}
-	return strings.TrimRight(strings.Join(lines[:len(lines)-1], "\n"), "\n")
+	return displayAttachmentPrompt(strings.TrimRight(strings.Join(lines[:len(lines)-1], "\n"), "\n"))
 }
 
 func displayTableContextPrompts(prompts []string) []string {

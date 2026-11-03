@@ -445,14 +445,18 @@ func iconActionV12(c *ui.Context, label string, iconValue func() *ui.SVG) ui.Ele
 // opaqueComposerV12 is the repository-owned composer used by the floating
 // conversation. It mirrors chat.Composer's input contract while keeping the
 // card opaque and free of Onevra's dependency shadow.
+// opaqueComposerV12 draws the card composer. allowEmptySend lets an empty
+// draft still send — the chat pages pass it when files are selected, so a
+// send can carry attachments alone (review C10); it never sends on its own.
 func opaqueComposerV12(c *ui.Context, p palette, draft *string,
-	options chat.ComposerOptions,
+	options chat.ComposerOptions, allowEmptySend bool,
+	menu *composerMenuHooks,
 	placeholderOverlays ...func(*ui.Context),
 ) chat.ComposerResult {
 	var result chat.ComposerResult
 	t := c.Theme()
 	empty := strings.TrimSpace(*draft) == ""
-	canSend := !empty && !options.SendDisabled
+	canSend := (!empty || allowEmptySend) && !options.SendDisabled
 	result.Root = ui.Column(c).FillWidth().MinWidth(0).Shrink(0).Children(func() {
 		card := ui.Column(c).FillWidth().MinWidth(0).MinHeight(96).
 			Padding(12, 12, 10, 12).Gap(8)
@@ -516,7 +520,11 @@ func opaqueComposerV12(c *ui.Context, p palette, draft *string,
 		})
 		if *pending {
 			*pending = false
-			result.Send = result.Send || canSend && !composing
+			// A suggestion menu takes plain Enter, so choosing a row never sends
+			// the half-typed token. The Send button still sends.
+			if !menu.takeEnter() {
+				result.Send = result.Send || canSend && !composing
+			}
 		}
 		if options.AcceptFiles {
 			result.Dropped = card.DroppedFiles()

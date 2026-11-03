@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "example.interactive-fixture",
+  "name": "Interactive Fixture",
+  "version": "0.1.0",
+  "description": "Contract fixture for the P25 interactive contributions: status item, language and MIME renderers, slash commands, mention and palette providers.",
+  "runtime": "node",
+  "entry": "plugin.mjs",
+  "icon": "sparkles",
+  "compatibility": {
+    "host": ">=0.19.0 <1.0.0",
+    "pluginApi": "1"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "fixture.status.publish",
+        "title": "Publish status item",
+        "description": "Publish a compact HUD status item through host.setStatusItem."
+      },
+      {
+        "id": "fixture.status.clear",
+        "title": "Clear status item",
+        "description": "Hide the status item again, which releases the HUD slot."
+      },
+      {
+        "id": "fixture.render.qa-card",
+        "title": "Render qa-card block",
+        "description": "Turn a closed qa-card fence into typed native blocks."
+      },
+      {
+        "id": "fixture.render.image",
+        "title": "Render PNG attachment",
+        "description": "Turn a sent image attachment into a typed native card."
+      },
+      {
+        "id": "fixture.mention.query",
+        "title": "Query mention items",
+        "description": "Return insertable items for an @ reference."
+      },
+      {
+        "id": "fixture.palette.query",
+        "title": "Query palette items",
+        "description": "Return palette results whose commands are declared here."
+      }
+    ],
+    "slashCommands": [
+      {
+        "id": "slash.fixture.status",
+        "title": "QA status",
+        "name": "qa-status",
+        "description": "Run the fixture status command from the composer.",
+        "command": "fixture.status.publish"
+      },
+      {
+        "id": "slash.fixture.prompt",
+        "title": "QA prompt",
+        "name": "qa-prompt",
+        "description": "Insert a prompt template the user completes before sending.",
+        "prompt": "Summarize {args} for the QA walkthrough."
+      }
+    ],
+    "mentionProviders": [
+      {
+        "id": "mention.fixture",
+        "title": "QA references",
+        "command": "fixture.mention.query"
+      }
+    ],
+    "paletteProviders": [
+      {
+        "id": "palette.fixture",
+        "title": "QA actions",
+        "command": "fixture.palette.query"
+      }
+    ],
+    "statusItems": [
+      {
+        "id": "fixture.status",
+        "title": "Fixture status"
+      }
+    ],
+    "messageRenderers": [
+      {
+        "id": "renderer.qa-card",
+        "title": "QA card",
+        "command": "fixture.render.qa-card",
+        "languages": ["qa-card"]
+      },
+      {
+        "id": "renderer.image",
+        "title": "QA image",
+        "command": "fixture.render.image",
+        "mimeTypes": ["image/png"]
+      }
+    ]
+  },
+  "activation": {
+    "events": [
+      "onCommand:fixture.status.publish",
+      "onCommand:fixture.status.clear",
+      "onCommand:fixture.render.qa-card",
+      "onCommand:fixture.render.image",
+      "onCommand:fixture.mention.query",
+      "onCommand:fixture.palette.query"
+    ],
+    "lazy": true
+  },
+  "capabilities": {
+    "workspace": "none",
+    "files": "none",
+    "network": false,
+    "process": "none"
+  }
+}

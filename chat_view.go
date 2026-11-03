@@ -214,6 +214,14 @@ func (s *appState) chatPage(c *ui.Context, p palette) {
 func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	theme := markdown.DefaultTheme(c.Theme())
 	theme.FontSize = p.bodyFont
+	// A selected theme resource may set the body and code families; sizes stay
+	// on the 12/14/18 rule, so only families change here.
+	if bodyFont, _ := themeFontsForSelection(currentPluginThemeOverlay()); bodyFont != "" {
+		theme.Font = bodyFont
+	}
+	if _, codeFont := themeFontsForSelection(currentPluginThemeOverlay()); codeFont != "" {
+		theme.CodeFont = codeFont
+	}
 	theme.LineHeight = 1.5
 	theme.BlockSpacing = 12.0 / p.bodyFont
 	theme.ItemSpacing = 4.0 / p.bodyFont
@@ -261,13 +269,15 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 		return false
 	}
 	s.chatView.markdown.CodeBlock = func(c *ui.Context, block *markdown.CodeBlockView) {
-		card := ui.Column(c).FillWidth().MinWidth(0)
-		card = styleRaisedSurface(card, p, 8).Clip()
-		card.Children(func() {
-			// Body contributes 3.5px above its first line; this brings the
-			// visual top inset to the prototype's 12px.
-			ui.Row(c).FillWidth().Padding(8, 4, 0, 4).Children(func() {
-				block.Body(c)
+		s.pluginCodeBlock(c, p, block, func() {
+			card := ui.Column(c).FillWidth().MinWidth(0)
+			card = styleRaisedSurface(card, p, 8).Clip()
+			card.Children(func() {
+				// Body contributes 3.5px above its first line; this brings the
+				// visual top inset to the prototype's 12px.
+				ui.Row(c).FillWidth().Padding(8, 4, 0, 4).Children(func() {
+					block.Body(c)
+				})
 			})
 		})
 	}
@@ -417,7 +427,13 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 	options := chat.TurnOptions{ID: fmt.Sprintf("turn-%d", index), Status: chat.Completed, HoldOpen: !s.chatView.conversation.AtLatest()}
 	if prompt != nil {
 		text := messageText(prompt)
-		options.Prompt = func(c *ui.Context) { components.Text(c, text).Selectable() }
+		metas := prompt.attachments
+		options.Prompt = func(c *ui.Context) {
+			ui.Column(c).FillWidth().MinWidth(0).Gap(6).Children(func() {
+				s.chatAttachmentChipRow(c, metas, options.ID+"-attachments")
+				components.Text(c, text).Selectable()
+			})
+		}
 	}
 	if message != nil {
 		showTurnHUD := latestAssistantForPrompt(s.chat, message)
@@ -463,11 +479,13 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 			options.Footer = func(c *ui.Context) { turnFooter(c, label+" - "+elapsed, failed) }
 		} else if options.Status == chat.Completed {
 			var promptText string
+			var promptAttachments []chatAttachmentMeta
 			if prompt != nil {
 				promptText = messageText(prompt)
+				promptAttachments = prompt.attachments
 			}
 			options.Footer = func(c *ui.Context) {
-				s.turnCompletionFooter(c, message, elapsed, tools, promptText)
+				s.turnCompletionFooter(c, message, elapsed, tools, promptText, promptAttachments)
 			}
 		}
 	}
@@ -772,7 +790,7 @@ func turnFooter(c *ui.Context, label string, failed bool) {
 }
 
 func (s *appState) turnCompletionFooter(c *ui.Context, message *chatMessage,
-	elapsed string, tools int, prompt string,
+	elapsed string, tools int, prompt string, attachments []chatAttachmentMeta,
 ) {
 	t := c.Theme()
 	ui.Row(c).Height(26).Margin(1, 0, 0, 0).AlignItems(ui.Center).Gap(4).Children(func() {
@@ -790,6 +808,18 @@ func (s *appState) turnCompletionFooter(c *ui.Context, message *chatMessage,
 		if prompt != "" {
 			if iconActionV12(c, text("retry"), lu.RotateCcw).Clicked() {
 				s.composerDraft = prompt
+				// Retry re-adds the files that went with the turn, through the
+				// same path the picker uses, so the bytes are read fresh and a
+				// file that no longer exists is reported instead of dropped
+				// silently. History-restored images carry no path (Pi keeps no
+				// name for them), so they are the one honest gap.
+				retryPaths := make([]string, 0, len(attachments))
+				for _, attachment := range attachments {
+					if attachment.Path != "" {
+						retryPaths = append(retryPaths, attachment.Path)
+					}
+				}
+				s.addComposerAttachmentPaths(retryPaths)
 			}
 		}
 	})
@@ -831,6 +861,10 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 		if !s.runActive() && !s.retrying && !s.compacting {
 			footer = nil
 		}
+		// A selected file is enough to send (review C10): the send carries the
+		// attachments alone, and the send path substitutes one localized
+		// fallback line because Pi's message field needs a non-empty string.
+		s.composerMenusWithRefresh(c, p)
 		result := opaqueComposerV12(c, p, &s.composerDraft, chat.ComposerOptions{
 			Label:        text("chatMessageLabel"),
 			Placeholder:  placeholder,
@@ -838,10 +872,15 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 			StopLabel:    text("chatStop"),
 			Running:      running,
 			SendDisabled: !running && (s.piConn != piConnected || s.piSessionBusy || s.modelStateUnconfirmed),
+			Attachments:  func(c *ui.Context) { s.composerAttachmentChips(c, p) },
+			// The card is a drop target (review C8): drops on it highlight the
+			// card and add the files; the window handler stays as the fallback
+			// for drops elsewhere on the chat page.
+			AcceptFiles: true,
 			Accessory: func(c *ui.Context) {
 				ui.Row(c).FillWidth().MinWidth(0).Wrap().AlignItems(ui.Start).Gap(8).Children(func() {
 					if composerAddButtonV12(c).Clicked() {
-						s.showNotice(text("chatAttachmentNotice"))
+						s.pickComposerAttachments()
 					}
 					s.composerChoices(c)
 					s.composerTableContextChip(c)
@@ -853,14 +892,23 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 				})
 			},
 			Footer: footer,
-		}, placeholderOverlay...)
+		}, len(s.composerAttachments) > 0, s.composerMenuHooksFor(), placeholderOverlay...)
 		result.Root.Key("chat-composer")
 		result.Input.FontSize(fontBody)
+		// Drops the card took are added here; the window handler sees only the
+		// ones it did not take.
+		if len(result.Dropped) > 0 {
+			s.addComposerAttachmentPaths(result.Dropped)
+		}
 		if !cardVisible {
 			s.applyPendingFollowUpAdoption(result.Input)
 		}
+		s.applyPendingComposerMenus(result.Input)
 		if result.Input.Focused() {
 			result.Input.OnTextKey(func(k ui.TextKey) bool {
+				if s.handleComposerMenuTextKey(k.Key, k.Mods) {
+					return true
+				}
 				return s.handleComposerTextKey(k)
 			})
 		}
@@ -872,6 +920,9 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 		} else if running && result.Input.Focused() && strings.TrimSpace(s.composerDraft) != "" {
 			composing := result.Input.Composing()
 			result.Input.HandleInput(func(ev ui.InputEvent) bool {
+				if s.handleComposerMenuInput(ev, composing) {
+					return true
+				}
 				return handleRunningComposerInput(
 					ev,
 					composing,
@@ -911,7 +962,7 @@ func (s *appState) followUpGhostPlaceholder(c *ui.Context) {
 }
 
 func composerAddButtonV12(c *ui.Context) ui.Element {
-	label := text("chatAttachmentUnavailable")
+	label := text("chatAttachmentButton")
 	t := c.Theme()
 	button := ui.ButtonBase(c).Size(26, 26).Shrink(0).Radius(v12ChipRadius).
 		Center().Background(ui.Color{}).TextColor(t.TextMuted).Label(label)
@@ -1653,7 +1704,7 @@ func (s *appState) composerModelChip(c *ui.Context, label, provider string, cont
 	}
 	chip.Children(func() {
 		components.Text(c, label).MinWidth(0).SingleLine().FontSize(fontSmall).TextColor(t.TextMuted)
-		modelReleaseBadgeNode(c, s.pluginRegistry.modelLabelBadge(
+		modelReleaseBadgeNode(c, s.composerModelLabelBadge(
 			s.piModelProvider, s.piModelID, s.piModelName))
 		if !readOnly {
 			components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).TextColor(t.TextMuted.Alpha(.7))
@@ -1701,7 +1752,7 @@ func (s *appState) customModelPicker(c *ui.Context, options []chat.Option,
 	chip.Children(func() {
 		components.Text(c, label).MinWidth(0).SingleLine().
 			FontSize(fontSmall).TextColor(t.TextMuted)
-		modelReleaseBadgeNode(c, s.pluginRegistry.modelLabelBadge(
+		modelReleaseBadgeNode(c, s.composerModelLabelBadge(
 			s.piModelProvider, s.piModelID, s.piModelName))
 		components.Icon(c, lu.ChevronDown).Size(10.5, 10.5).Shrink(0).
 			TextColor(t.TextMuted.Alpha(.7))
