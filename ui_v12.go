@@ -544,7 +544,7 @@ func opaqueComposerV12(c *ui.Context, p palette, draft *string,
 		}
 		if options.Footer != nil {
 			ui.Row(c).Key("composer-footer").Label("composer-footer").FillWidth().MinWidth(0).Height(24).
-				Padding(8, 0, 0, 0).AlignItems(ui.Center).Gap(2).
+				Padding(12, 0, 0, 0).AlignItems(ui.Center).Gap(2).
 				Children(func() { options.Footer(c) })
 		} else {
 			// Keep the layout-test seam present without changing the resting

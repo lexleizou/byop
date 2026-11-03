@@ -211,7 +211,7 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 		}
 		if hudVisible {
 			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
-				Padding(0).AlignItems(ui.Center).
+				Padding(p.composerPadding, 0, 0, 0).AlignItems(ui.Center).
 				Children(func() { s.piHUDFooter(c) })
 		}
 	})
@@ -319,7 +319,7 @@ func jAgentComposerV12(
 		}
 		if options.Footer != nil {
 			ui.Row(c).Key("composer-footer").Label("composer-footer").FillWidth().
-				MinWidth(0).Height(24).Padding(8, 0, 0, 0).
+				MinWidth(0).Height(24).Padding(p.composerPadding, 0, 0, 0).
 				AlignItems(ui.Center).Gap(2).Children(func() { options.Footer(c) })
 		} else {
 			ui.Row(c).Key("composer-footer").Label("composer-footer").Absolute().
