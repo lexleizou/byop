@@ -144,12 +144,11 @@ func TestP10cHUDStateAndStatusEvents(t *testing.T) {
 		hud: hudState{
 			autoCompact:           true,
 			contextWindowFallback: 200000,
-			extStatus:             map[string]string{"z": "last", "a": "first"},
 		},
 	}
 	state.applyPiHUDState(&piSessionState{AutoCompactionEnabled: true})
-	if got := state.piHUDLabel(); got != "first  last" {
-		t.Fatalf("HUD label = %q", got)
+	if got := state.piHUDLabel(); got != "" {
+		t.Fatalf("extension status no longer renders in HUD: %q", got)
 	}
 }
 

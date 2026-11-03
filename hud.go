@@ -22,7 +22,6 @@ type hudState struct {
 	autoCompact           bool
 	contextWindowFallback int
 	usingSubscription     bool
-	extStatus             map[string]string
 	generation            uint64
 	branchGeneration      uint64
 	avgOutputTokens       int64
@@ -45,7 +44,6 @@ func (s *appState) beginPiHUD(cwd string, state *piSessionState) {
 	s.hud.branch = ""
 	s.hud.stats = nil
 	s.hud.statsLoading = false
-	s.hud.extStatus = make(map[string]string)
 	s.hud.usingSubscription = false
 	s.hud.avgOutputTokens = 0
 	s.hud.avgGenerationSeconds = 0
@@ -61,7 +59,6 @@ func (s *appState) resetPiHUDData() {
 	s.hud.stats = nil
 	s.hud.statsRequestedAt = time.Time{}
 	s.hud.statsLoading = false
-	s.hud.extStatus = make(map[string]string)
 	s.hud.avgOutputTokens = 0
 	s.hud.avgGenerationSeconds = 0
 	s.hud.liveTurnOutputTokens = 0
@@ -79,7 +76,6 @@ func (s *appState) clearPiHUD() {
 	s.hud.autoCompact = false
 	s.hud.contextWindowFallback = 0
 	s.hud.usingSubscription = false
-	s.hud.extStatus = nil
 	s.hud.avgOutputTokens = 0
 	s.hud.avgGenerationSeconds = 0
 	s.hud.liveTurnOutputTokens = 0
@@ -607,22 +603,6 @@ func (s *appState) piHUDFooterItems() []hudItem {
 		}
 		items = append(items, hudItem{value: cost, flexible: true})
 	}
-	if len(s.hud.extStatus) > 0 {
-		keys := make([]string, 0, len(s.hud.extStatus))
-		for key, value := range s.hud.extStatus {
-			if strings.TrimSpace(key) != "" && strings.TrimSpace(value) != "" {
-				keys = append(keys, key)
-			}
-		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			items = append(items, hudItem{
-				value:    truncateHUDStatus(s.hud.extStatus[key], 40),
-				flexible: true,
-				side:     hudItemRight,
-			})
-		}
-	}
 	// Plugin status items sit beside the Pi extension statuses and share their
 	// visibility: the HUD is the status line of the running session. Each
 	// enabled plugin may hold one item, keyed by plugin id so the order is
@@ -735,6 +715,8 @@ func (s *appState) piHUDTurn(c *ui.Context, message *chatMessage) {
 				components.Text(c, item.value).FontSize(fontSmall).LineHeight(1.2).
 					FontWeight(600).TextColor(p.text).SingleLine().
 					Shrink(1).MinWidth(0).Ellipsis("…").Tooltip(item.value)
+				modelReleaseBadgeNode(c, s.composerModelLabelBadge(
+					s.piModelProvider, s.piModelID, model))
 			case hudItemTurnTokens:
 				components.Text(c, item.value).FontSize(fontSmall).LineHeight(1.2).
 					FontWeight(500).FontFeatures("tnum").TextColor(p.muted).

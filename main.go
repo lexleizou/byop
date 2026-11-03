@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.19.0"
+	appVersion = "0.19.1"
 )
 
 func appBuildVersion() string {
@@ -3256,20 +3256,8 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		s.extensionEvent = event.ExtensionEvent
 		s.notice = textArgs("noticePiExtensionError", map[string]any{"error": s.extensionError})
 	case piEventExtensionStatus:
-		key := strings.TrimSpace(event.StatusKey)
-		if key == "" {
-			return
-		}
-		if s.hud.extStatus == nil {
-			s.hud.extStatus = make(map[string]string)
-		}
-		if event.StatusText == nil {
-			delete(s.hud.extStatus, key)
-		} else if status := sanitizePiStatusText(*event.StatusText); status != "" {
-			s.hud.extStatus[key] = status
-		} else {
-			delete(s.hud.extStatus, key)
-		}
+		// Extension status updates stay accepted but no longer surface in the
+		// HUD; the slot was removed with the P26 cleanup.
 	case piEventExtensionNotify:
 		if message := strings.TrimSpace(event.Text); message != "" {
 			s.showNotice(message)

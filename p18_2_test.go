@@ -39,7 +39,6 @@ func p18_2HUDState(t *testing.T) *appState {
 	state.hud.currentTPSUpdatedAt = time.Now()
 	state.hud.avgOutputTokens = 100
 	state.hud.avgGenerationSeconds = 2
-	state.hud.extStatus = map[string]string{"ov": "OV ✓"}
 	state.chat = []chatMessage{
 		{
 			role:   chatUser,
@@ -84,7 +83,7 @@ func TestP18_3HUDSplitsTranscriptAndComposerFooterItems(t *testing.T) {
 		}
 	}
 	left, right := splitHUDItems(footer)
-	if len(left) < 6 || len(right) != 1 {
+	if len(left) < 6 || len(right) != 0 {
 		t.Fatalf("footer grouping left=%#v right=%#v", left, right)
 	}
 	if left[0].kind != hudItemContextCapacity ||
@@ -93,8 +92,7 @@ func TestP18_3HUDSplitsTranscriptAndComposerFooterItems(t *testing.T) {
 		left[2].label != "Cache hit" ||
 		left[3].value != textArgs("hudAverageSpeed", map[string]any{"speed": "50.0"}) ||
 		left[4].value != "main" ||
-		left[5].value != "$0.012" ||
-		right[0].value != "OV ✓" {
+		left[5].value != "$0.012" {
 		t.Fatalf("footer left order or right status = left:%#v right:%#v", left, right)
 	}
 	footerLabel := state.piHUDFooterLabel()
@@ -104,7 +102,7 @@ func TestP18_3HUDSplitsTranscriptAndComposerFooterItems(t *testing.T) {
 		}
 	}
 	for _, wanted := range []string{
-		"1M", "↑12k", "↓3.0k", "Cache hit", "Avg 50.0 t/s", "$0.012", "OV ✓",
+		"1M", "↑12k", "↓3.0k", "Cache hit", "Avg 50.0 t/s", "$0.012",
 	} {
 		if !strings.Contains(footerLabel, wanted) {
 			t.Fatalf("footer label %q does not contain %q", footerLabel, wanted)
@@ -503,14 +501,9 @@ func TestP18_3ConversationHUDKeepsTokensAndTPSAtNarrowWidths(t *testing.T) {
 					}
 					previousX = rect.X
 				}
-				ov, ok := tt.Find("OV ✓")
-				if !ok || ov.X < footer.X || ov.X+ov.W > footer.X+footer.W {
-					t.Fatalf("OV status escaped footer row: row=%#v ov=%#v", footer, ov)
-				}
-				if firstFooter.X > footer.X+1 ||
-					ov.X+ov.W < footer.X+footer.W-1 {
-					t.Fatalf("footer groups are not aligned to opposite edges: row=%#v first=%#v ov=%#v",
-						footer, firstFooter, ov)
+				if firstFooter.X > footer.X+1 {
+					t.Fatalf("footer items do not start at left edge: row=%#v first=%#v",
+						footer, firstFooter)
 				}
 				if size.width >= 1440 {
 					if rect, ok := tt.Find("DeepSeek V4.1 Flash"); !ok || rect.W <= 0 {

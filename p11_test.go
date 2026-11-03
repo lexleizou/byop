@@ -297,12 +297,11 @@ func TestP11HUDFooterLabelIncludesStatsAndStatus(t *testing.T) {
 			},
 			avgOutputTokens:      96,
 			avgGenerationSeconds: 2,
-			extStatus:            map[string]string{"lint": "checking"},
 		},
 	}
 	label := state.piHUDLabel()
-	if !strings.HasPrefix(label, "Context 3.7%  ↑12k ↓3.0k  Cache hit 0%  Avg 48.0 t/s  main  $0.020  ") ||
-		!strings.HasSuffix(label, "  checking") {
+	if !strings.HasPrefix(label, "Context 3.7%  ↑12k ↓3.0k  Cache hit 0%  Avg 48.0 t/s  main  $0.020") ||
+		strings.HasSuffix(label, "  checking") {
 		t.Fatalf("HUD label order or spacing = %q", label)
 	}
 }
