@@ -1,0 +1,213 @@
+/* BYOP plugin page. Colors, fonts, sizes and motion come from the host
+   theme variables injected by the bridge; fallbacks keep a bridge-less
+   browser preview readable. */
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--byop-background, #ffffff);
+  color: var(--byop-text, #1f1f1f);
+  font-family: var(--byop-font-family, -apple-system, BlinkMacSystemFont,
+    "PingFang SC", "Helvetica Neue", sans-serif);
+  font-size: var(--byop-font-body, 14px);
+  transition: background-color var(--byop-motion-duration, 250ms) ease-out;
+}
+
+main.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100vh;
+  padding: 16px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: var(--byop-font-title, 18px);
+  font-weight: 600;
+}
+
+.page-header .subtitle {
+  margin: 4px 0 0;
+  font-size: var(--byop-font-caption, 12px);
+  color: var(--byop-muted, #6e6e6e);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(280px, 5fr) minmax(320px, 7fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+  padding: 12px;
+  background: var(--byop-surface, #f6f6f5);
+  border: var(--byop-border-width, 0.5px) solid var(--byop-border, #cecdc3);
+  border-radius: var(--byop-radius-overlay, 12px);
+}
+
+.pane h2 {
+  margin: 0;
+  font-size: var(--byop-font-body, 14px);
+  font-weight: 600;
+}
+
+textarea#source {
+  flex: 1;
+  min-height: 120px;
+  resize: none;
+  padding: 8px;
+  background: var(--byop-background, #ffffff);
+  color: var(--byop-text, #1f1f1f);
+  border: var(--byop-border-width, 0.5px) solid var(--byop-border, #cecdc3);
+  border-radius: var(--byop-radius-input, 8px);
+  font-family: var(--byop-font-family-code, ui-monospace, SFMono-Regular, Menlo,
+    monospace);
+  font-size: var(--byop-font-code, 14px);
+  line-height: 1.5;
+}
+
+textarea#source:focus-visible,
+.button:focus-visible {
+  outline: 2px solid var(--byop-focus, var(--byop-accent, #205ea6));
+  outline-offset: 1px;
+}
+
+.source-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.button {
+  padding: 6px 12px;
+  background: var(--byop-background, #ffffff);
+  color: var(--byop-text, #1f1f1f);
+  border: var(--byop-border-width, 0.5px) solid var(--byop-border, #cecdc3);
+  border-radius: var(--byop-radius-input, 8px);
+  font-family: inherit;
+  font-size: var(--byop-font-body, 14px);
+  cursor: pointer;
+  transition: background-color var(--byop-motion-duration, 250ms) ease-out;
+}
+
+.button:hover {
+  background: var(--byop-surface-hover, #eeeeec);
+}
+
+.button.primary {
+  background: var(--byop-accent, #205ea6);
+  color: var(--byop-on-accent, #ffffff);
+  border-color: transparent;
+}
+
+.button.primary:hover {
+  background: var(--byop-accent, #205ea6);
+  filter: brightness(1.08);
+}
+
+.button[aria-pressed="true"] {
+  border-color: var(--byop-accent, #205ea6);
+  color: var(--byop-accent, #205ea6);
+}
+
+.button:disabled {
+  color: var(--byop-muted, #6e6e6e);
+  cursor: default;
+}
+
+.status {
+  font-size: var(--byop-font-caption, 12px);
+  color: var(--byop-muted, #6e6e6e);
+  overflow-wrap: anywhere;
+}
+
+.status[data-tone="error"] {
+  color: var(--byop-danger-text, var(--byop-danger, #b53333));
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--byop-font-caption, 12px);
+  color: var(--byop-muted, #6e6e6e);
+}
+
+.preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zoom-level {
+  min-width: 44px;
+  text-align: center;
+  font-size: var(--byop-font-caption, 12px);
+  color: var(--byop-muted, #6e6e6e);
+}
+
+.preview-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+  background: var(--byop-background, #ffffff);
+  border: var(--byop-border-width, 0.5px) solid var(--byop-border, #cecdc3);
+  border-radius: var(--byop-radius-input, 8px);
+}
+
+.preview-empty {
+  margin: 24px 8px;
+  color: var(--byop-muted, #6e6e6e);
+}
+
+#preview {
+  display: block;
+}
+
+#preview[hidden] {
+  display: none;
+}
+
+#preview[data-mode="fit"] {
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 860px) {
+  main.page {
+    height: auto;
+  }
+
+  .columns {
+    grid-template-columns: 1fr;
+  }
+
+  textarea#source {
+    min-height: 160px;
+  }
+
+  .preview-scroll {
+    min-height: 240px;
+  }
+}

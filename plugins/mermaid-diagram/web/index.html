@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mermaid Diagram</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <h1 data-i18n="pageTitle">Mermaid Diagram</h1>
+        <p class="subtitle" data-i18n="pageSubtitle">Render Mermaid source to SVG on this device.</p>
+      </header>
+
+      <div class="columns">
+        <section class="pane source-pane" aria-labelledby="source-heading">
+          <h2 id="source-heading" data-i18n="sourceLabel">Mermaid source</h2>
+          <textarea id="source" spellcheck="false" data-i18n-placeholder="sourcePlaceholder"></textarea>
+          <div class="source-actions">
+            <button id="render-button" class="button primary" type="button" data-i18n="renderButton">Render</button>
+            <span id="status" class="status" role="status" aria-live="polite"></span>
+          </div>
+          <p class="hint" data-i18n="draftHint">Drafts live in this page only.</p>
+        </section>
+
+        <section class="pane preview-pane" aria-labelledby="preview-heading">
+          <div class="preview-bar">
+            <h2 id="preview-heading" data-i18n="previewTitle">Preview</h2>
+            <div class="zoom-controls" role="toolbar">
+              <button id="zoom-out" class="button" type="button" data-i18n="zoomOut">Zoom out</button>
+              <span id="zoom-level" class="zoom-level">100%</span>
+              <button id="zoom-in" class="button" type="button" data-i18n="zoomIn">Zoom in</button>
+              <button id="fit-width" class="button" type="button" aria-pressed="true" data-i18n="fitWidth">Fit width</button>
+              <button id="zoom-reset" class="button" type="button" data-i18n="zoomReset">Reset zoom</button>
+            </div>
+          </div>
+          <div id="preview-scroll" class="preview-scroll">
+            <p id="preview-empty" class="preview-empty" data-i18n="previewEmpty">The rendered diagram appears here.</p>
+            <img id="preview" alt="Rendered Mermaid diagram" hidden>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

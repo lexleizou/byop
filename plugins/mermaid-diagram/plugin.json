@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "local.mermaid-diagram",
+  "name": "%manifestName%",
+  "version": "0.1.0",
+  "description": "%manifestDescription%",
+  "l10n": "l10n",
+  "runtime": "node",
+  "entry": "plugin.mjs",
+  "icon": "plugins",
+  "compatibility": {
+    "host": ">=0.19.2 <1.0.0",
+    "pluginApi": "1"
+  },
+  "contributes": {
+    "navigation": [
+      {
+        "id": "mermaid",
+        "title": "%navigationTitle%",
+        "icon": "plugins",
+        "view": "mermaid.diagram"
+      }
+    ],
+    "webviews": [
+      {
+        "id": "mermaid.diagram",
+        "title": "%webviewTitle%",
+        "location": "main",
+        "entry": "web/index.html"
+      }
+    ]
+  },
+  "activation": {
+    "events": [
+      "onWebView:mermaid.diagram"
+    ]
+  },
+  "capabilities": {
+    "workspace": "none",
+    "files": "none",
+    "network": false,
+    "process": "none"
+  }
+}

@@ -1,0 +1,4 @@
+flowchart LR
+  A[Customer request] --> B{Reuse possible?}
+  B -- Yes --> C[Render SVG in WebView]
+  B -- No --> D[Product reference only]

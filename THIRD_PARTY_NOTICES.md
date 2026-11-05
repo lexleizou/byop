@@ -147,3 +147,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Pele (Mermaid Diagram Plugin)
+
+Source: <https://github.com/obsidianmd/pele>
+Version: `pele@1.7.0` (commit `8603bf3313add9143cd417015d4a6bd6c522dada`)
+Usage: The separately installable `plugins/mermaid-diagram` ships the original ESM renderer for offline SVG previews. It is not linked into the Go binary.
+License: MIT; upstream Lucide ISC notice retained. Full license text: [plugins/mermaid-diagram/web/vendor/LICENSE](plugins/mermaid-diagram/web/vendor/LICENSE). Source and checksums: [vendor/README.md](plugins/mermaid-diagram/web/vendor/README.md).

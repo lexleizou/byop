@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.19.2"
+	appVersion = "0.20.0"
 )
 
 func appBuildVersion() string {
@@ -1339,7 +1339,13 @@ func (s *appState) applyPiSessionState(state *piSessionState) {
 		s.resetPiHUDSpeed()
 	}
 	s.applyPiHUDState(state)
-	s.migrateModelTuples(oldKey, s.piSessionKey())
+	// Model memory belongs to a single session. Only the ID-to-file key
+	// handoff within one confirmed session may move tuples; a different
+	// session must start from Pi's own state and keep its own memory under
+	// its own key for a later restore.
+	if samePiSession(oldFile, oldID, s.piSessionFile, state.SessionID) {
+		s.migrateModelTuples(oldKey, s.piSessionKey())
+	}
 	if state.SessionID != "" {
 		s.recordLastSession(state.SessionID)
 	}
