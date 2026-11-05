@@ -6,9 +6,11 @@ BYOP（Build You Own Pi）是 MyGo 原生 UI + 外部 Pi CLI 的多插件工作�
 
 | 角色 | 模型 | 职责 |
 |---|---|---|
-| 开发 | DeepSeek V4.1 Flash（`auto/deepseek-v4.1-flash`） | 按阶段规格实现代码、文档和最小必要测试 |
+| 开发 | Magpie 渠道 Qwen 3.8 Flash Next（`local-litellm/Qwen3.8-Flash-Next-NVFP4-RTX5000`）与 GLM 5.3-Flash（`local-litellm/GLM5.3-Flash-Maya-M`），两个开发席 | 按阶段规格实现代码、文档和最小必要测试 |
 | 审核 | Claude Opus 5.5（`auto/claude-opus-5-5`） | 审核 diff，按 P0–P3 分级给出问题；P0–P2 交回开发修复后复审 |
 | 协调 | 当前主 Agent | 写阶段规格、分派、复核检查、真实窗口走查、提交并推送 |
+
+- 开发席为两个，均为 Magpie 渠道（2026-11-05 用户指定，可用性已实测）：两个开发席使用独立副本，由协调方按文件合并。
 
 - 每个阶段先在 `~/AgentScratch/<YYYYMMDD>-byop-<phase>/` 写规格，再交给开发模型。
 - 审核意见中的 P0–P2 必须修复并复审通过后才能提交；P3 可记录在验证文档的已知限制中。
