@@ -13459,3 +13459,81 @@ func MentionMenuLabel() string { return In(i18n.Locale()).MentionMenuLabel() }
 func (msgs Messages) MentionMenuLabel() string {
 	return Catalog.Format(msgs.locale, "mentionMenuLabel", nil)
 }
+
+// ChatMermaidPreview says "Preview diagram"
+// in the language the app shows.
+//
+// Button under a closed Mermaid code block that opens the Mermaid preview
+// page.
+func ChatMermaidPreview() string { return In(i18n.Locale()).ChatMermaidPreview() }
+
+// ChatMermaidPreview says "Preview diagram"
+// in the language of msgs.
+//
+// Button under a closed Mermaid code block that opens the Mermaid preview
+// page.
+func (msgs Messages) ChatMermaidPreview() string {
+	return Catalog.Format(msgs.locale, "chatMermaidPreview", nil)
+}
+
+// MermaidPreviewMissing says "Install the Mermaid Diagram plugin to preview this diagram."
+// in the language the app shows.
+//
+// Notice when the Mermaid preview button is clicked but the plugin is not
+// installed.
+func MermaidPreviewMissing() string { return In(i18n.Locale()).MermaidPreviewMissing() }
+
+// MermaidPreviewMissing says "Install the Mermaid Diagram plugin to preview this diagram."
+// in the language of msgs.
+//
+// Notice when the Mermaid preview button is clicked but the plugin is not
+// installed.
+func (msgs Messages) MermaidPreviewMissing() string {
+	return Catalog.Format(msgs.locale, "mermaidPreviewMissing", nil)
+}
+
+// MermaidPreviewDisabled says "Enable the Mermaid Diagram plugin to preview this diagram."
+// in the language the app shows.
+//
+// Notice when the Mermaid preview button is clicked but the plugin is
+// disabled.
+func MermaidPreviewDisabled() string { return In(i18n.Locale()).MermaidPreviewDisabled() }
+
+// MermaidPreviewDisabled says "Enable the Mermaid Diagram plugin to preview this diagram."
+// in the language of msgs.
+//
+// Notice when the Mermaid preview button is clicked but the plugin is
+// disabled.
+func (msgs Messages) MermaidPreviewDisabled() string {
+	return Catalog.Format(msgs.locale, "mermaidPreviewDisabled", nil)
+}
+
+// MermaidPreviewOutdated says "Update the Mermaid Diagram plugin to version 0.2.0 or newer to preview this diagram."
+// in the language the app shows.
+//
+// Notice when the installed Mermaid plugin is too old for one-click
+// preview.
+func MermaidPreviewOutdated() string { return In(i18n.Locale()).MermaidPreviewOutdated() }
+
+// MermaidPreviewOutdated says "Update the Mermaid Diagram plugin to version 0.2.0 or newer to preview this diagram."
+// in the language of msgs.
+//
+// Notice when the installed Mermaid plugin is too old for one-click
+// preview.
+func (msgs Messages) MermaidPreviewOutdated() string {
+	return Catalog.Format(msgs.locale, "mermaidPreviewOutdated", nil)
+}
+
+// MermaidPreviewTooLong says "This diagram exceeds the 20,000 character preview limit."
+// in the language the app shows.
+//
+// Notice when a Mermaid source is longer than the shared preview limit.
+func MermaidPreviewTooLong() string { return In(i18n.Locale()).MermaidPreviewTooLong() }
+
+// MermaidPreviewTooLong says "This diagram exceeds the 20,000 character preview limit."
+// in the language of msgs.
+//
+// Notice when a Mermaid source is longer than the shared preview limit.
+func (msgs Messages) MermaidPreviewTooLong() string {
+	return Catalog.Format(msgs.locale, "mermaidPreviewTooLong", nil)
+}

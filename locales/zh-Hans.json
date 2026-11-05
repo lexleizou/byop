@@ -4015,5 +4015,25 @@
   },
   "@mentionMenuLabel": {
     "description": "Command palette or mention menu interface."
+  },
+  "chatMermaidPreview": "预览图解",
+  "@chatMermaidPreview": {
+    "description": "对话中完整 Mermaid 代码块下方的按钮，打开 Mermaid 预览页。"
+  },
+  "mermaidPreviewMissing": "安装 Mermaid 图解插件后可预览此图解。",
+  "@mermaidPreviewMissing": {
+    "description": "点击预览按钮但插件未安装时的提示。"
+  },
+  "mermaidPreviewDisabled": "启用 Mermaid 图解插件后可预览此图解。",
+  "@mermaidPreviewDisabled": {
+    "description": "点击预览按钮但插件被停用时的提示。"
+  },
+  "mermaidPreviewOutdated": "请将 Mermaid 图解插件更新到 0.2.0 或更高版本后再预览此图解。",
+  "@mermaidPreviewOutdated": {
+    "description": "已安装插件版本过旧、不支持一键预览时的提示。"
+  },
+  "mermaidPreviewTooLong": "此图解超过 20,000 字符的预览长度限制。",
+  "@mermaidPreviewTooLong": {
+    "description": "Mermaid 源码超过宿主与插件共同的预览长度限制时的提示。"
   }
 }

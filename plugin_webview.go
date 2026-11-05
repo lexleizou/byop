@@ -432,6 +432,11 @@ func (s *appState) reconcilePluginWebViews() {
 		if !valid {
 			delete(s.pluginWebViews, key)
 			stale = append(stale, state)
+			// A replaced or removed preview page releases its queued request so a
+			// later open without a click shows the page's own initial state.
+			if state.pluginID == mermaidPreviewPluginID {
+				s.clearMermaidPreviewLocked()
+			}
 		}
 	}
 	s.pluginWebViewsMu.Unlock()
@@ -450,6 +455,14 @@ func (s *appState) destroyPluginWebViews(pluginID string) {
 			delete(s.pluginWebViews, key)
 			removed = append(removed, state)
 		}
+	}
+	// Every caller of this is a lifecycle decision about one plugin — a
+	// disable, an uninstall, a replaced package, a restart, or an idle
+	// reclaim — so the preview request queued for that plugin goes stale with
+	// its pages. The open path never comes through here: it replaces a page
+	// through removePluginWebView, which keeps a just-queued request.
+	if pluginID == mermaidPreviewPluginID {
+		s.clearMermaidPreviewLocked()
 	}
 	s.pluginWebViewsMu.Unlock()
 	for _, state := range removed {
@@ -623,6 +636,17 @@ func (s *appState) dispatchPluginWebViewCall(
 	if _, ok := pluginWebViewContributionByID(entry.Manifest, viewID); !ok {
 		return nil, pluginBridgeError(pluginRPCPermissionDenied,
 			"permission denied: WebView is not declared")
+	}
+	// P28: the Mermaid preview request belongs to its plugin and view alone.
+	// The identity checks above already proved this page is registered, its
+	// fingerprint matches, and this view is declared; only the pair gate is
+	// added here.
+	if method == "plugin.getMermaidPreview" {
+		if entry.ID != mermaidPreviewPluginID || viewID != mermaidPreviewViewID {
+			return nil, pluginBridgeError(pluginRPCPermissionDenied,
+				"permission denied: plugin.getMermaidPreview is reserved for the Mermaid preview")
+		}
+		return s.mermaidPreviewPayload(), nil
 	}
 	if strings.HasPrefix(method, "host.") {
 		s.plugins.updateStatus(entry.ID, func(status *pluginRuntimeStatus) {

@@ -269,16 +269,30 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 		return false
 	}
 	s.chatView.markdown.CodeBlock = func(c *ui.Context, block *markdown.CodeBlockView) {
-		s.pluginCodeBlock(c, p, block, func() {
-			card := ui.Column(c).FillWidth().MinWidth(0)
-			card = styleRaisedSurface(card, p, 8).Clip()
-			card.Children(func() {
-				// Body contributes 3.5px above its first line; this brings the
-				// visual top inset to the prototype's 12px.
-				ui.Row(c).FillWidth().Padding(8, 4, 0, 4).Children(func() {
-					block.Body(c)
+		render := func() {
+			s.pluginCodeBlock(c, p, block, func() {
+				card := ui.Column(c).FillWidth().MinWidth(0)
+				card = styleRaisedSurface(card, p, 8).Clip()
+				card.Children(func() {
+					// Body contributes 3.5px above its first line; this brings the
+					// visual top inset to the prototype's 12px.
+					ui.Row(c).FillWidth().Padding(8, 4, 0, 4).Children(func() {
+						block.Body(c)
+					})
 				})
 			})
+		}
+		// P28: a closed Mermaid block gains a preview button under it, added
+		// outside whatever pluginCodeBlock rendered so an existing message
+		// renderer is neither replaced nor triggered by the button's presence.
+		source, eligible := mermaidPreviewBlockSource(block, block.Code())
+		if !eligible {
+			render()
+			return
+		}
+		ui.Column(c).FillWidth().MinWidth(0).Gap(4).Children(func() {
+			render()
+			mermaidPreviewAction(c, p, source, func() { s.openMermaidPreview(source) })
 		})
 	}
 }

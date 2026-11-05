@@ -233,6 +233,40 @@ dom.zoomReset.addEventListener("click", () => {
 });
 setZoomControlsEnabled(false);
 
+// P28: import the diagram source the chat page queued via "Preview diagram".
+// Runs once, after locale initialization, per the host contract: subscribe to
+// `byop.mermaid-preview` first, then read `plugin.getMermaidPreview` actively.
+// A missing method (0.20 host) or a module load failure only disables this
+// additive path; the manual editor and renderer stay untouched.
+let previewStart = null;
+function startMermaidPreview() {
+  if (!bridge || typeof bridge.call !== "function") {
+    return Promise.resolve(); // bridge-less browser preview: nothing to import
+  }
+  if (!previewStart) {
+    previewStart = import("./preview-import.mjs")
+      .then(({ createMermaidPreviewConsumer }) => {
+        const consumer = createMermaidPreviewConsumer({
+          call: (method) => bridge.call(method),
+          subscribe: (handler) => {
+            if (window.mygo && typeof window.mygo.on === "function") {
+              window.mygo.on("byop.mermaid-preview", handler);
+            }
+          },
+          apply: (request) => {
+            dom.source.value = request.source;
+            renderSource();
+          },
+        });
+        return consumer.start();
+      })
+      .catch(() => {
+        previewStart = null; // allow a later retry; never break the page
+      });
+  }
+  return previewStart;
+}
+
 if (bridge) {
   bridge.onTheme((theme) => {
     state.theme = theme || null;
@@ -252,7 +286,9 @@ if (bridge) {
   });
   bridge.call("host.getLocale")
     .then((result) => applyLocale(result.locale))
-    .catch(() => applyLocale(bridge.locale));
+    .catch(() => applyLocale(bridge.locale))
+    .then(() => startMermaidPreview())
+    .catch(() => {});
 } else {
   const guess = String(navigator.language || "en");
   applyLocale(guess.startsWith("zh") ? "zh-Hans" : "en");

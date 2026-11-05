@@ -5,6 +5,10 @@ BYOP 首批解冻的功能插件 MVP：在独立页面粘贴 Mermaid 源码，�
 支持缩放与适应宽度、跟随宿主主题与中英语言、源码编辑后重新渲染。全部处理
 在本机完成，无网络请求、无子进程、无文件写入。
 
+插件 0.2.0 起支持 BYOP ≥ 0.21 的「对话一键预览」：聊天页中完整的 Mermaid
+代码块会出现「预览图解」按钮，源码自动带入本页并渲染；在 0.20 宿主上该
+能力自动降级为手动粘贴路径，行为与 0.1.0 一致。
+
 ## 使用流程
 
 1. 在 BYOP 侧栏 **Plugins** 页点击「从文件夹添加」（Add from folder）选择本目录
@@ -14,6 +18,9 @@ BYOP 首批解冻的功能插件 MVP：在独立页面粘贴 Mermaid 源码，�
    （或按 ⌘/Ctrl+Enter）。
 3. 预览工具栏：缩小 / 放大 / 适应宽度 / 重置缩放。放大后预览区可滚动。
 4. 渲染失败时显示错误说明（含行列定位），保留源码可继续修改重试。
+5. 从聊天页点击「预览图解」进入时，源码自动填入并渲染；页面已打开会直接
+   更新为该次源码（后一次点击胜出）。相同请求重复送达不会覆盖你已编辑的
+   草稿；错误源码照常填入并显示渲染错误，可原地修正重渲染。
 
 ## 实现要点
 
@@ -31,11 +38,19 @@ BYOP 首批解冻的功能插件 MVP：在独立页面粘贴 Mermaid 源码，�
 - 源码仅在主动点击时渲染；文本只驻留页面内存，页面回收后不保证保留。
 - 拒绝 init/config frontmatter（`---` 块与 `%%{…}%%`）与超过 20000 字符的
   输入；渲染选项固定。
+- 预览导入协议（宿主内存态，不落盘）：宿主维护最新 `{requestId, source}`，
+  页面通过 `byop.call("plugin.getMermaidPreview")` 幂等读取（返回该对象或
+  null），并订阅 MyGo 事件 `byop.mermaid-preview`（payload `{requestId}`）
+  触发重读。消费逻辑在 `web/preview-import.mjs`（纯逻辑，可在 Node 直接
+  测试）：初始化按「先本地化、再订阅、后首读」顺序执行；按 requestId 去重
+  （重复 ID 不覆盖草稿）；迟到的旧读取结果直接丢弃，事件竞态不会回滚到旧
+  请求；方法不存在（0.20 宿主）或调用失败时静默忽略，手动路径不受影响。
+  导入仅写入 textarea 后走既有渲染，不执行源码、不注入 HTML、无新网络。
 
 ## 开发与测试
 
 ```sh
-node --check plugin.mjs web/app.js web/diagram-renderer.mjs
+node --check plugin.mjs web/app.js web/diagram-renderer.mjs web/preview-import.mjs
 node --test test/
 ```
 
@@ -53,7 +68,8 @@ cd plugins/mermaid-diagram && python3 -m http.server 8791
 
 ## 已知边界（MVP）
 
-- 独立页面渲染，不含 Chat 内嵌 SVG、历史 Mermaid 自动解析、导出或持久化。
+- 独立页面渲染，不含 Chat 内嵌 SVG、历史 Mermaid 自动解析、导出或持久化；
+  「预览图解」只搬运当前代码块源码，回聊天后原消息不变。
 - SVG 以图片呈现：图内链接与文字选择不可用；渲染字体在点击时固定。
 - 图表类（pie 等）使用 Pele 默认 series 色，不映射宿主强调色。
 - 真实 BYOP WebView 与窄窗走查由协调方在构建版本中验收（docs/P27-validation.md）。

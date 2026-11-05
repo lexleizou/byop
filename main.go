@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.20.0"
+	appVersion = "0.21.0"
 )
 
 func appBuildVersion() string {
@@ -368,13 +368,19 @@ type appState struct {
 	// Idle reclaim keeps its own lock because the timer fires off the UI thread
 	// while plugin view fields belong to the UI thread. A round is decided and
 	// applied on the UI thread, so visibility and cached WebViews stay coherent.
-	pluginReclaimMu                 sync.Mutex
-	pluginReclaimTimer              *time.Timer
-	pluginReclaimStop               bool
-	pluginReclaimRounds             atomic.Uint64
-	pluginHiddenSinceByPlugin       map[string]time.Time
-	pluginWebViews                  map[string]*pluginWebViewState
-	pluginWebViewsMu                sync.RWMutex
+	pluginReclaimMu           sync.Mutex
+	pluginReclaimTimer        *time.Timer
+	pluginReclaimStop         bool
+	pluginReclaimRounds       atomic.Uint64
+	pluginHiddenSinceByPlugin map[string]time.Time
+	pluginWebViews            map[string]*pluginWebViewState
+	pluginWebViewsMu          sync.RWMutex
+	// mermaidPreview is the latest chat click for the Mermaid preview page
+	// (P28): memory-only, guarded by pluginWebViewsMu together with the
+	// preview WebViews, read by plugin.getMermaidPreview, and never persisted
+	// or broadcast to Pi.
+	mermaidPreview                  *mermaidPreviewRequest
+	mermaidPreviewSeq               uint64
 	pluginWebViewDark               bool
 	pluginWebViewHighContrast       bool
 	pluginWebViewReduceTransparency bool

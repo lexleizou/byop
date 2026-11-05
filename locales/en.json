@@ -4218,5 +4218,25 @@
   "mentionMenuLabel": "Mention suggestions",
   "@mentionMenuLabel": {
     "description": "Command palette or mention menu interface."
+  },
+  "chatMermaidPreview": "Preview diagram",
+  "@chatMermaidPreview": {
+    "description": "Button under a closed Mermaid code block that opens the Mermaid preview page."
+  },
+  "mermaidPreviewMissing": "Install the Mermaid Diagram plugin to preview this diagram.",
+  "@mermaidPreviewMissing": {
+    "description": "Notice when the Mermaid preview button is clicked but the plugin is not installed."
+  },
+  "mermaidPreviewDisabled": "Enable the Mermaid Diagram plugin to preview this diagram.",
+  "@mermaidPreviewDisabled": {
+    "description": "Notice when the Mermaid preview button is clicked but the plugin is disabled."
+  },
+  "mermaidPreviewOutdated": "Update the Mermaid Diagram plugin to version 0.2.0 or newer to preview this diagram.",
+  "@mermaidPreviewOutdated": {
+    "description": "Notice when the installed Mermaid plugin is too old for one-click preview."
+  },
+  "mermaidPreviewTooLong": "This diagram exceeds the 20,000 character preview limit.",
+  "@mermaidPreviewTooLong": {
+    "description": "Notice when a Mermaid source is longer than the shared preview limit."
   }
 }
