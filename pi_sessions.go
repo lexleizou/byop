@@ -396,6 +396,10 @@ func piSessionTitle(text string) string {
 type piMessageContentBlock struct {
 	Type      string          `json:"type"`
 	Text      string          `json:"text"`
+	Thinking  string          `json:"thinking"`
+	Reasoning string          `json:"reasoning"`
+	Phase     string          `json:"phase"`
+	Signature string          `json:"textSignature"`
 	ID        string          `json:"id"`
 	Name      string          `json:"name"`
 	Arguments json.RawMessage `json:"arguments"`
@@ -443,6 +447,8 @@ type piAgentMessage struct {
 	IsError      bool                    `json:"isError"`
 	StopReason   string                  `json:"stopReason"`
 	ErrorMessage string                  `json:"errorMessage"`
+	Model        string                  `json:"model"`
+	Provider     string                  `json:"provider"`
 	Blocks       []piMessageContentBlock `json:"-"`
 }
 
@@ -473,6 +479,10 @@ func rebuildChatFromPiMessages(rawMessages []json.RawMessage) ([]chatMessage, er
 				status:      text("chatStatusSent"),
 				attachments: attachments,
 				blocks:      []chatBlock{{kind: chatBlockText, text: userText}},
+				// The stored Pi timestamp keeps the real submission moment; a
+				// message without one stays zero instead of being backfilled
+				// with the restore time.
+				startedAt: timestamp,
 			})
 			lastAssistant = nil
 		case "assistant":
@@ -485,7 +495,7 @@ func rebuildChatFromPiMessages(rawMessages []json.RawMessage) ([]chatMessage, er
 			case "error":
 				status = "failed"
 				errorText := fallback(strings.TrimSpace(message.ErrorMessage), text("assistantErrorFallback"))
-				blocks = append(blocks, chatBlock{kind: chatBlockText, text: errorText})
+				blocks = append(blocks, chatBlock{kind: chatBlockText, text: errorText, synthetic: true})
 			case "aborted":
 				status = "Stopped"
 				for blockIndex := range blocks {
@@ -498,14 +508,17 @@ func rebuildChatFromPiMessages(rawMessages []json.RawMessage) ([]chatMessage, er
 				if message.StopReason != "aborted" {
 					continue
 				}
-				blocks = append(blocks, chatBlock{kind: chatBlockText, text: text("assistantStoppedFallback")})
+				blocks = append(blocks, chatBlock{kind: chatBlockText, text: text("assistantStoppedFallback"), synthetic: true})
 			}
 			chat = append(chat, chatMessage{
-				role:      chatAssistant,
-				status:    status,
-				blocks:    blocks,
-				startedAt: timestamp,
-				endedAt:   timestamp,
+				role:       chatAssistant,
+				status:     status,
+				blocks:     blocks,
+				stopReason: message.StopReason,
+				model:      message.Model,
+				provider:   message.Provider,
+				startedAt:  timestamp,
+				endedAt:    timestamp,
 			})
 			lastAssistant = &chat[len(chat)-1]
 			for blockIndex := range lastAssistant.blocks {
@@ -556,9 +569,22 @@ func piAssistantBlocks(raw json.RawMessage) ([]chatBlock, error) {
 	result := make([]chatBlock, 0, len(blocks))
 	for _, block := range blocks {
 		switch block.Type {
+		case "thinking", "reasoning":
+			value := firstNonEmpty(block.Thinking, block.Text, block.Reasoning)
+			if strings.TrimSpace(value) != "" {
+				result = append(result, chatBlock{
+					kind:  chatBlockThinking,
+					text:  value,
+					phase: piTextPhase(block.Phase, block.Signature),
+				})
+			}
 		case "text":
 			if strings.TrimSpace(block.Text) != "" {
-				result = append(result, chatBlock{kind: chatBlockText, text: block.Text})
+				result = append(result, chatBlock{
+					kind:  chatBlockText,
+					text:  block.Text,
+					phase: piTextPhase(block.Phase, block.Signature),
+				})
 			}
 		case "toolCall":
 			result = append(result, chatBlock{

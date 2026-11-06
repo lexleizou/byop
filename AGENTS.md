@@ -29,10 +29,11 @@ BYOP（Build You Own Pi）是 MyGo 原生 UI + 外部 Pi CLI 的多插件工作�
 - 产品名 BYOP，标识使用 Pi 图标；运行时 UI token 以 BYOP Radix 产品 token `design-system/pi-workbench/tokens.json` 为准，设计根同名文件是权威来源，仓库文件是相同发布副本。`tokens.extensions.json` 只保留兼容、迁移和非冲突的组件几何；Onevra 原始 token 是只读上游参考，不覆盖其数值。
 - 界面文字一律写入 locales/ 语言包（en 为源语言），不得在代码中硬编码用户可见文字；新增文字需同时补齐所有语言包并重新生成 locales/catalog_gen.go。
 - 字号仅 12/14/18px：正文与代码 14px，标题 18px，最小 12px；可见边框 0.5px；间距 4/8/12/16/24px；输入 8px、浮层 12px 圆角。必要过渡统一 250ms ease-out，减少动态为 0。
+- 局部例外（P29，2026-11-06 用户明确要求“完全按商业版”）：对话消息头、过程时间轴与最终回答采用 Proma 商业版 0.21.45 的 15/16px、1.72 行高、35px 头像/46px 缩进、1px 时间轴及 150/320/420/500ms 分层动效（实现在 `p29_*.go`，规格 `docs/P29-design.md`）；保留原实时 t/s 胶囊。其余区域仍按上一条，不扩大到设置、插件或 Composer。
 - Liquid Glass 只用于标题、导航和必要浮层；阅读区与 Composer 内容背景不透明。高对比、减少透明度或不支持平台回退到 Radix 实色。
 - 右侧任务栏默认收起。布局已于 2026-11-05 拍板为方案 A（简洁侧栏，定稿，与当前实施一致）；已启用插件数量长期超过 8 个时重新评估方案 B。
 - Pi 以独立安装的 Pi CLI 运行，BYOP 通过 JSONL RPC 调用，不内置 Pi 内核，不复制凭据。
-- 插件开发暂停：插件平台能力可以继续建设，但在 Lex 明确要求前不开发任何功能插件。2026-11-05 拍板首批解冻 Mermaid 渲染（Pele）插件；Library、Document、Git、终端等其余候选继续冻结。P27 已实现独立 Mermaid 插件页，P28 增加对话代码块一键送到该页面自动预览（应用0.21.0、插件0.2.0，`plugins/mermaid-diagram/`）；验证边界见 `docs/P28-validation.md`，系统文件选择自动化仍未通过，聊天内嵌仍未实现；当前核心入口仍为 Chat、Plugins、Automations、Settings，`examples/` 只放契约 fixture。
+- 插件开发暂停：插件平台能力可以继续建设，但在 Lex 明确要求前不开发任何功能插件。2026-11-05 拍板首批解冻 Mermaid 渲染（Pele）插件；Library、Document、Git、终端等其余候选继续冻结。P27 已实现独立 Mermaid 插件页，P28 增加对话代码块一键送到该页面自动预览（应用0.21.0、插件0.2.0，`plugins/mermaid-diagram/`）；验证边界见 `docs/P28-validation.md`，系统文件选择自动化仍未通过，聊天内嵌仍未实现；P29（应用0.22.0）把对话过程改为商业版时间轴，Mermaid 插件未变，验证见 `docs/P29-validation.md`；当前核心入口仍为 Chat、Plugins、Automations、Settings，`examples/` 只放契约 fixture。
 - Automations 只统一已有登记、运行历史和失败暂停/恢复，不新增 Loop 调度器或 `/loop`。新对话默认值已定为完全跟随 Pi 的有效配置（2026-11-05 拍板；不新增独立设置页，BYOP 不保存跨会话默认值；会话内模型档位记忆保留并隔离，P27 只允许同一会话身份的 key 迁移）；HUD 显示项开关继续挂账观察（2026-11-05 决定）。
 
 ## 交付与检查

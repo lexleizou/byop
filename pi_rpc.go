@@ -30,6 +30,7 @@ const (
 	piEventText            piEventKind = "text"
 	piEventThinking        piEventKind = "thinking"
 	piEventMessage         piEventKind = "message"
+	piEventAssistantStart  piEventKind = "assistant_start"
 	piEventToolStart       piEventKind = "tool_start"
 	piEventToolUpdate      piEventKind = "tool_update"
 	piEventToolEnd         piEventKind = "tool_end"
@@ -149,16 +150,32 @@ type piEvent struct {
 	Delta           string
 	ThinkingStarted bool
 	ThinkingEnded   bool
-	ToolName        string
-	ToolCallID      string
-	ToolArgs        json.RawMessage
-	ToolResult      json.RawMessage
-	ToolPartial     json.RawMessage
-	ToolIsError     bool
-	ToolDurationMS  int64
-	Aborted         bool
-	Session         *piSessionState
-	StderrTail      string
+	// P29 ordered-block contract: ContentIndex is the per-message content part
+	// index and PartText is the full text of exactly that part, so the data
+	// layer can keep thinking/text/tool blocks in real Pi order without
+	// merging separate parts back into one block. PartSet marks that the
+	// sender filled PartText deliberately; synthetic events (older tests,
+	// fixtures) leave it false and fall back to the aggregate Text.
+	ContentIndex int
+	PartText     string
+	PartSet      bool
+	// P29 message_end metadata: the true per-message identity, kept separate
+	// from the session-level current model so history can never be mislabelled
+	// with the live model.
+	StopReason     string
+	Model          string
+	Provider       string
+	OrderedContent []piContentEntry
+	ToolName       string
+	ToolCallID     string
+	ToolArgs       json.RawMessage
+	ToolResult     json.RawMessage
+	ToolPartial    json.RawMessage
+	ToolIsError    bool
+	ToolDurationMS int64
+	Aborted        bool
+	Session        *piSessionState
+	StderrTail     string
 
 	QueueSteering  []string
 	QueueFollowUp  []string
@@ -920,6 +937,42 @@ func (p *piClient) handleRecord(line []byte) {
 		p.emit(piEvent{Kind: piEventRunStarted})
 	case "message_update":
 		p.handleMessageUpdate(line)
+	case "message_start":
+		// The explicit assistant message boundary replaces any contentIndex
+		// heuristic: Pi restarts indices at 0 per message and interleaves
+		// thinking_end at a lower index inside one message, so source identity
+		// must come from message_start itself.
+		var start struct {
+			Message struct {
+				Role     string `json:"role"`
+				Model    string `json:"model"`
+				Provider string `json:"provider"`
+			} `json:"message"`
+			Role     string `json:"role"`
+			Model    string `json:"model"`
+			Provider string `json:"provider"`
+		}
+		if err := json.Unmarshal(line, &start); err != nil {
+			p.emit(piEvent{Kind: piEventParseError, Error: "Invalid Pi message start: " + err.Error()})
+			return
+		}
+		role := start.Message.Role
+		model := start.Message.Model
+		provider := start.Message.Provider
+		if role == "" {
+			role = start.Role
+			if model == "" {
+				model = start.Model
+			}
+			if provider == "" {
+				provider = start.Provider
+			}
+		}
+		if role != "assistant" {
+			return
+		}
+		p.resetStream()
+		p.emit(piEvent{Kind: piEventAssistantStart, Model: model, Provider: provider})
 	case "message_end":
 		p.handleMessageEnd(line)
 	case "tool_execution_start":
@@ -1266,10 +1319,20 @@ func (p *piClient) handleMessageUpdate(line []byte) {
 			Delta:           update.Delta,
 			ThinkingStarted: update.Type == "thinking_start",
 			ThinkingEnded:   update.Type == "thinking_end",
+			ContentIndex:    update.ContentIndex,
+			PartText:        p.thinkingPart(update.ContentIndex),
+			PartSet:         true,
 		})
 		return
 	}
-	p.emit(piEvent{Kind: piEventText, Text: p.streamSnapshot(), Delta: update.Delta})
+	p.emit(piEvent{
+		Kind:         piEventText,
+		Text:         p.streamSnapshot(),
+		Delta:        update.Delta,
+		ContentIndex: update.ContentIndex,
+		PartText:     p.streamPart(update.ContentIndex),
+		PartSet:      true,
+	})
 }
 
 func (p *piClient) handleMessageEnd(line []byte) {
@@ -1279,6 +1342,8 @@ func (p *piClient) handleMessageEnd(line []byte) {
 			Content      json.RawMessage `json:"content"`
 			StopReason   string          `json:"stopReason"`
 			ErrorMessage string          `json:"errorMessage"`
+			Model        string          `json:"model"`
+			Provider     string          `json:"provider"`
 			Usage        struct {
 				Output int64 `json:"output"`
 			} `json:"usage"`
@@ -1300,10 +1365,16 @@ func (p *piClient) handleMessageEnd(line []byte) {
 	default:
 		return
 	}
+	ordered := piOrderedContent(event.Message.Content)
 	if text == "" && thinking == "" && event.Message.ErrorMessage == "" {
 		p.resetGenerationTiming()
 		p.resetStream()
-		return
+		// P29: an empty assistant message still carries its identity, so the
+		// data layer can stamp stopReason/model/provider without creating a
+		// visible block row. The handler decides what to do with it.
+		if len(ordered) == 0 && event.Message.StopReason == "" && event.Message.Model == "" && event.Message.Provider == "" {
+			return
+		}
 	}
 	generationTime := p.endGenerationTiming()
 	p.emit(piEvent{
@@ -1313,6 +1384,10 @@ func (p *piClient) handleMessageEnd(line []byte) {
 		Error:          event.Message.ErrorMessage,
 		GenerationTime: generationTime,
 		OutputTokens:   event.Message.Usage.Output,
+		StopReason:     event.Message.StopReason,
+		Model:          event.Message.Model,
+		Provider:       event.Message.Provider,
+		OrderedContent: ordered,
 	})
 	p.resetGenerationTiming()
 	p.resetStream()
@@ -1456,6 +1531,109 @@ func (p *piClient) thinkingSnapshot() string {
 		b.WriteString(p.thinkingParts[index])
 	}
 	return b.String()
+}
+
+// piContentEntry is one ordered entry of a final assistant message content,
+// carrying its real contentIndex (the position inside the final content array)
+// and the phase (commentary/final_answer) the P29 presentation needs. Pi
+// carries the phase inside the text content's textSignature (TextSignatureV1,
+// a JSON string); an explicit phase field is honoured when a protocol sends
+// one, and unknown values resolve to empty. Empty entries are skipped but
+// never shift later entries' indexes.
+type piContentEntry struct {
+	Kind         string
+	Text         string
+	Phase        string
+	ContentIndex int
+	ToolCallID   string
+	ToolName     string
+	ToolArgs     json.RawMessage
+}
+
+// piOrderedContent turns a final message content into ordered entries while
+// keeping the raw JSON shapes the older contentText/contentThinking helpers
+// accept. A plain string content becomes a single text entry.
+func piOrderedContent(raw json.RawMessage) []piContentEntry {
+	var text string
+	if json.Unmarshal(raw, &text) == nil {
+		return []piContentEntry{{Kind: "text", Text: text, ContentIndex: 0}}
+	}
+	var blocks []struct {
+		Type      string          `json:"type"`
+		Text      string          `json:"text"`
+		Thinking  string          `json:"thinking"`
+		Reasoning string          `json:"reasoning"`
+		Phase     string          `json:"phase"`
+		Signature string          `json:"textSignature"`
+		ID        string          `json:"id"`
+		ToolName  string          `json:"name"`
+		Arguments json.RawMessage `json:"arguments"`
+	}
+	if json.Unmarshal(raw, &blocks) != nil {
+		return nil
+	}
+	entries := make([]piContentEntry, 0, len(blocks))
+	for i := range blocks {
+		block := &blocks[i]
+		switch block.Type {
+		case "text":
+			if strings.TrimSpace(block.Text) == "" {
+				continue
+			}
+			entries = append(entries, piContentEntry{Kind: "text", Text: block.Text, Phase: piTextPhase(block.Phase, block.Signature), ContentIndex: i})
+		case "thinking", "reasoning":
+			value := firstNonEmpty(block.Thinking, block.Text, block.Reasoning)
+			if strings.TrimSpace(value) == "" {
+				continue
+			}
+			entries = append(entries, piContentEntry{Kind: "thinking", Text: value, Phase: piTextPhase(block.Phase, block.Signature), ContentIndex: i})
+		case "toolCall":
+			entries = append(entries, piContentEntry{
+				Kind:         "toolCall",
+				Phase:        block.Phase,
+				ContentIndex: i,
+				ToolCallID:   block.ID,
+				ToolName:     block.ToolName,
+				ToolArgs:     block.Arguments,
+			})
+		}
+	}
+	return entries
+}
+
+// piTextPhase mirrors pi-ai TextSignatureV1: the phase lives inside the text
+// content's textSignature JSON string. An explicit phase field keeps priority,
+// and only the known commentary/final_answer values are accepted.
+func piTextPhase(phase, signature string) string {
+	if phase != "" {
+		return phase
+	}
+	if !strings.HasPrefix(signature, "{") {
+		return ""
+	}
+	var parsed struct {
+		V     int    `json:"v"`
+		Phase string `json:"phase"`
+	}
+	if json.Unmarshal([]byte(signature), &parsed) != nil || parsed.V != 1 {
+		return ""
+	}
+	if parsed.Phase == "commentary" || parsed.Phase == "final_answer" {
+		return parsed.Phase
+	}
+	return ""
+}
+
+func (p *piClient) streamPart(index int) string {
+	p.streamMu.Lock()
+	defer p.streamMu.Unlock()
+	return p.streamParts[index]
+}
+
+func (p *piClient) thinkingPart(index int) string {
+	p.streamMu.Lock()
+	defer p.streamMu.Unlock()
+	return p.thinkingParts[index]
 }
 
 func contentText(raw json.RawMessage) string {

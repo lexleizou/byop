@@ -4035,5 +4035,215 @@
   "mermaidPreviewTooLong": "此图解超过 20,000 字符的预览长度限制。",
   "@mermaidPreviewTooLong": {
     "description": "Mermaid 源码超过宿主与插件共同的预览长度限制时的提示。"
+  },
+  "p29ProcessThinking": "已思考 {count} 次",
+  "@p29ProcessThinking": {
+    "description": "Process summary count of thinking blocks.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "p29ProcessTools": "执行 {count} 次工具",
+  "@p29ProcessTools": {
+    "description": "Process summary count of tool calls by unique call ID.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "p29ProcessDuration": "耗时 {duration}",
+  "@p29ProcessDuration": {
+    "description": "Process summary elapsed time."
+  },
+  "p29ProcessJoin": "、",
+  "@p29ProcessJoin": {
+    "description": "Joiner between process summary parts."
+  },
+  "p29ProcessSteps": "· {count} 步",
+  "@p29ProcessSteps": {
+    "description": "Step count suffix on a collapsed activity."
+  },
+  "p29ThinkingLive": "正在思考...",
+  "@p29ThinkingLive": {
+    "description": "Live status of a thinking activity."
+  },
+  "p29ThinkingDone": "思考完成",
+  "@p29ThinkingDone": {
+    "description": "Settled status of a thinking activity."
+  },
+  "p29ToolFailed": "工具 {name} 执行失败",
+  "@p29ToolFailed": {
+    "description": "Failed tool status line.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "bash"
+      }
+    }
+  },
+  "p29ToolIncomplete": "工具 {name} 执行未完成",
+  "@p29ToolIncomplete": {
+    "description": "Unfinished tool status line.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "bash"
+      }
+    }
+  },
+  "p29ReadLive": "正在读取",
+  "@p29ReadLive": {
+    "description": "Running read status prefix."
+  },
+  "p29ReadDone": "文件读取完成",
+  "@p29ReadDone": {
+    "description": "Completed read status."
+  },
+  "p29WriteLive": "正在写入",
+  "@p29WriteLive": {
+    "description": "Running write status prefix."
+  },
+  "p29WriteDone": "文件写入完成",
+  "@p29WriteDone": {
+    "description": "Completed write status."
+  },
+  "p29EditLive": "正在编辑",
+  "@p29EditLive": {
+    "description": "Running edit status prefix."
+  },
+  "p29EditDone": "文件编辑完成",
+  "@p29EditDone": {
+    "description": "Completed edit status."
+  },
+  "p29BashLive": "正在运行",
+  "@p29BashLive": {
+    "description": "Running command status prefix."
+  },
+  "p29BashDone": "命令执行完成",
+  "@p29BashDone": {
+    "description": "Completed command status."
+  },
+  "p29GlobLive": "正在查找",
+  "@p29GlobLive": {
+    "description": "Running file-search status prefix."
+  },
+  "p29GlobDone": "文件查找完成",
+  "@p29GlobDone": {
+    "description": "Completed file-search status."
+  },
+  "p29GrepLive": "正在搜索",
+  "@p29GrepLive": {
+    "description": "Running content-search status prefix."
+  },
+  "p29GrepDone": "内容搜索完成",
+  "@p29GrepDone": {
+    "description": "Completed content-search status."
+  },
+  "p29AgentLive": "正在运行子代理",
+  "@p29AgentLive": {
+    "description": "Sub-agent status prefix."
+  },
+  "p29AgentDone": "子代理执行完成",
+  "@p29AgentDone": {
+    "description": "Completed sub-agent status."
+  },
+  "p29TaskLive": "正在执行任务",
+  "@p29TaskLive": {
+    "description": "Task status prefix."
+  },
+  "p29TaskDone": "任务执行完成",
+  "@p29TaskDone": {
+    "description": "Completed task status."
+  },
+  "p29WebSearchLive": "正在搜索网络",
+  "@p29WebSearchLive": {
+    "description": "Running web-search status prefix."
+  },
+  "p29WebSearchDone": "网络搜索完成",
+  "@p29WebSearchDone": {
+    "description": "Completed web-search status."
+  },
+  "p29WebFetchLive": "正在读取网页",
+  "@p29WebFetchLive": {
+    "description": "Running web-fetch status prefix."
+  },
+  "p29WebFetchDone": "网页读取完成",
+  "@p29WebFetchDone": {
+    "description": "Completed web-fetch status."
+  },
+  "p29McpLive": "正在调用",
+  "@p29McpLive": {
+    "description": "Running MCP call status prefix."
+  },
+  "p29McpDone": "MCP 调用完成",
+  "@p29McpDone": {
+    "description": "Completed MCP call status."
+  },
+  "p29ToolLive": "正在执行",
+  "@p29ToolLive": {
+    "description": "Generic running tool status prefix."
+  },
+  "p29ToolDone": "工具执行完成",
+  "@p29ToolDone": {
+    "description": "Generic completed tool status."
+  },
+  "p29EditReplacements": "替换 {count} 处",
+  "@p29EditReplacements": {
+    "description": "Edit summary counted from the result only.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
+  "p29IncompleteOutput": "未完成输出",
+  "@p29IncompleteOutput": {
+    "description": "Label above the trailing text of a stopped or failed turn."
+  },
+  "p29NoAnswerNote": "本轮结束未提供文字总结。",
+  "@p29NoAnswerNote": {
+    "description": "Note when a turn settles with no answer text."
+  },
+  "p29ThinkingAsAnswerNote": "本轮结束只有思考、没有文字总结；以下展示最后一段思考。",
+  "@p29ThinkingAsAnswerNote": {
+    "description": "Note when thinking stands in as the body."
+  },
+  "p29ThinkingLabel": "思考",
+  "@p29ThinkingLabel": {
+    "description": "Heading of the dashed thinking card."
+  },
+  "p29ShowDetail": "详情",
+  "@p29ShowDetail": {
+    "description": "Disclosure that opens a tool's full input and result."
+  },
+  "p29HideDetail": "收起详情",
+  "@p29HideDetail": {
+    "description": "Disclosure that closes a tool's full input and result."
+  },
+  "p29ShowMore": "展开",
+  "@p29ShowMore": {
+    "description": "Control that reveals a clamped thinking body."
+  },
+  "p29ShowLess": "收起",
+  "@p29ShowLess": {
+    "description": "Control that re-clamps an expanded thinking body."
+  },
+  "p29McpTag": "MCP",
+  "@p29McpTag": {
+    "description": "Coloured tag on MCP tool rows."
+  },
+  "p29SkillTag": "Skill",
+  "@p29SkillTag": {
+    "description": "Coloured tag on Skill tool rows."
+  },
+  "p29UserLabel": "你",
+  "@p29UserLabel": {
+    "description": "Label standing in for the account holder on a user message header."
   }
 }

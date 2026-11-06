@@ -253,13 +253,13 @@ func TestP18_2HUDLeadsThinkingAndToolsInLiveAndSettledTurns(t *testing.T) {
 		status := "Complete"
 		run := runCompleted
 		toolStatus := toolCallCompleted
-		toolTitle := textArgs("chatRanTools", map[string]any{"count": 1})
+		activityLabel := text("p29ReadDone")
 		if live {
 			name = "live"
 			status = "Streaming"
 			run = runStreaming
 			toolStatus = toolCallRunning
-			toolTitle = "read"
+			activityLabel = text("p29ReadLive")
 		}
 		t.Run(name, func(t *testing.T) {
 			state := p18_2HUDState(t)
@@ -286,13 +286,34 @@ func TestP18_2HUDLeadsThinkingAndToolsInLiveAndSettledTurns(t *testing.T) {
 			if !ok {
 				t.Fatal("turn HUD did not render")
 			}
+			// P29: the process folds under its summary; a watched turn is
+			// open while live, and the activity keeps its thinking and
+			// tool items inside a click-opened detail.
+			summary := p29ProcessTitleParts(1, 1, live, "0s")
+			if _, ok := tt.Find(summary); !ok {
+				t.Fatalf("process summary %q did not render: %#v", summary, tt.Texts())
+			}
+			if !live {
+				if err := tt.Click(summary); err != nil {
+					t.Fatal(err)
+				}
+				tt.Advance(600 * time.Millisecond)
+			}
+			head := activityLabel
+			if !live {
+				head += " " + textArgs("p29ProcessSteps", map[string]any{"count": 2})
+			}
+			if err := tt.Click(head); err != nil {
+				t.Fatalf("activity %q: %v; texts=%#v", head, err, tt.Texts())
+			}
+			tt.Advance(300 * time.Millisecond)
 			thinking, ok := tt.Find("Inspect the request.")
 			if !ok {
-				t.Fatal("thinking line did not render")
+				t.Fatalf("thinking detail did not render: %#v", tt.Texts())
 			}
-			tool, ok := tt.Find(toolTitle)
+			tool, ok := tt.Find("read")
 			if !ok {
-				t.Fatalf("tool step %q did not render: %#v", toolTitle, tt.Texts())
+				t.Fatalf("tool row did not render: %#v", tt.Texts())
 			}
 			prompt, ok := tt.Find("Run the tool")
 			if !ok {
@@ -401,16 +422,31 @@ func TestP18_2JAgentHUDPrecedesWorkSummaryAndThinking(t *testing.T) {
 	if !ok {
 		t.Fatal("J Agent HUD did not render")
 	}
-	summary, ok := tt.Find(textArgs("chatWorkedFor", map[string]any{"duration": "0s"}))
-	if !ok {
-		t.Fatalf("J Agent work summary did not render: %#v", tt.Texts())
+	// P29: both presets take the commercial process; the fold title now
+	// counts thinking and tool runs instead of the old worked-for label.
+	summary := p29ProcessTitleParts(1, 1, false, "0s")
+	if _, ok := tt.Find(summary); !ok {
+		t.Fatalf("J Agent process summary did not render: %#v", tt.Texts())
 	}
+	if err := tt.Click(summary); err != nil {
+		t.Fatal(err)
+	}
+	tt.Advance(600 * time.Millisecond)
+	head := text("p29ReadDone") + " " + textArgs("p29ProcessSteps", map[string]any{"count": 2})
+	if err := tt.Click(head); err != nil {
+		t.Fatalf("activity %q: %v; texts=%#v", head, err, tt.Texts())
+	}
+	tt.Advance(300 * time.Millisecond)
 	thinking, ok := tt.Find("Check the answer.")
 	if !ok {
-		t.Fatal("J Agent thinking line did not render")
+		t.Fatalf("J Agent thinking detail did not render: %#v", tt.Texts())
 	}
-	if !(hud.Y < summary.Y && summary.Y < thinking.Y) {
-		t.Fatalf("J Agent order is hud=%#v summary=%#v thinking=%#v", hud, summary, thinking)
+	summaryRect, ok := tt.Find(summary)
+	if !ok {
+		t.Fatal("process summary vanished after expansion")
+	}
+	if !(hud.Y < summaryRect.Y && summaryRect.Y < thinking.Y) {
+		t.Fatalf("J Agent order is hud=%#v summary=%#v thinking=%#v", hud, summaryRect, thinking)
 	}
 }
 

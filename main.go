@@ -185,20 +185,41 @@ type toolCallView struct {
 type chatBlockKind string
 
 const (
-	chatBlockText chatBlockKind = "text"
-	chatBlockTool chatBlockKind = "tool"
+	chatBlockText     chatBlockKind = "text"
+	chatBlockThinking chatBlockKind = "thinking"
+	chatBlockTool     chatBlockKind = "tool"
 )
 
+// P29 ordered-block contract: chatBlock keeps one Pi content part. Thinking
+// parts store their text in `text` (the UI reads thinking text from the same
+// field), phase marks commentary/final_answer when a protocol supplies it,
+// and contentIndex/epoch are internal identity fields so streaming updates
+// land on exactly the right block without merging separate parts.
 type chatBlock struct {
-	kind chatBlockKind
-	text string
-	tool toolCallView
+	kind         chatBlockKind
+	text         string
+	tool         toolCallView
+	phase        string
+	contentIndex int
+	epoch        int
+	// synthetic marks text the app itself wrote (fallback placeholders,
+	// injected history notices) as opposed to real Pi content, which stays
+	// false. The P29 presentation uses it to keep placeholders out of the
+	// thinking-only / no-summary judgements.
+	synthetic bool
 }
 
+// chatMessage gains the per-message identity the P29 header needs: the true
+// stop reason plus the model/provider the message actually ran on, which for
+// restored history comes from the Pi session file itself, never from the
+// current model selection.
 type chatMessage struct {
-	role   chatRole
-	status string
-	blocks []chatBlock
+	role       chatRole
+	status     string
+	blocks     []chatBlock
+	stopReason string
+	model      string
+	provider   string
 	// attachments keeps names and kinds only, so history rows never retain
 	// image bytes after a send.
 	attachments       []chatAttachmentMeta
@@ -439,6 +460,15 @@ type appState struct {
 	activePrompt            string
 	activeRequest           string
 	chat                    []chatMessage
+	// P29 ordered-block identity: the epoch counts assistant source messages
+	// inside the aggregated turn row, assistantMaxIndex is the highest
+	// contentIndex seen for the current epoch, and assistantEpochClosed is set
+	// when that source message's message_end merged its final content. The
+	// next streaming event then starts a fresh epoch even when the new
+	// message's contentIndex restarts at the same number.
+	assistantSourceEpoch    int
+	assistantMaxIndex       int
+	assistantEpochClosed    bool
 	chatView                chatPresentation
 	followUpGeneration      uint64
 	followUpCancel          context.CancelFunc
@@ -847,7 +877,8 @@ func (s *appState) seedToolDemo() {
 				kind: chatBlockText,
 				text: "Review the sample project.",
 			}},
-			status: "sent",
+			status:    "sent",
+			startedAt: time.Now(),
 		},
 		{
 			role:      chatAssistant,
@@ -1743,6 +1774,7 @@ func (s *appState) loadPiSession(client *piClient, epoch, gen uint64, expectedPa
 			s.cancelThinkingPending()
 			s.chatView = chatPresentation{}
 			s.chat = chat
+			s.resetAssistantOrderedIdentity()
 			// The transcript now comes from the restored session, so metas kept
 			// for a delayed echo of the previous one can never be matched.
 			s.pendingEchoAttachments = nil
@@ -2863,6 +2895,9 @@ func (s *appState) startAssistantPrompt(prompt string, attachments []chatAttachm
 			}},
 			attachments: attachments,
 			status:      text("chatStatusSent"),
+			// The real local submission moment, so the turn header shows the
+			// user time like the assistant side does.
+			startedAt: time.Now(),
 		},
 		chatMessage{role: chatAssistant, status: text("assistantWaiting"), startedAt: time.Now()},
 	)
@@ -3171,13 +3206,17 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 	case piEventText:
 		s.run = runStreaming
 		s.observePiHUDSpeed(event.Delta)
-		s.setAssistantText(event.Text, "Streaming")
+		s.streamAssistantTextBlock(event)
 		s.refreshPiHUDIfStale(time.Now())
 	case piEventThinking:
 		s.run = runStreaming
 		s.observePiHUDSpeed(event.Delta)
 		s.setAssistantThinking(event.Text, event.ThinkingStarted, event.ThinkingEnded)
+		s.streamAssistantThinkingBlock(event)
 		s.refreshPiHUDIfStale(time.Now())
+	case piEventAssistantStart:
+		s.run = runStreaming
+		s.beginAssistantSourceMessage(event)
 	case piEventMessage:
 		s.run = runStreaming
 		if event.OutputTokens > 0 && event.GenerationTime > 0 {
@@ -3186,12 +3225,7 @@ func (s *appState) handlePiEvent(event piEvent, epoch uint64) {
 		if event.OutputTokens > 0 {
 			s.addPiTurnOutputTokens(event.OutputTokens)
 		}
-		if event.Thinking != "" {
-			s.setAssistantThinkingFallback(event.Thinking)
-		}
-		if event.Text != "" {
-			s.setAssistantText(event.Text, "Received")
-		}
+		s.mergeAssistantFinalContent(event)
 		if event.Error != "" {
 			s.piError = uiErrorFromText(event.Error, text("errorPiMessageFailed"))
 		}
@@ -3439,6 +3473,7 @@ func (s *appState) setAssistantText(value, status string) {
 				return
 			}
 			last.text = value
+			last.synthetic = false
 			return
 		}
 	}
@@ -3524,11 +3559,24 @@ func (s *appState) ensureAssistantFallback(text string) {
 	if strings.TrimSpace(text) == "" {
 		return
 	}
-	message.blocks = append(message.blocks, chatBlock{kind: chatBlockText, text: text})
+	message.blocks = append(message.blocks, chatBlock{kind: chatBlockText, text: text, synthetic: true})
 }
 
 func (s *appState) finishAssistant(text, status string) {
 	s.setAssistantText(text, status)
+	// The finish text is an app-injected notice (error/handled/exit), never
+	// Pi content: mark what setAssistantText just wrote as synthetic while
+	// the helper itself stays the plain real-text API.
+	if n := len(s.chat); n > 0 && s.chat[n-1].role == chatAssistant {
+		row := &s.chat[n-1]
+		for i := len(row.blocks) - 1; i >= 0; i-- {
+			block := &row.blocks[i]
+			if block.kind == chatBlockText {
+				block.synthetic = true
+				break
+			}
+		}
+	}
 	s.markAssistantEnded()
 	s.activeRequest = ""
 	s.activePrompt = ""
@@ -3592,12 +3640,16 @@ func (s *appState) appendRunningUserMessage(value string) {
 	if len(s.chat) > 0 && s.chat[len(s.chat)-1].role == chatAssistant {
 		s.markAssistantEnded()
 	}
+	s.resetAssistantOrderedIdentity()
 	s.chat = append(s.chat,
 		chatMessage{
 			role:        chatUser,
 			status:      text("chatStatusSent"),
 			attachments: attachments,
 			blocks:      []chatBlock{{kind: chatBlockText, text: value}},
+			// A delayed echo still marks a live local message; the arrival
+			// moment is the closest provable time, never a history backfill.
+			startedAt: time.Now(),
 		},
 		chatMessage{role: chatAssistant, status: text("assistantWaiting"), startedAt: time.Now()},
 	)
@@ -3618,7 +3670,8 @@ func (s *appState) startToolCall(event piEvent) {
 		return
 	}
 	message.blocks = append(message.blocks, chatBlock{
-		kind: chatBlockTool,
+		kind:  chatBlockTool,
+		epoch: s.assistantSourceEpoch,
 		tool: toolCallView{
 			id:        id,
 			name:      fallback(event.ToolName, text("errorToolFallback")),
@@ -3660,7 +3713,8 @@ func (s *appState) endToolCall(event piEvent) {
 	tool, _ := s.findToolBlock(message, event.ToolCallID)
 	if tool == nil {
 		message.blocks = append(message.blocks, chatBlock{
-			kind: chatBlockTool,
+			kind:  chatBlockTool,
+			epoch: s.assistantSourceEpoch,
 			tool: toolCallView{
 				id:       event.ToolCallID,
 				name:     fallback(event.ToolName, text("errorToolFallback")),

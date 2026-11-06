@@ -4238,5 +4238,215 @@
   "mermaidPreviewTooLong": "This diagram exceeds the 20,000 character preview limit.",
   "@mermaidPreviewTooLong": {
     "description": "Notice when a Mermaid source is longer than the shared preview limit."
+  },
+  "p29ProcessThinking": "Thought {count, plural, one {# time} other {# times}}",
+  "@p29ProcessThinking": {
+    "description": "Process summary count of thinking blocks.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "p29ProcessTools": "Ran {count, plural, one {# tool} other {# tools}}",
+  "@p29ProcessTools": {
+    "description": "Process summary count of tool calls by unique call ID.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "p29ProcessDuration": "Took {duration}",
+  "@p29ProcessDuration": {
+    "description": "Process summary elapsed time."
+  },
+  "p29ProcessJoin": " · ",
+  "@p29ProcessJoin": {
+    "description": "Joiner between process summary parts."
+  },
+  "p29ProcessSteps": "· {count} steps",
+  "@p29ProcessSteps": {
+    "description": "Step count suffix on a collapsed activity."
+  },
+  "p29ThinkingLive": "Thinking...",
+  "@p29ThinkingLive": {
+    "description": "Live status of a thinking activity."
+  },
+  "p29ThinkingDone": "Thinking complete",
+  "@p29ThinkingDone": {
+    "description": "Settled status of a thinking activity."
+  },
+  "p29ToolFailed": "Tool {name} failed",
+  "@p29ToolFailed": {
+    "description": "Failed tool status line.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "bash"
+      }
+    }
+  },
+  "p29ToolIncomplete": "Tool {name} did not finish",
+  "@p29ToolIncomplete": {
+    "description": "Unfinished tool status line.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "bash"
+      }
+    }
+  },
+  "p29ReadLive": "Reading",
+  "@p29ReadLive": {
+    "description": "Running read status prefix."
+  },
+  "p29ReadDone": "File read complete",
+  "@p29ReadDone": {
+    "description": "Completed read status."
+  },
+  "p29WriteLive": "Writing",
+  "@p29WriteLive": {
+    "description": "Running write status prefix."
+  },
+  "p29WriteDone": "File write complete",
+  "@p29WriteDone": {
+    "description": "Completed write status."
+  },
+  "p29EditLive": "Editing",
+  "@p29EditLive": {
+    "description": "Running edit status prefix."
+  },
+  "p29EditDone": "File edit complete",
+  "@p29EditDone": {
+    "description": "Completed edit status."
+  },
+  "p29BashLive": "Running",
+  "@p29BashLive": {
+    "description": "Running command status prefix."
+  },
+  "p29BashDone": "Command complete",
+  "@p29BashDone": {
+    "description": "Completed command status."
+  },
+  "p29GlobLive": "Finding",
+  "@p29GlobLive": {
+    "description": "Running file-search status prefix."
+  },
+  "p29GlobDone": "File search complete",
+  "@p29GlobDone": {
+    "description": "Completed file-search status."
+  },
+  "p29GrepLive": "Searching",
+  "@p29GrepLive": {
+    "description": "Running content-search status prefix."
+  },
+  "p29GrepDone": "Content search complete",
+  "@p29GrepDone": {
+    "description": "Completed content-search status."
+  },
+  "p29AgentLive": "Running sub-agent",
+  "@p29AgentLive": {
+    "description": "Sub-agent status prefix."
+  },
+  "p29AgentDone": "Sub-agent complete",
+  "@p29AgentDone": {
+    "description": "Completed sub-agent status."
+  },
+  "p29TaskLive": "Running task",
+  "@p29TaskLive": {
+    "description": "Task status prefix."
+  },
+  "p29TaskDone": "Task complete",
+  "@p29TaskDone": {
+    "description": "Completed task status."
+  },
+  "p29WebSearchLive": "Searching the web",
+  "@p29WebSearchLive": {
+    "description": "Running web-search status prefix."
+  },
+  "p29WebSearchDone": "Web search complete",
+  "@p29WebSearchDone": {
+    "description": "Completed web-search status."
+  },
+  "p29WebFetchLive": "Reading web page",
+  "@p29WebFetchLive": {
+    "description": "Running web-fetch status prefix."
+  },
+  "p29WebFetchDone": "Web page read complete",
+  "@p29WebFetchDone": {
+    "description": "Completed web-fetch status."
+  },
+  "p29McpLive": "Calling",
+  "@p29McpLive": {
+    "description": "Running MCP call status prefix."
+  },
+  "p29McpDone": "MCP call complete",
+  "@p29McpDone": {
+    "description": "Completed MCP call status."
+  },
+  "p29ToolLive": "Running",
+  "@p29ToolLive": {
+    "description": "Generic running tool status prefix."
+  },
+  "p29ToolDone": "Tool execution complete",
+  "@p29ToolDone": {
+    "description": "Generic completed tool status."
+  },
+  "p29EditReplacements": "{count} replacements",
+  "@p29EditReplacements": {
+    "description": "Edit summary counted from the result only.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
+  "p29IncompleteOutput": "Unfinished output",
+  "@p29IncompleteOutput": {
+    "description": "Label above the trailing text of a stopped or failed turn."
+  },
+  "p29NoAnswerNote": "The turn ended without a text summary.",
+  "@p29NoAnswerNote": {
+    "description": "Note when a turn settles with no answer text."
+  },
+  "p29ThinkingAsAnswerNote": "The turn ended with thinking only; the last thinking shows below.",
+  "@p29ThinkingAsAnswerNote": {
+    "description": "Note when thinking stands in as the body."
+  },
+  "p29ThinkingLabel": "Thinking",
+  "@p29ThinkingLabel": {
+    "description": "Heading of the dashed thinking card."
+  },
+  "p29ShowDetail": "Details",
+  "@p29ShowDetail": {
+    "description": "Disclosure that opens a tool's full input and result."
+  },
+  "p29HideDetail": "Hide details",
+  "@p29HideDetail": {
+    "description": "Disclosure that closes a tool's full input and result."
+  },
+  "p29ShowMore": "Expand",
+  "@p29ShowMore": {
+    "description": "Control that reveals a clamped thinking body."
+  },
+  "p29ShowLess": "Collapse",
+  "@p29ShowLess": {
+    "description": "Control that re-clamps an expanded thinking body."
+  },
+  "p29McpTag": "MCP",
+  "@p29McpTag": {
+    "description": "Coloured tag on MCP tool rows."
+  },
+  "p29SkillTag": "Skill",
+  "@p29SkillTag": {
+    "description": "Coloured tag on Skill tool rows."
+  },
+  "p29UserLabel": "You",
+  "@p29UserLabel": {
+    "description": "Label standing in for the account holder on a user message header."
   }
 }

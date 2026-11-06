@@ -2,7 +2,9 @@
 
 **Build You Own Pi**（BYOP）是一个基于 [MyGo](https://github.com/egoist/mygo) 原生 UI 的多插件工作台外壳，通过 JSONL RPC 调用单独安装的 [Pi CLI](https://github.com/earendil-works/pi)。
 
-当前版本 0.21.0（P28）：对话中的完整 Mermaid 代码块新增“预览图解”按钮，点击后将该段源码送到已安装的 Mermaid 0.2.0 独立页面并自动渲染。支持首次打开与已有页面更新，不自动安装或启用插件。设计见 [P28-design.md](docs/P28-design.md)，真实 Pi 会话补验、安装包检查与使用边界见 [P28-validation.md](docs/P28-validation.md)。
+当前版本 0.22.0（P29）：对话过程改为 Proma 商业版 0.21.45 的呈现方式。一次用户输入对应一轮：35px 头像与双行模型/时间头部，“已思考 N 次、执行 N 次工具、耗时 Xs”可折叠过程，按顺序排列的思考、工具与中间说明时间轴，可展开的完整思考、工具参数与结果，独立于过程之下的最终回答，失败与停止如实标示。按商业版时长使用原生分层动效与不抢滚动的跟随。模型信息旁保留原实时 t/s 胶囊，计算方式不变。Pi 历史恢复后与实时形态一致。设计见 [P29-design.md](docs/P29-design.md)，验证与限制见 [P29-validation.md](docs/P29-validation.md)。
+
+0.21.0（P28）：对话中的完整 Mermaid 代码块新增“预览图解”按钮，点击后将该段源码送到已安装的 Mermaid 0.2.0 独立页面并自动渲染。支持首次打开与已有页面更新，不自动安装或启用插件。设计见 [P28-design.md](docs/P28-design.md)，真实 Pi 会话补验、安装包检查与使用边界见 [P28-validation.md](docs/P28-validation.md)。
 
 0.20.0（P27）：落实 2026-11-05 决策，保持 A 简洁侧栏与暂缓的 HUD 开关；新对话跟随 Pi 有效状态，并修复模型档位记忆跨会话迁移。新增可独立安装的 [Mermaid 图解插件](plugins/mermaid-diagram/README.md)，使用固定版本 Pele 在本机渲染源码，支持缩放、适应宽度和中英/主题跟随；聊天内嵌渲染不属于本次 MVP。阶段设计见 [P27-design.md](docs/P27-design.md)，真实验收与限制见 [P27-validation.md](docs/P27-validation.md)。
 

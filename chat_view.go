@@ -38,6 +38,12 @@ type chatPresentation struct {
 	thinkingPending     string
 	thinkingCommitTimer *time.Timer
 
+	// P29: commercial process presentation, kept per turn so folds,
+	// detail choices, status throttles and scroll anchors survive every
+	// rebuild. A session change resets the whole struct.
+	p29         map[string]*p29TurnState
+	p29Markdown markdown.Options
+
 	// Output-file cards: per-path preview choice, the live web views, the
 	// frame counter that frees views no longer built, the message whose
 	// cards may preview on their own, and the palette the hook paints with.
@@ -295,6 +301,20 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 			mermaidPreviewAction(c, p, source, func() { s.openMermaidPreview(source) })
 		})
 	}
+	// P29: the process prose runs on these same hooks at the authorised
+	// 15px/1.72 scale, so Mermaid buttons, file cards and plugin renderers
+	// behave identically inside and outside the process.
+	processTheme := *theme
+	processTheme.FontSize = p29FontBody
+	processTheme.LineHeight = p29LineHeight
+	processTheme.BlockSpacing = 12.0 / p29FontBody
+	processTheme.ItemSpacing = 4.0 / p29FontBody
+	processTheme.ListIndent = 22.0 / p29FontBody
+	processTheme.CodeSize = p.codeFont / p29FontBody
+	processTheme.CodeBlockPadding = 12.0 / p29FontBody
+	s.chatView.p29Markdown.Theme = &processTheme
+	s.chatView.p29Markdown.Block = s.chatView.markdown.Block
+	s.chatView.p29Markdown.CodeBlock = s.chatView.markdown.CodeBlock
 }
 
 func (s *appState) piConnectionAlert(c *ui.Context, p palette) {
@@ -313,6 +333,18 @@ func (s *appState) piConnectionAlert(c *ui.Context, p palette) {
 }
 
 func (s *appState) transcript(c *ui.Context) {
+	if len(s.chat) == 0 {
+		s.emptyTranscript(c)
+		return
+	}
+	s.p29Transcript(c)
+}
+
+// transcriptLegacyV11 is the pre-P29 grouping: prompts with one answer and
+// tool-only assistant runs folded into shared rows. The P29 entry above
+// aggregates whole turns instead; the old renderer stays reachable here and
+// keeps its protocol-side helpers and tests.
+func (s *appState) transcriptLegacyV11(c *ui.Context) {
 	if len(s.chat) == 0 {
 		s.emptyTranscript(c)
 		return

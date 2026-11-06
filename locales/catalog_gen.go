@@ -13537,3 +13537,635 @@ func MermaidPreviewTooLong() string { return In(i18n.Locale()).MermaidPreviewToo
 func (msgs Messages) MermaidPreviewTooLong() string {
 	return Catalog.Format(msgs.locale, "mermaidPreviewTooLong", nil)
 }
+
+// P29ProcessThinking says "Thought {count, plural, one {# time} other {# times}}"
+// in the language the app shows.
+//
+// Process summary count of thinking blocks.
+func P29ProcessThinking(count int) string { return In(i18n.Locale()).P29ProcessThinking(count) }
+
+// P29ProcessThinking says "Thought {count, plural, one {# time} other {# times}}"
+// in the language of msgs.
+//
+// Process summary count of thinking blocks.
+func (msgs Messages) P29ProcessThinking(count int) string {
+	return Catalog.Format(msgs.locale, "p29ProcessThinking", map[string]any{"count": count})
+}
+
+// P29ProcessTools says "Ran {count, plural, one {# tool} other {# tools}}"
+// in the language the app shows.
+//
+// Process summary count of tool calls by unique call ID.
+func P29ProcessTools(count int) string { return In(i18n.Locale()).P29ProcessTools(count) }
+
+// P29ProcessTools says "Ran {count, plural, one {# tool} other {# tools}}"
+// in the language of msgs.
+//
+// Process summary count of tool calls by unique call ID.
+func (msgs Messages) P29ProcessTools(count int) string {
+	return Catalog.Format(msgs.locale, "p29ProcessTools", map[string]any{"count": count})
+}
+
+// P29ProcessDuration says "Took {duration}"
+// in the language the app shows.
+//
+// Process summary elapsed time.
+func P29ProcessDuration(duration string) string {
+	return In(i18n.Locale()).P29ProcessDuration(duration)
+}
+
+// P29ProcessDuration says "Took {duration}"
+// in the language of msgs.
+//
+// Process summary elapsed time.
+func (msgs Messages) P29ProcessDuration(duration string) string {
+	return Catalog.Format(msgs.locale, "p29ProcessDuration", map[string]any{"duration": duration})
+}
+
+// P29ProcessJoin says " · "
+// in the language the app shows.
+//
+// Joiner between process summary parts.
+func P29ProcessJoin() string { return In(i18n.Locale()).P29ProcessJoin() }
+
+// P29ProcessJoin says " · "
+// in the language of msgs.
+//
+// Joiner between process summary parts.
+func (msgs Messages) P29ProcessJoin() string {
+	return Catalog.Format(msgs.locale, "p29ProcessJoin", nil)
+}
+
+// P29ProcessSteps says "· {count} steps"
+// in the language the app shows.
+//
+// Step count suffix on a collapsed activity.
+func P29ProcessSteps(count string) string { return In(i18n.Locale()).P29ProcessSteps(count) }
+
+// P29ProcessSteps says "· {count} steps"
+// in the language of msgs.
+//
+// Step count suffix on a collapsed activity.
+func (msgs Messages) P29ProcessSteps(count string) string {
+	return Catalog.Format(msgs.locale, "p29ProcessSteps", map[string]any{"count": count})
+}
+
+// P29ThinkingLive says "Thinking..."
+// in the language the app shows.
+//
+// Live status of a thinking activity.
+func P29ThinkingLive() string { return In(i18n.Locale()).P29ThinkingLive() }
+
+// P29ThinkingLive says "Thinking..."
+// in the language of msgs.
+//
+// Live status of a thinking activity.
+func (msgs Messages) P29ThinkingLive() string {
+	return Catalog.Format(msgs.locale, "p29ThinkingLive", nil)
+}
+
+// P29ThinkingDone says "Thinking complete"
+// in the language the app shows.
+//
+// Settled status of a thinking activity.
+func P29ThinkingDone() string { return In(i18n.Locale()).P29ThinkingDone() }
+
+// P29ThinkingDone says "Thinking complete"
+// in the language of msgs.
+//
+// Settled status of a thinking activity.
+func (msgs Messages) P29ThinkingDone() string {
+	return Catalog.Format(msgs.locale, "p29ThinkingDone", nil)
+}
+
+// P29ToolFailed says "Tool {name} failed"
+// in the language the app shows.
+//
+// Failed tool status line.
+func P29ToolFailed(name string) string { return In(i18n.Locale()).P29ToolFailed(name) }
+
+// P29ToolFailed says "Tool {name} failed"
+// in the language of msgs.
+//
+// Failed tool status line.
+func (msgs Messages) P29ToolFailed(name string) string {
+	return Catalog.Format(msgs.locale, "p29ToolFailed", map[string]any{"name": name})
+}
+
+// P29ToolIncomplete says "Tool {name} did not finish"
+// in the language the app shows.
+//
+// Unfinished tool status line.
+func P29ToolIncomplete(name string) string { return In(i18n.Locale()).P29ToolIncomplete(name) }
+
+// P29ToolIncomplete says "Tool {name} did not finish"
+// in the language of msgs.
+//
+// Unfinished tool status line.
+func (msgs Messages) P29ToolIncomplete(name string) string {
+	return Catalog.Format(msgs.locale, "p29ToolIncomplete", map[string]any{"name": name})
+}
+
+// P29ReadLive says "Reading"
+// in the language the app shows.
+//
+// Running read status prefix.
+func P29ReadLive() string { return In(i18n.Locale()).P29ReadLive() }
+
+// P29ReadLive says "Reading"
+// in the language of msgs.
+//
+// Running read status prefix.
+func (msgs Messages) P29ReadLive() string {
+	return Catalog.Format(msgs.locale, "p29ReadLive", nil)
+}
+
+// P29ReadDone says "File read complete"
+// in the language the app shows.
+//
+// Completed read status.
+func P29ReadDone() string { return In(i18n.Locale()).P29ReadDone() }
+
+// P29ReadDone says "File read complete"
+// in the language of msgs.
+//
+// Completed read status.
+func (msgs Messages) P29ReadDone() string {
+	return Catalog.Format(msgs.locale, "p29ReadDone", nil)
+}
+
+// P29WriteLive says "Writing"
+// in the language the app shows.
+//
+// Running write status prefix.
+func P29WriteLive() string { return In(i18n.Locale()).P29WriteLive() }
+
+// P29WriteLive says "Writing"
+// in the language of msgs.
+//
+// Running write status prefix.
+func (msgs Messages) P29WriteLive() string {
+	return Catalog.Format(msgs.locale, "p29WriteLive", nil)
+}
+
+// P29WriteDone says "File write complete"
+// in the language the app shows.
+//
+// Completed write status.
+func P29WriteDone() string { return In(i18n.Locale()).P29WriteDone() }
+
+// P29WriteDone says "File write complete"
+// in the language of msgs.
+//
+// Completed write status.
+func (msgs Messages) P29WriteDone() string {
+	return Catalog.Format(msgs.locale, "p29WriteDone", nil)
+}
+
+// P29EditLive says "Editing"
+// in the language the app shows.
+//
+// Running edit status prefix.
+func P29EditLive() string { return In(i18n.Locale()).P29EditLive() }
+
+// P29EditLive says "Editing"
+// in the language of msgs.
+//
+// Running edit status prefix.
+func (msgs Messages) P29EditLive() string {
+	return Catalog.Format(msgs.locale, "p29EditLive", nil)
+}
+
+// P29EditDone says "File edit complete"
+// in the language the app shows.
+//
+// Completed edit status.
+func P29EditDone() string { return In(i18n.Locale()).P29EditDone() }
+
+// P29EditDone says "File edit complete"
+// in the language of msgs.
+//
+// Completed edit status.
+func (msgs Messages) P29EditDone() string {
+	return Catalog.Format(msgs.locale, "p29EditDone", nil)
+}
+
+// P29BashLive says "Running"
+// in the language the app shows.
+//
+// Running command status prefix.
+func P29BashLive() string { return In(i18n.Locale()).P29BashLive() }
+
+// P29BashLive says "Running"
+// in the language of msgs.
+//
+// Running command status prefix.
+func (msgs Messages) P29BashLive() string {
+	return Catalog.Format(msgs.locale, "p29BashLive", nil)
+}
+
+// P29BashDone says "Command complete"
+// in the language the app shows.
+//
+// Completed command status.
+func P29BashDone() string { return In(i18n.Locale()).P29BashDone() }
+
+// P29BashDone says "Command complete"
+// in the language of msgs.
+//
+// Completed command status.
+func (msgs Messages) P29BashDone() string {
+	return Catalog.Format(msgs.locale, "p29BashDone", nil)
+}
+
+// P29GlobLive says "Finding"
+// in the language the app shows.
+//
+// Running file-search status prefix.
+func P29GlobLive() string { return In(i18n.Locale()).P29GlobLive() }
+
+// P29GlobLive says "Finding"
+// in the language of msgs.
+//
+// Running file-search status prefix.
+func (msgs Messages) P29GlobLive() string {
+	return Catalog.Format(msgs.locale, "p29GlobLive", nil)
+}
+
+// P29GlobDone says "File search complete"
+// in the language the app shows.
+//
+// Completed file-search status.
+func P29GlobDone() string { return In(i18n.Locale()).P29GlobDone() }
+
+// P29GlobDone says "File search complete"
+// in the language of msgs.
+//
+// Completed file-search status.
+func (msgs Messages) P29GlobDone() string {
+	return Catalog.Format(msgs.locale, "p29GlobDone", nil)
+}
+
+// P29GrepLive says "Searching"
+// in the language the app shows.
+//
+// Running content-search status prefix.
+func P29GrepLive() string { return In(i18n.Locale()).P29GrepLive() }
+
+// P29GrepLive says "Searching"
+// in the language of msgs.
+//
+// Running content-search status prefix.
+func (msgs Messages) P29GrepLive() string {
+	return Catalog.Format(msgs.locale, "p29GrepLive", nil)
+}
+
+// P29GrepDone says "Content search complete"
+// in the language the app shows.
+//
+// Completed content-search status.
+func P29GrepDone() string { return In(i18n.Locale()).P29GrepDone() }
+
+// P29GrepDone says "Content search complete"
+// in the language of msgs.
+//
+// Completed content-search status.
+func (msgs Messages) P29GrepDone() string {
+	return Catalog.Format(msgs.locale, "p29GrepDone", nil)
+}
+
+// P29AgentLive says "Running sub-agent"
+// in the language the app shows.
+//
+// Sub-agent status prefix.
+func P29AgentLive() string { return In(i18n.Locale()).P29AgentLive() }
+
+// P29AgentLive says "Running sub-agent"
+// in the language of msgs.
+//
+// Sub-agent status prefix.
+func (msgs Messages) P29AgentLive() string {
+	return Catalog.Format(msgs.locale, "p29AgentLive", nil)
+}
+
+// P29AgentDone says "Sub-agent complete"
+// in the language the app shows.
+//
+// Completed sub-agent status.
+func P29AgentDone() string { return In(i18n.Locale()).P29AgentDone() }
+
+// P29AgentDone says "Sub-agent complete"
+// in the language of msgs.
+//
+// Completed sub-agent status.
+func (msgs Messages) P29AgentDone() string {
+	return Catalog.Format(msgs.locale, "p29AgentDone", nil)
+}
+
+// P29TaskLive says "Running task"
+// in the language the app shows.
+//
+// Task status prefix.
+func P29TaskLive() string { return In(i18n.Locale()).P29TaskLive() }
+
+// P29TaskLive says "Running task"
+// in the language of msgs.
+//
+// Task status prefix.
+func (msgs Messages) P29TaskLive() string {
+	return Catalog.Format(msgs.locale, "p29TaskLive", nil)
+}
+
+// P29TaskDone says "Task complete"
+// in the language the app shows.
+//
+// Completed task status.
+func P29TaskDone() string { return In(i18n.Locale()).P29TaskDone() }
+
+// P29TaskDone says "Task complete"
+// in the language of msgs.
+//
+// Completed task status.
+func (msgs Messages) P29TaskDone() string {
+	return Catalog.Format(msgs.locale, "p29TaskDone", nil)
+}
+
+// P29WebSearchLive says "Searching the web"
+// in the language the app shows.
+//
+// Running web-search status prefix.
+func P29WebSearchLive() string { return In(i18n.Locale()).P29WebSearchLive() }
+
+// P29WebSearchLive says "Searching the web"
+// in the language of msgs.
+//
+// Running web-search status prefix.
+func (msgs Messages) P29WebSearchLive() string {
+	return Catalog.Format(msgs.locale, "p29WebSearchLive", nil)
+}
+
+// P29WebSearchDone says "Web search complete"
+// in the language the app shows.
+//
+// Completed web-search status.
+func P29WebSearchDone() string { return In(i18n.Locale()).P29WebSearchDone() }
+
+// P29WebSearchDone says "Web search complete"
+// in the language of msgs.
+//
+// Completed web-search status.
+func (msgs Messages) P29WebSearchDone() string {
+	return Catalog.Format(msgs.locale, "p29WebSearchDone", nil)
+}
+
+// P29WebFetchLive says "Reading web page"
+// in the language the app shows.
+//
+// Running web-fetch status prefix.
+func P29WebFetchLive() string { return In(i18n.Locale()).P29WebFetchLive() }
+
+// P29WebFetchLive says "Reading web page"
+// in the language of msgs.
+//
+// Running web-fetch status prefix.
+func (msgs Messages) P29WebFetchLive() string {
+	return Catalog.Format(msgs.locale, "p29WebFetchLive", nil)
+}
+
+// P29WebFetchDone says "Web page read complete"
+// in the language the app shows.
+//
+// Completed web-fetch status.
+func P29WebFetchDone() string { return In(i18n.Locale()).P29WebFetchDone() }
+
+// P29WebFetchDone says "Web page read complete"
+// in the language of msgs.
+//
+// Completed web-fetch status.
+func (msgs Messages) P29WebFetchDone() string {
+	return Catalog.Format(msgs.locale, "p29WebFetchDone", nil)
+}
+
+// P29McpLive says "Calling"
+// in the language the app shows.
+//
+// Running MCP call status prefix.
+func P29McpLive() string { return In(i18n.Locale()).P29McpLive() }
+
+// P29McpLive says "Calling"
+// in the language of msgs.
+//
+// Running MCP call status prefix.
+func (msgs Messages) P29McpLive() string {
+	return Catalog.Format(msgs.locale, "p29McpLive", nil)
+}
+
+// P29McpDone says "MCP call complete"
+// in the language the app shows.
+//
+// Completed MCP call status.
+func P29McpDone() string { return In(i18n.Locale()).P29McpDone() }
+
+// P29McpDone says "MCP call complete"
+// in the language of msgs.
+//
+// Completed MCP call status.
+func (msgs Messages) P29McpDone() string {
+	return Catalog.Format(msgs.locale, "p29McpDone", nil)
+}
+
+// P29ToolLive says "Running"
+// in the language the app shows.
+//
+// Generic running tool status prefix.
+func P29ToolLive() string { return In(i18n.Locale()).P29ToolLive() }
+
+// P29ToolLive says "Running"
+// in the language of msgs.
+//
+// Generic running tool status prefix.
+func (msgs Messages) P29ToolLive() string {
+	return Catalog.Format(msgs.locale, "p29ToolLive", nil)
+}
+
+// P29ToolDone says "Tool execution complete"
+// in the language the app shows.
+//
+// Generic completed tool status.
+func P29ToolDone() string { return In(i18n.Locale()).P29ToolDone() }
+
+// P29ToolDone says "Tool execution complete"
+// in the language of msgs.
+//
+// Generic completed tool status.
+func (msgs Messages) P29ToolDone() string {
+	return Catalog.Format(msgs.locale, "p29ToolDone", nil)
+}
+
+// P29EditReplacements says "{count} replacements"
+// in the language the app shows.
+//
+// Edit summary counted from the result only.
+func P29EditReplacements(count string) string { return In(i18n.Locale()).P29EditReplacements(count) }
+
+// P29EditReplacements says "{count} replacements"
+// in the language of msgs.
+//
+// Edit summary counted from the result only.
+func (msgs Messages) P29EditReplacements(count string) string {
+	return Catalog.Format(msgs.locale, "p29EditReplacements", map[string]any{"count": count})
+}
+
+// P29IncompleteOutput says "Unfinished output"
+// in the language the app shows.
+//
+// Label above the trailing text of a stopped or failed turn.
+func P29IncompleteOutput() string { return In(i18n.Locale()).P29IncompleteOutput() }
+
+// P29IncompleteOutput says "Unfinished output"
+// in the language of msgs.
+//
+// Label above the trailing text of a stopped or failed turn.
+func (msgs Messages) P29IncompleteOutput() string {
+	return Catalog.Format(msgs.locale, "p29IncompleteOutput", nil)
+}
+
+// P29NoAnswerNote says "The turn ended without a text summary."
+// in the language the app shows.
+//
+// Note when a turn settles with no answer text.
+func P29NoAnswerNote() string { return In(i18n.Locale()).P29NoAnswerNote() }
+
+// P29NoAnswerNote says "The turn ended without a text summary."
+// in the language of msgs.
+//
+// Note when a turn settles with no answer text.
+func (msgs Messages) P29NoAnswerNote() string {
+	return Catalog.Format(msgs.locale, "p29NoAnswerNote", nil)
+}
+
+// P29ThinkingAsAnswerNote says "The turn ended with thinking only; the last thinking shows below."
+// in the language the app shows.
+//
+// Note when thinking stands in as the body.
+func P29ThinkingAsAnswerNote() string { return In(i18n.Locale()).P29ThinkingAsAnswerNote() }
+
+// P29ThinkingAsAnswerNote says "The turn ended with thinking only; the last thinking shows below."
+// in the language of msgs.
+//
+// Note when thinking stands in as the body.
+func (msgs Messages) P29ThinkingAsAnswerNote() string {
+	return Catalog.Format(msgs.locale, "p29ThinkingAsAnswerNote", nil)
+}
+
+// P29ThinkingLabel says "Thinking"
+// in the language the app shows.
+//
+// Heading of the dashed thinking card.
+func P29ThinkingLabel() string { return In(i18n.Locale()).P29ThinkingLabel() }
+
+// P29ThinkingLabel says "Thinking"
+// in the language of msgs.
+//
+// Heading of the dashed thinking card.
+func (msgs Messages) P29ThinkingLabel() string {
+	return Catalog.Format(msgs.locale, "p29ThinkingLabel", nil)
+}
+
+// P29ShowDetail says "Details"
+// in the language the app shows.
+//
+// Disclosure that opens a tool's full input and result.
+func P29ShowDetail() string { return In(i18n.Locale()).P29ShowDetail() }
+
+// P29ShowDetail says "Details"
+// in the language of msgs.
+//
+// Disclosure that opens a tool's full input and result.
+func (msgs Messages) P29ShowDetail() string {
+	return Catalog.Format(msgs.locale, "p29ShowDetail", nil)
+}
+
+// P29HideDetail says "Hide details"
+// in the language the app shows.
+//
+// Disclosure that closes a tool's full input and result.
+func P29HideDetail() string { return In(i18n.Locale()).P29HideDetail() }
+
+// P29HideDetail says "Hide details"
+// in the language of msgs.
+//
+// Disclosure that closes a tool's full input and result.
+func (msgs Messages) P29HideDetail() string {
+	return Catalog.Format(msgs.locale, "p29HideDetail", nil)
+}
+
+// P29ShowMore says "Expand"
+// in the language the app shows.
+//
+// Control that reveals a clamped thinking body.
+func P29ShowMore() string { return In(i18n.Locale()).P29ShowMore() }
+
+// P29ShowMore says "Expand"
+// in the language of msgs.
+//
+// Control that reveals a clamped thinking body.
+func (msgs Messages) P29ShowMore() string {
+	return Catalog.Format(msgs.locale, "p29ShowMore", nil)
+}
+
+// P29ShowLess says "Collapse"
+// in the language the app shows.
+//
+// Control that re-clamps an expanded thinking body.
+func P29ShowLess() string { return In(i18n.Locale()).P29ShowLess() }
+
+// P29ShowLess says "Collapse"
+// in the language of msgs.
+//
+// Control that re-clamps an expanded thinking body.
+func (msgs Messages) P29ShowLess() string {
+	return Catalog.Format(msgs.locale, "p29ShowLess", nil)
+}
+
+// P29McpTag says "MCP"
+// in the language the app shows.
+//
+// Coloured tag on MCP tool rows.
+func P29McpTag() string { return In(i18n.Locale()).P29McpTag() }
+
+// P29McpTag says "MCP"
+// in the language of msgs.
+//
+// Coloured tag on MCP tool rows.
+func (msgs Messages) P29McpTag() string {
+	return Catalog.Format(msgs.locale, "p29McpTag", nil)
+}
+
+// P29SkillTag says "Skill"
+// in the language the app shows.
+//
+// Coloured tag on Skill tool rows.
+func P29SkillTag() string { return In(i18n.Locale()).P29SkillTag() }
+
+// P29SkillTag says "Skill"
+// in the language of msgs.
+//
+// Coloured tag on Skill tool rows.
+func (msgs Messages) P29SkillTag() string {
+	return Catalog.Format(msgs.locale, "p29SkillTag", nil)
+}
+
+// P29UserLabel says "You"
+// in the language the app shows.
+//
+// Label standing in for the account holder on a user message header.
+func P29UserLabel() string { return In(i18n.Locale()).P29UserLabel() }
+
+// P29UserLabel says "You"
+// in the language of msgs.
+//
+// Label standing in for the account holder on a user message header.
+func (msgs Messages) P29UserLabel() string {
+	return Catalog.Format(msgs.locale, "p29UserLabel", nil)
+}
