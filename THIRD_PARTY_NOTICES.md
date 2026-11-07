@@ -154,3 +154,20 @@ Source: <https://github.com/obsidianmd/pele>
 Version: `pele@1.7.0` (commit `8603bf3313add9143cd417015d4a6bd6c522dada`)
 Usage: The separately installable `plugins/mermaid-diagram` ships the original ESM renderer for offline SVG previews. It is not linked into the Go binary. The P30 inline diagram card additionally embeds read-only copies of `web/diagram-renderer.mjs` and `web/vendor/pele.mjs` into the Go binary (served over `byop-diagram://`); the embedded files are byte-identical to the plugin copies, the plugin directory itself is not modified, and the plugin remains optional.
 License: MIT; upstream Lucide ISC notice retained. Full license text: [plugins/mermaid-diagram/web/vendor/LICENSE](plugins/mermaid-diagram/web/vendor/LICENSE). Source and checksums: [vendor/README.md](plugins/mermaid-diagram/web/vendor/README.md).
+
+## Inter Font
+
+Source: <https://github.com/rsms/inter>
+Version: `v4.1` (`Inter-4.1.zip`, SHA-256 `9883fdd4…b11e`), files from `extras/ttf/`
+Usage: The BoardUI appearance preset (P31) embeds `Inter-Regular/Medium/SemiBold/Bold.ttf` from `assets/fonts/` into the Go binary and registers them as "BYOP Inter". The font files are not modified.
+Copyright: Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
+License: SIL Open Font License, Version 1.1; full text at `assets/fonts/OFL-Inter.txt` (also shipped to `Contents/Resources`).
+
+## Noto Sans SC Font
+
+Source: <https://github.com/notofonts/noto-cjk>
+Version: `Sans2.004` (`18_NotoSansSC.zip`, SHA-256 `4d107c09…292ec`)
+Usage: The BoardUI appearance preset (P31) embeds `NotoSansSC-Regular/Medium/Bold.otf` from `assets/fonts/` into the Go binary and registers them as "BYOP Noto Sans SC". The font files are not modified.
+Copyright: © 2014-2021 Adobe (http://www.adobe.com/)
+Trademark: Noto is a trademark of Google LLC.
+License: SIL Open Font License, Version 1.1; full text at `assets/fonts/OFL-NotoSansSC.txt` (also shipped to `Contents/Resources`).

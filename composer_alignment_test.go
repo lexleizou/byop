@@ -9,14 +9,16 @@ import (
 
 const composerAlignmentProbe = "帮我看看"
 
-// composerAlignmentRuns lists the two composer appearances the P29.1
-// alignment design must hold for.
+// composerAlignmentRuns lists the composer appearances the P29.1 alignment
+// design must hold for; P31 §11 adds the BoardUI preset with every assertion
+// unchanged.
 var composerAlignmentRuns = []struct {
 	name   string
 	preset appearancePreset
 }{
 	{name: "byop", preset: appearancePresetBYOP},
 	{name: "j-agent", preset: appearancePresetJAgent},
+	{name: "board-ui", preset: appearancePresetBoardUI},
 }
 
 func composerAlignmentPalette(t *testing.T, preset appearancePreset) palette {

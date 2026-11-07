@@ -1461,6 +1461,18 @@
   "@chatCopy": {
     "description": "Accessible label for copying a completed response."
   },
+  "chatCodeCopy": "Copy code",
+  "@chatCodeCopy": {
+    "description": "Tooltip and accessible label for the code block copy button."
+  },
+  "chatCodeCopied": "Copied",
+  "@chatCodeCopied": {
+    "description": "Confirmation label shown after a code block copy."
+  },
+  "chatCodeLanguageFallback": "Code",
+  "@chatCodeLanguageFallback": {
+    "description": "Fallback language name for a code block without one."
+  },
   "chatWorkingFor": "Working; {duration}",
   "@chatWorkingFor": {
     "description": "Summary of a running assistant turn.",
@@ -1663,6 +1675,10 @@
   "settingsAppearancePresetJAgent": "J Agent (dark)",
   "@settingsAppearancePresetJAgent": {
     "description": "The measured J Agent dark visual preset."
+  },
+  "settingsAppearancePresetBoardUI": "BoardUI",
+  "@settingsAppearancePresetBoardUI": {
+    "description": "The BoardUI visual preset with embedded Inter and Noto Sans SC fonts."
   },
   "settingsThemeTitle": "Theme",
   "@settingsThemeTitle": {

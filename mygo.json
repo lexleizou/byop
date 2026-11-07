@@ -1,10 +1,14 @@
 {
   "name": "BYOP",
   "identifier": "io.github.lexleizou.byop",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "icon": "assets/byop-logo-1024.png",
   "i18n": {
     "dir": "locales",
     "source": "en"
-  }
+  },
+  "resources": [
+    "assets/fonts/OFL-Inter.txt",
+    "assets/fonts/OFL-NotoSansSC.txt"
+  ]
 }

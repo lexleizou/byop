@@ -11,6 +11,10 @@ type appearancePreset string
 const (
 	appearancePresetBYOP   appearancePreset = "byop"
 	appearancePresetJAgent appearancePreset = "jagent"
+	// appearancePresetBoardUI is the P31 preset: BoardUI's public blue and
+	// neutral tokens, Inter with Noto Sans SC, opaque surfaces and a right-side
+	// user bubble. See docs/P31-design.md.
+	appearancePresetBoardUI appearancePreset = "boardui"
 )
 
 type visualMetrics struct {
@@ -38,13 +42,18 @@ type visualMetrics struct {
 	composerRadius        float32
 	composerMinHeight     float32
 	composerPadding       float32
-	transitionMS          int
+	// userBubbleRadius is the BoardUI right-side user bubble's radius; the
+	// other presets draw no bubble and leave it zero.
+	userBubbleRadius float32
+	transitionMS     int
 }
 
 func normalizeAppearancePreset(value string) appearancePreset {
 	switch appearancePreset(strings.ToLower(strings.TrimSpace(value))) {
 	case appearancePresetJAgent:
 		return appearancePresetJAgent
+	case appearancePresetBoardUI:
+		return appearancePresetBoardUI
 	default:
 		return appearancePresetBYOP
 	}
@@ -59,6 +68,10 @@ func (s *appState) currentAppearancePreset() appearancePreset {
 
 func (s *appState) jAgentPresetActive() bool {
 	return s.currentAppearancePreset() == appearancePresetJAgent
+}
+
+func (s *appState) boardUIPresetActive() bool {
+	return s.currentAppearancePreset() == appearancePresetBoardUI
 }
 
 func (s *appState) effectiveDark() bool {
@@ -76,7 +89,18 @@ func (s *appState) effectiveThemeSource() mygo.ThemeSource {
 }
 
 func metricsForAppearancePreset(preset appearancePreset) visualMetrics {
-	if normalizeAppearancePreset(string(preset)) == appearancePresetJAgent {
+	preset = normalizeAppearancePreset(string(preset))
+	if preset == appearancePresetBoardUI {
+		// P31 §3: BYOP's metrics with the four BoardUI values the BYOP render
+		// path reads (outer spacing, main radius, composer radius, bubble).
+		m := metricsForAppearancePreset(appearancePresetBYOP)
+		m.shellSpacing = 12
+		m.mainRadius = 24
+		m.composerRadius = 24
+		m.userBubbleRadius = 16
+		return m
+	}
+	if preset == appearancePresetJAgent {
 		return visualMetrics{
 			bodyFont:              15,
 			codeFont:              13,

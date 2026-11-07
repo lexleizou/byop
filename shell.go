@@ -79,7 +79,7 @@ func (s *appState) byopShell(c *ui.Context, p palette, dark, high, reduceTranspa
 	ui.Column(c).Fill().Background(p.background).Children(func() {
 		s.wallpaperLayer(c, p, dark, high, reduceTransparency)
 		ui.Row(c).Absolute().Top(0).Right(0).Bottom(0).Left(0).
-			Fill().Padding(shellGap).Gap(0).
+			Fill().Padding(p.shellSpacing).Gap(0).
 			AlignItems(ui.Stretch).Children(func() {
 			s.navigation(c, p)
 			s.main(c, p)
@@ -111,7 +111,15 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 		// their own presses first.
 		capsule := ui.Row(c).Height(36).Padding(0, 12).Radius(12).
 			AlignItems(ui.Center).DragWindow()
-		if high || reduceTransparency {
+		if p.preset == appearancePresetBoardUI {
+			// P31 §4: BoardUI keeps the capsule opaque with its raised surface.
+			capsuleShadow := ui.RGBA(0, 0, 0, .05)
+			if p.dark {
+				capsuleShadow = ui.RGBA(0, 0, 0, .18)
+			}
+			capsule.Border(runtimeTokens.Dimension.Border.Value, p.border).
+				Background(p.raisedSurface).Shadow(0, 1, 2, 0, capsuleShadow)
+		} else if high || reduceTransparency {
 			capsule.Border(runtimeTokens.Dimension.Border.Value, p.border).
 				Background(p.surface)
 		} else {
@@ -123,7 +131,15 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 		ui.Spacer(c).Grow(1).FillHeight().DragWindow()
 		right := ui.Row(c).Absolute().Top((height-36)/2).Right(12).
 			Height(36).Padding(0, 4).Radius(12)
-		if high || reduceTransparency {
+		if p.preset == appearancePresetBoardUI {
+			// P31 §4: the right button group uses the same opaque style.
+			rightShadow := ui.RGBA(0, 0, 0, .05)
+			if p.dark {
+				rightShadow = ui.RGBA(0, 0, 0, .18)
+			}
+			right.Border(runtimeTokens.Dimension.Border.Value, p.border).
+				Background(p.raisedSurface).Shadow(0, 1, 2, 0, rightShadow)
+		} else if high || reduceTransparency {
 			right.Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surfaceSubtle)
 		} else {
 			right.Material(productGlassWithTint(p.glassTint))
@@ -140,7 +156,7 @@ func (s *appState) titleBar(c *ui.Context, p palette) {
 }
 
 func glassChrome(card ui.Element, p palette, dark, high, reduceTransparency bool) ui.Element {
-	card.Radius(shellRadius)
+	card.Radius(p.mainRadius)
 	if high || reduceTransparency {
 		return card.Border(runtimeTokens.Dimension.Border.Value, p.border).Background(p.surface)
 	}
@@ -148,7 +164,7 @@ func glassChrome(card ui.Element, p palette, dark, high, reduceTransparency bool
 }
 
 func opaqueContent(card ui.Element, p palette) ui.Element {
-	return card.Border(runtimeTokens.Dimension.Border.Value, p.border).Radius(shellRadius).
+	return card.Border(runtimeTokens.Dimension.Border.Value, p.border).Radius(p.mainRadius).
 		Background(p.surface)
 }
 
@@ -207,19 +223,23 @@ func (s *appState) titleBarHeading(c *ui.Context, p palette) {
 	}
 	title := s.sessionDisplayTitle()
 	ui.Row(c).MaxWidth(maxWidth).MinWidth(0).Gap(8).AlignItems(ui.Center).Children(func() {
-		ui.Text(c, title).Shrink(1).MinWidth(0).FontSize(p.bodyFont).FontWeight(600).
+		// P31 §8: the title wins the space; the workspace path only shows its
+		// last component, with the full path in the tooltip.
+		ui.Text(c, title).Shrink(0).MaxWidth(maxWidth * 0.6).FontSize(p.bodyFont).FontWeight(600).
 			TextColor(titleColor).SingleLine().Tooltip(title)
-		path := ui.Row(c).Shrink(1).MinWidth(0).Gap(4).AlignItems(ui.Center)
-		path.Children(func() {
-			workspace := s.workspaceDisplayPath()
-			ui.Text(c, "· "+workspace).FontSize(p.captionFont).TextColor(p.muted).
-				Shrink(1).MinWidth(0).SingleLine().Tooltip(workspace)
-			if branch := strings.TrimSpace(s.hud.branch); branch != "" {
-				ui.Icon(c, icon("git-branch")).Size(12, 12).Shrink(0).TextColor(p.muted)
-				ui.Text(c, branch).FontSize(p.captionFont).TextColor(p.muted).
-					Shrink(1).MinWidth(0).SingleLine().Tooltip(branch)
-			}
-		})
+		workspace := s.workspaceDisplayPath()
+		if workspace != "" {
+			path := ui.Row(c).Shrink(1).MinWidth(0).Gap(4).AlignItems(ui.Center)
+			path.Children(func() {
+				ui.Text(c, "· "+filepath.Base(workspace)).FontSize(p.captionFont).TextColor(p.muted).
+					Shrink(1).MinWidth(0).SingleLine().Tooltip(workspace)
+				if branch := strings.TrimSpace(s.hud.branch); branch != "" {
+					ui.Icon(c, icon("git-branch")).Size(12, 12).Shrink(0).TextColor(p.muted)
+					ui.Text(c, branch).FontSize(p.captionFont).TextColor(p.muted).
+						Shrink(1).MinWidth(0).SingleLine().Tooltip(branch)
+				}
+			})
+		}
 		if s.piSessionID != "" || s.piSessionFile != "" {
 			s.sessionTitleMenu(c, p)
 		}
@@ -438,7 +458,7 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 	high := s.highContrastActive(currentAppearanceHighContrast())
 	reduceTransparency := currentAppearanceReduceTransparency()
 	navPalette := p
-	if deepLiquidGlassActive(dark, high, reduceTransparency) &&
+	if glassAllowed(p) && deepLiquidGlassActive(dark, high, reduceTransparency) &&
 		s.preferences.NavTransparency > 75 {
 		navPalette.muted = p.text
 	}
@@ -457,9 +477,9 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 		// Follow the pointer without easing while the handle is dragged.
 		duration = 0
 	}
-	animatedWidth := nav.AnimateWith("navigation-width", width+shellGap, duration, ui.EaseOut)
-	nav.Width(animatedWidth).FillHeight().Shrink(0).Padding(0, shellGap, 0, 0).Children(func() {
-		navGlassCard(c, p, dark, high, reduceTransparency, shellRadius,
+	animatedWidth := nav.AnimateWith("navigation-width", width+p.shellSpacing, duration, ui.EaseOut)
+	nav.Width(animatedWidth).FillHeight().Shrink(0).Padding(0, p.shellSpacing, 0, 0).Children(func() {
+		navGlassCard(c, p, dark, high, reduceTransparency, p.mainRadius,
 			s.preferences.NavTransparency, s.preferences.GlassBlur,
 			s.preferences.GlassRefraction, func() {
 				ui.Column(c).FillHeight().FillWidth().MinHeight(0).Children(func() {
@@ -505,7 +525,7 @@ func (s *appState) navigation(c *ui.Context, p palette) {
 // the stage, which the pointer drags to resize the expanded navigation.
 func (s *appState) navigationResizeHandle(c *ui.Context, p palette, windowWidth float32) {
 	handle := ui.Box(c).Key("navigation-resize").Absolute().Top(0).Bottom(0).
-		Right(0).Width(shellGap).Cursor(ui.CursorResizeEW).
+		Right(0).Width(p.shellSpacing).Cursor(ui.CursorResizeEW).
 		Label(text("navigationResize"))
 	// Dragged reports the pointer's move in this frame, so each frame steps
 	// the width from the one the previous frame shows.
@@ -573,7 +593,11 @@ func (s *appState) navigationBrandRow(c *ui.Context, p palette) {
 }
 
 func (s *appState) navigationFooter(c *ui.Context, p palette, dark, high, reduceTransparency bool) {
-	glass := deepLiquidGlassActive(dark, high, reduceTransparency)
+	// P31 §4: BoardUI builds no glass button and shows no glass divider. The
+	// button itself is a BYOP feature in every mode (0.23.0 always built it),
+	// so only the preset gates it; the divider still follows the glass.
+	glass := glassAllowed(p) && deepLiquidGlassActive(dark, high, reduceTransparency)
+	showGlassButton := glassAllowed(p)
 	collapsed := s.navigationVisuallyCollapsed(c)
 	ui.Column(c).FillWidth().Shrink(0).Children(func() {
 		if glass && !collapsed {
@@ -585,7 +609,9 @@ func (s *appState) navigationFooter(c *ui.Context, p palette, dark, high, reduce
 			Padding(collapsedPadding, collapsedPadding, collapsedPadding, collapsedPadding)
 		if collapsed {
 			footer.Gap(8).AlignItems(ui.Center).Children(func() {
-				s.navigationGlassButton(c, p)
+				if showGlassButton {
+					s.navigationGlassButton(c, p)
+				}
 				s.settingsGearButton(c, p)
 			})
 			return
@@ -594,7 +620,9 @@ func (s *appState) navigationFooter(c *ui.Context, p palette, dark, high, reduce
 		footer.Children(func() {
 			ui.Row(c).FillWidth().Gap(4).AlignItems(ui.Center).Children(func() {
 				s.integrationStatus(c, p)
-				s.navigationGlassButton(c, p)
+				if showGlassButton {
+					s.navigationGlassButton(c, p)
+				}
 				s.settingsGearButton(c, p)
 			})
 		})
@@ -1434,17 +1462,23 @@ func (s *appState) main(c *ui.Context, p palette) {
 	high := s.highContrastActive(currentAppearanceHighContrast())
 	reduceTransparency := currentAppearanceReduceTransparency()
 	stageBackground := mainStageBackground(p, dark)
-	card := ui.Column(c).Grow(1).MinWidth(0).MinHeight(0).FillHeight().
-		Radius(shellRadius).Border(runtimeTokens.Dimension.Border.Value, p.border).
-		Background(stageBackground)
-	if deepLiquidGlassActive(dark, high, reduceTransparency) {
-		card.Shadow(runtimeTokens.Shadow.Stage.OffsetX.Value,
-			runtimeTokens.Shadow.Stage.OffsetY.Value,
-			runtimeTokens.Shadow.Stage.Blur.Value,
-			runtimeTokens.Shadow.Stage.Spread.Value, p.shadowStage)
+	card := ui.Column(c).Grow(1).MinWidth(0).MinHeight(0).FillHeight()
+	if p.preset == appearancePresetBoardUI {
+		// P31 §5: the BoardUI chat card is an opaque reading surface with the
+		// preset's radius and no border or shadow.
+		card.Radius(p.mainRadius).Background(p.readingSurface)
+	} else {
+		card.Radius(p.mainRadius).Border(runtimeTokens.Dimension.Border.Value, p.border).
+			Background(stageBackground)
+		if glassAllowed(p) && deepLiquidGlassActive(dark, high, reduceTransparency) {
+			card.Shadow(runtimeTokens.Shadow.Stage.OffsetX.Value,
+				runtimeTokens.Shadow.Stage.OffsetY.Value,
+				runtimeTokens.Shadow.Stage.Blur.Value,
+				runtimeTokens.Shadow.Stage.Spread.Value, p.shadowStage)
+		}
 	}
 	card.Children(func() {
-		ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(shellRadius - .5).Clip().
+		ui.Column(c).FillHeight().FillWidth().MinHeight(0).Radius(p.mainRadius - .5).Clip().
 			Children(func() {
 				s.titleBar(c, p)
 				ui.Column(c).Grow(1).FillWidth().MinHeight(0).Children(func() {

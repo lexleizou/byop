@@ -5062,6 +5062,48 @@ func (msgs Messages) ChatCopy() string {
 	return Catalog.Format(msgs.locale, "chatCopy", nil)
 }
 
+// ChatCodeCopy says "Copy code"
+// in the language the app shows.
+//
+// Tooltip and accessible label for the code block copy button.
+func ChatCodeCopy() string { return In(i18n.Locale()).ChatCodeCopy() }
+
+// ChatCodeCopy says "Copy code"
+// in the language of msgs.
+//
+// Tooltip and accessible label for the code block copy button.
+func (msgs Messages) ChatCodeCopy() string {
+	return Catalog.Format(msgs.locale, "chatCodeCopy", nil)
+}
+
+// ChatCodeCopied says "Copied"
+// in the language the app shows.
+//
+// Confirmation label shown after a code block copy.
+func ChatCodeCopied() string { return In(i18n.Locale()).ChatCodeCopied() }
+
+// ChatCodeCopied says "Copied"
+// in the language of msgs.
+//
+// Confirmation label shown after a code block copy.
+func (msgs Messages) ChatCodeCopied() string {
+	return Catalog.Format(msgs.locale, "chatCodeCopied", nil)
+}
+
+// ChatCodeLanguageFallback says "Code"
+// in the language the app shows.
+//
+// Fallback language name for a code block without one.
+func ChatCodeLanguageFallback() string { return In(i18n.Locale()).ChatCodeLanguageFallback() }
+
+// ChatCodeLanguageFallback says "Code"
+// in the language of msgs.
+//
+// Fallback language name for a code block without one.
+func (msgs Messages) ChatCodeLanguageFallback() string {
+	return Catalog.Format(msgs.locale, "chatCodeLanguageFallback", nil)
+}
+
 // ChatWorkingFor says "Working; {duration}"
 // in the language the app shows.
 //
@@ -5646,6 +5688,22 @@ func SettingsAppearancePresetJAgent() string {
 // The measured J Agent dark visual preset.
 func (msgs Messages) SettingsAppearancePresetJAgent() string {
 	return Catalog.Format(msgs.locale, "settingsAppearancePresetJAgent", nil)
+}
+
+// SettingsAppearancePresetBoardUI says "BoardUI"
+// in the language the app shows.
+//
+// The BoardUI visual preset with embedded Inter and Noto Sans SC fonts.
+func SettingsAppearancePresetBoardUI() string {
+	return In(i18n.Locale()).SettingsAppearancePresetBoardUI()
+}
+
+// SettingsAppearancePresetBoardUI says "BoardUI"
+// in the language of msgs.
+//
+// The BoardUI visual preset with embedded Inter and Noto Sans SC fonts.
+func (msgs Messages) SettingsAppearancePresetBoardUI() string {
+	return Catalog.Format(msgs.locale, "settingsAppearancePresetBoardUI", nil)
 }
 
 // SettingsThemeTitle says "Theme"

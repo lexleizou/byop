@@ -78,6 +78,9 @@ func themePaletteForAppearance(
 	if preset == appearancePresetJAgent {
 		return jAgentThemePalette(high, reduceTransparency)
 	}
+	if preset == appearancePresetBoardUI {
+		return boardUIThemePalette(dark, high, reduceTransparency)
+	}
 	colors := runtimeTokens.Color.Light
 	if dark {
 		colors = runtimeTokens.Color.Dark
@@ -266,6 +269,14 @@ func nativeThemeForAppearance(
 	preset appearancePreset,
 	dark, high, reduceTransparency bool,
 ) (*ui.Theme, palette) {
+	if normalizeAppearancePreset(string(preset)) == appearancePresetBoardUI {
+		// P31 §1.2: every trip through the BoardUI theme registers the
+		// embedded fonts once and sets the family list; sync.Once makes the
+		// start-up and switch paths idempotent. A failure only logs, and the
+		// family then falls back to the system font. A theme resource's own
+		// family keeps its priority, as with the other presets.
+		ensureBoardUIFonts()
+	}
 	p := themePaletteForAppearance(preset, dark, high, reduceTransparency)
 	t := ui.LightTheme()
 	if p.dark {
@@ -296,6 +307,8 @@ func nativeThemeForAppearance(
 	// size: the metric fields above keep the 12/14/18 rule intact.
 	if bodyFont, _ := themeFontsForSelection(currentPluginThemeOverlay()); bodyFont != "" {
 		t.Font = bodyFont
+	} else if p.preset == appearancePresetBoardUI {
+		t.Font = boardUIFontFamily
 	}
 	return t, p
 }

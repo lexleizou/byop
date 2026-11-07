@@ -1410,6 +1410,18 @@
   "@chatCopy": {
     "description": "Accessible label for copying a completed response."
   },
+  "chatCodeCopy": "复制代码",
+  "@chatCodeCopy": {
+    "description": "Tooltip and accessible label for the code block copy button."
+  },
+  "chatCodeCopied": "已复制",
+  "@chatCodeCopied": {
+    "description": "Confirmation label shown after a code block copy."
+  },
+  "chatCodeLanguageFallback": "代码",
+  "@chatCodeLanguageFallback": {
+    "description": "Fallback language name for a code block without one."
+  },
   "chatWorkingFor": "正在工作；{duration}",
   "@chatWorkingFor": {
     "description": "Summary of a running assistant turn."
@@ -1578,6 +1590,10 @@
   "settingsAppearancePresetJAgent": "J Agent（深色）",
   "@settingsAppearancePresetJAgent": {
     "description": "The measured J Agent dark visual preset."
+  },
+  "settingsAppearancePresetBoardUI": "BoardUI",
+  "@settingsAppearancePresetBoardUI": {
+    "description": "The BoardUI visual preset with embedded Inter and Noto Sans SC fonts."
   },
   "settingsThemeTitle": "主题",
   "@settingsThemeTitle": {

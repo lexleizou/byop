@@ -30,9 +30,23 @@ func jAgentGlassSurface(
 	return element.Material(blurredTintMaterial{blur: blur, tint: tint})
 }
 
+func boardUIRaisedShadow(p palette) ui.Color {
+	if p.dark {
+		return ui.RGBA(0, 0, 0, .18)
+	}
+	return ui.RGBA(0, 0, 0, .05)
+}
+
 func styleRaisedSurface(element ui.Element, p palette, radius float32) ui.Element {
 	if p.preset == appearancePresetJAgent {
 		return jAgentGlassSurface(element, p, radius, 14, p.raisedSurface)
+	}
+	if p.preset == appearancePresetBoardUI {
+		// P31 §5: an opaque raised card with BoardUI's subtle shadow.
+		return element.Radius(radius).
+			Border(0.5, p.border).
+			Background(p.raisedSurface).
+			Shadow(0, 1, 2, 0, boardUIRaisedShadow(p))
 	}
 	return element.Radius(radius).
 		Border(runtimeTokens.Dimension.Border.Value, p.border).
@@ -42,6 +56,14 @@ func styleRaisedSurface(element ui.Element, p palette, radius float32) ui.Elemen
 func styleComposerSurface(element ui.Element, p palette, radius float32) ui.Element {
 	if p.preset == appearancePresetJAgent {
 		return jAgentGlassSurface(element, p, radius, 14, p.composerSurface)
+	}
+	if p.preset == appearancePresetBoardUI {
+		// P31 §5: the BoardUI composer is an opaque card with the preset
+		// radius the caller passes.
+		return element.Radius(radius).
+			Border(0.5, p.border).
+			Background(p.composerSurface).
+			Shadow(0, 1, 2, 0, boardUIRaisedShadow(p))
 	}
 	return element.Radius(radius).
 		Border(runtimeTokens.Dimension.Border.Value, p.border).
@@ -60,6 +82,19 @@ func stylePopoverOpaque(
 }
 
 func stylePopoverGlass(element ui.Element, p palette, radius float32) ui.Element {
+	if p.preset == appearancePresetBoardUI {
+		// P31 §5: BoardUI's popover is opaque, and its shadows are applied
+		// here so popoverShadow never stacks its own stage shadow on top.
+		first, second := ui.RGBA(0, 0, 0, .04), ui.RGBA(0, 0, 0, .02)
+		if p.dark {
+			first, second = ui.RGBA(0, 0, 0, .14), ui.RGBA(0, 0, 0, .10)
+		}
+		return element.Radius(radius).
+			Border(0.5, p.popoverBorder).
+			Background(p.popoverTint).
+			Shadow(0, 1, 1, 0, first).
+			Shadow(0, 4, 4, 0, second)
+	}
 	element = popoverShadow(element, p, radius)
 	if p.preset == appearancePresetJAgent {
 		return jAgentGlassSurface(element, p, radius, 16, p.popoverTint)

@@ -43,6 +43,10 @@ func wallpaperBitmap(name string) *ui.Bitmap {
 }
 
 func (s *appState) activeWallpaper() string {
+	if s.currentAppearancePreset() == appearancePresetBoardUI {
+		// P31 §4: BoardUI draws no wallpaper; "none" keeps every caller honest.
+		return "none"
+	}
 	if s.jAgentPresetActive() {
 		return normalizeJAgentWallpaper(s.preferences.JAgentWallpaper)
 	}
@@ -56,7 +60,8 @@ func (s *appState) wallpaperBackdrop(
 	c *ui.Context,
 	dark, high, reduceTransparency bool,
 ) bool {
-	if !deepLiquidGlassActive(dark, high, reduceTransparency) ||
+	if s.currentAppearancePreset() == appearancePresetBoardUI ||
+		!deepLiquidGlassActive(dark, high, reduceTransparency) ||
 		s.activeWallpaper() == "none" {
 		return false
 	}

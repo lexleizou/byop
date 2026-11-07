@@ -328,6 +328,10 @@ func (s *appState) persistGlassBlurSlider(previous int) {
 }
 
 func (s *appState) glassStatusText() string {
+	if s.boardUIPresetActive() {
+		// P31 §4: BoardUI shows no glass status; the settings page hides the row.
+		return ""
+	}
 	if s.jAgentPresetActive() {
 		return text("settingsGlassJAgentFixed")
 	}
@@ -407,7 +411,7 @@ func (s *appState) settingsGlassPreviewV12(c *ui.Context, p palette) {
 		}
 		ui.Row(c).Absolute().Top(0).Right(0).Bottom(0).Left(0).
 			Padding(8).Gap(8).Children(func() {
-			navGlassCard(c, p, dark, high, reduceTransparency, shellRadius,
+			navGlassCard(c, p, dark, high, reduceTransparency, p.mainRadius,
 				s.preferences.NavTransparency, s.preferences.GlassBlur,
 				s.preferences.GlassRefraction, func() {
 					ui.Column(c).FillWidth().FillHeight().Padding(10).Gap(6).Children(func() {

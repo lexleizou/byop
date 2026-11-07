@@ -7,9 +7,10 @@ import (
 )
 
 // P30 1.3: the contrast matrix. Every tone the process draws with is checked
-// against the background it really sits on, for each of the five palettes the
-// design names. A failure means the tone must be raised, never the threshold
-// lowered, so this test is what fixes the final values in p29_tones.go.
+// against the background it really sits on, for each of the palettes the
+// design names (P31 adds the BoardUI light and dark rows). A failure means
+// the tone must be raised, never the threshold lowered, so this test is what
+// fixes the final values in p29_tones.go.
 
 func p30ContrastPalettes() map[string]palette {
 	return map[string]palette{
@@ -25,6 +26,13 @@ func p30ContrastPalettes() map[string]palette {
 			appearancePresetBYOP, false, true, false),
 		"jagent-high-contrast": themePaletteForAppearance(
 			appearancePresetJAgent, true, true, false),
+		// P31 §2: the BoardUI preset draws its process on the opaque chat
+		// card, so the same tones must clear against its effective surface
+		// in light and dark too.
+		"boardui-light": themePaletteForAppearance(
+			appearancePresetBoardUI, false, false, false),
+		"boardui-dark": themePaletteForAppearance(
+			appearancePresetBoardUI, true, false, false),
 	}
 }
 
@@ -120,6 +128,16 @@ func TestP30EffectiveBackgroundPerPreset(t *testing.T) {
 	high := themePaletteForAppearance(appearancePresetJAgent, true, true, false)
 	if got := p29EffectiveBackground(high); !sameRGB(got, high.surface) {
 		t.Fatalf("jagent high-contrast background = %#v, want the surface %#v", got, high.surface)
+	}
+	// P31 §2: BoardUI has no glass card and no wallpaper; the process sits
+	// on the opaque chat card, whose fill is the palette surface.
+	for _, boardui := range []palette{
+		themePaletteForAppearance(appearancePresetBoardUI, false, false, false),
+		themePaletteForAppearance(appearancePresetBoardUI, true, false, false),
+	} {
+		if got := p29EffectiveBackground(boardui); !sameRGB(got, boardui.surface) {
+			t.Fatalf("boardui background = %#v, want the surface %#v", got, boardui.surface)
+		}
 	}
 }
 

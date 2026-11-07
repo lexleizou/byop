@@ -169,11 +169,13 @@ func p29AccessibleInk(p palette, color ui.Color, threshold float64) ui.Color {
 //     onto pure white.
 //   - With high contrast or reduced transparency the card falls back to the
 //     opaque surface, so that surface is the background.
+//   - P31 §2: BoardUI never draws a glass card or a wallpaper; the process
+//     sits on the opaque chat card, whose fill is the palette surface.
 func p29EffectiveBackground(p palette) ui.Color {
 	if p.preset == appearancePresetJAgent && !p.highContrast && !p.reduceTransparency {
 		return compositeOver(p29TurnCardTint, ui.Color{R: 255, G: 255, B: 255, A: 255})
 	}
-	if p.preset == appearancePresetJAgent {
+	if p.preset == appearancePresetJAgent || p.preset == appearancePresetBoardUI {
 		return p.surface
 	}
 	return p.background

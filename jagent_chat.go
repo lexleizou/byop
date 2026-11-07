@@ -410,7 +410,7 @@ func (s *appState) jAgentPromptPill(c *ui.Context, p palette, index int, prompt 
 		if len(prompt.attachments) > 0 {
 			ui.Row(c).FillWidth().Justify(ui.End).MinWidth(0).Children(func() {
 				s.chatAttachmentChipRow(c, prompt.attachments,
-					fmt.Sprintf("j-agent-turn-%d-attachments", index))
+					fmt.Sprintf("j-agent-turn-%d-attachments", index), ui.Start)
 			})
 		}
 		ui.Row(c).FillWidth().Justify(ui.End).Children(func() {

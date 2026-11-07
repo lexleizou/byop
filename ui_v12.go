@@ -476,7 +476,11 @@ func opaqueComposerV12(c *ui.Context, p palette, draft *string,
 	result.Root = ui.Column(c).FillWidth().MinWidth(0).Shrink(0).Children(func() {
 		card := ui.Column(c).FillWidth().MinWidth(0).MinHeight(96).
 			Padding(12, 12, 10, 12).Gap(8)
-		card = styleComposerSurface(card, p, v12InputRadius)
+		// P31 §3: the card corner follows the preset's composer radius — the
+		// BYOP metric keeps the old 8 (= v12InputRadius), BoardUI raises it
+		// to 24. This composer is only built for those two presets; J Agent
+		// draws its own card in jagent_chat.go.
+		card = styleComposerSurface(card, p, p.composerRadius)
 		card.Children(func() {
 			if options.Attachments != nil {
 				ui.Row(c).Key("attachments").FillWidth().Wrap().Gap(8).

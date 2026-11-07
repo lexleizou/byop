@@ -450,10 +450,12 @@ func (s *appState) settingsAppearanceV12(c *ui.Context, p palette) {
 			if s.jAgentPresetActive() {
 				wallpaperDescription = text("settingsWallpaperJAgentDescription")
 			}
-			settingsRowV12(c, p,
-				text("settingsWallpaperTitle"), wallpaperDescription,
-				func() { s.settingsWallpaperChoicesV12(c, p) })
-			if !s.jAgentPresetActive() {
+			if !s.boardUIPresetActive() {
+				settingsRowV12(c, p,
+					text("settingsWallpaperTitle"), wallpaperDescription,
+					func() { s.settingsWallpaperChoicesV12(c, p) })
+			}
+			if !s.boardUIPresetActive() && !s.jAgentPresetActive() {
 				settingsRowV12(c, p,
 					text("settingsNavTransparencyTitle"), text("settingsNavTransparencyDescription"),
 					func() { s.navTransparencyInlineV12(c, p) })
@@ -467,13 +469,15 @@ func (s *appState) settingsAppearanceV12(c *ui.Context, p palette) {
 			settingsRowV12(c, p,
 				text("settingsReduceTransparencyTitle"), text("settingsReduceTransparencyDescription"),
 				func() { s.reduceTransparencyInlineV12(c, p) })
-			if status := s.glassStatusText(); status != "" {
-				ui.Text(c, status).FontSize(fontCaption).LineHeight(1.4).
-					TextColor(p.muted).Padding(8, 0, 8, 0)
+			if !s.boardUIPresetActive() {
+				if status := s.glassStatusText(); status != "" {
+					ui.Text(c, status).FontSize(fontCaption).LineHeight(1.4).
+						TextColor(p.muted).Padding(8, 0, 8, 0)
+				}
+				ui.Column(c).FillWidth().Padding(16, 0, 0, 0).Children(func() {
+					s.settingsGlassPreviewV12(c, p)
+				})
 			}
-			ui.Column(c).FillWidth().Padding(16, 0, 0, 0).Children(func() {
-				s.settingsGlassPreviewV12(c, p)
-			})
 		})
 	}
 	if p.dark {
@@ -558,6 +562,7 @@ func (s *appState) settingsAppearancePresetSegmentV12(c *ui.Context, p palette) 
 		}{
 			{appearancePresetBYOP, "appearance-preset-byop", text("settingsAppearancePresetBYOP")},
 			{appearancePresetJAgent, "appearance-preset-jagent", text("settingsAppearancePresetJAgent")},
+			{appearancePresetBoardUI, "appearance-preset-boardui", text("settingsAppearancePresetBoardUI")},
 		} {
 			selected := s.currentAppearancePreset() == choice.preset
 			s.settingsChoiceSegmentButtonV12(c, p, choice.key, choice.label, selected, func() {
@@ -839,6 +844,7 @@ func settingsCategorySearchTermsWithText(
 		terms = append(terms, localize("settingsAppearanceTitle"),
 			localize("settingsAppearancePresetTitle"),
 			localize("settingsAppearancePresetBYOP"),
+			localize("settingsAppearancePresetBoardUI"),
 			localize("settingsAppearancePresetJAgent"),
 			localize("settingsGlassTitle"), localize("settingsWallpaperTitle"),
 			localize("settingsNavTransparencyTitle"),

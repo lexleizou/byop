@@ -547,11 +547,14 @@ func composerAttachmentRemoveKey(attachment composerAttachment) string {
 // frame theme so each appearance keeps its own tokens. A plugin that declared a
 // matching mimeType replaces the chip once its render is ready (see
 // pluginAttachmentChip); until then the plain chip stays, so a slow or failing
-// renderer never removes the file from view.
+// renderer never removes the file from view. justify places the chips across
+// the row (P31 §6: the BoardUI bubble end-aligns them; every other caller
+// passes ui.Start, the previous behaviour).
 func (s *appState) chatAttachmentChipRow(
 	c *ui.Context,
 	metas []chatAttachmentMeta,
 	keyPrefix string,
+	justify ui.Align,
 ) {
 	if len(metas) == 0 {
 		return
@@ -564,7 +567,8 @@ func (s *appState) chatAttachmentChipRow(
 		currentAppearanceReduceTransparency(),
 	)
 	ui.Row(c).Key(keyPrefix).Label(text("chatFileReferencePrefix")).
-		FillWidth().MinWidth(0).Wrap().Gap(6).Padding(0, 0, 4, 0).
+		FillWidth().MinWidth(0).Wrap().Justify(justify).Gap(6).
+		Padding(0, 0, 4, 0).
 		AlignItems(ui.Center).Children(func() {
 		for index, meta := range metas {
 			kindLabel := text("chatAttachmentFileLabel")

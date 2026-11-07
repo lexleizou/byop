@@ -53,7 +53,7 @@ func TestP25MimeChipKeysArePerFilePath(t *testing.T) {
 		t.Fatalf("fixture metas = %#v", metas)
 	}
 	first := ui.NewTester(func(c *ui.Context) {
-		state.chatAttachmentChipRow(c, metas[:1], "msg-a-attachments")
+		state.chatAttachmentChipRow(c, metas[:1], "msg-a-attachments", ui.Start)
 	}, 800, 200)
 	first.Frame()
 	if len(state.pluginRendererResults) != 1 {
@@ -66,7 +66,7 @@ func TestP25MimeChipKeysArePerFilePath(t *testing.T) {
 		state.cancelPluginRender(key)
 	}
 	second := ui.NewTester(func(c *ui.Context) {
-		state.chatAttachmentChipRow(c, metas[1:], "msg-b-attachments")
+		state.chatAttachmentChipRow(c, metas[1:], "msg-b-attachments", ui.Start)
 	}, 800, 200)
 	second.Frame()
 	if strings.Contains(strings.Join(second.Texts(), " | "), "RENDER-OF-PROJ-A") {
@@ -83,7 +83,7 @@ func TestP25MimeChipWithoutPathStaysPlain(t *testing.T) {
 	state := interactiveRendererState(t, interactiveMimeManifest())
 	metas := []chatAttachmentMeta{{Name: "report.pdf", Kind: attachmentFile, MimeType: "application/pdf"}}
 	frame := ui.NewTester(func(c *ui.Context) {
-		state.chatAttachmentChipRow(c, metas, "msg-nopath-attachments")
+		state.chatAttachmentChipRow(c, metas, "msg-nopath-attachments", ui.Start)
 	}, 800, 200)
 	frame.Frame()
 	if len(state.pluginRendererResults) != 0 {

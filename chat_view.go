@@ -5,6 +5,7 @@ import (
 	"math"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -82,6 +83,13 @@ type chatPresentation struct {
 	// keeps its rendered diagrams across a light/dark or preset switch.
 	diagramTheme      inlineDiagramTheme
 	diagramThemeKnown bool
+
+	// codeCopied remembers which code blocks show their copy button as
+	// checked (P31 §7). The key is language|index (see codeCopyKey); keys
+	// older than p31CodeCopyFeedback are dropped once per frame. Blocks
+	// sharing a language and index — the common case being one block's own
+	// streaming frames — share the feedback, the design's known-limit family.
+	codeCopied map[string]time.Time
 }
 
 type activityPresentation struct {
@@ -282,18 +290,32 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	s.dropStaleInlineDiagrams(s.chatView.previewFrame)
 	s.dropStaleDiagramCardStates()
 	s.dropStaleChatFilePreviews()
+	s.chatView.dropStaleCodeCopied(c.Now())
 	codeColors := editor.DefaultTheme(c.Theme())
 	codeColors.Background = p.raisedSurface
 	codeColors.Text = p.text
 	for i := range codeColors.Tokens {
 		codeColors.Tokens[i] = editor.TokenStyle{Color: p.text}
 	}
-	codeColors.Tokens[editor.TokenKeyword] = editor.TokenStyle{Color: p.accentPressed}
-	codeColors.Tokens[editor.TokenType] = editor.TokenStyle{Color: p.accentPressed}
+	// P31 §2: on the BoardUI palette the accent is a saturated blue that no
+	// longer reads as text on the code card, so keyword and type ink move to
+	// the palette's own accent text token. The other presets keep the old ink.
+	keywordColor := p.accentPressed
+	if p.preset == appearancePresetBoardUI {
+		keywordColor = p.accentText
+	}
+	codeColors.Tokens[editor.TokenKeyword] = editor.TokenStyle{Color: keywordColor}
+	codeColors.Tokens[editor.TokenType] = editor.TokenStyle{Color: keywordColor}
 	codeColors.Tokens[editor.TokenFunction] = editor.TokenStyle{Color: p.accentText}
 	codeColors.Tokens[editor.TokenString] = editor.TokenStyle{Color: p.successText}
 	codeColors.Tokens[editor.TokenComment] = editor.TokenStyle{Color: p.muted}
 	theme.CodeColors = codeColors
+	// P31 §2: links read as text, so on BoardUI they take the accent-text
+	// blue too (MyGo's default binds Link to the accent, which is darker
+	// than the contrast floor on the deep card surfaces).
+	if p.preset == appearancePresetBoardUI {
+		theme.Link = p.accentText
+	}
 	tones := p29TonesFor(p)
 	s.chatView.markdown.Theme = theme
 	s.chatView.markdown.Block = func(c *ui.Context, doc *parser.Document, index int) bool {
@@ -315,12 +337,19 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	s.chatView.markdown.CodeBlock = func(c *ui.Context, block *markdown.CodeBlockView) {
 		render := func() {
 			s.pluginCodeBlock(c, p, block, func() {
+				// P31 §7: the card grows a header line (language plus a
+				// copy button); only the corner differs per preset.
+				radius := float32(8)
+				if p.preset == appearancePresetBoardUI {
+					radius = 16
+				}
 				card := ui.Column(c).FillWidth().MinWidth(0)
-				card = styleRaisedSurface(card, p, 8).Clip()
+				card = styleRaisedSurface(card, p, radius).Clip()
 				card.Children(func() {
-					// Body contributes 3.5px above its first line; this brings the
-					// visual top inset to the prototype's 12px.
-					ui.Row(c).FillWidth().Padding(8, 4, 0, 4).Children(func() {
+					s.codeBlockHeader(c, p, block)
+					// The header already provides the top inset, so the
+					// body keeps only the small visual breathing room.
+					ui.Row(c).FillWidth().Padding(4, 4, 0, 4).Children(func() {
 						block.Body(c)
 					})
 				})
@@ -350,6 +379,90 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	s.chatView.p29Markdown.Theme = &processTheme
 	s.chatView.p29Markdown.Block = s.chatView.markdown.Block
 	s.chatView.p29Markdown.CodeBlock = s.chatView.markdown.CodeBlock
+}
+
+// p31CodeCopyFeedback is how long a code block's copy button stays checked
+// after a click (§7); the same duration drives the c.After repaint and the
+// per-frame cleanup of the codeCopied keys.
+const p31CodeCopyFeedback = 1200 * time.Millisecond
+
+// codeCopyKey identifies one block's copy feedback and names its copy
+// button. The CodeBlock hook is a closure shared by every message and cannot
+// see the message key, so the coordinates are the fence's language and the
+// block's index in its document. They must not include the code text: an
+// open block changes code with every streamed token, and a hashed key
+// re-made the button mid-press, so a click could never land (review N1).
+// Each button sits alone under its own header row, so these coordinates are
+// unique where it matters; same-language same-index blocks in different
+// messages share the feedback — the design's known-limit family.
+func codeCopyKey(block *markdown.CodeBlockView) string {
+	return block.Language + "|" + strconv.Itoa(block.Index)
+}
+
+// dropStaleCodeCopied forgets checked states past their window. It runs once
+// per configured frame, so no stale key survives a render.
+func (p *chatPresentation) dropStaleCodeCopied(now time.Time) {
+	for key, at := range p.codeCopied {
+		if now.Sub(at) >= p31CodeCopyFeedback {
+			delete(p.codeCopied, key)
+		}
+	}
+}
+
+// codeBlockHeader is the P31 §7 line above a plain code block: the fence's
+// language (or the localised fallback) on the left, and a repository-owned
+// copy button on the right. MyGo's CodeBlockView.CopyButton is deliberately
+// not used: it disables while a block is still open, labels itself from
+// MyGo's language pack and keeps its state private, while the design wants a
+// streaming block copyable, BYOP's own wording, and a 1200 ms checked state.
+func (s *appState) codeBlockHeader(c *ui.Context, p palette, block *markdown.CodeBlockView) {
+	language := block.Language
+	if language == "" {
+		language = text("chatCodeLanguageFallback")
+	}
+	now := c.Now()
+	key := codeCopyKey(block)
+	copiedAt, checked := s.chatView.codeCopied[key]
+	copied := checked && now.Sub(copiedAt) < p31CodeCopyFeedback
+	label := text("chatCodeCopy")
+	if copied {
+		label = text("chatCodeCopied")
+	}
+	ui.Row(c).FillWidth().MinWidth(0).Height(32).Padding(0, 6, 0, 10).
+		AlignItems(ui.Center).Gap(6).Children(func() {
+		components.Text(c, language).Font("monospace").FontSize(fontCaption).
+			TextColor(p.muted).Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
+		button := ui.ButtonBase(c.Key(codeCopyKey(block))).Label(label).
+			Size(24, 24).Shrink(0).
+			Radius(6).Center().Background(ui.Color{}).Cursor(ui.CursorPointer)
+		if button.Hovered() || button.Focused() {
+			button.Background(p.surfaceHover)
+		}
+		button.Children(func() {
+			if copied {
+				components.Icon(c, lu.Check).Size(14, 14).TextColor(p.text)
+			} else {
+				components.Icon(c, lu.Copy).Size(14, 14).TextColor(p.muted)
+			}
+		})
+		components.Tooltip(c, button, label)
+		if button.Clicked() {
+			c.WriteClipboard(block.Code())
+			if s.chatView.codeCopied == nil {
+				s.chatView.codeCopied = map[string]time.Time{}
+			}
+			s.chatView.codeCopied[key] = now
+			c.After(p31CodeCopyFeedback)
+		} else if copied {
+			// The restore timer re-arms on every frame that shows the check,
+			// the way the P29 status throttle re-arms its wait: After holds a
+			// single slot, and a rebuild — a streamed token lands on an open
+			// block while the check is up — can replace it and strand the
+			// check past its window (review N1).
+			c.After(p31CodeCopyFeedback - now.Sub(copiedAt))
+		}
+	})
+	ui.Box(c).FillWidth().Height(v12BorderWidth).Background(p.border)
 }
 
 func (s *appState) piConnectionAlert(c *ui.Context, p palette) {
@@ -511,7 +624,7 @@ func (s *appState) turnView(c *ui.Context, index int, prompt, message *chatMessa
 		metas := prompt.attachments
 		options.Prompt = func(c *ui.Context) {
 			ui.Column(c).FillWidth().MinWidth(0).Gap(6).Children(func() {
-				s.chatAttachmentChipRow(c, metas, options.ID+"-attachments")
+				s.chatAttachmentChipRow(c, metas, options.ID+"-attachments", ui.Start)
 				components.Text(c, text).Selectable()
 			})
 		}
@@ -1566,7 +1679,7 @@ func (s *appState) composerThinkingControl(c *ui.Context, readOnly bool, levels 
 		s.highContrastActive(currentAppearanceHighContrast()) || currentAppearanceReduceTransparency(),
 		300, func(panel ui.Element) {
 			panel.Label(accessibleLabel).Padding(10, 12, 12, 12).Gap(8).Children(func() {
-				s.thinkingEffortSlider(c, t, levels, label)
+				s.thinkingEffortSlider(c, t, p, levels, label)
 			})
 		})
 	if wasOpen && !s.chatView.effortPicker.Open {
@@ -1581,8 +1694,18 @@ func effortSliderFillColor(t *ui.Theme, preset appearancePreset) ui.Color {
 	return t.Accent
 }
 
-func (s *appState) thinkingEffortSlider(c *ui.Context, t *ui.Theme, levels []chat.Option,
-	currentLabel string,
+// thinkingLevelInk colours the popover's current-level word (P31 §2): the
+// BoardUI palette reads it in its accent text, the other presets keep the
+// theme accent they always used.
+func thinkingLevelInk(t *ui.Theme, p palette) ui.Color {
+	if p.preset == appearancePresetBoardUI {
+		return p.accentText
+	}
+	return t.Accent
+}
+
+func (s *appState) thinkingEffortSlider(c *ui.Context, t *ui.Theme, p palette,
+	levels []chat.Option, currentLabel string,
 ) {
 	selected := s.piThinkingLevel
 	if s.chatView.thinkingPending != "" {
@@ -1598,8 +1721,10 @@ func (s *appState) thinkingEffortSlider(c *ui.Context, t *ui.Theme, levels []cha
 	ui.Row(c).FillWidth().MinWidth(0).AlignItems(ui.Center).Gap(8).Children(func() {
 		components.Text(c, text("thinkingStrengthTitle")).Grow(1).MinWidth(0).
 			SingleLine().Ellipsis("…").FontSize(fontBody).FontWeight(500).TextColor(t.Text)
+		// P31 §2: on the BoardUI palette the accent is not a text colour; the
+		// current level reads in the palette's accent-text blue instead.
 		components.Text(c, currentLabel).Shrink(0).SingleLine().FontSize(fontBody).
-			FontWeight(600).TextColor(t.Accent)
+			FontWeight(600).TextColor(thinkingLevelInk(t, p))
 	})
 
 	value := float64(selectedIndex)

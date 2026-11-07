@@ -194,7 +194,13 @@ func (s *appState) p29Transcript(c *ui.Context) {
 
 // p29UserTurn is the commercial user row: the neutral 35px avatar, the
 // localized You, the message time, and the text indented under the header.
+// P31 §6: the BoardUI preset draws no header at all and hands the message
+// to p29UserBubble instead.
 func (s *appState) p29UserTurn(c *ui.Context, p palette, tones p29Tones, turnKey string, prompt *chatMessage) {
+	if p.preset == appearancePresetBoardUI {
+		s.p29UserBubble(c, p, turnKey, prompt)
+		return
+	}
 	you := text("p29UserLabel")
 	ui.Column(c).Key(turnKey + "/user").FillWidth().MinWidth(0).Shrink(0).
 		Gap(10).Children(func() {
@@ -218,11 +224,44 @@ func (s *appState) p29UserTurn(c *ui.Context, p palette, tones p29Tones, turnKey
 		})
 		ui.Column(c).FillWidth().MinWidth(0).Padding(0, 0, 0, p29BodyIndent).Gap(6).
 			Children(func() {
-				s.chatAttachmentChipRow(c, prompt.attachments, turnKey+"-attachments")
+				s.chatAttachmentChipRow(c, prompt.attachments, turnKey+"-attachments", ui.Start)
 				components.Text(c, messageText(prompt)).
 					FontSize(p29FontBody).LineHeight(p29LineHeight).
 					TextColor(p.text).Selectable()
 			})
+	})
+}
+
+// p29UserBubble is the BoardUI user message (P31 §6): no avatar, no header
+// row. The outer column keeps the accessible "You" name, and the message
+// rides on the right of that column as a raised bubble. The bubble takes no
+// minimum width, so a short message shrinks to its text; attachments that
+// travelled with the message line up above it, end-aligned. The body reads
+// at the assistant's 15px/1.72 — the P29 conversation-area exception.
+func (s *appState) p29UserBubble(c *ui.Context, p palette, turnKey string, prompt *chatMessage) {
+	windowWidth, _ := c.Size()
+	// The column the bubble rides in: the transcript's content column, which
+	// is the chat content width or the main area minus its horizontal
+	// padding, whichever is smaller (§6).
+	colW := min(p.chatContentWidth, s.chatMainWidth(windowWidth)-2*p.chatHorizontalPadding)
+	bubbleMax := max(min(colW*0.8, 560), 240)
+	shadow := ui.RGBA(0, 0, 0, .05)
+	if p.dark {
+		shadow = ui.RGBA(0, 0, 0, .14)
+	}
+	ui.Column(c).Key(turnKey + "/user").Label(text("p29UserLabel")).
+		FillWidth().MinWidth(0).Shrink(0).Gap(10).Children(func() {
+		// The row end-aligns its own chips (§6); an outer Justify cannot,
+		// because the chip row fills the column width.
+		s.chatAttachmentChipRow(c, prompt.attachments, turnKey+"-attachments", ui.End)
+		bubble := ui.Column(c).AlignSelf(ui.End).MaxWidth(bubbleMax).
+			Padding(11, 12).Radius(p.userBubbleRadius).
+			Background(p.raisedSurface).Shadow(0, 1, 1, 0, shadow).Clip()
+		bubble.Children(func() {
+			components.Text(c, messageText(prompt)).
+				FontSize(p29FontBody).LineHeight(p29LineHeight).
+				TextColor(p.text).Selectable()
+		})
 	})
 }
 

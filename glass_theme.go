@@ -26,8 +26,31 @@ func navGlassCard(
 	refraction bool,
 	content func(),
 ) ui.Element {
+	if p.preset == appearancePresetBoardUI {
+		// P31 §5: the BoardUI sidebar card is opaque and skips glassChrome;
+		// the sidebar card shadows come from BoardUI's public token rows.
+		card := ui.Column(c).FillHeight().FillWidth().MinWidth(0).Radius(p.mainRadius).
+			Border(0.5, p.border).Background(p.surface)
+		if p.dark {
+			card.BorderColor(ui.Hex("#27272a"))
+		} else {
+			card.BorderColor(ui.Hex("#ffffff"))
+		}
+		sh1 := ui.RGBA(0, 0, 0, .02)
+		sh2 := ui.RGBA(0, 0, 0, .06)
+		sh3 := ui.RGBA(0, 0, 0, .32)
+		if p.dark {
+			sh1, sh2, sh3 = ui.RGBA(0, 0, 0, .10), ui.RGBA(0, 0, 0, .16), ui.RGBA(0, 0, 0, .42)
+		}
+		card.Shadow(0, 1, 0, 0, sh1).Shadow(0, 1, 12, 0, sh2).Shadow(0, 0, 1, 0, sh3)
+		card.Children(func() {
+			ui.Column(c).FillHeight().FillWidth().MinHeight(0).
+				Radius(p.mainRadius - 0.5).Clip().Children(content)
+		})
+		return card
+	}
 	card := ui.Column(c).FillHeight().FillWidth().MinWidth(0).Radius(radius)
-	if deepLiquidGlassActive(dark, high, reduceTransparency) {
+	if glassAllowed(p) && deepLiquidGlassActive(dark, high, reduceTransparency) {
 		if blur > 0 {
 			card.Material(glass.Blur{Radius: float32(blur)})
 		}
