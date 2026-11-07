@@ -1,0 +1,59 @@
+/* The inline diagram card page (P30). The body is an opaque themed surface,
+   the scroll container pans, and the stage carries the sanitized inline SVG
+   scaled from the host's setScale calls. Text inside the SVG stays
+   selectable. */
+
+:root {
+  --pele-bg: #ffffff;
+  --pele-fg: #000000;
+  --pele-line: #000000;
+  --pele-muted: #555555;
+  --pele-surface: #f6f6f5;
+  --pele-surface-alt: #eeeeee;
+  --pele-border: #d0d0d0;
+  --pele-accent: #205ea6;
+  --pele-danger: #ce2c31;
+  --pele-font-size: 15px;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--pele-bg);
+  color: var(--pele-fg);
+  font-size: var(--pele-font-size);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.scroll {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  cursor: default;
+}
+
+.scroll.draggable {
+  cursor: grab;
+}
+
+.scroll.dragging {
+  cursor: grabbing;
+}
+
+.stage {
+  box-sizing: border-box;
+  margin: 0;
+  transform-origin: 0 0;
+  line-height: 0;
+}
+
+.stage svg {
+  max-width: none;
+}
+
+.stage a {
+  cursor: pointer;
+}

@@ -805,3 +805,67 @@ func TestP29ManualFoldAnimatesWrapperHeight(t *testing.T) {
 		t.Fatal("capsule must survive the fold animation")
 	}
 }
+
+// TestP30JAgentTurnCardsAndByopHasNone checks P30 1.1 as geometry. The J Agent
+// preset wraps each side of a turn in the dark glass card, so the turn's
+// content sits inside 12×16 of card padding on a 0.5 edge; the BYOP preset
+// keeps the commercial card-less layout, so the same content fills the column.
+// The turn is rendered twice in one tester and only the preset changes, so the
+// measured difference is the card and nothing else.
+func TestP30JAgentTurnCardsAndByopHasNone(t *testing.T) {
+	restore := stableTestAppearance(t)
+	defer restore()
+	state := layoutTestState(t)
+	state.chat = []chatMessage{
+		{role: chatUser, status: "Complete"},
+		{role: chatAssistant, status: "Complete",
+			blocks: []chatBlock{p29TextBlock("Answer.", p29PhaseFinalAnswer)}},
+	}
+	tt := ui.NewTester(state.view, 1180, 1400)
+
+	// Without a card each header fills the content column, and the two sides
+	// of the turn are separated by the turn's own gaps alone.
+	byop := themePaletteForAppearance(appearancePresetBYOP, false, false, false)
+	user, answer := p30TurnHeaders(t, tt)
+	if absFloat32(user.W-byop.chatContentWidth) > 1 ||
+		absFloat32(answer.W-byop.chatContentWidth) > 1 {
+		t.Fatalf("byop headers are %.1f/%.1f DIP wide, want the whole %.0f DIP column: no card may inset them",
+			user.W, answer.W, byop.chatContentWidth)
+	}
+	byopGap := answer.Y - (user.Y + user.H)
+
+	// With the cards, each header loses one padding and one edge on both
+	// sides, and the two cards put their own bottom and top padding between
+	// the headers.
+	state.preferences.AppearancePreset = string(appearancePresetJAgent)
+	p30Settle(tt)
+	jagent := themePaletteForAppearance(appearancePresetJAgent, true, false, false)
+	user, answer = p30TurnHeaders(t, tt)
+	wantWidth := jagent.chatContentWidth - 2*p29TurnCardPaddingX - 1 // two 0.5 edges
+	if absFloat32(user.W-wantWidth) > 1 || absFloat32(answer.W-wantWidth) > 1 {
+		t.Fatalf("jagent headers are %.1f/%.1f DIP wide, want %.0f: each card insets its content by %.0f on both sides",
+			user.W, answer.W, wantWidth, p29TurnCardPaddingX)
+	}
+	jagentGap := answer.Y - (user.Y + user.H)
+	wantExtra := 2 * (p29TurnCardPaddingY + 0.5) // the two cards' facing padding and edges
+	if diff := absFloat32((jagentGap - byopGap) - wantExtra); diff > 1 {
+		t.Fatalf("the cards added %.1f DIP between the turn's two headers, want %.1f",
+			jagentGap-byopGap, wantExtra)
+	}
+}
+
+// p30TurnHeaders returns the two header rows of one turn: the user row,
+// labelled with the localized "You", and the assistant row, labelled with the
+// HUD text that carries the model name — "GPT-5" is the fixture model.
+func p30TurnHeaders(t *testing.T, tt *ui.Tester) (ui.Rect, ui.Rect) {
+	t.Helper()
+	user, ok := tt.Find(text("p29UserLabel"))
+	if !ok {
+		t.Fatalf("user header missing: %#v", tt.Texts())
+	}
+	answer, ok := tt.Find("GPT-5")
+	if !ok {
+		t.Fatalf("assistant header missing: %#v", tt.Texts())
+	}
+	return user, answer
+}

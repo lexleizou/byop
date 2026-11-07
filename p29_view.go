@@ -62,6 +62,9 @@ type p29TurnState struct {
 	nodeProbeMoving    bool
 	detailProbeH       float32
 	detailProbeMoving  bool
+	// railCuts is filled during the build with the previous-frame rect of each
+	// marker, and the rail's paint reads it to stop the thread there.
+	railCuts []ui.Rect
 }
 
 func (p *chatPresentation) p29Turn(key string) *p29TurnState {
@@ -109,6 +112,33 @@ func (st *p29TurnState) thinkingOpen(key string) bool { return st.thinkOpen[key]
 
 func (st *p29TurnState) setThinkingOpen(key string, open bool) { st.thinkOpen[key] = open }
 
+// p29TurnCardTint and the turn card geometry are P30 1.1: the J Agent preset
+// carries each turn on a dark glass card again, so the text never sits on the
+// wallpaper itself. The BYOP preset keeps the commercial card-less layout.
+var p29TurnCardTint = ui.RGBA(27, 27, 27, .80)
+
+const (
+	p29TurnCardRadius   float32 = 12
+	p29TurnCardBlur     float32 = 14
+	p29TurnCardPaddingY float32 = 12
+	p29TurnCardPaddingX float32 = 16
+)
+
+// p29TurnCard wraps one side of a turn in the glass card, or hands back the
+// content unchanged on the BYOP preset. The card itself never animates: the
+// reveal and fold animations keep running on the container inside it, and the
+// card only grows and shrinks with its content.
+func p29TurnCard(c *ui.Context, p palette, content func()) {
+	if p.preset != appearancePresetJAgent {
+		content()
+		return
+	}
+	card := ui.Column(c).FillWidth().MinWidth(0).
+		Padding(p29TurnCardPaddingY, p29TurnCardPaddingX)
+	card = jAgentGlassSurface(card, p, p29TurnCardRadius, p29TurnCardBlur, p29TurnCardTint)
+	card.Children(content)
+}
+
 // p29Transcript groups the transcript by real user input: a user message
 // starts a turn and the assistant messages that follow — including the
 // tool-only ones, which never start a turn of their own — answer it. Both
@@ -122,6 +152,16 @@ func (s *appState) p29Transcript(c *ui.Context) {
 		}
 	}
 	p := s.p29Palette(c)
+	tones := p29TonesFor(p)
+	// The content's own top, read from the previous frame's layout. The inline
+	// diagram cards measure their distance to it, which is the same in every
+	// coordinate space and — unlike a paint rect — is known for a card the
+	// viewport does not show.
+	origin := ui.Box(c).Key("p29-transcript-origin").Size(0, 0)
+	if s.chatView.previewFrame > 0 {
+		s.chatView.transcriptOriginY = origin.Bounds().Y
+		s.chatView.transcriptOriginKnown = true
+	}
 	for i := 0; i < len(s.chat); {
 		start := i
 		var prompt *chatMessage
@@ -139,10 +179,14 @@ func (s *appState) p29Transcript(c *ui.Context) {
 		ui.Column(c).Key(turnKey).FillWidth().MinWidth(0).Shrink(0).Gap(10).
 			Margin(8, 0).Children(func() {
 			if prompt != nil {
-				s.p29UserTurn(c, p, turnKey, prompt)
+				p29TurnCard(c, p, func() {
+					s.p29UserTurn(c, p, tones, turnKey, prompt)
+				})
 			}
 			if len(assistants) > 0 {
-				s.p29AssistantTurn(c, p, turnKey, prompt, assistants, live)
+				p29TurnCard(c, p, func() {
+					s.p29AssistantTurn(c, p, tones, turnKey, prompt, assistants, live)
+				})
 			}
 		})
 	}
@@ -150,7 +194,7 @@ func (s *appState) p29Transcript(c *ui.Context) {
 
 // p29UserTurn is the commercial user row: the neutral 35px avatar, the
 // localized You, the message time, and the text indented under the header.
-func (s *appState) p29UserTurn(c *ui.Context, p palette, turnKey string, prompt *chatMessage) {
+func (s *appState) p29UserTurn(c *ui.Context, p palette, tones p29Tones, turnKey string, prompt *chatMessage) {
 	you := text("p29UserLabel")
 	ui.Column(c).Key(turnKey + "/user").FillWidth().MinWidth(0).Shrink(0).
 		Gap(10).Children(func() {
@@ -158,21 +202,21 @@ func (s *appState) p29UserTurn(c *ui.Context, p palette, turnKey string, prompt 
 			MinWidth(0).Height(35).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Box(c).Size(35, 35).Shrink(0).Radius(8.75).Center().
 				Background(p.text.Alpha(.06)).Children(func() {
-				components.Icon(c, lu.User).Size(16, 16).TextColor(p.text.Alpha(.70))
+				components.Icon(c, lu.User).Size(16, 16).TextColor(tones.glyph)
 			})
 			texts := ui.Column(c).MinWidth(0).Shrink(1).Gap(0)
 			texts.Children(func() {
 				components.Text(c, you).FontSize(p29FontBody).FontWeight(600).
-					LineHeight(p29LineHeight).TextColor(p.text.Alpha(.60)).
+					LineHeight(p29LineHeight).TextColor(tones.label).
 					SingleLine()
 				if !prompt.startedAt.IsZero() {
 					components.Text(c, prompt.startedAt.Format("15:04")).
 						FontSize(fontSmall).LineHeight(1.2).
-						TextColor(p.text.Alpha(.38)).SingleLine()
+						TextColor(tones.meta).SingleLine()
 				}
 			})
 		})
-		ui.Column(c).FillWidth().MinWidth(0).Margin(0, 0, 0, 46).Gap(6).
+		ui.Column(c).FillWidth().MinWidth(0).Padding(0, 0, 0, p29BodyIndent).Gap(6).
 			Children(func() {
 				s.chatAttachmentChipRow(c, prompt.attachments, turnKey+"-attachments")
 				components.Text(c, messageText(prompt)).
@@ -200,6 +244,7 @@ func (s *appState) p29Palette(c *ui.Context) palette {
 func (s *appState) p29AssistantTurn(
 	c *ui.Context,
 	p palette,
+	tones p29Tones,
 	turnKey string,
 	prompt *chatMessage,
 	assistants []*chatMessage,
@@ -217,15 +262,15 @@ func (s *appState) p29AssistantTurn(
 
 	// The header sits above everything and never folds with the process,
 	// so the tokens and the live t/s capsule survive every collapse.
-	s.p29TurnHeader(c, p, turnKey, assistants, live)
+	s.p29TurnHeader(c, p, tones, turnKey, assistants, live)
 
 	hasProcess := len(turn.nodes) > 0 || turn.status == chat.Running
 	open := state.processOpen(turn.status, live, !s.chatView.conversation.AtLatest())
 
-	body := ui.Column(c).FillWidth().MinWidth(0).Gap(10).Margin(0, 0, 0, 46)
+	body := ui.Column(c).FillWidth().MinWidth(0).Gap(10).Padding(0, 0, 0, p29BodyIndent)
 	body.Children(func() {
 		if hasProcess {
-			s.p29ProcessSummary(c, p, turnKey, state, &turn, open, reduced, elapsed)
+			s.p29ProcessSummary(c, p, tones, turnKey, state, &turn, open, reduced, elapsed)
 		}
 		// The settle coordination: when the watched turn stops streaming,
 		// the wrapper that holds both the process and the answer measures
@@ -325,9 +370,9 @@ func (s *appState) p29AssistantTurn(
 			})
 			inner.Children(func() {
 				if showProcess {
-					s.p29Timeline(c, p, turnKey, state, &turn, live, animateNodes, reduced)
+					s.p29Timeline(c, p, tones, turnKey, state, &turn, live, animateNodes, reduced)
 				}
-				s.p29Final(c, p, turnKey, state, &turn, reduced)
+				s.p29Final(c, p, tones, turnKey, state, &turn, reduced)
 			})
 		})
 		if turn.status == chat.Failed || turn.status == chat.Cancelled {
@@ -352,11 +397,11 @@ func (s *appState) p29AssistantTurn(
 				}
 				noticeLines = append([]string{s.piError}, deduped...)
 			}
+			noticeColor := tones.muted
+			if turn.status == chat.Failed {
+				noticeColor = tones.dangerText
+			}
 			if len(noticeLines) > 0 {
-				noticeColor := p.muted
-				if turn.status == chat.Failed {
-					noticeColor = p.danger
-				}
 				ui.Column(c).FillWidth().MinWidth(0).Gap(2).Children(func() {
 					for _, line := range noticeLines {
 						components.Text(c, line).FontSize(fontSmall).
@@ -374,7 +419,7 @@ func (s *appState) p29AssistantTurn(
 				promptText = messageText(prompt)
 				promptAttachments = prompt.attachments
 			}
-			s.p29Actions(c, &turn, last, promptText, promptAttachments)
+			s.p29Actions(c, tones, &turn, last, promptText, promptAttachments)
 		}
 	})
 
@@ -395,6 +440,7 @@ func (s *appState) p29AssistantTurn(
 func (s *appState) p29TurnHeader(
 	c *ui.Context,
 	p palette,
+	tones p29Tones,
 	turnKey string,
 	assistants []*chatMessage,
 	live bool,
@@ -469,7 +515,7 @@ func (s *appState) p29TurnHeader(
 				line := ui.Row(c).MinWidth(0).Gap(4).AlignItems(ui.Center)
 				line.Children(func() {
 					components.Text(c, model).FontSize(p29FontBody).FontWeight(600).
-						LineHeight(1.4).TextColor(p.text.Alpha(.60)).Shrink(1).
+						LineHeight(1.4).TextColor(tones.label).Shrink(1).
 						MinWidth(0).SingleLine().Ellipsis("…").Tooltip(model)
 					if latest {
 						modelReleaseBadgeNode(c, s.composerModelLabelBadge(
@@ -479,7 +525,7 @@ func (s *appState) p29TurnHeader(
 			}
 			if !startedAt.IsZero() {
 				components.Text(c, startedAt.Format("15:04")).FontSize(fontSmall).
-					LineHeight(1.2).TextColor(p.text.Alpha(.38)).SingleLine()
+					LineHeight(1.2).TextColor(tones.meta).SingleLine()
 			}
 		})
 		if latest {
@@ -487,14 +533,14 @@ func (s *appState) p29TurnHeader(
 				switch item.kind {
 				case hudItemTurnTokens:
 					components.Text(c, item.value).FontSize(fontSmall).LineHeight(1.2).
-						FontWeight(500).FontFeatures("tnum").TextColor(p.muted).
+						FontWeight(500).FontFeatures("tnum").TextColor(tones.muted).
 						SingleLine().Shrink(0)
 				case hudItemTPS:
 					rate, ok := s.piHUDCurrentTPS()
 					if !ok {
 						continue
 					}
-					color, background, border := piTPSStyle(t, rate)
+					color, background, border := piTPSCapsuleStyle(t, p, rate)
 					ui.Row(c).Key("conversation-hud-tps").Label(item.value).
 						Height(20).Padding(0, 7).Radius(10).Shrink(0).
 						Background(background).Border(v12BorderWidth, border).
@@ -506,7 +552,7 @@ func (s *appState) p29TurnHeader(
 			}
 		} else if tokens > 0 {
 			components.Text(c, "↓"+formatPiTokens(tokens)).FontSize(fontSmall).
-				LineHeight(1.2).FontFeatures("tnum").TextColor(p.muted).
+				LineHeight(1.2).FontFeatures("tnum").TextColor(tones.muted).
 				SingleLine().Shrink(0)
 		}
 	})
@@ -533,6 +579,7 @@ func (s *appState) p29HistoryModelName(provider, model string) string {
 func (s *appState) p29ProcessSummary(
 	c *ui.Context,
 	p palette,
+	tones p29Tones,
 	turnKey string,
 	state *p29TurnState,
 	turn *p29Turn,
@@ -550,13 +597,13 @@ func (s *appState) p29ProcessSummary(
 	}
 	button.Children(func() {
 		components.Icon(c, lu.ListTree).Size(18, 18).Shrink(0).
-			TextColor(p.text.Alpha(.55))
+			TextColor(tones.statIcon)
 		components.Text(c, title).FontSize(p29FontTitle).FontWeight(600).
-			LineHeight(p29LineHeight).TextColor(p.text.Alpha(.55)).
+			LineHeight(p29LineHeight).TextColor(tones.statTitle).
 			Shrink(1).MinWidth(0).SingleLine().Ellipsis("…")
 		chevron := components.Icon(c, lu.ChevronRight).Size(14, 14).Shrink(0)
 		chevron.Rotate(p29ArrowRotation(chevron, open, reduced))
-		chevron.TextColor(p.text.Alpha(.45))
+		chevron.TextColor(tones.chevron)
 		// The commercial fold row carries no permanent arrow: it sits
 		// 8px after the label, hidden, and fades in over 150 ms on
 		// hover or focus of the row. Rotation keeps its own curve.
@@ -629,12 +676,55 @@ func p29ProcessTitleParts(thinking, tools int, live bool, elapsed string) string
 	return strings.Join(parts, text("p29ProcessJoin"))
 }
 
+// p29BodyIndent is the commercial content indent under a turn's header row.
+// It is padding on the body column, not a margin: a margin left the column at
+// the full column width, so its content — the answer, a node's chevron, an
+// inline diagram — hung 46 DIP past the right edge, which showed on the
+// J Agent glass card and stayed invisible on the borderless BYOP page.
+const (
+	p29BodyIndent       float32 = 46
+	p29RailInset        float32 = 7  // the rail's own distance from the body edge
+	p29RailContentInset float32 = 16 // the node content's distance from the rail
+)
+
+// p29RailSegments cuts the marker ranges out of the rail's vertical span, so
+// the thread stops at each marker instead of running behind it. Ranges that do
+// not overlap the rail, and ones still unknown, change nothing.
+func p29RailSegments(top, bottom float32, cuts []ui.Rect) [][2]float32 {
+	segments := [][2]float32{{top, bottom}}
+	for _, cut := range cuts {
+		if cut.H <= 0 {
+			continue
+		}
+		start, end := cut.Y, cut.Y+cut.H
+		if end <= top || start >= bottom {
+			continue
+		}
+		next := make([][2]float32, 0, len(segments)+1)
+		for _, segment := range segments {
+			if end <= segment[0] || start >= segment[1] {
+				next = append(next, segment)
+				continue
+			}
+			if start > segment[0] {
+				next = append(next, [2]float32{segment[0], start})
+			}
+			if end < segment[1] {
+				next = append(next, [2]float32{end, segment[1]})
+			}
+		}
+		segments = next
+	}
+	return segments
+}
+
 // p29Timeline draws the 1px rail at 7px and lays out the nodes: 16px
 // markers overlap the rail, the content is inset 16px, and nodes keep a
 // 4px vertical gap.
 func (s *appState) p29Timeline(
 	c *ui.Context,
 	p palette,
+	tones p29Tones,
 	turnKey string,
 	state *p29TurnState,
 	turn *p29Turn,
@@ -642,10 +732,19 @@ func (s *appState) p29Timeline(
 	animate bool,
 	reduced bool,
 ) {
+	// The cuts are collected for this frame only: a node that is no longer
+	// built must not leave a gap in the thread.
+	state.railCuts = nil
 	rail := ui.Column(c).FillWidth().MinWidth(0).Gap(4).
-		Padding(2, 0, 2, 16).Margin(0, 0, 0, 7)
+		Padding(2, 0, 2, p29RailInset+p29RailContentInset)
 	rail.Draw(func(pn *ui.Painter, r ui.Rect) {
-		pn.Line(r.X, r.Y, r.X, r.Y+r.H, 1, p.border.Alpha(.70))
+		// The rail stops where a marker sits, so nothing has to be painted over
+		// it: a filled disc looked right on an opaque page and wrong on the
+		// J Agent glass card, where it read as a dark dot.
+		x := r.X + p29RailInset
+		for _, segment := range p29RailSegments(r.Y, r.Y+r.H, state.railCuts) {
+			pn.Line(x, segment[0], x, segment[1], p29RailWidth, tones.rail)
+		}
 	})
 	rail.Children(func() {
 		for n := range turn.nodes {
@@ -676,7 +775,7 @@ func (s *appState) p29Timeline(
 			}
 			row.Children(func() {
 				if node.kind == p29NodeActivity {
-					s.p29ActivityNode(c, p, turnKey, state, turn, node,
+					s.p29ActivityNode(c, p, tones, turnKey, state, turn, node,
 						live, reduced)
 				} else {
 					s.p29Commentary(c, node, live)
@@ -691,6 +790,7 @@ func (s *appState) p29Timeline(
 func (s *appState) p29ActivityNode(
 	c *ui.Context,
 	p palette,
+	tones p29Tones,
 	turnKey string,
 	state *p29TurnState,
 	turn *p29Turn,
@@ -717,16 +817,13 @@ func (s *appState) p29ActivityNode(
 
 	// The 16px marker sits on the rail; the content keeps its 16px inset.
 	marker := ui.Box(c).Size(16, 16).Shrink(0).Margin(5, 0, 0, -24).Center()
-	// The rail runs behind the marker; a small disc in the chat panel's
-	// own background colour keeps the line from crossing the icon. Both
-	// presets draw it, so no wallpaper makes the thread visible through
-	// the dot.
-	marker.Draw(func(pn *ui.Painter, r ui.Rect) {
-		pn.Fill(ui.Rect{X: r.X + 2, Y: r.Y + 2, W: r.W - 4, H: r.H - 4},
-			p.background, (r.W-4)/2)
-	})
+	// The rail leaves a gap where this marker stands, taken from the previous
+	// frame's layout, which is known whether or not the marker painted.
+	if bounds := marker.Bounds(); bounds.H > 0 {
+		state.railCuts = append(state.railCuts, bounds)
+	}
 	marker.Children(func() {
-		s.p29ActivityMarker(c, p, *node, isLatest && live, reduced)
+		s.p29ActivityMarker(c, tones, *node, isLatest && live, reduced)
 	})
 
 	content := ui.Column(c).Grow(1).MinWidth(0).Gap(4)
@@ -739,9 +836,9 @@ func (s *appState) p29ActivityNode(
 			header.Background(p.text.Alpha(.04))
 		}
 		header.Children(func() {
-			foreground := p.text.Alpha(.45)
+			foreground := tones.status
 			if isLatest && live {
-				foreground = p.text.Alpha(.65)
+				foreground = tones.statusLive
 			}
 			label := components.Text(c, shown+suffix).FontSize(p29FontBody).
 				FontWeight(500).LineHeight(p29LineHeight).TextColor(foreground).
@@ -755,7 +852,7 @@ func (s *appState) p29ActivityNode(
 			}
 			chevron := components.Icon(c, lu.ChevronRight).Size(11, 11).Shrink(0)
 			chevron.Rotate(p29ArrowRotation(chevron, open, reduced))
-			chevron.TextColor(p.text.Alpha(.35))
+			chevron.TextColor(tones.chevron)
 		})
 		if header.Clicked() {
 			state.activityOpen[actKey] = !open
@@ -793,11 +890,11 @@ func (s *appState) p29ActivityNode(
 					for i := range node.items {
 						item := node.items[i]
 						if item.kind == p29ItemThinking {
-							s.p29ThinkingCard(c, p, state, actKey+"-d"+
+							s.p29ThinkingCard(c, p, tones, state, actKey+"-d"+
 								fmt.Sprint(i), item.text, false, reduced)
 							continue
 						}
-						s.p29ToolRow(c, p, state, actKey, item, i, reduced)
+						s.p29ToolRow(c, p, tones, state, actKey, item, i, reduced)
 					}
 				})
 			})
@@ -810,7 +907,7 @@ func (s *appState) p29ActivityNode(
 // thinking activity. Completion never forces a green check.
 func (s *appState) p29ActivityMarker(
 	c *ui.Context,
-	p palette,
+	tones p29Tones,
 	node p29Node,
 	active bool,
 	reduced bool,
@@ -819,14 +916,14 @@ func (s *appState) p29ActivityMarker(
 	if !ok {
 		return
 	}
-	color := p.text.Alpha(.45)
+	color := tones.icon
 	if active {
-		color = p.text.Alpha(.70)
+		color = tones.iconLive
 	}
 	if item.kind == p29ItemThinking {
-		dotColor := p.text.Alpha(.35)
+		dotColor := tones.dot
 		if active {
-			dotColor = p.text.Alpha(.60)
+			dotColor = tones.dotLive
 		}
 		ui.Box(c).Size(6, 6).Radius(3).Background(dotColor)
 		return
@@ -838,7 +935,7 @@ func (s *appState) p29ActivityMarker(
 			iconEl.Rotate(iconEl.Loop("p29-spin", time.Second, ui.Linear) * 360)
 		}
 	case toolCallFailed, toolCallInterrupted:
-		components.Icon(c, lu.CircleX).Size(14, 14).TextColor(p.danger.Alpha(.85))
+		components.Icon(c, lu.CircleX).Size(14, 14).TextColor(tones.danger)
 	default:
 		components.Icon(c, p29ToolIcon(item.tool.name)).Size(14, 14).TextColor(color)
 	}
@@ -862,6 +959,7 @@ func (s *appState) p29Commentary(c *ui.Context, node *p29Node, live bool) {
 func (s *appState) p29ToolRow(
 	c *ui.Context,
 	p palette,
+	tones p29Tones,
 	state *p29TurnState,
 	actKey string,
 	item p29Item,
@@ -884,23 +982,23 @@ func (s *appState) p29ToolRow(
 	}
 	row.Children(func() {
 		ui.Row(c).FillWidth().MinWidth(0).Gap(6).AlignItems(ui.Center).Children(func() {
-			color := p.text.Alpha(.55)
+			color := tones.icon
 			switch tool.status {
 			case toolCallRunning:
 				iconEl := components.Icon(c, lu.LoaderCircle).Size(16, 16).
-					TextColor(p.text.Alpha(.70))
+					TextColor(tones.iconLive)
 				if !reduced {
 					iconEl.Rotate(iconEl.Loop("p29-row-spin", time.Second, ui.Linear) * 360)
 				}
 			case toolCallFailed, toolCallInterrupted:
-				components.Icon(c, lu.CircleX).Size(16, 16).TextColor(p.danger.Alpha(.85))
+				components.Icon(c, lu.CircleX).Size(16, 16).TextColor(tones.danger)
 			default:
 				components.Icon(c, p29ToolIcon(tool.name)).Size(16, 16).TextColor(color)
 			}
 			components.Text(c, fallback(strings.TrimSpace(tool.name),
 				text("errorToolFallback"))).
 				FontSize(p29FontBody).FontWeight(500).LineHeight(p29LineHeight).
-				TextColor(p.text.Alpha(.55)).Shrink(0)
+				TextColor(tones.cardBody).Shrink(0)
 			if tag, tagColor, tagged := p29ToolTag(tool.name); tagged {
 				ui.Row(c).Shrink(0).Padding(1, 6).Radius(4).
 					Background(tagColor.Alpha(.12)).AlignItems(ui.Center).
@@ -911,14 +1009,14 @@ func (s *appState) p29ToolRow(
 			}
 			if summary := p29ToolSummary(tool); summary != "" {
 				components.Text(c, summary).FontSize(p29FontSub).LineHeight(1.4).
-					TextColor(p.muted).Grow(1).MinWidth(0).SingleLine().
+					TextColor(tones.muted).Grow(1).MinWidth(0).SingleLine().
 					Ellipsis("…").Tooltip(summary)
 			} else {
 				ui.Spacer(c)
 			}
 		})
 		if summary, ok := p29EditSummary(tool); ok {
-			components.Text(c, summary).FontSize(p29FontSub).TextColor(p.muted).
+			components.Text(c, summary).FontSize(p29FontSub).TextColor(tones.muted).
 				Padding(0, 0, 0, 22)
 		}
 		hasDetail := strings.TrimSpace(tool.arguments) != "" ||
@@ -935,7 +1033,7 @@ func (s *appState) p29ToolRow(
 			detail.Background(p.text.Alpha(.04))
 		}
 		detail.Children(func() {
-			components.Text(c, detailLabel).FontSize(p29FontSub).TextColor(p.muted)
+			components.Text(c, detailLabel).FontSize(p29FontSub).TextColor(tones.muted)
 		})
 		if detail.Clicked() {
 			state.rowOpen[rowKey] = !open
@@ -957,6 +1055,7 @@ func (s *appState) p29ToolRow(
 func (s *appState) p29ThinkingCard(
 	c *ui.Context,
 	p palette,
+	tones p29Tones,
 	state *p29TurnState,
 	cardKey string,
 	value string,
@@ -969,17 +1068,17 @@ func (s *appState) p29ThinkingCard(
 	card.Draw(func(pn *ui.Painter, r ui.Rect) {
 		p29PaintDashedRoundedRect(pn, ui.Rect{
 			X: r.X + 0.5, Y: r.Y + 0.5, W: r.W - 1, H: r.H - 1,
-		}, 8, 1.5, 8, 6, p.text.Alpha(.16))
+		}, 8, 1.5, 8, 6, tones.dash)
 	})
 	card.Children(func() {
 		ui.Row(c).FillWidth().MinWidth(0).Gap(6).AlignItems(ui.Center).Children(func() {
 			components.Icon(c, lu.Brain).Size(16, 16).Shrink(0).
-				TextColor(p.text.Alpha(.45))
+				TextColor(tones.icon)
 			components.Text(c, text("p29ThinkingLabel")).FontSize(p29FontBody).
-				FontWeight(500).TextColor(p.text.Alpha(.45))
+				FontWeight(500).TextColor(tones.cardTitle)
 		})
 		textEl := components.Text(c, value).FontSize(p29FontBody).
-			LineHeight(p29LineHeight).TextColor(p.text.Alpha(.55)).
+			LineHeight(p29LineHeight).TextColor(tones.cardBody).
 			Selectable().FillWidth().MinWidth(0)
 		if standalone && !expanded {
 			textEl.MaxLines(4)
@@ -991,7 +1090,7 @@ func (s *appState) p29ThinkingCard(
 				Cursor(ui.CursorPointer)
 			toggle.Children(func() {
 				components.Text(c, toggleLabel).FontSize(p29FontSub).
-					TextColor(p.muted)
+					TextColor(tones.muted)
 			})
 			if toggle.Clicked() {
 				state.setThinkingOpen(cardKey, !expanded)
@@ -1009,6 +1108,7 @@ func (s *appState) p29ThinkingCard(
 func (s *appState) p29Final(
 	c *ui.Context,
 	p palette,
+	tones p29Tones,
 	turnKey string,
 	state *p29TurnState,
 	turn *p29Turn,
@@ -1049,7 +1149,7 @@ func (s *appState) p29Final(
 		switch turn.finalKind {
 		case p29FinalIncomplete:
 			components.Text(c, text("p29IncompleteOutput")).FontSize(fontSmall).
-				FontWeight(500).TextColor(p.muted)
+				FontWeight(500).TextColor(tones.muted)
 			markdown.View(c, turn.finalText, &s.chatView.p29Markdown).FillWidth()
 		case p29FinalAnswer:
 			// The final answer reads at the commercial 15px/1.72 too
@@ -1058,12 +1158,12 @@ func (s *appState) p29Final(
 			markdown.View(c, turn.finalText, &s.chatView.p29Markdown).FillWidth()
 		case p29FinalThinkingOnly:
 			components.Text(c, text("p29ThinkingAsAnswerNote")).FontSize(fontSmall).
-				TextColor(p.muted)
-			s.p29ThinkingCard(c, p, state, turnKey+"/final-thinking",
+				TextColor(tones.muted)
+			s.p29ThinkingCard(c, p, tones, state, turnKey+"/final-thinking",
 				turn.finalText, true, reduced)
 		case p29FinalNoText:
 			components.Text(c, text("p29NoAnswerNote")).FontSize(fontSmall).
-				TextColor(p.muted)
+				TextColor(tones.muted)
 		}
 	})
 }
@@ -1074,21 +1174,21 @@ func (s *appState) p29Final(
 // carries those counts, and the commercial action area repeats nothing.
 func (s *appState) p29Actions(
 	c *ui.Context,
+	tones p29Tones,
 	turn *p29Turn,
 	last *chatMessage,
 	promptText string,
 	promptAttachments []chatAttachmentMeta,
 ) {
-	t := c.Theme()
 	ui.Row(c).FillWidth().MinWidth(0).Height(26).Margin(1, 0, 0, 0).
 		AlignItems(ui.Center).Gap(4).Children(func() {
 		switch turn.status {
 		case chat.Failed:
 			components.Text(c, turnEndLabel(last.status)).FontSize(fontSmall).
-				FontWeight(500).TextColor(t.Danger)
+				FontWeight(500).TextColor(tones.dangerText)
 		case chat.Cancelled:
 			components.Text(c, turnEndLabel(last.status)).FontSize(fontSmall).
-				FontWeight(500).TextColor(t.TextMuted)
+				FontWeight(500).TextColor(tones.muted)
 		}
 		if iconActionV12(c, text("chatCopy"), lu.Copy).Clicked() {
 			// Copy carries the answer, not the intermediate commentary

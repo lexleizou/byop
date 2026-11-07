@@ -436,6 +436,20 @@ func piTPSStyle(t *ui.Theme, rate float64) (foreground, background, border ui.Co
 	return foreground, foreground.Alpha(.10), foreground.Alpha(.30)
 }
 
+// piTPSCapsuleStyle is the live t/s capsule as it is painted: piTPSStyle's
+// tier colour, then nudged until it reads against the surface the capsule
+// actually sits on (P30 1.2), and the capsule's own translucent fill and edge
+// built from that final ink. The rate calculation, its updates, the 30s
+// staleness rule and the tier grading all stay in piTPSTierFor and
+// piTPSStyle; only the displayed colour moves here.
+func piTPSCapsuleStyle(t *ui.Theme, p palette, rate float64) (
+	foreground, background, border ui.Color,
+) {
+	foreground, _, _ = piTPSStyle(t, rate)
+	foreground = p29AccessibleInk(p, foreground, p29ContrastText)
+	return foreground, foreground.Alpha(.10), foreground.Alpha(.30)
+}
+
 func (s *appState) piHUDCurrentTPS() (float64, bool) {
 	if !s.hud.currentTPSKnown {
 		return 0, false
@@ -735,7 +749,7 @@ func (s *appState) piHUDTurn(c *ui.Context, message *chatMessage) {
 					SingleLine().Shrink(0)
 			case hudItemTPS:
 				rate, _ := s.piHUDCurrentTPS()
-				color, background, border := piTPSStyle(t, rate)
+				color, background, border := piTPSCapsuleStyle(t, p, rate)
 				ui.Row(c).Key("conversation-hud-tps").Label(item.value).
 					Height(20).Padding(0, 7).Radius(10).Shrink(0).
 					Background(background).Border(v12BorderWidth, border).

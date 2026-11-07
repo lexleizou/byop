@@ -4016,10 +4016,6 @@
   "@mentionMenuLabel": {
     "description": "Command palette or mention menu interface."
   },
-  "chatMermaidPreview": "预览图解",
-  "@chatMermaidPreview": {
-    "description": "对话中完整 Mermaid 代码块下方的按钮，打开 Mermaid 预览页。"
-  },
   "mermaidPreviewMissing": "安装 Mermaid 图解插件后可预览此图解。",
   "@mermaidPreviewMissing": {
     "description": "点击预览按钮但插件未安装时的提示。"
@@ -4035,6 +4031,74 @@
   "mermaidPreviewTooLong": "此图解超过 20,000 字符的预览长度限制。",
   "@mermaidPreviewTooLong": {
     "description": "Mermaid 源码超过宿主与插件共同的预览长度限制时的提示。"
+  },
+  "diagramCardLabel": "图解",
+  "@diagramCardLabel": {
+    "description": "对话内直接渲染 Mermaid 代码块的图解卡片标题。"
+  },
+  "diagramCardLabelFlow": "流程示意",
+  "@diagramCardLabelFlow": {
+    "description": "渲染结果为 agentflow 流程图时，图解卡片的标题。"
+  },
+  "diagramRendering": "正在渲染图解…",
+  "@diagramRendering": {
+    "description": "图解卡片主体在图解尚未渲染完成时的占位文案。"
+  },
+  "diagramFailed": "图解无法渲染：{message}",
+  "@diagramFailed": {
+    "description": "图解卡片主体在渲染器报错时的文案。",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Unexpected token"
+      }
+    }
+  },
+  "diagramFailedLine": "（第 {line} 行）",
+  "@diagramFailedLine": {
+    "description": "图解渲染失败文案后附带的行号。",
+    "placeholders": {
+      "line": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "diagramFailedNoDetail": "未报告具体原因",
+  "@diagramFailedNoDetail": {
+    "description": "渲染器没有给出原因时，失败文案里代替原因的占位文字。"
+  },
+  "diagramTooLong": "图解过长，未渲染",
+  "@diagramTooLong": {
+    "description": "图解卡片主体在源码超过共同渲染上限时的文案。"
+  },
+  "diagramCopied": "已复制源码",
+  "@diagramCopied": {
+    "description": "图解卡片复制 Mermaid 源码后的提示。"
+  },
+  "diagramZoomOut": "缩小",
+  "@diagramZoomOut": {
+    "description": "图解卡片工具栏按钮：缩小已渲染的图解。"
+  },
+  "diagramZoomIn": "放大",
+  "@diagramZoomIn": {
+    "description": "图解卡片工具栏按钮：放大已渲染的图解。"
+  },
+  "diagramFitWidth": "适应宽度",
+  "@diagramFitWidth": {
+    "description": "图解卡片工具栏开关：把图解缩放至卡片宽度。"
+  },
+  "diagramViewSource": "查看源码",
+  "@diagramViewSource": {
+    "description": "图解卡片工具栏开关：在图解下方显示 Mermaid 源码。"
+  },
+  "diagramCopySource": "复制源码",
+  "@diagramCopySource": {
+    "description": "图解卡片工具栏按钮：复制 Mermaid 源码。"
+  },
+  "diagramOpenInPage": "在 Mermaid 页面打开",
+  "@diagramOpenInPage": {
+    "description": "图解卡片工具栏按钮：在 Mermaid 插件页中打开该源码。"
   },
   "p29ProcessThinking": "已思考 {count} 次",
   "@p29ProcessThinking": {

@@ -52,6 +52,36 @@ type chatPresentation struct {
 	previewFrame     int
 	previewMessage   *chatMessage
 	fileCardPalette  palette
+
+	// P30: inline diagram cards. Toolbar switches, measured body width and
+	// last known position per source, freed on the same frame rule as the
+	// file previews.
+	diagramCards map[string]*diagramCardState
+
+	// diagramClaims counts, for the frame being built, how many cards have
+	// asked for one diagram. A WebView shows in one place per frame, so only
+	// the first card of a source attaches it and a later card of the same
+	// source shows its code instead.
+	diagramClaims map[string]int
+
+	// transcriptOriginY is the previous frame's window Y of the transcript
+	// content's top edge, the reference the diagram cards measure against.
+	transcriptOriginY     float32
+	transcriptOriginKnown bool
+
+	// composerTop is the previous frame's window Y of the floating composer
+	// card. A native diagram page cannot be blurred by the surface drawn over
+	// it, so a card whose body reaches into the composer's band hides its page
+	// and keeps the placeholder instead of painting diagram text over the
+	// status row (P30 fix round, item D).
+	composerTop      float32
+	composerTopKnown bool
+
+	// The theme last handed to the card pages. A palette change pushes it to
+	// every alive page (P30 2.5) and re-parses nothing, so the transcript
+	// keeps its rendered diagrams across a light/dark or preset switch.
+	diagramTheme      inlineDiagramTheme
+	diagramThemeKnown bool
 }
 
 type activityPresentation struct {
@@ -244,6 +274,13 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	// Only the latest turn's HUD marks a message, and it renders after every
 	// older message, so starting the frame clear keeps previews off them.
 	s.chatView.previewMessage = nil
+	// P30: the diagram views and the card states follow the same frame rule
+	// as the file previews. Both calls run before previewFrame moves on, so
+	// they release what the frame just drawn did not build. The card claims are
+	// per-frame and start empty for the frame about to be built.
+	s.chatView.diagramClaims = nil
+	s.dropStaleInlineDiagrams(s.chatView.previewFrame)
+	s.dropStaleDiagramCardStates()
 	s.dropStaleChatFilePreviews()
 	codeColors := editor.DefaultTheme(c.Theme())
 	codeColors.Background = p.raisedSurface
@@ -257,6 +294,7 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	codeColors.Tokens[editor.TokenString] = editor.TokenStyle{Color: p.successText}
 	codeColors.Tokens[editor.TokenComment] = editor.TokenStyle{Color: p.muted}
 	theme.CodeColors = codeColors
+	tones := p29TonesFor(p)
 	s.chatView.markdown.Theme = theme
 	s.chatView.markdown.Block = func(c *ui.Context, doc *parser.Document, index int) bool {
 		if markdownListNeedsItemGapV12(doc, index) {
@@ -288,18 +326,15 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 				})
 			})
 		}
-		// P28: a closed Mermaid block gains a preview button under it, added
-		// outside whatever pluginCodeBlock rendered so an existing message
-		// renderer is neither replaced nor triggered by the button's presence.
-		source, eligible := mermaidPreviewBlockSource(block, block.Code())
-		if !eligible {
-			render()
+		// P30 2.1: a closed Mermaid block is drawn as the inline diagram card,
+		// right where the model wrote it. A block that is still open, or in any
+		// other language, keeps the plain code block, so streaming shows source
+		// first and plugin renderers and file cards stay on their own hook.
+		if source, eligible := mermaidPreviewBlockSource(block, block.Code()); eligible {
+			s.inlineDiagramCard(c, p, tones, block, source)
 			return
 		}
-		ui.Column(c).FillWidth().MinWidth(0).Gap(4).Children(func() {
-			render()
-			mermaidPreviewAction(c, p, source, func() { s.openMermaidPreview(source) })
-		})
+		render()
 	}
 	// P29: the process prose runs on these same hooks at the authorised
 	// 15px/1.72 scale, so Mermaid buttons, file cards and plugin renderers
@@ -947,6 +982,10 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 			Footer: footer,
 		}, len(s.composerAttachments) > 0, s.composerMenuHooksFor(), placeholderOverlay...)
 		result.Root.Key("chat-composer")
+		result.Card.Draw(func(_ *ui.Painter, r ui.Rect) {
+			s.chatView.composerTop = r.Y
+			s.chatView.composerTopKnown = true
+		})
 		result.Input.FontSize(fontBody)
 		// Drops the card took are added here; the window handler sees only the
 		// ones it did not take.

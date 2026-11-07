@@ -170,6 +170,10 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 			Footer: footer,
 		}, len(s.composerAttachments) > 0, s.composerMenuHooksFor(), placeholderOverlay...)
 		result.Root.Key("chat-composer")
+		result.Card.Draw(func(_ *ui.Painter, r ui.Rect) {
+			s.chatView.composerTop = r.Y
+			s.chatView.composerTopKnown = true
+		})
 		result.Input.FontSize(p.bodyFont)
 		// Drops the card took are added here; the window handler sees only the
 		// ones it did not take.

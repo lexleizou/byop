@@ -1,25 +1,27 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"unicode/utf16"
 
 	"github.com/egoist/mygo"
-	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/markdown"
 )
 
-// P28: a closed Mermaid fenced code block in the transcript offers a button
-// that hands the block's source to the installed Mermaid preview page. The
-// host keeps only the latest click in memory; nothing is written to disk and
-// nothing is broadcast to Pi. The page reads the request with
-// plugin.getMermaidPreview on load, and an already-loaded page is told to
-// re-read by the byop.mermaid-preview event, so the first open and a cached
-// open take the same reliable path: a queued request plus either an event or
-// the page's own initial read.
+// P28: a closed Mermaid fenced code block hands the block's source to the
+// installed Mermaid preview page. The host keeps only the latest click in
+// memory; nothing is written to disk and nothing is broadcast to Pi. The page
+// reads the request with plugin.getMermaidPreview on load, and an already-loaded
+// page is told to re-read by the byop.mermaid-preview event, so the first open
+// and a cached open take the same reliable path: a queued request plus either
+// an event or the page's own initial read.
+//
+// P30 changed how the request starts: the transcript no longer draws a preview
+// button under a closed block, because the inline diagram card took its place.
+// The card offers "open in the Mermaid page" when the plugin is installed and
+// current, and calls openMermaidPreview below. The availability rules and the
+// request queue are untouched, because the page and its protocol did not change.
 
 const (
 	// mermaidPreviewPluginID and mermaidPreviewViewID are the fixed pair the
@@ -153,7 +155,8 @@ func (s *appState) clearMermaidPreviewLocked() {
 	s.mermaidPreview = nil
 }
 
-// openMermaidPreview is the chat button's click handler: validate, then store
+// openMermaidPreview is the diagram card's “open in the Mermaid page” handler:
+// validate, then store
 // the request, then open the page. The order keeps the promise that a page
 // loading right after the click finds the request on its initial read, and
 // the open path only ever removes a preview WebView through
@@ -179,14 +182,4 @@ func (s *appState) openMermaidPreview(source string) {
 		_ = pluginWebViewMermaidPreviewEvent.EmitPage(state.webView.Page(),
 			map[string]any{"requestId": requestID})
 	}
-}
-
-// mermaidPreviewAction draws the button under one eligible Mermaid block. The
-// key carries a content hash so two different blocks in one frame never share
-// a widget identity; two identical blocks do share it, and clicking either
-// queues the same source, which stays correct.
-func mermaidPreviewAction(c *ui.Context, p palette, source string, open func()) {
-	sum := sha256.Sum256([]byte(source))
-	secondaryAction(c, p, "chat-mermaid-preview-"+hex.EncodeToString(sum[:6]),
-		text("chatMermaidPreview"), open)
 }

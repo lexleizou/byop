@@ -26,7 +26,7 @@ import (
 const (
 	appTitle   = "Build You Own Pi"
 	appShort   = "BYOP"
-	appVersion = "0.22.1"
+	appVersion = "0.23.0"
 )
 
 func appBuildVersion() string {
@@ -58,6 +58,9 @@ func main() {
 	applyStartupPluginThemeSelection()
 	mygo.Theme.SetSource(state.effectiveThemeSource())
 	if err := mygo.Protocol.Handle(pluginWebViewScheme, newPluginWebViewSchemeHandler(state)); err != nil {
+		log.Fatal(err)
+	}
+	if err := mygo.Protocol.Handle(diagramWebViewScheme, newDiagramSchemeHandler()); err != nil {
 		log.Fatal(err)
 	}
 	mygo.BindAs("BYOPWebView", &pluginWebViewBridge{state: state})
@@ -400,8 +403,12 @@ type appState struct {
 	// (P28): memory-only, guarded by pluginWebViewsMu together with the
 	// preview WebViews, read by plugin.getMermaidPreview, and never persisted
 	// or broadcast to Pi.
-	mermaidPreview                  *mermaidPreviewRequest
-	mermaidPreviewSeq               uint64
+	mermaidPreview    *mermaidPreviewRequest
+	mermaidPreviewSeq uint64
+	// inlineDiagrams holds one card state per rendered Mermaid block source
+	// (P30), keyed by the SHA-256 of the source. All fields are used on the UI
+	// thread; render replies land there through postUI.
+	inlineDiagrams                  map[string]*inlineDiagram
 	pluginWebViewDark               bool
 	pluginWebViewHighContrast       bool
 	pluginWebViewReduceTransparency bool
@@ -577,6 +584,7 @@ func newAppState() *appState {
 		pluginViewModels:      make(map[string]pluginViewModel),
 		pluginWebViews:        make(map[string]*pluginWebViewState),
 		pluginBridgeSlots:     make(map[string]chan struct{}),
+		inlineDiagrams:        make(map[string]*inlineDiagram),
 		navTransparencySlider: float64(preferences.NavTransparency),
 		glassBlurSlider:       float64(preferences.GlassBlur),
 	}

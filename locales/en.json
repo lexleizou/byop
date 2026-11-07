@@ -4219,10 +4219,6 @@
   "@mentionMenuLabel": {
     "description": "Command palette or mention menu interface."
   },
-  "chatMermaidPreview": "Preview diagram",
-  "@chatMermaidPreview": {
-    "description": "Button under a closed Mermaid code block that opens the Mermaid preview page."
-  },
   "mermaidPreviewMissing": "Install the Mermaid Diagram plugin to preview this diagram.",
   "@mermaidPreviewMissing": {
     "description": "Notice when the Mermaid preview button is clicked but the plugin is not installed."
@@ -4238,6 +4234,74 @@
   "mermaidPreviewTooLong": "This diagram exceeds the 20,000 character preview limit.",
   "@mermaidPreviewTooLong": {
     "description": "Notice when a Mermaid source is longer than the shared preview limit."
+  },
+  "diagramCardLabel": "Diagram",
+  "@diagramCardLabel": {
+    "description": "Header label of the inline diagram card that renders a Mermaid block in the conversation."
+  },
+  "diagramCardLabelFlow": "Flow sketch",
+  "@diagramCardLabelFlow": {
+    "description": "Header label of the inline diagram card when the renderer drew an agentflow diagram."
+  },
+  "diagramRendering": "Rendering diagram…",
+  "@diagramRendering": {
+    "description": "Placeholder inside the diagram card body while the diagram is still rendering."
+  },
+  "diagramFailed": "Diagram could not render: {message}",
+  "@diagramFailed": {
+    "description": "Diagram card body when the renderer reported an error.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Unexpected token"
+      }
+    }
+  },
+  "diagramFailedLine": "(line {line})",
+  "@diagramFailedLine": {
+    "description": "Line number appended to a diagram render failure.",
+    "placeholders": {
+      "line": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "diagramFailedNoDetail": "no details reported",
+  "@diagramFailedNoDetail": {
+    "description": "Stand-in for the failure reason when the renderer reported none."
+  },
+  "diagramTooLong": "Diagram too long to render.",
+  "@diagramTooLong": {
+    "description": "Diagram card body when the source exceeds the shared render limit."
+  },
+  "diagramCopied": "Source copied",
+  "@diagramCopied": {
+    "description": "Toast after the diagram card copies its Mermaid source."
+  },
+  "diagramZoomOut": "Zoom out",
+  "@diagramZoomOut": {
+    "description": "Diagram card toolbar button that shrinks the rendered diagram."
+  },
+  "diagramZoomIn": "Zoom in",
+  "@diagramZoomIn": {
+    "description": "Diagram card toolbar button that enlarges the rendered diagram."
+  },
+  "diagramFitWidth": "Fit width",
+  "@diagramFitWidth": {
+    "description": "Diagram card toolbar switch that scales the diagram to the card width."
+  },
+  "diagramViewSource": "View source",
+  "@diagramViewSource": {
+    "description": "Diagram card toolbar switch that shows the Mermaid source under the diagram."
+  },
+  "diagramCopySource": "Copy source",
+  "@diagramCopySource": {
+    "description": "Diagram card toolbar button that copies the Mermaid source."
+  },
+  "diagramOpenInPage": "Open in Mermaid page",
+  "@diagramOpenInPage": {
+    "description": "Diagram card toolbar button that opens the source in the Mermaid plugin page."
   },
   "p29ProcessThinking": "Thought {count, plural, one {# time} other {# times}}",
   "@p29ProcessThinking": {

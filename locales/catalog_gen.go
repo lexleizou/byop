@@ -13460,22 +13460,6 @@ func (msgs Messages) MentionMenuLabel() string {
 	return Catalog.Format(msgs.locale, "mentionMenuLabel", nil)
 }
 
-// ChatMermaidPreview says "Preview diagram"
-// in the language the app shows.
-//
-// Button under a closed Mermaid code block that opens the Mermaid preview
-// page.
-func ChatMermaidPreview() string { return In(i18n.Locale()).ChatMermaidPreview() }
-
-// ChatMermaidPreview says "Preview diagram"
-// in the language of msgs.
-//
-// Button under a closed Mermaid code block that opens the Mermaid preview
-// page.
-func (msgs Messages) ChatMermaidPreview() string {
-	return Catalog.Format(msgs.locale, "chatMermaidPreview", nil)
-}
-
 // MermaidPreviewMissing says "Install the Mermaid Diagram plugin to preview this diagram."
 // in the language the app shows.
 //
@@ -13536,6 +13520,212 @@ func MermaidPreviewTooLong() string { return In(i18n.Locale()).MermaidPreviewToo
 // Notice when a Mermaid source is longer than the shared preview limit.
 func (msgs Messages) MermaidPreviewTooLong() string {
 	return Catalog.Format(msgs.locale, "mermaidPreviewTooLong", nil)
+}
+
+// DiagramCardLabel says "Diagram"
+// in the language the app shows.
+//
+// Header label of the inline diagram card that renders a Mermaid block in
+// the conversation.
+func DiagramCardLabel() string { return In(i18n.Locale()).DiagramCardLabel() }
+
+// DiagramCardLabel says "Diagram"
+// in the language of msgs.
+//
+// Header label of the inline diagram card that renders a Mermaid block in
+// the conversation.
+func (msgs Messages) DiagramCardLabel() string {
+	return Catalog.Format(msgs.locale, "diagramCardLabel", nil)
+}
+
+// DiagramCardLabelFlow says "Flow sketch"
+// in the language the app shows.
+//
+// Header label of the inline diagram card when the renderer drew an
+// agentflow diagram.
+func DiagramCardLabelFlow() string { return In(i18n.Locale()).DiagramCardLabelFlow() }
+
+// DiagramCardLabelFlow says "Flow sketch"
+// in the language of msgs.
+//
+// Header label of the inline diagram card when the renderer drew an
+// agentflow diagram.
+func (msgs Messages) DiagramCardLabelFlow() string {
+	return Catalog.Format(msgs.locale, "diagramCardLabelFlow", nil)
+}
+
+// DiagramRendering says "Rendering diagram…"
+// in the language the app shows.
+//
+// Placeholder inside the diagram card body while the diagram is still
+// rendering.
+func DiagramRendering() string { return In(i18n.Locale()).DiagramRendering() }
+
+// DiagramRendering says "Rendering diagram…"
+// in the language of msgs.
+//
+// Placeholder inside the diagram card body while the diagram is still
+// rendering.
+func (msgs Messages) DiagramRendering() string {
+	return Catalog.Format(msgs.locale, "diagramRendering", nil)
+}
+
+// DiagramFailed says "Diagram could not render: {message}"
+// in the language the app shows.
+//
+// Diagram card body when the renderer reported an error.
+func DiagramFailed(message string) string { return In(i18n.Locale()).DiagramFailed(message) }
+
+// DiagramFailed says "Diagram could not render: {message}"
+// in the language of msgs.
+//
+// Diagram card body when the renderer reported an error.
+func (msgs Messages) DiagramFailed(message string) string {
+	return Catalog.Format(msgs.locale, "diagramFailed", map[string]any{"message": message})
+}
+
+// DiagramFailedLine says "(line {line})"
+// in the language the app shows.
+//
+// Line number appended to a diagram render failure.
+func DiagramFailedLine(line int) string { return In(i18n.Locale()).DiagramFailedLine(line) }
+
+// DiagramFailedLine says "(line {line})"
+// in the language of msgs.
+//
+// Line number appended to a diagram render failure.
+func (msgs Messages) DiagramFailedLine(line int) string {
+	return Catalog.Format(msgs.locale, "diagramFailedLine", map[string]any{"line": line})
+}
+
+// DiagramFailedNoDetail says "no details reported"
+// in the language the app shows.
+//
+// Stand-in for the failure reason when the renderer reported none.
+func DiagramFailedNoDetail() string { return In(i18n.Locale()).DiagramFailedNoDetail() }
+
+// DiagramFailedNoDetail says "no details reported"
+// in the language of msgs.
+//
+// Stand-in for the failure reason when the renderer reported none.
+func (msgs Messages) DiagramFailedNoDetail() string {
+	return Catalog.Format(msgs.locale, "diagramFailedNoDetail", nil)
+}
+
+// DiagramTooLong says "Diagram too long to render."
+// in the language the app shows.
+//
+// Diagram card body when the source exceeds the shared render limit.
+func DiagramTooLong() string { return In(i18n.Locale()).DiagramTooLong() }
+
+// DiagramTooLong says "Diagram too long to render."
+// in the language of msgs.
+//
+// Diagram card body when the source exceeds the shared render limit.
+func (msgs Messages) DiagramTooLong() string {
+	return Catalog.Format(msgs.locale, "diagramTooLong", nil)
+}
+
+// DiagramCopied says "Source copied"
+// in the language the app shows.
+//
+// Toast after the diagram card copies its Mermaid source.
+func DiagramCopied() string { return In(i18n.Locale()).DiagramCopied() }
+
+// DiagramCopied says "Source copied"
+// in the language of msgs.
+//
+// Toast after the diagram card copies its Mermaid source.
+func (msgs Messages) DiagramCopied() string {
+	return Catalog.Format(msgs.locale, "diagramCopied", nil)
+}
+
+// DiagramZoomOut says "Zoom out"
+// in the language the app shows.
+//
+// Diagram card toolbar button that shrinks the rendered diagram.
+func DiagramZoomOut() string { return In(i18n.Locale()).DiagramZoomOut() }
+
+// DiagramZoomOut says "Zoom out"
+// in the language of msgs.
+//
+// Diagram card toolbar button that shrinks the rendered diagram.
+func (msgs Messages) DiagramZoomOut() string {
+	return Catalog.Format(msgs.locale, "diagramZoomOut", nil)
+}
+
+// DiagramZoomIn says "Zoom in"
+// in the language the app shows.
+//
+// Diagram card toolbar button that enlarges the rendered diagram.
+func DiagramZoomIn() string { return In(i18n.Locale()).DiagramZoomIn() }
+
+// DiagramZoomIn says "Zoom in"
+// in the language of msgs.
+//
+// Diagram card toolbar button that enlarges the rendered diagram.
+func (msgs Messages) DiagramZoomIn() string {
+	return Catalog.Format(msgs.locale, "diagramZoomIn", nil)
+}
+
+// DiagramFitWidth says "Fit width"
+// in the language the app shows.
+//
+// Diagram card toolbar switch that scales the diagram to the card width.
+func DiagramFitWidth() string { return In(i18n.Locale()).DiagramFitWidth() }
+
+// DiagramFitWidth says "Fit width"
+// in the language of msgs.
+//
+// Diagram card toolbar switch that scales the diagram to the card width.
+func (msgs Messages) DiagramFitWidth() string {
+	return Catalog.Format(msgs.locale, "diagramFitWidth", nil)
+}
+
+// DiagramViewSource says "View source"
+// in the language the app shows.
+//
+// Diagram card toolbar switch that shows the Mermaid source under the
+// diagram.
+func DiagramViewSource() string { return In(i18n.Locale()).DiagramViewSource() }
+
+// DiagramViewSource says "View source"
+// in the language of msgs.
+//
+// Diagram card toolbar switch that shows the Mermaid source under the
+// diagram.
+func (msgs Messages) DiagramViewSource() string {
+	return Catalog.Format(msgs.locale, "diagramViewSource", nil)
+}
+
+// DiagramCopySource says "Copy source"
+// in the language the app shows.
+//
+// Diagram card toolbar button that copies the Mermaid source.
+func DiagramCopySource() string { return In(i18n.Locale()).DiagramCopySource() }
+
+// DiagramCopySource says "Copy source"
+// in the language of msgs.
+//
+// Diagram card toolbar button that copies the Mermaid source.
+func (msgs Messages) DiagramCopySource() string {
+	return Catalog.Format(msgs.locale, "diagramCopySource", nil)
+}
+
+// DiagramOpenInPage says "Open in Mermaid page"
+// in the language the app shows.
+//
+// Diagram card toolbar button that opens the source in the Mermaid plugin
+// page.
+func DiagramOpenInPage() string { return In(i18n.Locale()).DiagramOpenInPage() }
+
+// DiagramOpenInPage says "Open in Mermaid page"
+// in the language of msgs.
+//
+// Diagram card toolbar button that opens the source in the Mermaid plugin
+// page.
+func (msgs Messages) DiagramOpenInPage() string {
+	return Catalog.Format(msgs.locale, "diagramOpenInPage", nil)
 }
 
 // P29ProcessThinking says "Thought {count, plural, one {# time} other {# times}}"

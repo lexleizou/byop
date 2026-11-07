@@ -152,5 +152,5 @@ SOFTWARE.
 
 Source: <https://github.com/obsidianmd/pele>
 Version: `pele@1.7.0` (commit `8603bf3313add9143cd417015d4a6bd6c522dada`)
-Usage: The separately installable `plugins/mermaid-diagram` ships the original ESM renderer for offline SVG previews. It is not linked into the Go binary.
+Usage: The separately installable `plugins/mermaid-diagram` ships the original ESM renderer for offline SVG previews. It is not linked into the Go binary. The P30 inline diagram card additionally embeds read-only copies of `web/diagram-renderer.mjs` and `web/vendor/pele.mjs` into the Go binary (served over `byop-diagram://`); the embedded files are byte-identical to the plugin copies, the plugin directory itself is not modified, and the plugin remains optional.
 License: MIT; upstream Lucide ISC notice retained. Full license text: [plugins/mermaid-diagram/web/vendor/LICENSE](plugins/mermaid-diagram/web/vendor/LICENSE). Source and checksums: [vendor/README.md](plugins/mermaid-diagram/web/vendor/README.md).
