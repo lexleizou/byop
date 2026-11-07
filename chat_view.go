@@ -899,8 +899,9 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 		s.followUpAnimatedCard(c, cardVisible)
 		var placeholderOverlay []func(*ui.Context)
 		if visible && style == followUpStyleGhost {
+			ghostLine := composerLineHeight(fontBody)
 			placeholderOverlay = append(placeholderOverlay, func(c *ui.Context) {
-				s.followUpGhostPlaceholder(c)
+				s.followUpGhostPlaceholder(c, fontBody, ghostLine)
 			})
 		}
 		footer := composerFooter
@@ -911,6 +912,10 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 		// attachments alone, and the send path substitutes one localized
 		// fallback line because Pi's message field needs a non-empty string.
 		s.composerMenusWithRefresh(c, p)
+		var attachments func(*ui.Context)
+		if len(s.composerAttachments) > 0 {
+			attachments = func(c *ui.Context) { s.composerAttachmentChips(c, p) }
+		}
 		result := opaqueComposerV12(c, p, &s.composerDraft, chat.ComposerOptions{
 			Label:        text("chatMessageLabel"),
 			Placeholder:  placeholder,
@@ -918,7 +923,7 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 			StopLabel:    text("chatStop"),
 			Running:      running,
 			SendDisabled: !running && (s.piConn != piConnected || s.piSessionBusy || s.modelStateUnconfirmed),
-			Attachments:  func(c *ui.Context) { s.composerAttachmentChips(c, p) },
+			Attachments:  attachments,
 			// The card is a drop target (review C8): drops on it highlight the
 			// card and add the files; the window handler stays as the fallback
 			// for drops elsewhere on the chat page.
@@ -930,7 +935,9 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 					}
 					s.composerChoices(c)
 					s.composerTableContextChip(c)
-					s.composerContextChip(c)
+					if !s.piHUDShowsContextCapacity() {
+						s.composerContextChip(c)
+					}
 					if running && strings.TrimSpace(s.composerDraft) != "" {
 						ui.Spacer(c).Grow(1)
 						s.runningSendModeControl(c)
@@ -988,16 +995,17 @@ func (s *appState) chatComposer(c *ui.Context, p palette) {
 		}
 		if hudVisible {
 			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
-				Padding(12, 0, 0, 0).AlignItems(ui.Center).
+				Padding(0, 0, 0, composerTextInset(p)).AlignItems(ui.Center).
 				Children(func() { s.piHUDFooter(c) })
 		}
 	})
 }
 
-func (s *appState) followUpGhostPlaceholder(c *ui.Context) {
+func (s *appState) followUpGhostPlaceholder(c *ui.Context, font, lineHeight float32) {
 	t := c.Theme()
-	ui.Row(c).MinWidth(0).AlignItems(ui.Center).Gap(8).Children(func() {
-		components.Text(c, s.followUpSuggestion).FontSize(fontBody).
+	ui.Row(c).Height(lineHeight).MinWidth(0).AlignItems(ui.Center).Gap(8).Children(func() {
+		components.Text(c, s.followUpSuggestion).FontSize(font).
+			FixedLineHeight(lineHeight).
 			TextColor(t.TextMuted).SingleLine().Ellipsis("…").Shrink(1).MinWidth(0)
 		ui.Row(c).Shrink(0).Height(22).Padding(0, 6).Radius(v12ChipRadius).
 			Border(v12BorderWidth, t.Border).Children(func() {

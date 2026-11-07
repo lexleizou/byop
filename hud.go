@@ -676,6 +676,18 @@ func (s *appState) piHUDFooterLabel() string {
 	return piHUDItemsLabel(s.piHUDFooterItems())
 }
 
+// piHUDShowsContextCapacity reports whether the composer's secondary HUD row
+// already shows a non-empty context capacity item, so the accessory row can
+// skip its own capacity chip.
+func (s *appState) piHUDShowsContextCapacity() bool {
+	for _, item := range s.piHUDFooterItems() {
+		if item.kind == hudItemContextCapacity && strings.TrimSpace(item.value) != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *appState) piHUDContextLabel() string {
 	return piHUDContextSummary(s.hud.stats, s.hud.contextWindowFallback, s.hud.autoCompact)
 }

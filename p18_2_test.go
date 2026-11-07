@@ -537,9 +537,14 @@ func TestP18_3ConversationHUDKeepsTokensAndTPSAtNarrowWidths(t *testing.T) {
 					}
 					previousX = rect.X
 				}
-				if firstFooter.X > footer.X+1 {
-					t.Fatalf("footer items do not start at left edge: row=%#v first=%#v",
-						footer, firstFooter)
+				// P29.1: the footer content starts at the composer's text
+				// inset (card padding plus border), not at the row edge.
+				_, insetPalette := nativeThemeForAppearance(appearance.preset,
+					appearance.dark, false, false)
+				inset := composerTextInset(insetPalette)
+				if firstFooter.X > footer.X+inset+0.5 || firstFooter.X < footer.X+inset-0.5 {
+					t.Fatalf("footer items do not start at the composer inset: row=%#v first=%#v inset=%v",
+						footer, firstFooter, inset)
 				}
 				if size.width >= 1440 {
 					if rect, ok := tt.Find("DeepSeek V4.1 Flash"); !ok || rect.W <= 0 {

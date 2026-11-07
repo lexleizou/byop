@@ -125,8 +125,9 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 		s.followUpAnimatedCard(c, cardVisible)
 		var placeholderOverlay []func(*ui.Context)
 		if visible && style == followUpStyleGhost {
+			ghostLine := composerLineHeight(p.bodyFont)
 			placeholderOverlay = append(placeholderOverlay, func(c *ui.Context) {
-				s.followUpGhostPlaceholder(c)
+				s.followUpGhostPlaceholder(c, p.bodyFont, ghostLine)
 			})
 		}
 		footer := composerFooter
@@ -134,6 +135,10 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 			footer = nil
 		}
 		s.composerMenusWithRefresh(c, p)
+		var attachments func(*ui.Context)
+		if len(s.composerAttachments) > 0 {
+			attachments = func(c *ui.Context) { s.composerAttachmentChips(c, p) }
+		}
 		result := jAgentComposerV12(c, p, &s.composerDraft, chat.ComposerOptions{
 			Label:        text("chatMessageLabel"),
 			Placeholder:  placeholder,
@@ -141,7 +146,7 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 			StopLabel:    text("chatStop"),
 			Running:      running,
 			SendDisabled: !running && (s.piConn != piConnected || s.piSessionBusy || s.modelStateUnconfirmed),
-			Attachments:  func(c *ui.Context) { s.composerAttachmentChips(c, p) },
+			Attachments:  attachments,
 			// The card is a drop target (review C8): drops on it highlight the
 			// card and add the files; the window handler stays as the fallback
 			// for drops elsewhere on the chat page.
@@ -153,7 +158,9 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 					}
 					s.composerChoices(c)
 					s.composerTableContextChip(c)
-					s.composerContextChip(c)
+					if !s.piHUDShowsContextCapacity() {
+						s.composerContextChip(c)
+					}
 					if running && strings.TrimSpace(s.composerDraft) != "" {
 						ui.Spacer(c).Grow(1)
 						s.runningSendModeControl(c)
@@ -211,7 +218,7 @@ func (s *appState) jAgentChatComposer(c *ui.Context, p palette) ui.Element {
 		}
 		if hudVisible {
 			ui.Row(c).Key("pi-hud-row").Label("pi-hud-row").FillWidth().MinWidth(0).Height(20).
-				Padding(p.composerPadding, 0, 0, 0).AlignItems(ui.Center).
+				Padding(0, 0, 0, composerTextInset(p)).AlignItems(ui.Center).
 				Children(func() { s.piHUDFooter(c) })
 		}
 	})
@@ -240,17 +247,20 @@ func jAgentComposerV12(
 				ui.Row(c).Key("attachments").FillWidth().Wrap().Gap(8).
 					Padding(0, 0, 4, 0).Children(func() { options.Attachments(c) })
 			}
-			result.Input = ui.TextAreaBase(c.Key("input"), draft).FillWidth().Lines(1, 10).
-				MinHeight(36).Label(options.Label).Placeholder(options.Placeholder).
-				Border(0, ui.Color{}).Background(ui.Color{}).Padding(0).
-				FontSize(p.bodyFont).TextColor(t.Text)
-			if empty && len(placeholderOverlays) > 0 {
-				ui.Row(c).Absolute().Top(p.composerPadding).Left(p.composerPadding).
-					Right(p.composerPadding).Height(36).AlignItems(ui.Start).
-					PassThrough().Children(func() {
-					placeholderOverlays[0](c)
-				})
-			}
+			ghostLine := composerLineHeight(p.bodyFont)
+			ui.Box(c).Key("input-wrap").FillWidth().MinWidth(0).Children(func() {
+				result.Input = ui.TextAreaBase(c.Key("input"), draft).FillWidth().Lines(1, 10).
+					MinHeight(36).Label(options.Label).Placeholder(options.Placeholder).
+					Border(0, ui.Color{}).Background(ui.Color{}).Padding(0).
+					FixedLineHeight(ghostLine).
+					FontSize(p.bodyFont).TextColor(t.Text)
+				if empty && len(placeholderOverlays) > 0 {
+					ui.Row(c).Absolute().Top(0).Left(0).Right(0).Height(ghostLine).
+						AlignItems(ui.Center).PassThrough().Children(func() {
+						placeholderOverlays[0](c)
+					})
+				}
+			})
 			if options.OnPaste != nil {
 				result.Input.OnPaste(options.OnPaste)
 			}
@@ -319,7 +329,7 @@ func jAgentComposerV12(
 		}
 		if options.Footer != nil {
 			ui.Row(c).Key("composer-footer").Label("composer-footer").FillWidth().
-				MinWidth(0).Height(24).Padding(p.composerPadding, 0, 0, 0).
+				MinWidth(0).Height(24).Padding(0, 0, 0, composerTextInset(p)).
 				AlignItems(ui.Center).Gap(2).Children(func() { options.Footer(c) })
 		} else {
 			ui.Row(c).Key("composer-footer").Label("composer-footer").Absolute().

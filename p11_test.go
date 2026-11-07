@@ -176,14 +176,32 @@ func TestP11bHUDContextFallbackClearsWhenPiReportsUnknown(t *testing.T) {
 	state.applyPiHUDState(known)
 
 	tt := ui.NewTester(state.view, 1180, 760)
-	if _, ok := tt.Find("1M"); !ok {
-		t.Fatal("composer did not show the initial 1M capacity")
+	// The HUD row owns the capacity display while it has a capacity item, so
+	// the "1M" text lives only inside the HUD summary.
+	capacityCount := 0
+	for _, label := range tt.Texts() {
+		if label == "1M" {
+			capacityCount++
+		}
+	}
+	if capacityCount != 0 {
+		t.Fatalf("standalone 1M capacity rendered beside the HUD capacity (count %d)", capacityCount)
+	}
+	if !tt.HasText("1M") {
+		t.Fatal("HUD capacity summary did not show the fallback 1M")
 	}
 
 	state.applyPiHUDState(&piSessionState{})
 	tt = ui.NewTester(state.view, 1180, 760)
-	if _, ok := tt.Find("1M"); ok {
-		t.Fatal("composer retained 1M after Pi reported an unknown capacity")
+	// Pi reports an unknown capacity: neither the HUD summary nor the
+	// composer chip may keep the "1M" text.
+	for _, label := range tt.Texts() {
+		if label == "1M" {
+			t.Fatalf("exact 1M capacity remained after Pi reported unknown: %#v", tt.Texts())
+		}
+	}
+	if tt.HasText("1M") {
+		t.Fatalf("1M substring remained after Pi reported unknown: %#v", tt.Texts())
 	}
 }
 

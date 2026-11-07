@@ -442,6 +442,22 @@ func iconActionV12(c *ui.Context, label string, iconValue func() *ui.SVG) ui.Ele
 	return button
 }
 
+// composerLineHeight is the fixed line height the composer input and its
+// ghost suggestion share, so the suggestion sits on the input's first line.
+func composerLineHeight(font float32) float32 { return float32(math.Round(float64(font * 20 / 14))) }
+
+// composerTextInset is the horizontal inset of the composer's content: the
+// card's left padding plus its surface border width, which the HUD and footer
+// rows need to line up with the typed text.
+func composerTextInset(p palette) float32 {
+	border := v12BorderWidth
+	if p.preset == appearancePresetJAgent {
+		// jAgentGlassSurface draws its own 0.5px glass border.
+		border = 0.5
+	}
+	return p.composerPadding + border
+}
+
 // opaqueComposerV12 is the repository-owned composer used by the floating
 // conversation. It mirrors chat.Composer's input contract while keeping the
 // card opaque and free of Onevra's dependency shadow.
@@ -466,16 +482,20 @@ func opaqueComposerV12(c *ui.Context, p palette, draft *string,
 				ui.Row(c).Key("attachments").FillWidth().Wrap().Gap(8).
 					Padding(0, 0, 4, 0).Children(func() { options.Attachments(c) })
 			}
-			result.Input = ui.TextAreaBase(c.Key("input"), draft).FillWidth().Lines(1, 10).
-				MinHeight(36).Label(options.Label).Placeholder(options.Placeholder).
-				Border(0, ui.Color{}).Background(ui.Color{}).Padding(0).
-				FontSize(fontBody).TextColor(t.Text)
-			if empty && len(placeholderOverlays) > 0 {
-				ui.Row(c).Absolute().Top(12).Left(12).Right(12).Height(36).
-					AlignItems(ui.Start).PassThrough().Children(func() {
-					placeholderOverlays[0](c)
-				})
-			}
+			lh := composerLineHeight(fontBody)
+			ui.Box(c).Key("input-wrap").FillWidth().MinWidth(0).Children(func() {
+				result.Input = ui.TextAreaBase(c.Key("input"), draft).FillWidth().Lines(1, 10).
+					MinHeight(36).Label(options.Label).Placeholder(options.Placeholder).
+					Border(0, ui.Color{}).Background(ui.Color{}).Padding(0).
+					FixedLineHeight(lh).
+					FontSize(fontBody).TextColor(t.Text)
+				if empty && len(placeholderOverlays) > 0 {
+					ui.Row(c).Absolute().Top(0).Left(0).Right(0).Height(lh).
+						AlignItems(ui.Center).PassThrough().Children(func() {
+						placeholderOverlays[0](c)
+					})
+				}
+			})
 			if options.OnPaste != nil {
 				result.Input.OnPaste(options.OnPaste)
 			}
@@ -544,7 +564,7 @@ func opaqueComposerV12(c *ui.Context, p palette, draft *string,
 		}
 		if options.Footer != nil {
 			ui.Row(c).Key("composer-footer").Label("composer-footer").FillWidth().MinWidth(0).Height(24).
-				Padding(12, 0, 0, 0).AlignItems(ui.Center).Gap(2).
+				Padding(0, 0, 0, composerTextInset(p)).AlignItems(ui.Center).Gap(2).
 				Children(func() { options.Footer(c) })
 		} else {
 			// Keep the layout-test seam present without changing the resting
