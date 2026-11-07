@@ -33,7 +33,7 @@ BYOP（Build You Own Pi）是 MyGo 原生 UI + 外部 Pi CLI 的多插件工作�
 - Liquid Glass 只用于标题、导航和必要浮层；阅读区与 Composer 内容背景不透明。高对比、减少透明度或不支持平台回退到 Radix 实色。
 - 右侧任务栏默认收起。布局已于 2026-11-05 拍板为方案 A（简洁侧栏，定稿，与当前实施一致）；已启用插件数量长期超过 8 个时重新评估方案 B。
 - Pi 以独立安装的 Pi CLI 运行，BYOP 通过 JSONL RPC 调用，不内置 Pi 内核，不复制凭据。
-- 插件开发暂停：插件平台能力可以继续建设，但在 Lex 明确要求前不开发任何功能插件。2026-11-05 拍板首批解冻 Mermaid 渲染（Pele）插件；Library、Document、Git、终端等其余候选继续冻结。P27 已实现独立 Mermaid 插件页，P28 增加对话代码块一键送到该页面自动预览（应用0.21.0、插件0.2.0，`plugins/mermaid-diagram/`）；验证边界见 `docs/P28-validation.md`，系统文件选择自动化仍未通过，聊天内嵌仍未实现；P29（应用0.22.0）把对话过程改为商业版时间轴，Mermaid 插件未变，验证见 `docs/P29-validation.md`；当前核心入口仍为 Chat、Plugins、Automations、Settings，`examples/` 只放契约 fixture。
+- 插件开发暂停：插件平台能力可以继续建设，但在 Lex 明确要求前不开发任何功能插件。2026-11-05 拍板首批解冻 Mermaid 渲染（Pele）插件；Library、Document、Git、终端等其余候选继续冻结。P27 已实现独立 Mermaid 插件页，P28 增加对话代码块一键送到该页面自动预览（应用0.21.0、插件0.2.0，`plugins/mermaid-diagram/`）；验证边界见 `docs/P28-validation.md`，系统文件选择自动化仍未通过，聊天内嵌仍未实现；P29（应用0.22.0）把对话过程改为商业版时间轴；P29.1（0.22.1）修输入框建议文字对齐等；P30（0.23.0）让 Mermaid 代码块在对话内就地渲染成图解卡片（宿主内置 `byop-diagram://` 协议 + go:embed，复用插件 vendor 的 Pele，插件与 vendor 未改），插件仍为 0.2.0，验证见 `docs/P30-validation.md`；当前核心入口仍为 Chat、Plugins、Automations、Settings，`examples/` 只放契约 fixture。
 - Automations 只统一已有登记、运行历史和失败暂停/恢复，不新增 Loop 调度器或 `/loop`。新对话默认值已定为完全跟随 Pi 的有效配置（2026-11-05 拍板；不新增独立设置页，BYOP 不保存跨会话默认值；会话内模型档位记忆保留并隔离，P27 只允许同一会话身份的 key 迁移）；HUD 显示项开关继续挂账观察（2026-11-05 决定）。
 
 ## 交付与检查
