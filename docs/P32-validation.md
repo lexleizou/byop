@@ -38,18 +38,29 @@
 |---|---|---|---|
 | 1 | 页头按钮、查询栏下拉全是白块、无文字 | `app.js` 的 `onTheme` 回调把 payload 当字符串比较（`theme === "dark"`），实际收到的是 `{mode, colors, …}` 对象，`data-mode` 永远写成 `light`，于是 `--bui-raised` 保持浅色 #fff，而文字色来自宿主深色 → 白底白字 | 改读 `theme.mode`（兼容裸字符串），并在注册后主动应用一次 `byop.theme` |
 | 2 | 列隐藏阈值对插件页过于激进（1366 窗口只显示 4–6 列） | `@container main` 用 1320/1150/1060/1000，而插件页容器只有约 1030 | 下调为 1240/1120/1040/980 |
+| 4 | 1000 宽窗口下插件对话列强行并排，表格被压到 430 DIP、布局崩坏 | 覆盖式判断用窗口宽（<980）而不用剩余空间 | 改为按“主区宽 − 面板宽 − 分隔条 < 640”判断，不足时面板浮在 WebView 之上 |
 | 3 | 选中一行后**滚轮**不再滚动（用户 19:26 直接反馈，是核心诉求） | 三处叠加：① `html/body/.table-page` 只有 `min-height`，flex 链撑不出受限高度，`#table-scroll` 实际没有可滚空间（**主因**）；② `td` 带 `tabindex=0`，鼠标点击本身就会聚焦它，WKWebView 把滚动目标改到该单元格；③ 上一版把焦点回交给 `#table-scroll`，容器持有焦点后同样走自己的滚动链 | ① `html,body{height:100%}`、`.table-page{height:100%;overflow:hidden}` 建立确定高度链；② 单击后 `blur()` 把焦点还给文档（`document.body`）；③ 容器 `tabindex` 改为 `-1`，不再进入 Tab 序列 |
+
+### 复验补充（19:45–20:10，真实 Pi 与演示时间线）
+
+| 项 | 证据 | 结论 |
+|---|---|---|
+| 对话内容列宽跟随窗口 | 窗口 1384 时内容列约 1100；缩到 1000 后收窄到约 790（`30-demo-chat.png` 与 `32-narrow-1000b.png` 对比） | 通过 |
+| 对话区字号随主题变化 | 同一对话在 BoardUI（`30-demo-chat.png`，15px、右侧气泡）与 BYOP（`33-byop-preset.png`，14px、左侧头像行）下字号与行高明显不同 | 通过 |
+| 插件右侧调出当前主对话 | `35-plugin-chat-panel.png`：面板显示“当前对话 + 模型胶囊”与主对话相同的消息；`37-panel-overlay.png`：窄窗口下改为浮层，表格不再被挤压 | 通过（含本轮第 4 项修复） |
+| 扶摇页跟随宿主预设 | `34-fuyao-byop.png`：BYOP 预设下 +新增记录 变橙色、表格与卡片改用 BYOP 表面 | 通过 |
+| 插件主题资源覆盖字号 | 未在真实窗口验证（需要第三方插件主题资源）；`TestP32ThemeFontSizeOverridesChatFont` 覆盖 | 未验证 |
+
+补充说明：演示时间线用 `BYOP_DEMO_TOOLS=1`；真实 Pi 会话用 `PI_CODING_AGENT_SESSION_DIR` 指向 `~/AgentScratch/20261108-byop-p32/verify/pi-sessions`，未写入用户既有会话。
 
 ### 未验证（工具限制或未覆盖）
 
 | 项 | 原因 |
 |---|---|
 | ~~选中后用真实滚轮继续滚动~~ | **已于 19:40 验证通过**：用 CoreGraphics `CGEventCreateScrollWheelEvent` 发真实滚轮（Cua `scroll` 与 AppleScript PageDown 都不能代表滚轮），`14-heightchain-wheel.png` 证空白滚动生效，`15a/15b` 证明先选行（已选 1 条）再滚轮时表格正常滚动且选中保持 |
-| 对话列宽跟随窗口 | 需要连接真实 Pi 并产生消息；本次为 `BYOP_PI_CONNECT=0`，对话区为空，无法测量内容列 |
-| 对话区字号随主题变化 | 同上；字号由 `palette.chatFont` 驱动，已由 `TestP32ChatFontFollowsPreset` 覆盖三档取值，但未在真实窗口切主题观察 |
-| 插件右侧调出当前对话 | 需要主对话存在；`BYOP_PI_CONNECT=0` 下无法验证面板内容、宽度拖拽与 `⌘⌥C` |
 | 模型与渠道页 | 未走查（需真实 `models.json` 交互，避免污染本机 Pi 配置） |
-| 还款计划 Tab 与计划详情子页 | 合成快照只有 1 个计划、2 期次，页面已有 Tab，但未逐项核对期次表渲染 |
+| 还款计划 Tab 切换与计划详情子页 | 真实窗口里两次点击 Tab 均未命中（窗口尺寸变化导致坐标换算失效），改由 `plans view, detail sub-tabs and chat panel follow the P32 contract` 与 `table.plans aggregates installments from the latest plan` 覆盖；期次表渲染未在窗口确认 |
+| 面板宽度拖拽与 `⌘⌥C` | 未在真实窗口触发 |
 | 「在 Pi 中登录」 | 会打开系统 Terminal，未在验收中触发 |
 | 打包与安装 | 本次未构建 DMG |
 

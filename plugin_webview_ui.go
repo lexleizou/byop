@@ -8,9 +8,12 @@ import (
 )
 
 const (
-	// pluginChatOverlayWidth: at or below a window this narrow the chat panel
-	// floats over the web view instead of taking width from it (P32 §2.3).
-	pluginChatOverlayWidth float32 = 980
+	// pluginChatMinWebViewWidth is the narrowest the plugin web view may get
+	// while the chat panel sits beside it. Deciding by window width alone put
+	// a 430 DIP web view next to the panel on a 1000 DIP window, which broke
+	// the table layout; the panel floats instead once the web view would drop
+	// below this (P32 §2.3).
+	pluginChatMinWebViewWidth float32 = 640
 	// pluginChatDividerWidth is the draggable hit area of the divider; the
 	// painted separator stays 1px inside it.
 	pluginChatDividerWidth float32 = 8
@@ -47,7 +50,14 @@ func (s *appState) pluginWebViewPage(c *ui.Context, p palette) {
 
 	windowWidth, _ := c.Size()
 	panelWidth := normalizePluginChatWidth(s.pluginChatWidth)
-	chatOverlay := s.pluginChatOpen && windowWidth < pluginChatOverlayWidth
+	// Side by side only while the web view keeps a usable width; otherwise the
+	// panel floats above it so the table keeps its own viewport.
+	mainWidth := windowWidth - s.navigationWidth(windowWidth)
+	if s.navCollapsed {
+		mainWidth = windowWidth - navCollapsedWidth
+	}
+	chatOverlay := s.pluginChatOpen &&
+		mainWidth-panelWidth-pluginChatDividerWidth < pluginChatMinWebViewWidth
 
 	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
 		s.pluginWebViewHeader(c, p, entry, view)
