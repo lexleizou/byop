@@ -64,6 +64,19 @@
 | 「在 Pi 中登录」 | 会打开系统 Terminal，未在验收中触发 |
 | 打包与安装 | 本次未构建 DMG |
 
+## 打包与安装（2026-11-08 23:45）
+
+| 项 | 值 |
+|---|---|
+| 产物 | `dist/darwin-arm64/BYOP 0.25.0 arm64.dmg` |
+| 大小 | 28,559,928 字节（0.24.0 为 28,146,615，增量约 0.4 MB，来自插件与本地化文案） |
+| SHA-256 | `a3e9bfa8c073069f19cb7dca2f95128deb1b4b6163b2ecb1ba8dd44cca6a7fb1` |
+| 签名 | adhoc、未公证（与以往一致） |
+| 版本 | `mygo.json` 与 `main.go` 的 `appVersion` 均为 0.25.0；`Info.plist` 读回 0.25.0 |
+| 安装 | 旧 0.24.0 已移入 `~/.Trash/BYOP-0.24.0-20261108-234508.app`；`/Applications/BYOP.app` 内二进制与构建产物逐字节一致 |
+
+安装后启动确认（`40-installed-025.png`）：使用用户真实配置（`appearancePreset = boardui`、`theme = light`），界面呈现 BoardUI 浅色（白底、蓝色强调、24 圆角外壳），Pi 1.5.0 已连接，会话列表与 Composer 正常。
+
 ## 已知限制
 
 1. 高对比模式下主题 `fontSize` 不生效（`applyPluginThemeOverlay` 遇高对比提前返回，与颜色覆盖的既有语义一致）。
