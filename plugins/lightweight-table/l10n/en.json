@@ -279,5 +279,12 @@
   "confirmCancel": "Cancel",
   "confirmConfirm": "Delete",
   "chatPanelAria": "Show the current chat next to this page",
-  "chatPanelError": "Could not toggle the chat panel. Try again later."
+  "chatPanelError": "Could not toggle the chat panel. Try again later.",
+  "kpiAria": "Key figures",
+  "kpiDueWindow": "{overdue} overdue · {soon} due in 30 days",
+  "kpiNoneOverdue": "Nothing overdue",
+  "kpiSettledCount": "{count} settled",
+  "kpiEarliestOverdue": "Earliest {date}",
+  "kpiNoOverdueDate": "—",
+  "kpiOverdueAmount": "Overdue amount"
 }

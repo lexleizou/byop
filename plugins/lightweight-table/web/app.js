@@ -22,6 +22,7 @@ const dom = {
   title: document.querySelector("#page-title"),
   subtitle: document.querySelector("#page-subtitle"),
   dashboard: document.querySelector("#dashboard"),
+  dashboardKpis: document.querySelector("#dashboard-kpis"),
   dashboardScope: document.querySelector("#dashboard-scope"),
   dashboardInline: document.querySelector("#dashboard-inline"),
   dashboardMixToggle: document.querySelector("#dashboard-mix-toggle"),
@@ -638,6 +639,90 @@ function textElement(tagName, className, textValue) {
   return element;
 }
 
+// renderDashboardKpis is the BoardUI KPI row (P32 §6.2): four plain cards
+// carrying the four amounts a reader checks first, each with the one line of
+// context that makes the number actionable. It replaces the old three-column
+// hero/status/attention strip; the status bar and composition keep their own
+// sections below.
+function renderDashboardKpis() {
+  const dashboard = state.dashboard;
+  const host = dom.dashboardKpis;
+  if (!host) {
+    return;
+  }
+  if (!dashboard) {
+    host.hidden = true;
+    host.replaceChildren();
+    return;
+  }
+  host.hidden = false;
+  host.setAttribute("aria-label", message("kpiAria"));
+
+  const totals = dashboard.totals ?? {};
+  const scope = dashboard.scope ?? {};
+  const status = dashboard.status ?? [];
+  const group = (value) => status.find((entry) => entry.value === value);
+  const overdueCount = group("overdue")?.row_count ?? 0;
+  const overdueAmount = group("overdue")?.remaining_due ?? "0.00";
+  const settledCount = group("settled")?.row_count ?? 0;
+  const attention = dashboard.attention ?? [];
+  const soonCount = attention.filter(
+    (item) => typeof item.days === "number" && item.days >= 0 && item.days <= (dashboard.due_window_days ?? 30),
+  ).length;
+  const earliestOverdue = attention
+    .filter((item) => typeof item.days === "number" && item.days < 0 && item.next_due)
+    .map((item) => item.next_due)
+    .sort()
+    .at(0);
+
+  const card = (labelKey, value, note, tone) => {
+    const wrap = document.createElement("div");
+    wrap.className = "kpi";
+    const lab = document.createElement("div");
+    lab.className = "kpi-lab";
+    lab.textContent = message(labelKey);
+    const val = document.createElement("div");
+    val.className = "kpi-val";
+    val.textContent = `${formatDecimal(value ?? "0.00")}`;
+    if (tone) {
+      val.style.color = tone;
+    }
+    const sub = document.createElement("div");
+    sub.className = "kpi-sub";
+    sub.textContent = note;
+    wrap.append(lab, val, sub);
+    return wrap;
+  };
+
+  host.replaceChildren(
+    card(
+      "column.principal",
+      totals.principal?.value,
+      message("recordCount", { count: dashboard.row_count ?? scope.total_count ?? 0 }),
+    ),
+    card(
+      "column.remaining_due",
+      totals.remaining_due?.value,
+      overdueCount > 0
+        ? message("kpiDueWindow", { overdue: overdueCount, soon: soonCount })
+        : message("kpiNoneOverdue"),
+    ),
+    card(
+      "column.actual_paid",
+      totals.actual_paid?.value,
+      message("kpiSettledCount", { count: settledCount }),
+    ),
+    card(
+      "kpiOverdueAmount",
+      overdueAmount,
+      overdueCount > 0
+        ? message("kpiEarliestOverdue", { date: earliestOverdue ?? message("kpiNoOverdueDate") })
+        : message("kpiNoneOverdue"),
+      overdueCount > 0 ? "var(--byop-danger-text, Mark)" : null,
+    ),
+  );
+}
+
 function renderDashboardScope() {
   const scope = state.dashboard?.scope ?? {};
   const label = textElement(
@@ -1128,10 +1213,16 @@ function renderDashboard() {
   );
   dom.dashboard.setAttribute("aria-label", message("dashboardAria"));
   renderDashboardScope();
+  renderDashboardKpis();
   renderDashboardInline();
   const collapsed = state.dashboardCollapsed;
   dom.dashboardInline.hidden = !collapsed;
   dom.dashboardPanel.hidden = collapsed;
+  // The KPI row carries the same amounts the collapsed summary line shows, so
+  // only the expanded board reveals it (P32 §6.2).
+  if (dom.dashboardKpis) {
+    dom.dashboardKpis.hidden = collapsed;
+  }
   dom.dashboardCollapseToggle.textContent = message(
     collapsed ? "dashboardExpand" : "dashboardCollapse",
   );

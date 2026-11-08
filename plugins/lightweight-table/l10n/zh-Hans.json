@@ -279,5 +279,12 @@
   "confirmCancel": "取消",
   "confirmConfirm": "删除",
   "chatPanelAria": "在本页右侧调出当前对话",
-  "chatPanelError": "对话面板调用失败，请稍后重试。"
+  "chatPanelError": "对话面板调用失败，请稍后重试。",
+  "kpiAria": "关键数字",
+  "kpiDueWindow": "逾期 {overdue} 条 · 30 天内 {soon} 条",
+  "kpiNoneOverdue": "没有逾期",
+  "kpiSettledCount": "已结清 {count} 条",
+  "kpiEarliestOverdue": "最早 {date}",
+  "kpiNoOverdueDate": "—",
+  "kpiOverdueAmount": "逾期金额"
 }

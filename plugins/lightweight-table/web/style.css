@@ -436,9 +436,16 @@ td[data-action="edit-cell"]:focus-visible {
 /* ============ KPI / dashboard（§6.2；dashboard-* 为 app.js 现有类名） ============ */
 
 .kpi-row {
+  padding: 16px 16px 0;
   display: grid;
+  /* [hidden] must win over the grid display above, or the collapsed board
+     keeps painting its KPI cards. */
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+}
+
+.kpi-row[hidden] {
+  display: none;
 }
 
 .kpi {
@@ -573,10 +580,16 @@ td[data-action="edit-cell"]:focus-visible {
 
 .dashboard-top {
   display: grid;
+  /* P32 §6.2: the KPI row now carries the headline amounts, so the old hero
+     column would repeat them; the status bar and the attention list keep the
+     row to themselves. */
   grid-template-columns:
-    minmax(200px, 0.8fr)
     minmax(360px, 2fr)
     minmax(260px, 1fr);
+}
+
+.dashboard-top > #dashboard-hero {
+  display: none;
 }
 
 .dashboard-top > * {
