@@ -36,6 +36,8 @@ type byopPreferences struct {
 	NavExpandedWidth               float32                               `json:"navExpandedWidth,omitempty"`
 	JAgentNavExpandedWidth         float32                               `json:"jAgentNavExpandedWidth,omitempty"`
 	TasksOpen                      bool                                  `json:"tasksOpen,omitempty"`
+	PluginChatOpen                 bool                                  `json:"pluginChatOpen,omitempty"`
+	PluginChatWidth                float32                               `json:"pluginChatWidth,omitempty"`
 	Workspace                      string                                `json:"workspace,omitempty"`
 	LegacyMigrationPromptDismissed bool                                  `json:"legacyMigrationPromptDismissed,omitempty"`
 	LastSessionByWorkspace         map[string]string                     `json:"lastSessionByWorkspace,omitempty"`
@@ -64,9 +66,12 @@ type byopPreferencesStore struct {
 
 func defaultByopPreferences() byopPreferences {
 	return byopPreferences{
-		Version:                byopPreferencesVersion,
-		Theme:                  string(themeSystem),
-		AppearancePreset:       string(appearancePresetBYOP),
+		Version: byopPreferencesVersion,
+		Theme:   string(themeSystem),
+		// P32 §3: a fresh install lands on the BoardUI preset. The
+		// normalizeAppearancePreset fallback stays BYOP so a damaged or
+		// unknown saved value still rolls back visibly, not silently.
+		AppearancePreset:       string(appearancePresetBoardUI),
 		Contrast:               string(contrastSystem),
 		Motion:                 string(motionSystem),
 		PanelAnimationMS:       defaultPanelAnimationMS,
@@ -156,6 +161,7 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 	preferences.JAgentWallpaper = normalizeJAgentWallpaper(preferences.JAgentWallpaper)
 	preferences.NavExpandedWidth = normalizeNavExpandedWidth(preferences.NavExpandedWidth)
 	preferences.JAgentNavExpandedWidth = normalizeJAgentNavExpandedWidth(preferences.JAgentNavExpandedWidth)
+	preferences.PluginChatWidth = normalizePluginChatWidth(preferences.PluginChatWidth)
 	preferences.NavTransparency = min(max(preferences.NavTransparency, 0), 100)
 	preferences.GlassBlur = min(max(preferences.GlassBlur, 0), runtimeTokens.Glass.BlurMax)
 	if preferences.LastSessionByWorkspace == nil {
@@ -170,6 +176,21 @@ func normalizeByopPreferences(preferences *byopPreferences) {
 	if preferences.Legacy == nil {
 		preferences.Legacy = make(map[string]legacyValue)
 	}
+}
+
+// The plugin view's chat panel (P32 §6.5 G) is clamped between these widths;
+// an unset (0) value means the default, the same convention as the nav width.
+const (
+	pluginChatMinWidth     float32 = 380
+	pluginChatMaxWidth     float32 = 560
+	pluginChatDefaultWidth float32 = 420
+)
+
+func normalizePluginChatWidth(value float32) float32 {
+	if value <= 0 {
+		return pluginChatDefaultWidth
+	}
+	return min(max(value, pluginChatMinWidth), pluginChatMaxWidth)
 }
 
 func normalizeWallpaper(value string) string {

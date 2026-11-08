@@ -1595,6 +1595,30 @@
   "@settingsAppearancePresetBoardUI": {
     "description": "The BoardUI visual preset with embedded Inter and Noto Sans SC fonts."
   },
+  "settingsAppearancePresetDefaultBadge": "默认",
+  "@settingsAppearancePresetDefaultBadge": {
+    "description": "Small badge marking the preset that ships as the default since P32."
+  },
+  "pluginChatPanelTitle": "当前对话",
+  "@pluginChatPanelTitle": {
+    "description": "Header title of the chat panel next to a plugin view (P32 §6.5 G)."
+  },
+  "pluginChatPanelSameSessionHint": "与「对话」页是同一个会话。",
+  "@pluginChatPanelSameSessionHint": {
+    "description": "Tooltip explaining the plugin chat panel shows the main conversation."
+  },
+  "pluginChatPanelCollapse": "收起对话面板",
+  "@pluginChatPanelCollapse": {
+    "description": "Accessible label for the button that hides the plugin chat panel."
+  },
+  "pluginChatPanelResize": "拖动调整对话面板宽度",
+  "@pluginChatPanelResize": {
+    "description": "Accessible label for the handle that resizes the plugin chat panel."
+  },
+  "noticePreferenceSaveChatPanel": "对话面板状态已更改，但偏好设置无法保存。",
+  "@noticePreferenceSaveChatPanel": {
+    "description": "Notice when the plugin chat panel state changed but could not be persisted."
+  },
   "settingsThemeTitle": "主题",
   "@settingsThemeTitle": {
     "description": "Label for the theme row in appearance settings."
@@ -4325,5 +4349,381 @@
   "p29UserLabel": "你",
   "@p29UserLabel": {
     "description": "Label standing in for the account holder on a user message header."
+  },
+  "channelsSectionTitle": "模型配置",
+  "@channelsSectionTitle": {
+    "description": "「模型配置」区块标题。"
+  },
+  "channelsSectionDescription": "管理 AI 供应商连接，配置 API Key 和可用模型。",
+  "@channelsSectionDescription": {
+    "description": "区块描述。"
+  },
+  "channelsAdd": "添加配置",
+  "@channelsAdd": {
+    "description": "开始新建渠道配置的按钮。"
+  },
+  "channelsPiStatusLine": "Pi：models.json 已读取 · {channels} 个渠道 · 凭据 {ready}/{total} 就绪",
+  "@channelsPiStatusLine": {
+    "description": "区块标题下方的 Pi 状态行。"
+  },
+  "channelsStatusLineMissing": "Pi：models.json 尚未创建",
+  "@channelsStatusLineMissing": {
+    "description": "models.json 不存在时的状态行。"
+  },
+  "channelsEmpty": "还没有配置任何模型，点击上方“添加配置”开始",
+  "@channelsEmpty": {
+    "description": "渠道列表空态。"
+  },
+  "channelsLoading": "加载中...",
+  "@channelsLoading": {
+    "description": "渠道列表加载态。"
+  },
+  "channelsRowDescription": "{name} · {count} 个模型已启用",
+  "@channelsRowDescription": {
+    "description": "渠道行描述行。"
+  },
+  "channelsEdit": "编辑",
+  "@channelsEdit": {
+    "description": "悬浮编辑按钮的可访问名称。"
+  },
+  "channelsDelete": "删除",
+  "@channelsDelete": {
+    "description": "BYOP 自建渠道悬浮删除按钮的可访问名称。"
+  },
+  "channelsRemoveCredential": "移除凭据",
+  "@channelsRemoveCredential": {
+    "description": "内置供应商替代删除的按钮可访问名称。"
+  },
+  "channelsEnableSwitchAria": "启用「{name}」",
+  "@channelsEnableSwitchAria": {
+    "description": "渠道启用开关的可访问名称。"
+  },
+  "channelsCreateTitle": "添加模型配置",
+  "@channelsCreateTitle": {
+    "description": "新建表单标题。"
+  },
+  "channelsEditTitle": "编辑模型配置",
+  "@channelsEditTitle": {
+    "description": "编辑表单标题。"
+  },
+  "channelsBack": "返回",
+  "@channelsBack": {
+    "description": "表单返回按钮的可访问名称。"
+  },
+  "channelsCreate": "创建",
+  "@channelsCreate": {
+    "description": "新建表单主按钮。"
+  },
+  "channelsSave": "保存",
+  "@channelsSave": {
+    "description": "编辑表单主按钮。"
+  },
+  "channelsSaving": "保存中...",
+  "@channelsSaving": {
+    "description": "保存进行中的按钮文字。"
+  },
+  "channelsBasicInfoTitle": "基本信息",
+  "@channelsBasicInfoTitle": {
+    "description": "第一张表单卡片标题。"
+  },
+  "channelsProviderType": "供应商类型",
+  "@channelsProviderType": {
+    "description": "供应商类型选择标签。"
+  },
+  "channelsProviderPlaceholder": "选择供应商",
+  "@channelsProviderPlaceholder": {
+    "description": "未选择供应商时的占位。"
+  },
+  "channelsProviderRequired": "请先选择供应商类型",
+  "@channelsProviderRequired": {
+    "description": "未选择供应商就提交时的行内错误。"
+  },
+  "channelsProviderName": "供应商名称",
+  "@channelsProviderName": {
+    "description": "供应商名称输入标签。"
+  },
+  "channelsProviderNamePlaceholder": "例如: My Anthropic",
+  "@channelsProviderNamePlaceholder": {
+    "description": "供应商名称占位。"
+  },
+  "channelsBaseURLLabel": "Base URL",
+  "@channelsBaseURLLabel": {
+    "description": "Base URL 输入标签。"
+  },
+  "channelsBaseURLPlaceholder": "https://api.example.com",
+  "@channelsBaseURLPlaceholder": {
+    "description": "Base URL 占位。"
+  },
+  "channelsBaseURLPreview": "预览：{url}",
+  "@channelsBaseURLPreview": {
+    "description": "Base URL 下方的实时端点预览。"
+  },
+  "channelsAPIKeyLabel": "API Key",
+  "@channelsAPIKeyLabel": {
+    "description": "API Key 输入标签。"
+  },
+  "channelsAPIKeyPlaceholderCreate": "输入 API Key",
+  "@channelsAPIKeyPlaceholderCreate": {
+    "description": "新建模式的密钥占位。"
+  },
+  "channelsAPIKeyPlaceholderEdit": "留空则不更新",
+  "@channelsAPIKeyPlaceholderEdit": {
+    "description": "编辑模式的密钥占位。"
+  },
+  "channelsToggleKeyVisibility": "显示或隐藏密钥",
+  "@channelsToggleKeyVisibility": {
+    "description": "密钥显隐切换的可访问名称。"
+  },
+  "channelsKeyMasked": "已保存的密钥：{mask}",
+  "@channelsKeyMasked": {
+    "description": "已存密钥的掩码回显（前 4 + 后 4）。"
+  },
+  "channelsPlaintextNote": "密钥以明文保存在 ~/.pi/agent/models.json（权限 600），请勿提交到版本库或同步到公开位置。",
+  "@channelsPlaintextNote": {
+    "description": "P32 设计要求的明文落盘固定提示。"
+  },
+  "channelsTestConnection": "测试连接",
+  "@channelsTestConnection": {
+    "description": "由 BYOP 直接探测供应商端点的按钮。"
+  },
+  "channelsTestRunning": "测试中...",
+  "@channelsTestRunning": {
+    "description": "探测进行中的行内提示。"
+  },
+  "channelsTestResultOK": "连接成功",
+  "@channelsTestResultOK": {
+    "description": "探测成功的行内结果。"
+  },
+  "channelsTestAuth": "认证失败，请检查 API Key",
+  "@channelsTestAuth": {
+    "description": "探测失败：认证。"
+  },
+  "channelsTestForbidden": "权限不足，当前 Key 无访问权限",
+  "@channelsTestForbidden": {
+    "description": "探测失败：禁止访问。"
+  },
+  "channelsTestQuota": "额度不足，请检查账户余额",
+  "@channelsTestQuota": {
+    "description": "探测失败：额度。"
+  },
+  "channelsTestNotFound": "资源不存在，请检查 Base URL 或模型",
+  "@channelsTestNotFound": {
+    "description": "探测失败：资源不存在。"
+  },
+  "channelsTestRateLimited": "请求频率受限，请稍后重试",
+  "@channelsTestRateLimited": {
+    "description": "探测失败：限流。"
+  },
+  "channelsTestInvalid": "请求无效，请检查渠道配置",
+  "@channelsTestInvalid": {
+    "description": "探测失败：请求无效。"
+  },
+  "channelsTestServer": "供应商服务异常，请稍后重试",
+  "@channelsTestServer": {
+    "description": "探测失败：服务端错误。"
+  },
+  "channelsTestNetwork": "网络连接失败，请检查网络或代理",
+  "@channelsTestNetwork": {
+    "description": "探测失败：网络。"
+  },
+  "channelsTestTimeout": "连接超时，请检查网络或代理",
+  "@channelsTestTimeout": {
+    "description": "探测失败：超时。"
+  },
+  "channelsTestFailed": "连接测试失败",
+  "@channelsTestFailed": {
+    "description": "探测失败兜底文案。"
+  },
+  "channelsFetchModels": "从供应商获取",
+  "@channelsFetchModels": {
+    "description": "拉取供应商模型目录的按钮。"
+  },
+  "channelsFetching": "获取中...",
+  "@channelsFetching": {
+    "description": "拉取进行中的行内提示。"
+  },
+  "channelsFetchOK": "成功获取 {count} 个模型",
+  "@channelsFetchOK": {
+    "description": "拉取成功的行内结果。"
+  },
+  "channelsSubscriptionFetchHint": "订阅渠道：模型目录在 Pi 中登录后可用",
+  "@channelsSubscriptionFetchHint": {
+    "description": "订阅渠道的拉取提示。"
+  },
+  "channelsSubscriptionLoginLabel": "在 Pi 中登录",
+  "@channelsSubscriptionLoginLabel": {
+    "description": "把订阅登录交给 Pi 终端的按钮。"
+  },
+  "channelsSubscriptionReloginLabel": "在 Pi 中重新登录",
+  "@channelsSubscriptionReloginLabel": {
+    "description": "已有凭据后的登录按钮文案。"
+  },
+  "channelsLoginWaiting": "等待 Pi 完成授权…",
+  "@channelsLoginWaiting": {
+    "description": "轮询 Pi 凭据状态时的行内提示。"
+  },
+  "channelsLoginReady": "已登录（Pi 凭据就绪）",
+  "@channelsLoginReady": {
+    "description": "Pi 报告就绪时的凭据状态行。"
+  },
+  "channelsLoginNotLoggedIn": "未登录（在 Pi 中完成授权后自动刷新）",
+  "@channelsLoginNotLoggedIn": {
+    "description": "Pi 报告未就绪时的凭据状态行。"
+  },
+  "channelsLoginTimeout": "等待 Pi 完成授权超时，可稍后在 Pi 中重新登录",
+  "@channelsLoginTimeout": {
+    "description": "90 秒登录轮询超时的行内提示。"
+  },
+  "channelsEnableSwitchLabel": "启用此配置",
+  "@channelsEnableSwitchLabel": {
+    "description": "「启用此配置」行标签。"
+  },
+  "channelsEnableSwitchDescription": "关闭后该配置的模型不会在选择列表中出现",
+  "@channelsEnableSwitchDescription": {
+    "description": "启用行描述。"
+  },
+  "channelsEnabledModelsTitle": "已启用模型",
+  "@channelsEnabledModelsTitle": {
+    "description": "已启用模型卡片标题。"
+  },
+  "channelsEnabledCount": "{count} 个模型",
+  "@channelsEnabledCount": {
+    "description": "已启用模型卡片的计数描述。"
+  },
+  "channelsEnabledEmpty": "还没有启用任何模型，从下方可用模型中选择",
+  "@channelsEnabledEmpty": {
+    "description": "已启用模型空态。"
+  },
+  "channelsDisableModel": "取消启用",
+  "@channelsDisableModel": {
+    "description": "单个模型取消启用按钮的可访问名称。"
+  },
+  "channelsAvailableModelsTitle": "可用模型",
+  "@channelsAvailableModelsTitle": {
+    "description": "可用模型卡片标题。"
+  },
+  "channelsAvailableCount": "{count} 个可用模型",
+  "@channelsAvailableCount": {
+    "description": "可用模型卡片计数。"
+  },
+  "channelsEnableModel": "启用",
+  "@channelsEnableModel": {
+    "description": "单个模型启用按钮的可访问名称。"
+  },
+  "channelsSearchPlaceholder": "搜索可用模型...",
+  "@channelsSearchPlaceholder": {
+    "description": "模型搜索框占位。"
+  },
+  "channelsSearchEmpty": "未找到匹配的模型",
+  "@channelsSearchEmpty": {
+    "description": "搜索无结果。"
+  },
+  "channelsAllEnabled": "所有模型已启用",
+  "@channelsAllEnabled": {
+    "description": "全部模型已启用时的提示。"
+  },
+  "channelsManualModelID": "模型 ID（如 claude-opus-4-6）",
+  "@channelsManualModelID": {
+    "description": "手动添加模型 ID 占位。"
+  },
+  "channelsManualModelName": "显示名称（可选）",
+  "@channelsManualModelName": {
+    "description": "手动添加显示名称占位。"
+  },
+  "channelsManualAdd": "手动添加",
+  "@channelsManualAdd": {
+    "description": "手动添加按钮的可访问名称。"
+  },
+  "channelsDeleteConfirmTitle": "确定删除渠道？",
+  "@channelsDeleteConfirmTitle": {
+    "description": "删除确认弹窗标题。"
+  },
+  "channelsDeleteConfirmBody": "确定删除渠道「{name}」？此操作不可恢复。",
+  "@channelsDeleteConfirmBody": {
+    "description": "删除确认弹窗正文。"
+  },
+  "channelsConfirmDelete": "确认删除",
+  "@channelsConfirmDelete": {
+    "description": "删除弹窗确认按钮。"
+  },
+  "channelsRemoveConfirmTitle": "确定移除该渠道的凭据？",
+  "@channelsRemoveConfirmTitle": {
+    "description": "内置供应商移除凭据弹窗标题。"
+  },
+  "channelsRemoveConfirmBody": "将从渠道「{name}」移除已保存的 API Key，渠道本身保留。",
+  "@channelsRemoveConfirmBody": {
+    "description": "移除凭据弹窗正文。"
+  },
+  "channelsConfirmRemove": "移除凭据",
+  "@channelsConfirmRemove": {
+    "description": "移除弹窗确认按钮。"
+  },
+  "channelsCancel": "取消",
+  "@channelsCancel": {
+    "description": "所有弹窗的取消按钮。"
+  },
+  "channelsRiskTitle": "确认使用第三方中转站？",
+  "@channelsRiskTitle": {
+    "description": "第三方 Base URL 风险确认弹窗标题。"
+  },
+  "channelsRiskBody1": "该地址并非当前供应商的官方默认 Base URL。中转站可能存在篡改对话内容和模型响应，存在中间人攻击、凭据泄露与隐私风险。",
+  "@channelsRiskBody1": {
+    "description": "风险弹窗第一段。"
+  },
+  "channelsRiskBody2": "其协议适配也可能导致上下文窗口、工具调用、多模态或流式内容显示异常。请仅使用你信赖的服务，并先用非敏感内容测试。",
+  "@channelsRiskBody2": {
+    "description": "风险弹窗第二段。"
+  },
+  "channelsRiskBody3": "BYOP 仅作为本地 Agent 执行环境：配置、会话等本地数据均存储在你的设备上，BYOP 本身不会额外构成数据风险。",
+  "@channelsRiskBody3": {
+    "description": "风险弹窗第三段，按设计 §4.1 由 Proma 改为 BYOP。"
+  },
+  "channelsRiskBody4": "测试连接与获取模型由 BYOP 直接向该地址发起，密钥不会离开本机文件。",
+  "@channelsRiskBody4": {
+    "description": "风险弹窗第四段，按设计 §4.1 替换 Proma 推广行。"
+  },
+  "channelsRiskAccept": "知晓并愿意承担风险",
+  "@channelsRiskAccept": {
+    "description": "风险弹窗确认按钮。"
+  },
+  "channelsDiscardTitle": "放弃未保存的更改？",
+  "@channelsDiscardTitle": {
+    "description": "放弃更改弹窗标题。"
+  },
+  "channelsDiscardBodyNoModels": "当前尚未配置模型，建议先配置模型再保存。",
+  "@channelsDiscardBodyNoModels": {
+    "description": "未配置模型时的放弃弹窗正文。"
+  },
+  "channelsDiscard": "放弃编辑",
+  "@channelsDiscard": {
+    "description": "放弃弹窗的放弃按钮。"
+  },
+  "channelsSaveAndClose": "保存并关闭",
+  "@channelsSaveAndClose": {
+    "description": "放弃弹窗的保存并关闭按钮。"
+  },
+  "channelsBannerTitle": "{name} 已在 Pi 中授权",
+  "@channelsBannerTitle": {
+    "description": "订阅登录成功横幅标题。"
+  },
+  "channelsBannerBody": "凭据已就绪；现在可以在 Pi 的模型选择器中使用该渠道。",
+  "@channelsBannerBody": {
+    "description": "订阅登录成功横幅正文。"
+  },
+  "channelsBannerClose": "关闭授权成功提示",
+  "@channelsBannerClose": {
+    "description": "横幅关闭按钮的可访问名称。"
+  },
+  "channelsStatusReadFailed": "读取 Pi 渠道状态失败：{detail}",
+  "@channelsStatusReadFailed": {
+    "description": "Pi 状态读取失败的行内错误。"
+  },
+  "channelsCreateFailed": "渠道创建失败，请检查配置后重试",
+  "@channelsCreateFailed": {
+    "description": "渠道创建失败的行内错误。"
+  },
+  "channelsSaveFailed": "自动保存失败，请检查后手动重试",
+  "@channelsSaveFailed": {
+    "description": "编辑保存失败的行内错误。"
   }
 }

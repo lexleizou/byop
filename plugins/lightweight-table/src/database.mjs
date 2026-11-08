@@ -1819,6 +1819,115 @@ export class TableStore {
     });
   }
 
+  // plans aggregates the latest non-replaced repayment plan of every debt
+  // matching the current query. Read-only, same plan-selection semantics as
+  // detail(): the newest plan by effective_on DESC, created_at DESC that is
+  // not replaced.
+  plans(args = {}) {
+    assertPlainObject(args, "table_plans", ["search", "filters"]);
+    const search = normalizeSearch(args.search);
+    const filters = normalizeFilters(args.filters);
+    return this.read(() => {
+      const workbook = workbookRecord(this.db);
+      if (!workbook) {
+        throw new TableError("database_not_initialized", "The table database is empty.");
+      }
+      const table = tableRecord(this.db);
+      const rows = this.db
+        .prepare(
+          `SELECT row_id, values_json
+             FROM rows
+            WHERE table_id = ? AND deleted_at IS NULL`,
+        )
+        .all(DEFAULT_TABLE_ID)
+        .map((row) => ({
+          row_id: row.row_id,
+          values: parseJSON(row.values_json),
+        }));
+      const today = localToday(workbook.timezone);
+      const matchedRows = rows
+        .filter((row) => matchesSearch(row, search))
+        .filter((row) => filters.every((filter) => matchesFilter(row, filter)));
+      const latestPlan = this.db.prepare(
+        `SELECT id, status, method
+           FROM fuyao_repayment_plans
+          WHERE debt_id = ? AND status <> 'replaced'
+          ORDER BY effective_on DESC, created_at DESC, id DESC
+          LIMIT 1`,
+      );
+      const installments = this.db.prepare(
+        `SELECT installment_no, due_on, total_cents, status, actual_paid_on
+           FROM fuyao_planned_payments
+          WHERE plan_id = ?
+          ORDER BY installment_no, id`,
+      );
+      let overdueAmountCents = 0;
+      const plans = matchedRows.map((row) => {
+        const currentPlan = latestPlan.get(row.row_id) ?? null;
+        let periods = 0;
+        let paid = 0;
+        let pending = 0;
+        let overdue = 0;
+        let nextDue = null;
+        let nextAmount = null;
+        if (currentPlan) {
+          const entries = installments.all(currentPlan.id);
+          periods = entries.length;
+          for (const entry of entries) {
+            const isPaid = entry.actual_paid_on !== null || entry.status === "paid";
+            if (isPaid) {
+              paid += 1;
+              continue;
+            }
+            if (entry.status === "overdue" || entry.due_on < today) {
+              overdue += 1;
+              overdueAmountCents += Number(entry.total_cents ?? 0);
+              continue;
+            }
+            pending += 1;
+            if (nextDue === null || entry.due_on < nextDue) {
+              nextDue = entry.due_on;
+              nextAmount = decimalFromCents(entry.total_cents ?? 0, 2);
+            }
+          }
+        }
+        return {
+          row_id: row.row_id,
+          name: row.values.name ?? null,
+          institution: row.values.institution ?? null,
+          method: currentPlan ? currentPlan.method : null,
+          plan_status: currentPlan
+            ? currentPlan.status
+            : (row.values.plan_status ?? null),
+          plan_id: currentPlan ? currentPlan.id : null,
+          periods,
+          paid,
+          pending,
+          overdue,
+          next_due: nextDue,
+          next_amount: nextAmount,
+          progress_pct:
+            periods === 0 ? 0 : Math.round(((paid + overdue) / periods) * 100),
+        };
+      });
+      return {
+        table_id: DEFAULT_TABLE_ID,
+        schema_revision: table.schema_revision,
+        data_revision: table.data_revision,
+        source_local_date: today,
+        plans,
+        totals: {
+          count: plans.length,
+          overdue_count: plans.filter((plan) => plan.overdue > 0).length,
+          overdue_amount: decimalFromCentsString(
+            BigInt(overdueAmountCents),
+            2,
+          ),
+        },
+      };
+    });
+  }
+
   seed(input, { ifEmpty = false } = {}) {
     const normalized = normalizeSeed(input);
     return this.immediate(() => {

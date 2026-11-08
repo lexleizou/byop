@@ -120,6 +120,10 @@ func boardUIThemePalette(dark, high, reduceTransparency bool) palette {
 	// BoardUI does not use the glass, but the palette must fill the field so
 	// the old glass call sites still compile.
 	p.glassTint = p.surface
+	// P32 §5.4: BoardUI conversation typography.
+	p.chatFont = chatFontBoardUI
+	p.chatLineHeight = chatLineBoardUI
+	p.chatCodeFont = chatCodeBoardUI
 	applyPluginThemeOverlay(&p)
 	return p
 }

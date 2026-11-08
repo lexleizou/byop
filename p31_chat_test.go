@@ -51,11 +51,14 @@ func TestP31BoardUIUserBubbleGeometry(t *testing.T) {
 		t.Fatalf("the bubble column lost its accessible You label: %#v", tt.Texts())
 	}
 	// The label names the outer column: it spans the content column (§6),
-	// not a 35×35 avatar or a header row — BoardUI draws neither, and at
-	// 1180px the column is the full 720 DIP wide (the P30 header test uses
-	// the same reference width).
-	if delta := col.W - 720; delta < -1 || delta > 1 {
-		t.Fatalf("the You label rect is %.1f DIP wide, want the whole 720 DIP column", col.W)
+	// not a 35×35 avatar or a header row — BoardUI draws neither. P32 §5
+	// changed the width rule: the BoardUI column follows the window, so at
+	// 1180px it is min(1280, chatMainWidth(1180) − 2×24), not the old
+	// fixed 720. Derived here instead of hard-coded, the same way §5.1
+	// states it.
+	contentWidth := min(float32(1280), state.chatMainWidth(1180)-2*24)
+	if delta := col.W - contentWidth; delta < -1 || delta > 1 {
+		t.Fatalf("the You label rect is %.1f DIP wide, want the window-following %.1f DIP column", col.W, contentWidth)
 	}
 	if col.H <= 40 {
 		t.Fatalf("the You label rect is only %.1f DIP tall: §6 keeps the label on the outer column, never on a header row", col.H)
@@ -108,9 +111,11 @@ func TestP31BoardUIUserBubbleGeometry(t *testing.T) {
 		t.Fatalf("long user message missing: %#v", tt.Texts())
 	}
 	longBubble := bubble(long)
-	// Same formula as §6, through the fixture's own appState so the nav and
-	// tasks preferences are the ones that were rendered.
-	colW := min(float32(720), state.chatMainWidth(1180)-40)
+	// Same formula as §6 through the fixture's own appState so the nav and
+	// tasks preferences are the ones that were rendered; P32 §5 sizes the
+	// column as min(1280, main − 2×24) on the window-following BoardUI
+	// preset.
+	colW := min(float32(1280), state.chatMainWidth(1180)-2*24)
 	bubbleMax := max(min(colW*0.8, 560), 240)
 	if longBubble.W > bubbleMax+1 {
 		t.Fatalf("long bubble is %.1f DIP wide, want at most %.1f", longBubble.W, bubbleMax)

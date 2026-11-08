@@ -559,17 +559,55 @@ func (s *appState) settingsAppearancePresetSegmentV12(c *ui.Context, p palette) 
 			preset appearancePreset
 			key    string
 			label  string
+			badge  string
 		}{
-			{appearancePresetBYOP, "appearance-preset-byop", text("settingsAppearancePresetBYOP")},
-			{appearancePresetJAgent, "appearance-preset-jagent", text("settingsAppearancePresetJAgent")},
-			{appearancePresetBoardUI, "appearance-preset-boardui", text("settingsAppearancePresetBoardUI")},
+			{appearancePresetBYOP, "appearance-preset-byop", text("settingsAppearancePresetBYOP"), ""},
+			{appearancePresetJAgent, "appearance-preset-jagent", text("settingsAppearancePresetJAgent"), ""},
+			// P32 §3: BoardUI is the shipped default preset, and the segment
+			// says so with a small badge instead of a second control.
+			{appearancePresetBoardUI, "appearance-preset-boardui", text("settingsAppearancePresetBoardUI"),
+				text("settingsAppearancePresetDefaultBadge")},
 		} {
 			selected := s.currentAppearancePreset() == choice.preset
-			s.settingsChoiceSegmentButtonV12(c, p, choice.key, choice.label, selected, func() {
+			s.settingsPresetSegmentButtonV12(c, p, choice.key, choice.label, choice.badge, selected, func() {
 				s.setAppearancePreset(choice.preset)
 			})
 		}
 	})
+}
+
+// settingsPresetSegmentButtonV12 is the appearance-preset variant of the
+// choice segment: it can carry a trailing badge (the P32 “default” tag on
+// BoardUI) next to the label inside the same button.
+func (s *appState) settingsPresetSegmentButtonV12(
+	c *ui.Context,
+	p palette,
+	key, label, badge string,
+	selected bool,
+	click func(),
+) {
+	bg, fg := ui.Color{}, p.muted
+	if selected {
+		bg, fg = p.text.Alpha(.14), p.text
+	}
+	button := ui.ButtonBase(c.Key(key)).Height(28).Padding(0, 10).Radius(6).
+		Background(bg).Cursor(ui.CursorPointer).Label(label)
+	if button.Hovered() && !selected {
+		button.Background(p.text.Alpha(.09))
+	}
+	button.Children(func() {
+		ui.Text(c, label).FontSize(p.captionFont).FontWeight(500).TextColor(fg)
+		if badge != "" {
+			ui.Row(c).Padding(1, 4).Radius(4).Background(p.accent.Alpha(.16)).
+				Shrink(0).Children(func() {
+				ui.Text(c, badge).FontSize(p.captionFont).FontWeight(500).
+					TextColor(p.accentText)
+			})
+		}
+	})
+	if button.Clicked() {
+		click()
+	}
 }
 
 func (s *appState) settingsContrastSegmentV12(c *ui.Context, p palette) {

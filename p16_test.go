@@ -14,9 +14,12 @@ import (
 )
 
 func TestP16AppearancePresetNormalization(t *testing.T) {
+	// P32 §3: the shipped default is BoardUI now; only this first assertion
+	// changed. The normalize fallback below must stay BYOP: a damaged or
+	// unknown saved value rolls back visibly, not silently into BoardUI.
 	preferences := defaultByopPreferences()
-	if got := normalizeAppearancePreset(preferences.AppearancePreset); got != appearancePresetBYOP {
-		t.Fatalf("default preset = %q, want BYOP", got)
+	if got := normalizeAppearancePreset(preferences.AppearancePreset); got != appearancePresetBoardUI {
+		t.Fatalf("default preset = %q, want BoardUI", got)
 	}
 	for _, value := range []string{"", "unknown", "  "} {
 		if got := normalizeAppearancePreset(value); got != appearancePresetBYOP {
@@ -118,8 +121,10 @@ func TestP16PresetSaveFailureRollsBackEffectiveAppearance(t *testing.T) {
 	}
 
 	state.setAppearancePreset(appearancePresetJAgent)
-	if state.currentAppearancePreset() != appearancePresetBYOP {
-		t.Fatalf("failed save left preset = %q, want BYOP", state.currentAppearancePreset())
+	// P32 §3: the default preset (the state's entry preset) is BoardUI, so
+	// the failed save must roll back to BoardUI, not to BYOP.
+	if state.currentAppearancePreset() != appearancePresetBoardUI {
+		t.Fatalf("failed save left preset = %q, want BoardUI", state.currentAppearancePreset())
 	}
 	if len(sources) == 0 || sources[len(sources)-1] != mygo.ThemeLight {
 		t.Fatalf("rollback sources = %v, want saved Light", sources)

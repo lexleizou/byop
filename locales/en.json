@@ -1680,6 +1680,30 @@
   "@settingsAppearancePresetBoardUI": {
     "description": "The BoardUI visual preset with embedded Inter and Noto Sans SC fonts."
   },
+  "settingsAppearancePresetDefaultBadge": "Default",
+  "@settingsAppearancePresetDefaultBadge": {
+    "description": "Small badge marking the preset that ships as the default since P32."
+  },
+  "pluginChatPanelTitle": "Current chat",
+  "@pluginChatPanelTitle": {
+    "description": "Header title of the chat panel next to a plugin view (P32 §6.5 G)."
+  },
+  "pluginChatPanelSameSessionHint": "Same conversation as the Chat page.",
+  "@pluginChatPanelSameSessionHint": {
+    "description": "Tooltip explaining the plugin chat panel shows the main conversation."
+  },
+  "pluginChatPanelCollapse": "Collapse chat panel",
+  "@pluginChatPanelCollapse": {
+    "description": "Accessible label for the button that hides the plugin chat panel."
+  },
+  "pluginChatPanelResize": "Resize chat panel",
+  "@pluginChatPanelResize": {
+    "description": "Accessible label for the handle that resizes the plugin chat panel."
+  },
+  "noticePreferenceSaveChatPanel": "Chat panel changed, but preferences could not be saved.",
+  "@noticePreferenceSaveChatPanel": {
+    "description": "Notice when the plugin chat panel state changed but could not be persisted."
+  },
   "settingsThemeTitle": "Theme",
   "@settingsThemeTitle": {
     "description": "Label for the theme row in appearance settings."
@@ -4528,5 +4552,381 @@
   "p29UserLabel": "You",
   "@p29UserLabel": {
     "description": "Label standing in for the account holder on a user message header."
+  },
+  "channelsSectionTitle": "Model configuration",
+  "@channelsSectionTitle": {
+    "description": "Title of the model configuration section."
+  },
+  "channelsSectionDescription": "Manage AI provider connections, API keys and available models.",
+  "@channelsSectionDescription": {
+    "description": "Description of the model configuration section."
+  },
+  "channelsAdd": "Add configuration",
+  "@channelsAdd": {
+    "description": "Button that starts a new channel configuration."
+  },
+  "channelsPiStatusLine": "Pi: models.json loaded · {channels} channels · credentials {ready}/{total} ready",
+  "@channelsPiStatusLine": {
+    "description": "One-line Pi status summary shown under the section header."
+  },
+  "channelsStatusLineMissing": "Pi: models.json has not been created yet",
+  "@channelsStatusLineMissing": {
+    "description": "Pi status line when models.json does not exist yet."
+  },
+  "channelsEmpty": "No model configured yet. Click \"Add configuration\" above to start.",
+  "@channelsEmpty": {
+    "description": "Empty state of the channel list."
+  },
+  "channelsLoading": "Loading...",
+  "@channelsLoading": {
+    "description": "Loading state of the channel list."
+  },
+  "channelsRowDescription": "{name} · {count} models enabled",
+  "@channelsRowDescription": {
+    "description": "Description line of one channel row."
+  },
+  "channelsEdit": "Edit",
+  "@channelsEdit": {
+    "description": "Accessible label of the hover edit button."
+  },
+  "channelsDelete": "Delete",
+  "@channelsDelete": {
+    "description": "Accessible label of the hover delete button for BYOP-created channels."
+  },
+  "channelsRemoveCredential": "Remove credential",
+  "@channelsRemoveCredential": {
+    "description": "Accessible label replacing delete for built-in Pi providers."
+  },
+  "channelsEnableSwitchAria": "Enable \"{name}\"",
+  "@channelsEnableSwitchAria": {
+    "description": "Accessible label of the per-channel enable switch."
+  },
+  "channelsCreateTitle": "Add model configuration",
+  "@channelsCreateTitle": {
+    "description": "Title of the create form."
+  },
+  "channelsEditTitle": "Edit model configuration",
+  "@channelsEditTitle": {
+    "description": "Title of the edit form."
+  },
+  "channelsBack": "Back",
+  "@channelsBack": {
+    "description": "Accessible label of the form back button."
+  },
+  "channelsCreate": "Create",
+  "@channelsCreate": {
+    "description": "Primary submit button of the create form."
+  },
+  "channelsSave": "Save",
+  "@channelsSave": {
+    "description": "Primary submit button of the edit form."
+  },
+  "channelsSaving": "Saving...",
+  "@channelsSaving": {
+    "description": "Submit button label while saving."
+  },
+  "channelsBasicInfoTitle": "Basic information",
+  "@channelsBasicInfoTitle": {
+    "description": "Title of the first form card."
+  },
+  "channelsProviderType": "Provider type",
+  "@channelsProviderType": {
+    "description": "Label of the provider type selector."
+  },
+  "channelsProviderPlaceholder": "Select a provider",
+  "@channelsProviderPlaceholder": {
+    "description": "Placeholder shown before a provider type is picked."
+  },
+  "channelsProviderRequired": "Pick a provider type first",
+  "@channelsProviderRequired": {
+    "description": "Inline error when submitting without a provider type."
+  },
+  "channelsProviderName": "Provider name",
+  "@channelsProviderName": {
+    "description": "Label of the provider name input."
+  },
+  "channelsProviderNamePlaceholder": "e.g. My Anthropic",
+  "@channelsProviderNamePlaceholder": {
+    "description": "Placeholder of the provider name input."
+  },
+  "channelsBaseURLLabel": "Base URL",
+  "@channelsBaseURLLabel": {
+    "description": "Label of the base URL input."
+  },
+  "channelsBaseURLPlaceholder": "https://api.example.com",
+  "@channelsBaseURLPlaceholder": {
+    "description": "Placeholder of the base URL input."
+  },
+  "channelsBaseURLPreview": "Preview: {url}",
+  "@channelsBaseURLPreview": {
+    "description": "Live endpoint preview under the base URL input."
+  },
+  "channelsAPIKeyLabel": "API Key",
+  "@channelsAPIKeyLabel": {
+    "description": "Label of the API key input."
+  },
+  "channelsAPIKeyPlaceholderCreate": "Enter API Key",
+  "@channelsAPIKeyPlaceholderCreate": {
+    "description": "Placeholder of the API key input in create mode."
+  },
+  "channelsAPIKeyPlaceholderEdit": "Leave empty to keep the current key",
+  "@channelsAPIKeyPlaceholderEdit": {
+    "description": "Placeholder of the API key input in edit mode."
+  },
+  "channelsToggleKeyVisibility": "Show or hide the key",
+  "@channelsToggleKeyVisibility": {
+    "description": "Accessible label of the key visibility toggle."
+  },
+  "channelsKeyMasked": "Stored key: {mask}",
+  "@channelsKeyMasked": {
+    "description": "Masked echo of the stored key (first 4 + last 4)."
+  },
+  "channelsPlaintextNote": "The key is stored as plaintext in ~/.pi/agent/models.json (mode 600). Do not commit it to version control or sync it to public locations.",
+  "@channelsPlaintextNote": {
+    "description": "Fixed plaintext storage warning required by the P32 design."
+  },
+  "channelsTestConnection": "Test connection",
+  "@channelsTestConnection": {
+    "description": "Button that probes the provider endpoint from BYOP."
+  },
+  "channelsTestRunning": "Testing...",
+  "@channelsTestRunning": {
+    "description": "Inline label while the connection probe runs."
+  },
+  "channelsTestResultOK": "Connection successful",
+  "@channelsTestResultOK": {
+    "description": "Successful probe result line."
+  },
+  "channelsTestAuth": "Authentication failed. Check the API Key.",
+  "@channelsTestAuth": {
+    "description": "Probe failure: authentication."
+  },
+  "channelsTestForbidden": "Insufficient permissions for the current key.",
+  "@channelsTestForbidden": {
+    "description": "Probe failure: forbidden."
+  },
+  "channelsTestQuota": "Quota exhausted. Check the account balance.",
+  "@channelsTestQuota": {
+    "description": "Probe failure: quota."
+  },
+  "channelsTestNotFound": "Resource not found. Check the Base URL or model.",
+  "@channelsTestNotFound": {
+    "description": "Probe failure: not found."
+  },
+  "channelsTestRateLimited": "Rate limited. Try again later.",
+  "@channelsTestRateLimited": {
+    "description": "Probe failure: rate limited."
+  },
+  "channelsTestInvalid": "Invalid request. Check the channel configuration.",
+  "@channelsTestInvalid": {
+    "description": "Probe failure: invalid request."
+  },
+  "channelsTestServer": "Provider service error. Try again later.",
+  "@channelsTestServer": {
+    "description": "Probe failure: server error."
+  },
+  "channelsTestNetwork": "Network connection failed. Check the network or proxy.",
+  "@channelsTestNetwork": {
+    "description": "Probe failure: network."
+  },
+  "channelsTestTimeout": "Connection timed out. Check the network or proxy.",
+  "@channelsTestTimeout": {
+    "description": "Probe failure: timeout."
+  },
+  "channelsTestFailed": "Connection test failed",
+  "@channelsTestFailed": {
+    "description": "Probe failure fallback."
+  },
+  "channelsFetchModels": "Fetch from provider",
+  "@channelsFetchModels": {
+    "description": "Button that fetches the provider model catalog."
+  },
+  "channelsFetching": "Fetching...",
+  "@channelsFetching": {
+    "description": "Inline label while the catalog fetch runs."
+  },
+  "channelsFetchOK": "Fetched {count} models",
+  "@channelsFetchOK": {
+    "description": "Successful fetch result line."
+  },
+  "channelsSubscriptionFetchHint": "Subscription provider: the model catalog is available after logging in inside Pi.",
+  "@channelsSubscriptionFetchHint": {
+    "description": "Fetch hint shown for subscription providers."
+  },
+  "channelsSubscriptionLoginLabel": "Log in via Pi",
+  "@channelsSubscriptionLoginLabel": {
+    "description": "Button that hands subscription login to the Pi terminal."
+  },
+  "channelsSubscriptionReloginLabel": "Log in via Pi again",
+  "@channelsSubscriptionReloginLabel": {
+    "description": "Login button label once a credential exists."
+  },
+  "channelsLoginWaiting": "Waiting for Pi to finish authorization...",
+  "@channelsLoginWaiting": {
+    "description": "Inline label while polling the Pi credential state."
+  },
+  "channelsLoginReady": "Logged in (Pi credential ready)",
+  "@channelsLoginReady": {
+    "description": "Credential status line when Pi reports ready."
+  },
+  "channelsLoginNotLoggedIn": "Not logged in (refreshes automatically once authorized inside Pi)",
+  "@channelsLoginNotLoggedIn": {
+    "description": "Credential status line when Pi reports not ready."
+  },
+  "channelsLoginTimeout": "Timed out waiting for Pi. You can log in via Pi again later.",
+  "@channelsLoginTimeout": {
+    "description": "Inline message when the 90s login poll expires."
+  },
+  "channelsEnableSwitchLabel": "Enable this configuration",
+  "@channelsEnableSwitchLabel": {
+    "description": "Label of the enable-this-configuration row."
+  },
+  "channelsEnableSwitchDescription": "When off, the models of this configuration disappear from the picker.",
+  "@channelsEnableSwitchDescription": {
+    "description": "Description of the enable row."
+  },
+  "channelsEnabledModelsTitle": "Enabled models",
+  "@channelsEnabledModelsTitle": {
+    "description": "Title of the enabled models card."
+  },
+  "channelsEnabledCount": "{count} models",
+  "@channelsEnabledCount": {
+    "description": "Description of the enabled models card with a count."
+  },
+  "channelsEnabledEmpty": "No models enabled yet. Pick them from the available models below.",
+  "@channelsEnabledEmpty": {
+    "description": "Empty state of the enabled models card."
+  },
+  "channelsDisableModel": "Disable",
+  "@channelsDisableModel": {
+    "description": "Accessible label of the per-model disable button."
+  },
+  "channelsAvailableModelsTitle": "Available models",
+  "@channelsAvailableModelsTitle": {
+    "description": "Title of the available models card."
+  },
+  "channelsAvailableCount": "{count} available models",
+  "@channelsAvailableCount": {
+    "description": "Count line of the available models card."
+  },
+  "channelsEnableModel": "Enable",
+  "@channelsEnableModel": {
+    "description": "Accessible label of the per-model enable button."
+  },
+  "channelsSearchPlaceholder": "Search available models...",
+  "@channelsSearchPlaceholder": {
+    "description": "Placeholder of the model search box."
+  },
+  "channelsSearchEmpty": "No matching model",
+  "@channelsSearchEmpty": {
+    "description": "Search with no matches."
+  },
+  "channelsAllEnabled": "All models are enabled",
+  "@channelsAllEnabled": {
+    "description": "Shown when every fetched model is enabled."
+  },
+  "channelsManualModelID": "Model ID (e.g. claude-opus-4-6)",
+  "@channelsManualModelID": {
+    "description": "Placeholder of the manual model ID input."
+  },
+  "channelsManualModelName": "Display name (optional)",
+  "@channelsManualModelName": {
+    "description": "Placeholder of the manual model name input."
+  },
+  "channelsManualAdd": "Add manually",
+  "@channelsManualAdd": {
+    "description": "Accessible label of the manual add button."
+  },
+  "channelsDeleteConfirmTitle": "Delete this channel?",
+  "@channelsDeleteConfirmTitle": {
+    "description": "Title of the delete confirmation dialog."
+  },
+  "channelsDeleteConfirmBody": "Delete channel \"{name}\"? This cannot be undone.",
+  "@channelsDeleteConfirmBody": {
+    "description": "Body of the delete confirmation dialog."
+  },
+  "channelsConfirmDelete": "Delete channel",
+  "@channelsConfirmDelete": {
+    "description": "Confirm button of the delete dialog."
+  },
+  "channelsRemoveConfirmTitle": "Remove the stored credential?",
+  "@channelsRemoveConfirmTitle": {
+    "description": "Title of the remove-credential dialog for built-in providers."
+  },
+  "channelsRemoveConfirmBody": "The stored API Key of \"{name}\" will be removed; the channel itself stays.",
+  "@channelsRemoveConfirmBody": {
+    "description": "Body of the remove-credential dialog."
+  },
+  "channelsConfirmRemove": "Remove credential",
+  "@channelsConfirmRemove": {
+    "description": "Confirm button of the remove dialog."
+  },
+  "channelsCancel": "Cancel",
+  "@channelsCancel": {
+    "description": "Cancel button of every dialog."
+  },
+  "channelsRiskTitle": "Use a third-party relay?",
+  "@channelsRiskTitle": {
+    "description": "Title of the third-party base URL risk dialog."
+  },
+  "channelsRiskBody1": "This address is not the provider's official default Base URL. A relay may tamper with conversation content and model responses; it carries man-in-the-middle, credential leakage and privacy risks.",
+  "@channelsRiskBody1": {
+    "description": "Risk dialog paragraph 1."
+  },
+  "channelsRiskBody2": "Its protocol adaptation can also break context window, tool calls, multimodal input or streaming output. Only use services you trust and test with non-sensitive content first.",
+  "@channelsRiskBody2": {
+    "description": "Risk dialog paragraph 2."
+  },
+  "channelsRiskBody3": "BYOP acts only as a local Agent environment: configuration, sessions and other local data stay on your device, and BYOP itself adds no extra data exposure.",
+  "@channelsRiskBody3": {
+    "description": "Risk dialog paragraph 3, adapted from Proma to BYOP per design §4.1."
+  },
+  "channelsRiskBody4": "Connection tests and model fetches are sent by BYOP directly to this address; the key never leaves this machine's files.",
+  "@channelsRiskBody4": {
+    "description": "Risk dialog paragraph 4, replacing the Proma commercial promo line per design §4.1."
+  },
+  "channelsRiskAccept": "I understand and accept the risk",
+  "@channelsRiskAccept": {
+    "description": "Confirm button of the risk dialog."
+  },
+  "channelsDiscardTitle": "Discard unsaved changes?",
+  "@channelsDiscardTitle": {
+    "description": "Title of the discard-changes dialog."
+  },
+  "channelsDiscardBodyNoModels": "No model is configured yet. Configure a model before saving.",
+  "@channelsDiscardBodyNoModels": {
+    "description": "Body of the discard dialog when no model is configured."
+  },
+  "channelsDiscard": "Discard edits",
+  "@channelsDiscard": {
+    "description": "Discard button of the discard dialog."
+  },
+  "channelsSaveAndClose": "Save and close",
+  "@channelsSaveAndClose": {
+    "description": "Save-and-close button of the discard dialog."
+  },
+  "channelsBannerTitle": "{name} authorized via Pi",
+  "@channelsBannerTitle": {
+    "description": "Title of the subscription login success banner."
+  },
+  "channelsBannerBody": "The credential is ready; the channel is now usable in Pi's model picker.",
+  "@channelsBannerBody": {
+    "description": "Body of the subscription login success banner."
+  },
+  "channelsBannerClose": "Close the authorization notice",
+  "@channelsBannerClose": {
+    "description": "Accessible label of the banner close button."
+  },
+  "channelsStatusReadFailed": "Failed to read the Pi channel status: {detail}",
+  "@channelsStatusReadFailed": {
+    "description": "Inline error when the Pi status cannot be read."
+  },
+  "channelsCreateFailed": "Channel creation failed. Check the configuration and retry.",
+  "@channelsCreateFailed": {
+    "description": "Inline error when creating a channel fails."
+  },
+  "channelsSaveFailed": "Auto-save failed. Check and retry manually.",
+  "@channelsSaveFailed": {
+    "description": "Inline error when saving edits fails."
   }
 }

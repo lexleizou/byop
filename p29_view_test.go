@@ -847,7 +847,12 @@ func TestP30JAgentTurnCardsAndByopHasNone(t *testing.T) {
 			user.W, answer.W, wantWidth, p29TurnCardPaddingX)
 	}
 	jagentGap := answer.Y - (user.Y + user.H)
-	wantExtra := 2 * (p29TurnCardPaddingY + 0.5) // the two cards' facing padding and edges
+	// P32 §5.4: the bubble between the two headers follows the preset chat
+	// typography, so the expected extra gap also includes the height delta of
+	// that single-line bubble between BYOP (14/1.5) and J Agent (15/1.72).
+	bubbleDelta := jagent.chatFont*jagent.chatLineHeight -
+		byop.chatFont*byop.chatLineHeight
+	wantExtra := 2*(p29TurnCardPaddingY+0.5) + bubbleDelta // facing paddings, edges, typography delta
 	if diff := absFloat32((jagentGap - byopGap) - wantExtra); diff > 1 {
 		t.Fatalf("the cards added %.1f DIP between the turn's two headers, want %.1f",
 			jagentGap-byopGap, wantExtra)

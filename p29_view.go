@@ -24,6 +24,10 @@ import (
 
 // The process scale authorised for this stage. Everything outside the
 // process keeps the old 12/14/18 rule.
+//
+// P32 §5.4: p29FontBody and p29LineHeight are superseded by the palette's
+// chatFont / chatLineHeight (theme-driven); the constants stay as the P29
+// spec reference and the default for the J Agent preset.
 const (
 	p29FontBody   float32 = 15
 	p29FontTitle  float32 = 16
@@ -212,8 +216,8 @@ func (s *appState) p29UserTurn(c *ui.Context, p palette, tones p29Tones, turnKey
 			})
 			texts := ui.Column(c).MinWidth(0).Shrink(1).Gap(0)
 			texts.Children(func() {
-				components.Text(c, you).FontSize(p29FontBody).FontWeight(600).
-					LineHeight(p29LineHeight).TextColor(tones.label).
+				components.Text(c, you).FontSize(p.chatFont).FontWeight(600).
+					LineHeight(p.chatLineHeight).TextColor(tones.label).
 					SingleLine()
 				if !prompt.startedAt.IsZero() {
 					components.Text(c, prompt.startedAt.Format("15:04")).
@@ -226,7 +230,7 @@ func (s *appState) p29UserTurn(c *ui.Context, p palette, tones p29Tones, turnKey
 			Children(func() {
 				s.chatAttachmentChipRow(c, prompt.attachments, turnKey+"-attachments", ui.Start)
 				components.Text(c, messageText(prompt)).
-					FontSize(p29FontBody).LineHeight(p29LineHeight).
+					FontSize(p.chatFont).LineHeight(p.chatLineHeight).
 					TextColor(p.text).Selectable()
 			})
 	})
@@ -241,9 +245,9 @@ func (s *appState) p29UserTurn(c *ui.Context, p palette, tones p29Tones, turnKey
 func (s *appState) p29UserBubble(c *ui.Context, p palette, turnKey string, prompt *chatMessage) {
 	windowWidth, _ := c.Size()
 	// The column the bubble rides in: the transcript's content column, which
-	// is the chat content width or the main area minus its horizontal
-	// padding, whichever is smaller (§6).
-	colW := min(p.chatContentWidth, s.chatMainWidth(windowWidth)-2*p.chatHorizontalPadding)
+	// P32 §5 sizes through chatContentColumnWidth (BoardUI: the window-
+	// following column, capped at its 1280 max, floored at zero).
+	colW := chatContentColumnWidth(p, s.chatMainWidth(windowWidth))
 	bubbleMax := max(min(colW*0.8, 560), 240)
 	shadow := ui.RGBA(0, 0, 0, .05)
 	if p.dark {
@@ -259,7 +263,7 @@ func (s *appState) p29UserBubble(c *ui.Context, p palette, turnKey string, promp
 			Background(p.raisedSurface).Shadow(0, 1, 1, 0, shadow).Clip()
 		bubble.Children(func() {
 			components.Text(c, messageText(prompt)).
-				FontSize(p29FontBody).LineHeight(p29LineHeight).
+				FontSize(p.chatFont).LineHeight(p.chatLineHeight).
 				TextColor(p.text).Selectable()
 		})
 	})
@@ -553,7 +557,7 @@ func (s *appState) p29TurnHeader(
 			if model != "" {
 				line := ui.Row(c).MinWidth(0).Gap(4).AlignItems(ui.Center)
 				line.Children(func() {
-					components.Text(c, model).FontSize(p29FontBody).FontWeight(600).
+					components.Text(c, model).FontSize(p.chatFont).FontWeight(600).
 						LineHeight(1.4).TextColor(tones.label).Shrink(1).
 						MinWidth(0).SingleLine().Ellipsis("…").Tooltip(model)
 					if latest {
@@ -638,7 +642,7 @@ func (s *appState) p29ProcessSummary(
 		components.Icon(c, lu.ListTree).Size(18, 18).Shrink(0).
 			TextColor(tones.statIcon)
 		components.Text(c, title).FontSize(p29FontTitle).FontWeight(600).
-			LineHeight(p29LineHeight).TextColor(tones.statTitle).
+			LineHeight(p.chatLineHeight).TextColor(tones.statTitle).
 			Shrink(1).MinWidth(0).SingleLine().Ellipsis("…")
 		chevron := components.Icon(c, lu.ChevronRight).Size(14, 14).Shrink(0)
 		chevron.Rotate(p29ArrowRotation(chevron, open, reduced))
@@ -879,8 +883,8 @@ func (s *appState) p29ActivityNode(
 			if isLatest && live {
 				foreground = tones.statusLive
 			}
-			label := components.Text(c, shown+suffix).FontSize(p29FontBody).
-				FontWeight(500).LineHeight(p29LineHeight).TextColor(foreground).
+			label := components.Text(c, shown+suffix).FontSize(p.chatFont).
+				FontWeight(500).LineHeight(p.chatLineHeight).TextColor(foreground).
 				Grow(1).MinWidth(0).SingleLine().Ellipsis("…")
 			if !reduced {
 				// Keyed by the shown value, so a swap crossfades: the
@@ -1036,7 +1040,7 @@ func (s *appState) p29ToolRow(
 			}
 			components.Text(c, fallback(strings.TrimSpace(tool.name),
 				text("errorToolFallback"))).
-				FontSize(p29FontBody).FontWeight(500).LineHeight(p29LineHeight).
+				FontSize(p.chatFont).FontWeight(500).LineHeight(p.chatLineHeight).
 				TextColor(tones.cardBody).Shrink(0)
 			if tag, tagColor, tagged := p29ToolTag(tool.name); tagged {
 				ui.Row(c).Shrink(0).Padding(1, 6).Radius(4).
@@ -1113,11 +1117,11 @@ func (s *appState) p29ThinkingCard(
 		ui.Row(c).FillWidth().MinWidth(0).Gap(6).AlignItems(ui.Center).Children(func() {
 			components.Icon(c, lu.Brain).Size(16, 16).Shrink(0).
 				TextColor(tones.icon)
-			components.Text(c, text("p29ThinkingLabel")).FontSize(p29FontBody).
+			components.Text(c, text("p29ThinkingLabel")).FontSize(p.chatFont).
 				FontWeight(500).TextColor(tones.cardTitle)
 		})
-		textEl := components.Text(c, value).FontSize(p29FontBody).
-			LineHeight(p29LineHeight).TextColor(tones.cardBody).
+		textEl := components.Text(c, value).FontSize(p.chatFont).
+			LineHeight(p.chatLineHeight).TextColor(tones.cardBody).
 			Selectable().FillWidth().MinWidth(0)
 		if standalone && !expanded {
 			textEl.MaxLines(4)

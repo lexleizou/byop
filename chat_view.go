@@ -238,8 +238,11 @@ func (s *appState) chatPage(c *ui.Context, p palette) {
 		c.After(time.Second)
 	}
 	s.configureMarkdownV12(c, p)
-	if s.jAgentPresetActive() {
-		s.jAgentChatPage(c, p)
+	// P32 §5.2: J Agent and BoardUI share the self-drawn floating
+	// conversation whose column follows the window; BYOP keeps Onevra's
+	// floating component with its fixed 720 DIP column.
+	if s.jAgentPresetActive() || s.boardUIPresetActive() {
+		s.floatingChatPage(c, p)
 		return
 	}
 	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
@@ -369,13 +372,13 @@ func (s *appState) configureMarkdownV12(c *ui.Context, p palette) {
 	// 15px/1.72 scale, so Mermaid buttons, file cards and plugin renderers
 	// behave identically inside and outside the process.
 	processTheme := *theme
-	processTheme.FontSize = p29FontBody
-	processTheme.LineHeight = p29LineHeight
-	processTheme.BlockSpacing = 12.0 / p29FontBody
-	processTheme.ItemSpacing = 4.0 / p29FontBody
-	processTheme.ListIndent = 22.0 / p29FontBody
-	processTheme.CodeSize = p.codeFont / p29FontBody
-	processTheme.CodeBlockPadding = 12.0 / p29FontBody
+	processTheme.FontSize = p.chatFont
+	processTheme.LineHeight = p.chatLineHeight
+	processTheme.BlockSpacing = 12.0 / p.chatFont
+	processTheme.ItemSpacing = 4.0 / p.chatFont
+	processTheme.ListIndent = 22.0 / p.chatFont
+	processTheme.CodeSize = p.chatCodeFont / p.chatFont
+	processTheme.CodeBlockPadding = 12.0 / p.chatFont
 	s.chatView.p29Markdown.Theme = &processTheme
 	s.chatView.p29Markdown.Block = s.chatView.markdown.Block
 	s.chatView.p29Markdown.CodeBlock = s.chatView.markdown.CodeBlock

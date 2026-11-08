@@ -160,6 +160,27 @@ func (h *pluginHost) handleHostCall(entry pluginRegistryEntry, method string, pa
 			h.onOpenChat(entry.ID, request)
 		}
 		return pluginHandleResult{Value: map[string]any{}}
+	case "host.setChatPanel":
+		// P32 contract §2.1: set (never toggle) the plugin view's chat
+		// panel and answer with the applied state. Page ownership is the
+		// bridge's; the plugin-view check happens in the handler.
+		var request struct {
+			Open *bool `json:"open"`
+		}
+		if err := decodePluginHostParams(params, &request); err != nil {
+			return pluginHostFailure(pluginRPCInvalidParams, err.Error())
+		}
+		if request.Open == nil {
+			return pluginHostFailure(pluginRPCInvalidParams, "open is required")
+		}
+		if h.onSetChatPanel == nil {
+			return pluginHostFailure(pluginRPCOtherHostError, "chat panel is unavailable")
+		}
+		value, rpcErr := h.onSetChatPanel(entry.ID, *request.Open)
+		if rpcErr != nil {
+			return pluginHandleResult{Err: rpcErr}
+		}
+		return pluginHandleResult{Value: value}
 	case "host.updateTask":
 		var request struct {
 			ID     string `json:"id"`

@@ -60,13 +60,17 @@ type pluginRuntimeStatus struct {
 // pluginHost owns lazy activation, lifecycle state and command routing for
 // local plugin processes. Each plugin communicates over JSONL JSON-RPC.
 type pluginHost struct {
-	hostVersion             string
-	onChange                func()
-	onNotice                func(pluginID, pluginName, text, tone string)
-	onTaskUpdate            func(update pluginTaskUpdate)
-	onStatusItem            func(update pluginStatusItemUpdate)
-	onRefreshView           func(pluginID, viewID string)
-	onOpenChat              func(pluginID string, request pluginOpenChatRequest)
+	hostVersion   string
+	onChange      func()
+	onNotice      func(pluginID, pluginName, text, tone string)
+	onTaskUpdate  func(update pluginTaskUpdate)
+	onStatusItem  func(update pluginStatusItemUpdate)
+	onRefreshView func(pluginID, viewID string)
+	onOpenChat    func(pluginID string, request pluginOpenChatRequest)
+	// onSetChatPanel answers host.setChatPanel (P32 contract §2.1): it gets
+	// the calling plugin and the wanted visibility, and returns the applied
+	// state or a permission error.
+	onSetChatPanel          func(pluginID string, open bool) (map[string]any, *pluginRPCError)
 	themeDark               func() bool
 	themeHighContrast       func() bool
 	themeReduceTransparency func() bool
@@ -148,6 +152,12 @@ func pluginHostRefreshHandler(handler func(pluginID, viewID string)) pluginHostO
 func pluginHostOpenChatHandler(handler func(pluginID string, request pluginOpenChatRequest)) pluginHostOption {
 	return func(host *pluginHost) {
 		host.onOpenChat = handler
+	}
+}
+
+func pluginHostChatPanelHandler(handler func(pluginID string, open bool) (map[string]any, *pluginRPCError)) pluginHostOption {
+	return func(host *pluginHost) {
+		host.onSetChatPanel = handler
 	}
 }
 

@@ -714,7 +714,7 @@ func TestP30DiagramThemeIsOpaqueAndFollowsPalette(t *testing.T) {
 			if want := pluginColorHex(compositeOver(p.surface, p.surface)); theme.Background != want {
 				t.Fatalf("background = %q, want the opaque surface %q", theme.Background, want)
 			}
-			if theme.FontSize != p29FontBody || theme.FontFamily == "" {
+			if theme.FontSize != p.chatFont || theme.FontFamily == "" {
 				t.Fatalf("font = %q/%v, want the process body size with a family",
 					theme.FontFamily, theme.FontSize)
 			}

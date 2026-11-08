@@ -60,6 +60,11 @@ type palette struct {
 	shadowCard         ui.Color
 	shadowOverlay      ui.Color
 	shadowStage        ui.Color
+	// P32 §5.4: the conversation typography follows the appearance preset and
+	// may be overridden by a selected plugin theme resource's fontSize.
+	chatFont       float32
+	chatLineHeight float32
+	chatCodeFont   float32
 }
 
 func themePalette(dark bool) palette {
@@ -69,6 +74,21 @@ func themePalette(dark bool) palette {
 func themePaletteWithContrast(dark, high bool) palette {
 	return themePaletteForAppearance(appearancePresetBYOP, dark, high, false)
 }
+
+// P32 §5.4 chat typography defaults per appearance preset. The theme overlay
+// may replace chatFont and chatCodeFont; the line height always follows the
+// preset.
+const (
+	chatFontBYOP    float32 = 14
+	chatLineBYOP    float32 = 1.5
+	chatCodeBYOP    float32 = 13
+	chatFontJAgent  float32 = 15
+	chatLineJAgent  float32 = 1.72
+	chatCodeJAgent  float32 = 13
+	chatFontBoardUI float32 = 15
+	chatLineBoardUI float32 = 1.72
+	chatCodeBoardUI float32 = 14
+)
 
 func themePaletteForAppearance(
 	preset appearancePreset,
@@ -124,6 +144,9 @@ func themePaletteForAppearance(
 		shadowCard:         ui.Color{},
 		shadowOverlay:      ui.Hex(runtimeTokens.Shadow.Overlay.Color),
 		shadowStage:        ui.Hex(runtimeTokens.Shadow.Stage.Color),
+		chatFont:           chatFontBYOP,
+		chatLineHeight:     chatLineBYOP,
+		chatCodeFont:       chatCodeBYOP,
 	}
 	if high {
 		contrast := runtimeTokens.Color.Contrast.Light
@@ -200,6 +223,10 @@ func jAgentThemePalette(high, reduceTransparency bool) palette {
 		p.popoverTint = p.surfaceSubtle
 		p.popoverBorder = p.border
 	}
+	// P32 §5.4: J Agent conversation typography follows the P29 spec.
+	p.chatFont = chatFontJAgent
+	p.chatLineHeight = chatLineJAgent
+	p.chatCodeFont = chatCodeJAgent
 	applyPluginThemeOverlay(&p)
 	return p
 }
@@ -253,6 +280,17 @@ func applyPluginThemeOverlay(p *palette) {
 			p.raisedSurface = color
 		case "composerSurface":
 			p.composerSurface = color
+		}
+	}
+	// P32 §5.4: a selected theme resource may resize the conversation text.
+	// body feeds chatFont, code feeds chatCodeFont; missing fields keep the
+	// preset default. The line height always follows the preset.
+	if body, code := themeFontSizeForSelection(currentPluginThemeOverlay()); body != nil || code != nil {
+		if body != nil {
+			p.chatFont = float32(*body)
+		}
+		if code != nil {
+			p.chatCodeFont = float32(*code)
 		}
 	}
 }

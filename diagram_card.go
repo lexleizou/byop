@@ -250,7 +250,7 @@ func inlineDiagramThemeFor(p palette, tones p29Tones) inlineDiagramTheme {
 			ink(p.text.Mix(p.surface, .4)),
 		},
 		FontFamily:   diagramFontFamily(),
-		FontSize:     p29FontBody,
+		FontSize:     p.chatFont,
 		HighContrast: p.highContrast,
 	}
 }

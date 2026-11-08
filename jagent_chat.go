@@ -11,17 +11,28 @@ import (
 	lu "github.com/oneo-me/onevra/source/icons/lucide"
 )
 
-func (s *appState) jAgentChatPage(c *ui.Context, p palette) {
+// floatingChatPage is the self-drawn chat page shared by the J Agent and
+// BoardUI presets (P32 §5.2). The BYOP preset keeps Onevra's
+// chat.FloatingConversationWith, whose 720 DIP content column is an internal
+// constant the host cannot widen — the known limitation behind
+// chatContentFollowsWindow being false there.
+func (s *appState) floatingChatPage(c *ui.Context, p palette) {
 	ui.Column(c).FillWidth().Grow(1).MinHeight(0).MinWidth(0).Children(func() {
 		if s.piConnectionErrorActive() {
 			s.piConnectionAlert(c, p)
 		}
 		s.legacyMigrationPrompt(c, p)
-		s.jAgentConversation(c, p)
+		s.floatingConversation(c, p)
 	})
 }
 
-func (s *appState) jAgentConversation(c *ui.Context, p palette) {
+// jAgentChatPage stays as the J Agent entry used by the P16 tests; it now
+// forwards to the generalized floating conversation.
+func (s *appState) jAgentChatPage(c *ui.Context, p palette) {
+	s.floatingChatPage(c, p)
+}
+
+func (s *appState) floatingConversation(c *ui.Context, p palette) {
 	state := &s.chatView.conversation
 	if s.chatView.jAgentPaused && state.Scroll.Y != s.chatView.jAgentPauseY && state.AtLatest() {
 		s.chatView.jAgentPaused = false
@@ -36,8 +47,10 @@ func (s *appState) jAgentConversation(c *ui.Context, p palette) {
 		composerHeight = p.composerMinHeight + p.chatBottomPadding
 	}
 	padding := p.chatHorizontalPadding
+	windowWidth, _ := c.Size()
+	contentWidth := chatContentColumnWidth(p, s.chatMainWidth(windowWidth))
 
-	ui.Column(c).Key("j-agent-conversation").FillWidth().Grow(1).MinHeight(0).MinWidth(0).Clip().Children(func() {
+	ui.Column(c).Key("floating-conversation").FillWidth().Grow(1).MinHeight(0).MinWidth(0).Clip().Children(func() {
 		viewport := components.ScrollView(c, components.ScrollViewOptions{}).
 			Key("transcript").FillWidth().Grow(1).MinHeight(0).
 			ScrollbarInsets(0, 0, composerHeight+8, 0).
@@ -45,7 +58,7 @@ func (s *appState) jAgentConversation(c *ui.Context, p palette) {
 		viewport.Children(func() {
 			ui.Column(c).FillWidth().MinWidth(0).Shrink(0).AlignItems(ui.Center).
 				Padding(22, padding, 0, padding).Children(func() {
-				ui.Column(c).FillWidth().MaxWidth(p.chatContentWidth).MinWidth(0).Gap(24).
+				ui.Column(c).FillWidth().MaxWidth(contentWidth).MinWidth(0).Gap(p.turnGap).
 					Children(func() {
 						s.transcript(c)
 					})
@@ -89,9 +102,16 @@ func (s *appState) jAgentConversation(c *ui.Context, p palette) {
 			}
 		})
 		composer.Children(func() {
-			ui.Column(c).FillWidth().MaxWidth(p.chatContentWidth).MinWidth(0).
+			ui.Column(c).FillWidth().MaxWidth(contentWidth).MinWidth(0).
 				Children(func() {
-					s.jAgentChatComposer(c, p)
+					// The two presets keep their own composer skin: J Agent's
+					// translucent v12 card versus the opaque surface the BYOP
+					// and BoardUI paths have always drawn.
+					if p.preset == appearancePresetJAgent {
+						s.jAgentChatComposer(c, p)
+					} else {
+						s.chatComposer(c, p)
+					}
 				})
 		})
 	})

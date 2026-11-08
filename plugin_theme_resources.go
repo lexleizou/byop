@@ -35,13 +35,28 @@ type pluginThemeColors struct {
 	ComposerSurf string `json:"composerSurface,omitempty"`
 }
 
+// pluginThemeFontSize is the P32 §5.4 optional conversation font sizing in px.
+type pluginThemeFontSize struct {
+	Body    *int `json:"body,omitempty"`
+	Code    *int `json:"code,omitempty"`
+	Caption *int `json:"caption,omitempty"`
+	Title   *int `json:"title,omitempty"`
+}
+
 type pluginThemeFile struct {
 	Colors pluginThemeColors `json:"colors"`
 	Font   string            `json:"font,omitempty"`
 	Code   string            `json:"codeFont,omitempty"`
+	// P32 §5.4: optional conversation font sizes. body feeds the palette's
+	// chatFont and code feeds chatCodeFont; caption and title are accepted
+	// but unused in this phase.
+	FontSize pluginThemeFontSize `json:"fontSize,omitempty"`
 	// Parsed holds the validated colours from Colors, keyed like the palette
 	// fields. It is filled by the loader and never mutated afterwards.
 	Parsed map[string]ui.Color `json:"-"`
+	// ValidFontSize reports whether the file carried a usable fontSize object
+	// after validation dropped the out-of-range fields.
+	ValidFontSize bool `json:"-"`
 }
 
 // pluginThemeSelection is one chosen resource. It remembers the plugin id and
@@ -74,6 +89,7 @@ type pluginThemeResource struct {
 	pluginID       string
 	fontFamily     string
 	codeFontFamily string
+	fontSize       pluginThemeFontSize
 	light          pluginThemeModeColors
 	dark           pluginThemeModeColors
 }
@@ -110,6 +126,7 @@ func buildPluginThemeResources(
 				pluginID:       entry.ID,
 				fontFamily:     firstString(contribution.FontFamily, light.Font, dark.Font),
 				codeFontFamily: firstString(contribution.CodeFontFamily, light.Code, dark.Code),
+				fontSize:       firstFontSize(light, dark),
 				light:          pluginThemeModeColors{colors: light.Parsed},
 				dark:           pluginThemeModeColors{colors: dark.Parsed},
 			})
@@ -131,6 +148,14 @@ func readPluginThemeResource(
 			"theme entry %s cannot be used: %v", entryPath, err)}}
 	}
 	var issues []pluginRegistryIssue
+	// P32 §5.4: body and code must be integers between 11 and 24 px. An
+	// out-of-range value becomes a registry issue and is dropped, never
+	// silently accepted.
+	dropped := validateThemeFontSize(&theme.FontSize, entryPath, &issues)
+	theme.ValidFontSize = hasThemeFontSize(&theme.FontSize) && dropped == nil
+	if dropped != nil {
+		issues = append(issues, pluginRegistryIssue{Message: dropped.Error()})
+	}
 	// Drop fields whose colour does not parse, keeping the valid ones, so a
 	// resource with one bad value still contributes the rest.
 	fields := []struct {
@@ -427,6 +452,82 @@ func applyStartupPluginThemeSelection() {
 		ResourceID: preferences.PluginThemeResourceID,
 	}
 	pluginThemeSelected.Store(selection)
+}
+
+// validateThemeFontSize checks body and code against the P32 range and nils
+// the fields it refuses. It returns the first rejection as an error so the
+// caller can report one issue, or nil when every provided value is usable.
+func validateThemeFontSize(sizes *pluginThemeFontSize, entryPath string, issues *[]pluginRegistryIssue) error {
+	for _, field := range []struct {
+		name  string
+		value **int
+	}{
+		{"body", &sizes.Body},
+		{"code", &sizes.Code},
+	} {
+		if *field.value == nil {
+			continue
+		}
+		value := **field.value
+		if value < 11 || value > 24 {
+			*field.value = nil
+			*issues = append(*issues, pluginRegistryIssue{
+				Message: fmt.Sprintf("theme entry %s fontSize %s must be an integer between 11 and 24 px, got %d",
+					entryPath, field.name, value),
+			})
+			return fmt.Errorf("theme entry %s fontSize %s must be an integer between 11 and 24 px, got %d",
+				entryPath, field.name, value)
+		}
+	}
+	return nil
+}
+
+func hasThemeFontSize(sizes *pluginThemeFontSize) bool {
+	return sizes.Body != nil || sizes.Code != nil ||
+		sizes.Caption != nil || sizes.Title != nil
+}
+
+// firstFontSize merges the light and dark files of one contribution. The dark
+// file wins when it carries a value; otherwise the light file's value stays.
+func firstFontSize(light, dark *pluginThemeFile) pluginThemeFontSize {
+	merged := pluginThemeFontSize{}
+	merged.Body = firstIntPointer(light, dark, func(f *pluginThemeFile) *int { return f.FontSize.Body })
+	merged.Code = firstIntPointer(light, dark, func(f *pluginThemeFile) *int { return f.FontSize.Code })
+	merged.Caption = firstIntPointer(light, dark, func(f *pluginThemeFile) *int { return f.FontSize.Caption })
+	merged.Title = firstIntPointer(light, dark, func(f *pluginThemeFile) *int { return f.FontSize.Title })
+	return merged
+}
+
+func firstIntPointer(light, dark *pluginThemeFile, pick func(*pluginThemeFile) *int) *int {
+	if dark != nil {
+		if value := pick(dark); value != nil {
+			return value
+		}
+	}
+	if light != nil {
+		if value := pick(light); value != nil {
+			return value
+		}
+	}
+	return nil
+}
+
+// themeFontSizeForSelection reports the body and code conversation font sizes
+// the selected theme resource carries; nil pointers keep the preset default.
+func themeFontSizeForSelection(overlay *pluginThemeOverlay) (*int, *int) {
+	if overlay == nil {
+		return nil, nil
+	}
+	selection := pluginThemeOverlaySelected()
+	if selection == nil {
+		return nil, nil
+	}
+	for _, resource := range overlay.resources {
+		if resource.pluginID == selection.PluginID && resource.entry.ID == selection.ResourceID {
+			return resource.fontSize.Body, resource.fontSize.Code
+		}
+	}
+	return nil, nil
 }
 
 // parseHexColor validates one hex colour against the shapes MyGo accepts,

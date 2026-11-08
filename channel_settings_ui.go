@@ -2,28 +2,30 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
 
-// channelSettingsAPI is the complete backend surface consumed by the channel
-// settings renderer. Plans bind previews to exact file versions; the UI passes
-// them back unchanged and performs no credential or configuration writes.
+// channelSettingsAPI is the complete backend surface consumed by the P32
+// Proma-style channel settings renderer. All credentials stay inside the
+// service; the UI only ever sees masked keys and status enums.
 type channelSettingsAPI interface {
-	Inventory() (ChannelInventory, error)
-	InspectModelsFile(path string) (ChannelInventory, error)
-	PrepareImport(req ChannelImportRequest) (ChannelImportPlan, error)
-	ApplyImport(req ChannelImportRequest) (ChannelMergeResult, error)
+	ConfigStatus() (ChannelConfigStatus, error)
+	CredentialStatus(providerID string) (ChannelCredentialStatus, error)
+	SetAPIKey(providerID, apiKey string) error
+	ClearAPIKey(providerID string) error
+	TestConnection(providerID string) (ChannelTestResult, error)
+	FetchModels(providerID string) (ChannelModelsResult, error)
+	SetModelEnabled(providerID, modelID string, enabled bool) ([]string, error)
+	SetChannelEnabled(providerID string, enabled bool) ([]string, error)
+	DeleteChannel(providerID string) (bool, error)
 	PrepareCustom(req ChannelCustomRequest) (ChannelCustomPlan, error)
 	ApplyCustom(req ChannelCustomRequest) (ChannelMergeResult, error)
 }
-
-type channelSettingsPicker func(parent *mygo.Window) (string, error)
 
 // channelSettingsRefreshBridge is the seam owned by channel_refresh.go and
 // the app lifecycle. A nil production field is replaced by the appState
@@ -34,70 +36,79 @@ type channelSettingsRefreshBridge struct {
 	Retry       func(*appState)
 }
 
-type channelSettingsSourceMode string
+type channelSettingsViewMode string
 
 const (
-	channelSettingsSourceNone   channelSettingsSourceMode = ""
-	channelSettingsSourcePreset channelSettingsSourceMode = "preset"
-	channelSettingsSourceCustom channelSettingsSourceMode = "custom"
-	channelSettingsSourceModels channelSettingsSourceMode = "models"
+	channelSettingsViewList   channelSettingsViewMode = ""
+	channelSettingsViewCreate channelSettingsViewMode = "create"
+	channelSettingsViewEdit   channelSettingsViewMode = "edit"
 )
 
-type channelSettingsPreviewKind string
-
+// P32 layout constants, translated from the Proma 0.19.58 spec:
+// a 1080px content column with px-5 (20) below the sm breakpoint and px-8
+// (32) above; BYOP caps the column at 1040.
 const (
-	channelSettingsPreviewImport channelSettingsPreviewKind = "import"
-	channelSettingsPreviewCustom channelSettingsPreviewKind = "custom"
+	channelSettingsMaxWidth  float32 = 1040
+	channelSettingsWideBreak float32 = 1180
+	channelSettingsPadWide   float32 = 32
+	channelSettingsPadNarrow float32 = 20
 )
 
 type channelSettingsUIState struct {
 	api     channelSettingsAPI
-	picker  channelSettingsPicker
 	refresh channelSettingsRefreshBridge
 	initErr error
 
-	inventory        ChannelInventory
-	inventoryLoaded  bool
-	inventoryLoading bool
-	inventoryErr     string
-	inventoryDetails bool
+	view channelSettingsViewMode
 
-	mode         channelSettingsSourceMode
-	presetID     string
-	presetKeyEnv string
-	providerID   string
-	providerName string
-	baseURL      string
-	apiName      string
-	apiKeyEnv    string
-	authHeader   bool
-	modelID      string
-	modelName    string
-	overrideID   string
-	overrideName string
+	status        ChannelConfigStatus
+	statusLoaded  bool
+	statusLoading bool
+	statusErr     string
 
-	sourcePath        string
-	pickerBusy        bool
-	sourceInventory   ChannelInventory
-	sourceProviderID  string
-	sourceErr         string
-	selectedModels    map[string]bool
-	selectedOverrides map[string]bool
+	credentials    map[string]ChannelCredentialStatus
+	credentialBusy map[string]bool
 
-	importPlan       *ChannelImportPlan
-	customPlan       *ChannelCustomPlan
-	preview          *ChannelMergePreview
-	previewKind      channelSettingsPreviewKind
-	previewErr       string
-	previewErrDetail string
-	applyErr         string
-	applyErrDetail   string
-	stale            bool
-	result           *ChannelMergeResult
+	testResults  map[string]ChannelTestResult
+	testBusy     map[string]bool
+	fetchResults map[string]ChannelModelsResult
+	fetchBusy    map[string]bool
+	deleteBusy   map[string]bool
 
-	diagnosticsOpen    bool
-	presetAdvancedOpen bool
-	providerDetails    map[string]bool
+	// form is the create/edit form. It never stores a loaded plaintext key;
+	// the edit mask comes from ConfigStatus.
+	form                 channelSettingsFormState
+	dialogDelete         string
+	dialogRemove         string
+	dialogRisk           string
+	dialogRiskAction     string
+	dialogDiscard        bool
+	loginBanner          string
+	loginWatchActive     bool
+	loginWatchProviderID string
+	loginWatchTimedOut   bool
+	// openPiLogin is the seam the app wires to the terminal host; the
+	// production default is nil and login runs inside the Pi terminal.
+	openPiLogin       func(providerID string)
+	loginWatchTimeout time.Duration
+}
+
+type channelSettingsFormState struct {
+	providerID      string
+	name            string
+	baseURL         string
+	apiKey          string
+	keyVisible      bool
+	enabled         bool
+	search          string
+	manualID        string
+	manualName      string
+	manualModels    []string
+	acknowledged    string
+	loaded          bool
+	enabledModels   map[string]bool
+	availableModels []string
+	saving          bool
 }
 
 var (
@@ -106,21 +117,6 @@ var (
 		return NewChannelConfigService("")
 	}
 )
-
-func defaultChannelSettingsPicker(parent *mygo.Window) (string, error) {
-	paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
-		Parent: parent,
-		Title:  text("channelModelsFileDialog"),
-		Filters: []mygo.FileFilter{{
-			Name:       "models.json",
-			Extensions: []string{"json"},
-		}},
-	})
-	if err != nil || len(paths) == 0 {
-		return "", err
-	}
-	return paths[0], nil
-}
 
 func defaultChannelSettingsRefreshBridge() channelSettingsRefreshBridge {
 	return channelSettingsRefreshBridge{
@@ -140,16 +136,22 @@ func channelSettingsState(s *appState) *channelSettingsUIState {
 	if value, ok := channelSettingsStates.Load(s); ok {
 		return value.(*channelSettingsUIState)
 	}
-	state := &channelSettingsUIState{
-		picker:            defaultChannelSettingsPicker,
-		refresh:           defaultChannelSettingsRefreshBridge(),
-		selectedModels:    map[string]bool{},
-		selectedOverrides: map[string]bool{},
-		providerDetails:   map[string]bool{},
-	}
+	state := newChannelSettingsUIState()
 	state.api, state.initErr = channelSettingsNewAPI()
 	value, _ := channelSettingsStates.LoadOrStore(s, state)
 	return value.(*channelSettingsUIState)
+}
+
+func newChannelSettingsUIState() *channelSettingsUIState {
+	return &channelSettingsUIState{
+		credentials:    map[string]ChannelCredentialStatus{},
+		credentialBusy: map[string]bool{},
+		testResults:    map[string]ChannelTestResult{},
+		testBusy:       map[string]bool{},
+		fetchResults:   map[string]ChannelModelsResult{},
+		fetchBusy:      map[string]bool{},
+		deleteBusy:     map[string]bool{},
+	}
 }
 
 func resetChannelSettingsForTest(s *appState) {
@@ -161,647 +163,1394 @@ func resetChannelSettingsForTest(s *appState) {
 func installChannelSettingsTestDependencies(
 	s *appState,
 	api channelSettingsAPI,
-	picker channelSettingsPicker,
 	refresh channelSettingsRefreshBridge,
 ) *channelSettingsUIState {
-	state := &channelSettingsUIState{
-		api:               api,
-		picker:            picker,
-		refresh:           refresh,
-		selectedModels:    map[string]bool{},
-		selectedOverrides: map[string]bool{},
-		providerDetails:   map[string]bool{},
-	}
+	state := newChannelSettingsUIState()
+	state.api = api
+	state.refresh = refresh
 	channelSettingsStates.Store(s, state)
 	return state
 }
 
+// channelSettingsContentWidth mirrors the Proma container: max-w-[1080px]
+// with px-5 below the wide breakpoint and px-8 above, capped at 1040.
+func channelSettingsContentWidth(containerWidth float32) float32 {
+	if containerWidth <= 0 {
+		return channelSettingsMaxWidth
+	}
+	pad := channelSettingsPadWide
+	if containerWidth < channelSettingsWideBreak {
+		pad = channelSettingsPadNarrow
+	}
+	width := containerWidth - 2*pad
+	if width > channelSettingsMaxWidth {
+		width = channelSettingsMaxWidth
+	}
+	if width < 0 {
+		width = 0
+	}
+	return width
+}
+
 func (s *appState) channelSettingsContent(c *ui.Context, p palette) ui.Element {
 	state := channelSettingsState(s)
-	if !state.inventoryLoading && !state.inventoryLoaded && state.inventoryErr == "" {
-		state.loadInventory()
+	if !state.statusLoading && !state.statusLoaded && state.statusErr == "" {
+		state.loadStatus()
 	}
 	return ui.Column(c).Key("channel-settings").FillWidth().MinWidth(0).Gap(12).
 		Children(func() {
-			s.channelSettingsHeader(c, p)
-			s.channelSettingsSources(c, p, state)
-			s.channelSettingsInventory(c, p, state)
-			s.channelSettingsForm(c, p, state)
-			s.channelSettingsPreview(c, p, state)
-			s.channelSettingsResult(c, p, state)
+			s.channelSettingsDialogs(c, p, state)
+			s.channelSettingsBanner(c, p, state)
+			if state.view == channelSettingsViewList {
+				s.channelSettingsList(c, p, state)
+				s.channelSettingsRefresh(c, p, state)
+				return
+			}
+			s.channelSettingsFormHeader(c, p, state)
+			s.channelSettingsBasicInfo(c, p, state)
+			s.channelSettingsEnabledModels(c, p, state)
+			s.channelSettingsAvailableModels(c, p, state)
 			s.channelSettingsRefresh(c, p, state)
 		})
 }
 
-func (s *appState) channelSettingsHeader(c *ui.Context, p palette) {
-	ui.Column(c).FillWidth().Children(func() {
-		ui.Text(c, text("channelSettingsTitle")).FontSize(fontTitle).FontWeight(650).
-			TextColor(p.text)
-	})
-}
-
-func (s *appState) channelSettingsInventory(
-	c *ui.Context,
-	p palette,
-	state *channelSettingsUIState,
-) {
-	settingsCardV12(c, p, text("channelInventoryTitle"), "", func() {
-		ui.Accordion(c, func() {
-			open := state.inventoryDetails
-			item := ui.AccordionItem(c, text("channelInventoryDiagnostics"), &open, func() {
-				settingsValueV12(c, p, text("channelPiDirectory"), fallback(state.inventory.AgentDir, "—"))
-				settingsValueV12(c, p, text("channelModelsFile"), fallback(state.inventory.ConfigPath, "—"))
+// channelSettingsList renders the Proma list view: section header with the
+// add button, the Pi status line, the provider rows and the empty state.
+func (s *appState) channelSettingsList(c *ui.Context, p palette, state *channelSettingsUIState) {
+	ui.Column(c).Key("channel-list").FillWidth().Gap(12).Children(func() {
+		ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(16).Children(func() {
+			ui.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
+				ui.Text(c, text("channelsSectionTitle")).FontSize(fontTitle).
+					FontWeight(650).TextColor(p.text)
+				ui.Text(c, text("channelsSectionDescription")).FontSize(fontBody).
+					TextColor(p.muted).Wrap()
 			})
-			if item.Changed() {
-				state.inventoryDetails = open
-			}
-		})
-		ui.Row(c).FillWidth().Wrap().AlignItems(ui.Center).Gap(8).Children(func() {
-			ui.Text(c, state.inventoryStatusLabel()).FontSize(fontBody).
-				TextColor(p.text).Grow(1).MinWidth(160).Wrap()
-			s.channelSettingsButton(c, p, "channel-inventory-refresh",
-				text("channelRefreshInventory"), "activity", false, !state.inventoryLoading,
-				func() {
-					state.loadInventory()
+			s.channelSettingsSmallButton(c, p, "channels-add", text("channelsAdd"),
+				"plus", true, func() {
+					state.openCreate()
 				})
 		})
-		if state.inventoryErr != "" {
-			s.channelSettingsError(c, p, "channel-inventory-error",
-				textArgs("channelInventoryReadFailed", map[string]any{"detail": state.inventoryErr}))
+		ui.Text(c, state.piStatusLine()).FontSize(fontSmall).TextColor(p.muted).Wrap()
+		if state.statusErr != "" {
+			s.channelSettingsError(c, p, "channel-status-error",
+				textArgs("channelsStatusReadFailed", map[string]any{"detail": state.statusErr}))
 			return
 		}
-		if !state.inventoryLoaded {
-			ui.Text(c, text("channelInventoryLoading")).FontSize(fontSmall).
-				TextColor(p.muted)
+		if state.statusLoading {
+			ui.Text(c, text("channelsLoading")).FontSize(fontSmall).TextColor(p.muted)
 			return
 		}
-		if !state.inventory.Exists || len(state.inventory.Providers) == 0 {
-			ui.Column(c).FillWidth().Padding(12).Radius(v12InputRadius).
-				Background(p.background).Children(func() {
-				ui.Text(c, text("channelInventoryEmptyTitle")).FontSize(fontBody).
-					FontWeight(600).TextColor(p.text)
+		if len(state.status.Providers) == 0 {
+			ui.Text(c, text("channelsEmpty")).FontSize(fontBody).TextColor(p.muted).Wrap()
+			return
+		}
+		providers := append([]ChannelStatusProvider{}, state.status.Providers...)
+		sort.Slice(providers, func(i, j int) bool { return providers[i].ID < providers[j].ID })
+		for index, provider := range providers {
+			if index == 0 {
+				first := ui.Column(c).Key("channel-rows").FillWidth().Radius(12).
+					Border(v12BorderWidth, p.border).Background(p.surface)
+				first.Children(func() {
+					s.channelSettingsProviderRow(c, p, state, provider)
+				})
+				continue
+			}
+			rowCard := ui.Column(c).Key("channel-row-card-"+provider.ID).FillWidth().
+				Radius(12).Border(v12BorderWidth, p.border).Background(p.surface)
+			rowCard.Children(func() {
+				s.channelSettingsProviderRow(c, p, state, provider)
 			})
-			return
 		}
-		if state.providerDetails == nil {
-			state.providerDetails = map[string]bool{}
-		}
-		for _, provider := range state.inventory.Providers {
-			s.channelSettingsProviderSummary(c, p, state, provider)
-		}
+		ui.Text(c, text("channelsPlaintextNote")).FontSize(fontSmall).
+			TextColor(p.muted).Wrap()
 	})
 }
 
-func (s *appState) channelSettingsProviderSummary(
+func (state *channelSettingsUIState) piStatusLine() string {
+	total := len(state.status.Providers)
+	ready := 0
+	for _, provider := range state.status.Providers {
+		if provider.CredentialConfigured {
+			ready++
+		}
+	}
+	if !state.status.ModelsExists {
+		return text("channelsStatusLineMissing")
+	}
+	return textArgs("channelsPiStatusLine", map[string]any{
+		"channels": total, "ready": ready, "total": total,
+	})
+}
+
+// channelSettingsProviderRow is one Proma settings row: 32×32 icon block,
+// name + description, hover-only edit/remove actions, and a 36×20 switch.
+func (s *appState) channelSettingsProviderRow(
 	c *ui.Context,
 	p palette,
 	state *channelSettingsUIState,
-	provider ChannelProviderSummary,
+	provider ChannelStatusProvider,
 ) {
 	displayName := fallback(provider.Name, provider.ID)
-	detailsOpen := state.providerDetails[provider.ID]
-	ui.Column(c).Key("channel-inventory-provider-"+provider.ID).FillWidth().Gap(8).
-		Padding(10).Radius(v12InputRadius).Background(p.background).
-		Border(v12BorderWidth, p.border).Children(func() {
-		ui.Row(c).FillWidth().Wrap().AlignItems(ui.Center).Gap(8).Children(func() {
-			ui.Text(c, displayName).FontSize(fontBody).
-				FontWeight(650).TextColor(p.text).MinWidth(120).Wrap()
-			if provider.ID != "" && provider.ID != displayName {
-				ui.Text(c, provider.ID).Font("monospace").FontSize(fontSmall).
-					TextColor(p.muted).Wrap()
-			}
-			ui.Spacer(c).Grow(1)
-			ui.Text(c, channelCredentialLabel(provider.Credential)).FontSize(fontSmall).
-				TextColor(p.muted).Wrap()
-			ui.Text(c, textArgs("channelModelsCount", map[string]any{
-				"count": len(provider.Models),
-			})).FontSize(fontSmall).TextColor(p.muted).Wrap()
-			detailsLabel := text("channelDetails")
-			details := ui.ButtonBase(c.Key("channel-inventory-details-"+provider.ID)).
-				Label(detailsLabel).Padding(5, 8).Radius(v12ChipRadius).
-				Border(v12BorderWidth, p.border).Background(p.surface).
-				Cursor(ui.CursorPointer)
-			if details.Hovered() {
-				details.Background(p.surfaceHover)
-			}
-			details.Children(func() {
-				ui.Text(c, detailsLabel).FontSize(fontSmall).FontWeight(600).
-					TextColor(p.text)
-			})
-			if details.Clicked() {
-				state.providerDetails[provider.ID] = !detailsOpen
-			}
-		})
-		if detailsOpen {
-			ui.Column(c).Key("channel-inventory-provider-details-"+provider.ID).
-				FillWidth().Gap(6).Padding(8, 0, 0, 0).Children(func() {
-				if provider.API != "" {
-					settingsValueV12(c, p, text("channelAPI"), provider.API)
-				}
-				if provider.BaseURL != "" {
-					settingsValueV12(c, p, text("channelBaseURL"), provider.BaseURL)
-				}
-				if len(provider.Models) > 0 {
-					s.channelSettingsModelChips(c, p, text("channelModels"), provider.Models)
-				}
-				if len(provider.ModelOverride) > 0 {
-					s.channelSettingsModelChips(c, p, text("channelModelOverrides"), provider.ModelOverride)
-				}
-			})
+	row := ui.Row(c).Key("channel-row-"+provider.ID).FillWidth().
+		Padding(12, 16).AlignItems(ui.Center).Gap(12)
+	row.Children(func() {
+		initial := ""
+		if provider.ID != "" {
+			initial = strings.ToUpper(provider.ID[:minInt(1, len(provider.ID))])
 		}
+		ui.Column(c).Key("channel-row-icon-" + provider.ID).Shrink(0).Width(32).
+			Height(32).Radius(4).Background(p.surfaceSubtle).AlignItems(ui.Center).
+			Children(func() {
+				ui.Text(c, initial).FontSize(fontBody).FontWeight(650).
+					TextColor(p.muted)
+			})
+		ui.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+			ui.Text(c, displayName).FontSize(fontBody).FontWeight(500).
+				TextColor(p.text).Wrap()
+			ui.Text(c, textArgs("channelsRowDescription", map[string]any{
+				"name": displayName, "count": provider.ModelCount,
+			})).FontSize(fontSmall).TextColor(p.muted).Wrap()
+		})
+		hovered := row.Hovered()
+		if !provider.BuiltIn {
+			edit := ui.ButtonBase(c.Key("channel-edit-" + provider.ID)).
+				Label(text("channelsEdit")).Width(26).Height(26).Padding(0).
+				Radius(v12ChipRadius).Cursor(ui.CursorPointer).
+				Opacity(hoverOpacity(hovered))
+			edit.Children(func() {
+				ui.Icon(c, icon("square-pen")).Size(14, 14).TextColor(p.muted)
+			})
+			if edit.Clicked() {
+				state.openEdit(provider)
+			}
+			remove := ui.ButtonBase(c.Key("channel-delete-" + provider.ID)).
+				Label(text("channelsDelete")).Width(26).Height(26).Padding(0).
+				Radius(v12ChipRadius).Cursor(ui.CursorPointer).
+				Opacity(hoverOpacity(hovered))
+			remove.Children(func() {
+				ui.Icon(c, icon("archive")).Size(14, 14).TextColor(p.dangerText)
+			})
+			if remove.Clicked() {
+				state.dialogDelete = provider.ID
+			}
+		} else {
+			remove := ui.ButtonBase(c.Key("channel-remove-"+provider.ID)).
+				Label(text("channelsRemoveCredential")).Padding(5, 8).
+				Radius(v12ChipRadius).Cursor(ui.CursorPointer).
+				Opacity(hoverOpacity(hovered))
+			remove.Children(func() {
+				ui.Text(c, text("channelsRemoveCredential")).FontSize(fontSmall).
+					TextColor(p.muted)
+			})
+			if remove.Clicked() {
+				state.dialogRemove = provider.ID
+			}
+		}
+		checked := provider.CredentialConfigured
+		channelSwitch(c, p, "channel-switch-"+provider.ID,
+			textArgs("channelsEnableSwitchAria", map[string]any{"name": displayName}),
+			checked, true, func(next bool) {
+				state.setChannelEnabled(provider.ID, next)
+			})
 	})
 }
 
-func (s *appState) channelSettingsModelChips(
+func hoverOpacity(hovered bool) float32 {
+	if hovered {
+		return 1
+	}
+	return 0
+}
+
+// channelSwitch draws the Proma switch: a 36×20 track with a 16px thumb that
+// translates 16px when checked.
+func channelSwitch(
 	c *ui.Context,
 	p palette,
-	label string,
-	models []ChannelModelSummary,
+	key, aria string,
+	checked bool,
+	enabled bool,
+	onChange func(bool),
 ) {
-	ui.Column(c).FillWidth().Gap(5).Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).FontWeight(650).TextColor(p.muted)
-		ui.Row(c).FillWidth().Wrap().Gap(6).Children(func() {
-			for _, model := range models {
-				ui.Column(c).Key("channel-model-"+model.ID).Shrink(0).Padding(5, 7).
-					Radius(v12ChipRadius).Background(p.surfaceSubtle).Gap(1).Children(func() {
-					ui.Text(c, fallback(model.Name, model.ID)).FontSize(fontSmall).
-						FontWeight(600).TextColor(p.text).Wrap()
-					ui.Text(c, model.ID).Font("monospace").FontSize(fontSmall).
-						TextColor(p.muted).Wrap()
-				})
+	trackBackground := p.border
+	if checked {
+		trackBackground = p.accent
+	}
+	if !enabled {
+		trackBackground = p.surfaceSubtle
+	}
+	track := ui.ButtonBase(c.Key(key)).Label(aria).Width(36).Height(20).Shrink(0).
+		Radius(10).Background(trackBackground).Cursor(ui.CursorPointer).
+		Disabled(!enabled)
+	track.Children(func() {
+		ui.Row(c).FillWidth().Height(20).AlignItems(ui.Center).Children(func() {
+			if checked {
+				ui.Spacer(c).Grow(1)
+			}
+			ui.Column(c).Width(16).Height(16).Radius(8).Background(p.background)
+			if !checked {
+				ui.Spacer(c).Grow(1)
 			}
 		})
 	})
+	if enabled && track.Clicked() {
+		onChange(!checked)
+	}
 }
 
-func (s *appState) channelSettingsSources(
+// channelSettingsSmallButton is the small button family: 28px tall with 12px
+// text for row actions, 32px tall for primary section actions.
+func (s *appState) channelSettingsSmallButton(
 	c *ui.Context,
 	p palette,
-	state *channelSettingsUIState,
+	key, label, iconName string,
+	primary bool,
+	click func(),
 ) {
-	settingsCardV12(c, p, text("channelAddSourceTitle"), "", func() {
-		ui.Row(c).FillWidth().Wrap().Gap(8).Children(func() {
-			s.channelSettingsModeButton(c, p, state, channelSettingsSourcePreset,
-				text("channelSourcePreset"))
-			s.channelSettingsModeButton(c, p, state, channelSettingsSourceCustom,
-				text("channelSourceCustom"))
-			s.channelSettingsModeButton(c, p, state, channelSettingsSourceModels,
-				text("channelSourceModelsFile"))
-		})
-	})
-}
-
-func (s *appState) channelSettingsModeButton(
-	c *ui.Context,
-	p palette,
-	state *channelSettingsUIState,
-	mode channelSettingsSourceMode,
-	label string,
-) {
-	button := ui.ButtonBase(c.Key("channel-source-"+string(mode))).Label(label).
-		Padding(7, 11).Radius(v12InputRadius).Border(v12BorderWidth,
-		channelBorderForSelection(p, state.mode == mode)).Background(p.surface).
-		Cursor(ui.CursorPointer)
+	height := float32(28)
+	if primary {
+		height = 32
+	}
+	background := p.surface
+	foreground := p.text
+	border := p.border
+	if primary {
+		background = p.accent
+		foreground = p.onAccent
+		border = p.accent
+	}
+	button := ui.ButtonBase(c.Key(key)).Label(label).Height(height).
+		Padding(0, 12).Radius(v12ChipRadius).Border(v12BorderWidth, border).
+		Background(background).Cursor(ui.CursorPointer)
 	if button.Hovered() {
-		button.Background(p.surfaceHover)
+		if primary {
+			button.Background(p.accentHover)
+		} else {
+			button.Background(p.surfaceHover)
+		}
 	}
 	button.Children(func() {
-		ui.Text(c, label).FontSize(fontBody).FontWeight(600).
-			TextColor(channelTextForSelection(p, state.mode == mode))
+		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+			if iconName != "" {
+				ui.Icon(c, icon(iconName)).Size(14, 14).TextColor(foreground)
+			}
+			ui.Text(c, label).FontSize(fontSmall).FontWeight(600).
+				TextColor(foreground).Wrap()
+		})
 	})
 	if button.Clicked() {
-		state.switchMode(mode)
+		click()
 	}
 }
 
-func (s *appState) channelSettingsForm(
-	c *ui.Context,
-	p palette,
-	state *channelSettingsUIState,
-) {
-	switch state.mode {
-	case channelSettingsSourceModels:
-		s.channelSettingsFileForm(c, p, state)
-	case channelSettingsSourcePreset:
-		s.channelSettingsPresetForm(c, p, state)
-	case channelSettingsSourceCustom:
-		s.channelSettingsCustomForm(c, p, state)
-	}
-}
-
-func (s *appState) channelSettingsFileForm(
-	c *ui.Context,
-	p palette,
-	state *channelSettingsUIState,
-) {
-	settingsCardV12(c, p, text("channelSourceModelsFile"), text("channelModelsFileDescription"), func() {
-		ui.Row(c).FillWidth().Wrap().AlignItems(ui.Center).Gap(8).Children(func() {
-			s.channelSettingsButton(c, p, "channel-choose-models-file",
-				text("channelChooseModelsFile"), "folder", false, true,
-				func() {
-					state.chooseModelsFile(s)
-				})
-			if state.sourcePath != "" {
-				ui.Text(c, state.sourcePath).Font("monospace").FontSize(fontSmall).
-					TextColor(p.muted).Grow(1).MinWidth(160).Wrap()
-			}
+// channelSettingsFormHeader is the create/edit title bar: back arrow, title,
+// and the primary submit button.
+func (s *appState) channelSettingsFormHeader(c *ui.Context, p palette, state *channelSettingsUIState) {
+	ui.Row(c).Key("channel-form-header").FillWidth().AlignItems(ui.Center).
+		Gap(8).Padding(0, 0, 8, 0).Children(func() {
+		back := ui.ButtonBase(c.Key("channel-form-back")).
+			Label(text("channelsBack")).Width(32).Height(32).Padding(0).
+			Radius(v12ChipRadius).Cursor(ui.CursorPointer)
+		back.Children(func() {
+			ui.Icon(c, icon("corner-up-left")).Size(18, 18).TextColor(p.text)
 		})
-		if state.sourceErr != "" {
-			s.channelSettingsError(c, p, "channel-source-file-error",
-				textArgs("channelModelsFileReadFailed", map[string]any{"detail": state.sourceErr}))
-			if state.sourcePath != "" {
-				s.channelSettingsButton(c, p, "channel-retry-source-file",
-					text("channelRetryReadFile"), "activity", false, true,
-					func() {
-						state.inspectSourceFile()
-					})
-			}
-			return
+		if back.Clicked() {
+			state.requestLeaveForm(s)
 		}
-		if len(state.sourceInventory.Providers) == 0 {
-			ui.Text(c, text("channelModelsFileAwaiting")).FontSize(fontSmall).
-				TextColor(p.muted)
-			return
+		title := text("channelsCreateTitle")
+		if state.view == channelSettingsViewEdit {
+			title = text("channelsEditTitle")
 		}
-		ui.Column(c).FillWidth().Gap(8).Children(func() {
-			ui.Text(c, text("channelSelectProvider")).FontSize(fontBody).
-				FontWeight(650).TextColor(p.text)
-			ui.Row(c).FillWidth().Wrap().Gap(6).Children(func() {
-				for _, provider := range state.sourceInventory.Providers {
-					label := fallback(provider.Name, provider.ID) + " " + provider.ID
-					selected := provider.ID == state.sourceProviderID
-					button := ui.ButtonBase(c.Key("channel-source-provider-"+provider.ID)).
-						Label(label).Padding(6, 9).Radius(v12ChipRadius).
-						Border(v12BorderWidth, channelBorderForSelection(p, selected)).
-						Background(p.surface).Cursor(ui.CursorPointer)
-					if button.Hovered() {
-						button.Background(p.surfaceHover)
-					}
-					button.Children(func() {
-						ui.Text(c, label).FontSize(fontBody).
-							TextColor(channelTextForSelection(p, selected)).Wrap()
-					})
-					if button.Clicked() {
-						state.selectProvider(provider.ID)
-					}
+		ui.Text(c, title).FontSize(fontTitle).FontWeight(500).TextColor(p.text).
+			Grow(1).MinWidth(0)
+		s.channelSettingsSmallButton(c, p, "channel-form-submit",
+			state.submitLabel(), "check", true, func() {
+				if state.view == channelSettingsViewCreate {
+					state.submitCreate(s)
+				} else {
+					state.submitEdit(s)
 				}
 			})
-		})
-		provider, ok := state.selectedSourceProvider()
-		if !ok {
-			return
-		}
-		if len(provider.Models) > 0 {
-			s.channelSettingsCheckboxList(c, p, text("channelSelectModels"),
-				"channel-source-model-", provider.ID, provider.Models, state.selectedModels, state)
-		}
-		if len(provider.ModelOverride) > 0 {
-			s.channelSettingsCheckboxList(c, p, text("channelSelectOverrides"),
-				"channel-source-override-", provider.ID, provider.ModelOverride, state.selectedOverrides, state)
-		}
-		ui.Row(c).FillWidth().Wrap().Gap(8).Children(func() {
-			s.channelSettingsButton(c, p, "channel-preview-import",
-				text("channelPreviewImport"), "search", true, true,
-				func() {
-					state.prepareImport()
-				})
-		})
 	})
 }
 
-func (s *appState) channelSettingsCheckboxList(
-	c *ui.Context,
-	p palette,
-	label, keyPrefix, providerID string,
-	models []ChannelModelSummary,
-	selected map[string]bool,
-	state *channelSettingsUIState,
-) {
-	ui.Column(c).FillWidth().Gap(5).Children(func() {
-		ui.Text(c, label).FontSize(fontBody).FontWeight(650).TextColor(p.text)
-		for _, model := range models {
-			checked := selected[model.ID]
-			modelLabel := fallback(model.Name, model.ID) + " (" + model.ID + ")"
-			checkbox := ui.Checkbox(c.Key(keyPrefix+providerID+"-"+model.ID),
-				&checked, modelLabel).FontSize(fontBody)
-			if checkbox.Changed() {
-				selected[model.ID] = checked
-				if state != nil {
-					state.invalidatePreview()
+// channelSettingsBasicInfo is the first Proma form card: provider type,
+// name, base URL with preview, the API key with mask, the connectivity probe
+// and the Pi login row for subscription providers.
+func (s *appState) channelSettingsBasicInfo(c *ui.Context, p palette, state *channelSettingsUIState) {
+	settingsCardV12(c, p, text("channelsBasicInfoTitle"), "", func() {
+		ui.Text(c, text("channelsProviderType")).FontSize(fontBody).
+			FontWeight(500).TextColor(p.text)
+		ui.Row(c).FillWidth().Wrap().Gap(6).Children(func() {
+			ids := []string{}
+			seen := map[string]bool{}
+			if state.form.providerID != "" {
+				ids = append(ids, state.form.providerID)
+				seen[state.form.providerID] = true
+			}
+			for _, preset := range ChannelPresets() {
+				if !seen[preset.ID] {
+					ids = append(ids, preset.ID)
+					seen[preset.ID] = true
 				}
 			}
-		}
-	})
-}
-
-func (s *appState) channelSettingsPresetForm(
-	c *ui.Context,
-	p palette,
-	state *channelSettingsUIState,
-) {
-	settingsCardV12(c, p, text("channelSourcePreset"), text("channelPresetDescription"), func() {
-		ui.Row(c).FillWidth().Wrap().Gap(6).Children(func() {
-			for _, preset := range ChannelPresets() {
-				preset := preset
-				selected := state.presetID == preset.ID
-				button := ui.ButtonBase(c.Key("channel-preset-"+preset.ID)).
-					Label(preset.Name).Padding(6, 9).Radius(v12ChipRadius).
+			sort.Strings(ids)
+			for _, id := range ids {
+				selected := state.form.providerID == id
+				label := channelDisplayName(id)
+				button := ui.ButtonBase(c.Key("channel-provider-option-"+id)).
+					Label(label).Padding(6, 9).Radius(v12ChipRadius).
 					Border(v12BorderWidth, channelBorderForSelection(p, selected)).
 					Background(p.surface).Cursor(ui.CursorPointer)
 				if button.Hovered() {
 					button.Background(p.surfaceHover)
 				}
 				button.Children(func() {
-					ui.Text(c, preset.Name).FontSize(fontBody).
-						TextColor(channelTextForSelection(p, selected))
+					ui.Text(c, label).FontSize(fontBody).
+						TextColor(channelTextForSelection(p, selected)).Wrap()
 				})
-				if button.Clicked() {
-					state.selectPreset(preset)
+				if button.Clicked() && state.view != channelSettingsViewEdit {
+					state.selectProviderType(id)
 				}
 			}
 		})
-		preset, ok := channelPresetByID(state.presetID)
-		if !ok {
-			ui.Text(c, text("channelSelectPresetFirst")).FontSize(fontSmall).
+		if state.form.providerID == "" {
+			ui.Text(c, text("channelsProviderPlaceholder")).FontSize(fontSmall).
 				TextColor(p.muted)
-			return
 		}
-		if preset.UsesPiLogin {
-			ui.Column(c).FillWidth().Padding(10).Radius(v12InputRadius).
-				Background(p.background).Gap(3).Children(func() {
-				ui.Text(c, text("channelPiLoginManagedTitle")).FontSize(fontBody).
-					FontWeight(600).TextColor(p.text)
-				ui.Text(c, text("channelPiLoginManagedDescription")).FontSize(fontSmall).
-					LineHeight(1.4).TextColor(p.muted).Wrap()
+		s.channelSettingsTextField(c, p, "channel-form-name",
+			text("channelsProviderName"), text("channelsProviderNamePlaceholder"),
+			&state.form.name)
+		s.channelSettingsTextField(c, p, "channel-form-base-url",
+			text("channelsBaseURLLabel"), text("channelsBaseURLPlaceholder"),
+			&state.form.baseURL)
+		if strings.TrimSpace(state.form.baseURL) != "" {
+			ui.Text(c, textArgs("channelsBaseURLPreview", map[string]any{
+				"url": strings.TrimSpace(state.form.baseURL),
+			})).FontSize(fontSmall).TextColor(p.muted).Wrap()
+		}
+		if state.isSubscriptionProvider() {
+			s.channelSettingsPiLoginRow(c, p, state)
+		} else {
+			s.channelSettingsAPIKeyRow(c, p, state)
+			s.channelSettingsTestRow(c, p, state)
+		}
+		enabledSwitch := state.form.enabled
+		enabled := ui.Checkbox(c.Key("channel-form-enabled"), &enabledSwitch,
+			text("channelsEnableSwitchLabel")).FontSize(fontBody)
+		if enabled.Changed() {
+			state.form.enabled = enabledSwitch
+		}
+		ui.Text(c, text("channelsEnableSwitchDescription")).FontSize(fontSmall).
+			TextColor(p.muted).Wrap()
+		ui.Text(c, text("channelsPlaintextNote")).FontSize(fontSmall).
+			TextColor(p.muted).Wrap()
+	})
+}
+
+func (state *channelSettingsUIState) isSubscriptionProvider() bool {
+	preset, ok := channelPresetByID(state.form.providerID)
+	return ok && preset.UsesPiLogin
+}
+
+// channelSettingsAPIKeyRow renders the key input with a visibility toggle and
+// the masked existing value in edit mode. The full key is never re-rendered.
+func (s *appState) channelSettingsAPIKeyRow(c *ui.Context, p palette, state *channelSettingsUIState) {
+	placeholder := text("channelsAPIKeyPlaceholderCreate")
+	if state.view == channelSettingsViewEdit {
+		placeholder = text("channelsAPIKeyPlaceholderEdit")
+	}
+	ui.Column(c).FillWidth().Gap(4).Children(func() {
+		ui.Text(c, text("channelsAPIKeyLabel")).FontSize(fontSmall).
+			FontWeight(600).TextColor(p.muted)
+		ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
+			input := ui.TextInputBase(c.Key("channel-form-api-key"), &state.form.apiKey).
+				FillWidth().Height(36).Padding(0, 10).Radius(v12InputRadius).
+				Border(v12BorderWidth, p.border).Background(p.surface).
+				FontSize(fontBody).TextColor(p.text).
+				Label(text("channelsAPIKeyLabel")).Placeholder(placeholder)
+			if !state.form.keyVisible {
+				input.Password()
+			}
+			if input.Focused() {
+				input.BorderColor(p.focus)
+			}
+			eye := ui.ButtonBase(c.Key("channel-form-key-toggle")).
+				Label(text("channelsToggleKeyVisibility")).Width(32).Height(32).
+				Padding(0).Radius(v12ChipRadius).Cursor(ui.CursorPointer)
+			eye.Children(func() {
+				ui.Icon(c, icon("contrast")).Size(16, 16).TextColor(p.muted)
+			})
+			if eye.Clicked() {
+				state.form.keyVisible = !state.form.keyVisible
+			}
+		})
+		if state.view == channelSettingsViewEdit {
+			ui.Text(c, textArgs("channelsKeyMasked", map[string]any{
+				"mask": state.editKeyMask(),
+			})).FontSize(fontSmall).TextColor(p.muted).Wrap()
+		}
+	})
+}
+
+func (state *channelSettingsUIState) editKeyMask() string {
+	for _, provider := range state.status.Providers {
+		if provider.ID == state.form.providerID {
+			return provider.APIKeyMasked
+		}
+	}
+	return ""
+}
+
+// channelSettingsTestRow is the BYOP-direct connectivity probe with the
+// normalized Proma result copy.
+func (s *appState) channelSettingsTestRow(c *ui.Context, p palette, state *channelSettingsUIState) {
+	ui.Column(c).FillWidth().Gap(6).Children(func() {
+		ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
+			busy := state.testBusy[state.form.providerID]
+			s.channelSettingsSmallButton(c, p, "channel-form-test",
+				text("channelsTestConnection"), "activity", false, func() {
+					state.runTest(s)
+				})
+			if busy {
+				ui.Text(c, text("channelsTestRunning")).FontSize(fontSmall).
+					TextColor(p.muted)
+			}
+		})
+		if result, ok := state.testResults[state.form.providerID]; ok {
+			ui.Row(c).FillWidth().Gap(6).AlignItems(ui.Center).Children(func() {
+				ui.Icon(c, icon("check")).Size(12, 12).TextColor(resultColor(p, result.OK))
+				ui.Text(c, channelTestResultLabel(result)).FontSize(fontSmall).
+					TextColor(resultColor(p, result.OK)).Wrap()
 			})
 		}
-		ui.Collapsible(c, text("channelAdvanced"), &state.presetAdvancedOpen, func() {
-			s.channelSettingsTextField(c, p, "channel-preset-api-key-env",
-				text("channelAPIKeyEnvironment"), text("channelAPIKeyEnvironmentHint"),
-				&state.presetKeyEnv, state)
-		})
-		s.channelSettingsModelFields(c, p, state, true)
-		ui.Row(c).FillWidth().Wrap().Gap(8).Children(func() {
-			s.channelSettingsButton(c, p, "channel-preview-preset",
-				text("channelPreviewPreset"), "search", true, true,
-				func() {
-					state.preparePreset()
-				})
-		})
 	})
 }
 
-func (s *appState) channelSettingsCustomForm(
-	c *ui.Context,
-	p palette,
-	state *channelSettingsUIState,
-) {
-	settingsCardV12(c, p, text("channelSourceCustom"), text("channelCustomDescription"), func() {
-		s.channelSettingsTextField(c, p, "channel-custom-provider-id",
-			text("channelProviderID"), text("channelProviderIDHint"), &state.providerID, state)
-		s.channelSettingsTextField(c, p, "channel-custom-provider-name",
-			text("channelProviderName"), text("channelProviderNameHint"), &state.providerName, state)
-		s.channelSettingsTextField(c, p, "channel-custom-base-url",
-			text("channelBaseURL"), text("channelBaseURLHint"), &state.baseURL, state)
-		s.channelSettingsTextField(c, p, "channel-custom-api",
-			text("channelAPI"), text("channelAPIHint"), &state.apiName, state)
-		s.channelSettingsTextField(c, p, "channel-custom-api-key-env",
-			text("channelAPIKeyEnvironment"), text("channelAPIKeyEnvironmentHint"), &state.apiKeyEnv, state)
-		authHeader := state.authHeader
-		auth := ui.Checkbox(c.Key("channel-custom-auth-header"),
-			&authHeader, text("channelUseAuthorizationHeader")).FontSize(fontBody)
-		if auth.Changed() {
-			state.authHeader = authHeader
-			state.invalidatePreview()
-		}
-		s.channelSettingsModelFields(c, p, state, false)
-		ui.Row(c).FillWidth().Wrap().Gap(8).Children(func() {
-			s.channelSettingsButton(c, p, "channel-preview-custom",
-				text("channelPreviewCustom"), "search", true, true,
-				func() {
-					state.prepareCustom()
-				})
-		})
-	})
-}
-
-func (s *appState) channelSettingsModelFields(
-	c *ui.Context,
-	p palette,
-	state *channelSettingsUIState,
-	preset bool,
-) {
-	prefix := "channel-custom"
-	if preset {
-		prefix = "channel-preset"
+func resultColor(p palette, ok bool) ui.Color {
+	if ok {
+		return p.successText
 	}
-	ui.Text(c, text("channelModelEntryTitle")).FontSize(fontBody).
-		FontWeight(650).TextColor(p.text)
-	s.channelSettingsTextField(c, p, prefix+"-model-id",
-		text("channelModelID"), text("channelModelIDHint"), &state.modelID, state)
-	s.channelSettingsTextField(c, p, prefix+"-model-name",
-		text("channelModelName"), text("channelModelNameHint"), &state.modelName, state)
-	ui.Text(c, text("channelOverrideEntryTitle")).FontSize(fontBody).
-		FontWeight(650).TextColor(p.text)
-	s.channelSettingsTextField(c, p, prefix+"-override-id",
-		text("channelOverrideID"), text("channelOverrideIDHint"), &state.overrideID, state)
-	s.channelSettingsTextField(c, p, prefix+"-override-name",
-		text("channelOverrideName"), text("channelOverrideNameHint"), &state.overrideName, state)
+	return p.dangerText
 }
 
-func (s *appState) channelSettingsPreview(
-	c *ui.Context,
-	p palette,
-	state *channelSettingsUIState,
-) {
-	if state.previewErr != "" {
-		settingsCardV12(c, p, text("channelPreviewErrorTitle"), "", func() {
-			s.channelSettingsError(c, p, "channel-preview-error", state.previewErr)
-			if state.previewErrDetail != "" {
-				ui.Text(c, state.previewErrDetail).Font("monospace").FontSize(fontSmall).
-					TextColor(p.muted).Wrap()
+func channelTestResultLabel(result ChannelTestResult) string {
+	if result.OK {
+		return text("channelsTestResultOK")
+	}
+	key := "channelsTestFailed"
+	switch result.Category {
+	case "auth":
+		key = "channelsTestAuth"
+	case "forbidden":
+		key = "channelsTestForbidden"
+	case "quota":
+		key = "channelsTestQuota"
+	case "not_found":
+		key = "channelsTestNotFound"
+	case "rate_limited":
+		key = "channelsTestRateLimited"
+	case "invalid":
+		key = "channelsTestInvalid"
+	case "server":
+		key = "channelsTestServer"
+	case "network":
+		key = "channelsTestNetwork"
+	case "timeout":
+		key = "channelsTestTimeout"
+	}
+	return text(key)
+}
+
+// channelSettingsPiLoginRow is the BYOP subscription flow: hand the login to
+// the Pi terminal and poll `pi auth check` every two seconds for up to 90s.
+func (s *appState) channelSettingsPiLoginRow(c *ui.Context, p palette, state *channelSettingsUIState) {
+	providerID := state.form.providerID
+	ui.Column(c).FillWidth().Gap(6).Children(func() {
+		ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
+			label := text("channelsSubscriptionLoginLabel")
+			if state.loginWatchActive {
+				label = text("channelsLoginWaiting")
+			} else if cred, ok := state.credentials[providerID]; ok && cred.Status == "ready" {
+				label = text("channelsSubscriptionReloginLabel")
 			}
-			if state.stale {
-				s.channelSettingsButton(c, p, "channel-repreview",
-					text("channelRepreview"), "activity", true, true,
-					func() {
-						state.reprepare()
+			s.channelSettingsSmallButton(c, p, "channel-form-pi-login",
+				label, "terminal", false, func() {
+					state.startLoginWatch(s, providerID)
+				})
+			if state.loginWatchActive {
+				ui.Text(c, text("channelsLoginWaiting")).FontSize(fontSmall).
+					TextColor(p.muted)
+			}
+		})
+		if cred, ok := state.credentials[providerID]; ok {
+			statusColor := p.muted
+			statusText := text("channelsLoginNotLoggedIn")
+			if cred.Status == "ready" {
+				statusColor = p.successText
+				statusText = text("channelsLoginReady")
+			}
+			ui.Row(c).FillWidth().Gap(6).AlignItems(ui.Center).Children(func() {
+				ui.Icon(c, icon("check")).Size(12, 12).TextColor(statusColor)
+				ui.Text(c, statusText).FontSize(fontSmall).TextColor(statusColor).Wrap()
+			})
+		}
+		if state.loginWatchTimedOut && state.loginWatchProviderID == providerID {
+			ui.Text(c, text("channelsLoginTimeout")).FontSize(fontSmall).
+				TextColor(p.warningText).Wrap()
+		}
+	})
+}
+
+// channelSettingsEnabledModels is the second Proma form card.
+func (s *appState) channelSettingsEnabledModels(c *ui.Context, p palette, state *channelSettingsUIState) {
+	enabled := state.enabledModelIDs()
+	settingsCardV12(c, p, text("channelsEnabledModelsTitle"),
+		textArgs("channelsEnabledCount", map[string]any{"count": len(enabled)}), func() {
+			if len(enabled) == 0 {
+				ui.Text(c, text("channelsEnabledEmpty")).FontSize(fontSmall).
+					TextColor(p.muted).Wrap()
+				return
+			}
+			ui.Column(c).FillWidth().Children(func() {
+				for index, modelID := range enabled {
+					if index > 0 {
+						separator(c, "channel-enabled-sep-"+modelID, p)
+					}
+					ui.Row(c).Key("channel-enabled-"+modelID).FillWidth().
+						Padding(10, 16).AlignItems(ui.Center).Gap(8).Children(func() {
+						ui.Icon(c, icon("check")).Size(14, 14).TextColor(p.successText)
+						ui.Text(c, modelID).FontSize(fontBody).TextColor(p.text).
+							Grow(1).MinWidth(0).Wrap()
+						remove := ui.ButtonBase(c.Key("channel-enabled-remove-" + modelID)).
+							Label(text("channelsDisableModel")).Padding(2).
+							Radius(v12ChipRadius).Cursor(ui.CursorPointer)
+						remove.Children(func() {
+							ui.Icon(c, icon("x")).Size(14, 14).TextColor(p.muted)
+						})
+						if remove.Clicked() {
+							state.setModelEnabled(modelID, false)
+						}
 					})
-			}
-		})
-	}
-	if state.preview == nil {
-		return
-	}
-	preview := *state.preview
-	settingsCardV12(c, p, text("channelPreviewTitle"), text("channelPreserveConflictDescription"), func() {
-		ui.Row(c).FillWidth().Wrap().Gap(8).Children(func() {
-			providerColor := p.successText
-			if preview.ProviderAction == channelMergePreserve {
-				providerColor = p.muted
-			}
-			s.channelSettingsBadge(c, p, textArgs("channelProviderAction",
-				map[string]any{
-					"provider": channelDisplayName(preview.ProviderID),
-					"action":   channelMergeActionLabel(preview.ProviderAction),
-				}), providerColor)
-			s.channelSettingsBadge(c, p, text("channelConflictPolicyPreserve"), p.muted)
-		})
-		if len(preview.Models) > 0 {
-			s.channelSettingsMergeItems(c, p, text("channelModels"), preview.Models)
-		}
-		if len(preview.ModelOverrides) > 0 {
-			s.channelSettingsMergeItems(c, p, text("channelModelOverrides"), preview.ModelOverrides)
-		}
-		for _, conflict := range preview.Conflicts {
-			ui.Column(c).Key("channel-conflict-"+conflict.Path).FillWidth().Gap(3).
-				Padding(9, 10).Radius(v12InputRadius).Background(p.background).Children(func() {
-				ui.Text(c, textArgs("channelConflictSummary", map[string]any{
-					"path": conflict.Path,
-				})).FontSize(fontBody).FontWeight(600).TextColor(p.warningText).Wrap()
-				if len(conflict.Fields) > 0 {
-					ui.Text(c, strings.Join(conflict.Fields, "\n")).Font("monospace").
-						FontSize(fontSmall).TextColor(p.muted).Wrap()
 				}
 			})
-		}
-		for _, notice := range preview.Notices {
-			s.channelSettingsNotice(c, p, notice)
-		}
-		ui.Accordion(c, func() {
-			open := state.diagnosticsOpen
-			item := ui.AccordionItem(c, text("channelPreviewDiagnostics"), &open, func() {
-				ui.Row(c).FillWidth().Wrap().GapX(16).GapY(6).Children(func() {
-					s.channelSettingsDigest(c, p, text("channelPreviewSource"),
-						preview.Source.Path, preview.Source.Digest)
-					s.channelSettingsDigest(c, p, text("channelPreviewDestination"),
-						preview.Destination.Path, preview.Destination.Digest)
-				})
+		})
+}
+
+func separator(c *ui.Context, key string, p palette) {
+	ui.Row(c).Key(key).FillWidth().Height(v12BorderWidth).
+		Background(p.border).Shrink(0)
+}
+
+// channelSettingsAvailableModels is the third Proma form card: fetch button,
+// search box (only when more than five models), the list (height 280 when
+// more than eight rows) and the manual add row.
+func (s *appState) channelSettingsAvailableModels(c *ui.Context, p palette, state *channelSettingsUIState) {
+	unenabled := state.unenabledModels()
+	settingsCardV12(c, p, text("channelsAvailableModelsTitle"),
+		textArgs("channelsAvailableCount", map[string]any{"count": len(unenabled)}), func() {
+			ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(8).Children(func() {
+				busy := state.fetchBusy[state.form.providerID]
+				s.channelSettingsSmallButton(c, p, "channel-form-fetch",
+					text("channelsFetchModels"), "arrow-up", false, func() {
+						state.fetchModels(s)
+					})
+				if busy {
+					ui.Text(c, text("channelsFetching")).FontSize(fontSmall).
+						TextColor(p.muted)
+				}
+				if result, ok := state.fetchResults[state.form.providerID]; ok {
+					ui.Text(c, channelFetchResultLabel(result)).FontSize(fontSmall).
+						TextColor(resultColor(p, result.Category == "ok")).Wrap()
+				}
 			})
-			if item.Changed() {
-				state.diagnosticsOpen = open
-			}
-		})
-		if state.stale {
-			s.channelSettingsError(c, p, "channel-preview-stale",
-				text("channelPreviewStaleDescription"))
-			s.channelSettingsButton(c, p, "channel-repreview",
-				text("channelRepreview"), "activity", true, true,
-				func() {
-					state.reprepare()
+			if len(unenabled) > 5 {
+				ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(4).
+					Padding(4, 0, 4, 0).Children(func() {
+					ui.Icon(c, icon("search")).Size(14, 14).TextColor(p.muted)
+					ui.TextInputBase(c.Key("channel-form-model-search"), &state.form.search).
+						FillWidth().Height(32).Padding(0, 10).
+						Radius(v12InputRadius).Border(v12BorderWidth, p.border).
+						Background(p.surface).FontSize(fontSmall).TextColor(p.text).
+						Label(text("channelsSearchPlaceholder")).
+						Placeholder(text("channelsSearchPlaceholder"))
 				})
-			return
-		}
-		ui.Row(c).FillWidth().Wrap().Gap(8).Children(func() {
-			label := text("channelApplyImport")
-			key := "channel-apply-import"
-			if state.previewKind == channelSettingsPreviewCustom {
-				label = text("channelApplyCustom")
-				key = "channel-apply-custom"
 			}
-			s.channelSettingsButton(c, p, key, label, "check", true,
-				state.planBound(), func() {
-					state.apply(s)
-				})
-		})
-		if state.applyErr != "" {
-			s.channelSettingsError(c, p, "channel-apply-error", state.applyErr)
-			if state.applyErrDetail != "" {
-				ui.Text(c, state.applyErrDetail).Font("monospace").FontSize(fontSmall).
+			shown := unenabled
+			if search := strings.TrimSpace(state.form.search); search != "" {
+				filtered := []string{}
+				for _, modelID := range unenabled {
+					if strings.Contains(strings.ToLower(modelID), strings.ToLower(search)) {
+						filtered = append(filtered, modelID)
+					}
+				}
+				shown = filtered
+				if len(filtered) == 0 {
+					ui.Text(c, text("channelsSearchEmpty")).FontSize(fontSmall).
+						TextColor(p.muted).Wrap()
+					return
+				}
+			}
+			if len(shown) == 0 {
+				ui.Text(c, text("channelsAllEnabled")).FontSize(fontSmall).
 					TextColor(p.muted).Wrap()
+				return
 			}
-		}
-	})
+			if len(shown) > 8 {
+				ui.Scroll(c).Height(280).FillWidth().MinHeight(0).MinWidth(0).
+					Children(func() {
+						s.channelSettingsModelList(c, p, state, shown, true)
+					})
+				return
+			}
+			s.channelSettingsModelList(c, p, state, shown, false)
+		})
 }
 
-func (s *appState) channelSettingsDigest(
-	c *ui.Context,
-	p palette,
-	label, path, digest string,
-) {
-	ui.Column(c).Grow(1).MinWidth(180).Gap(2).Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).FontWeight(650).TextColor(p.muted)
-		ui.Text(c, fallback(path, "—")).Font("monospace").FontSize(fontSmall).
-			TextColor(p.text).Wrap()
-		ui.Text(c, channelShortDigest(digest)).Font("monospace").FontSize(fontSmall).
-			TextColor(p.muted).Wrap()
-	})
-}
-
-func (s *appState) channelSettingsMergeItems(
-	c *ui.Context,
-	p palette,
-	label string,
-	items []ChannelMergeItem,
-) {
-	ui.Column(c).FillWidth().Gap(5).Children(func() {
-		ui.Text(c, label).FontSize(fontBody).FontWeight(650).TextColor(p.text)
-		for _, item := range items {
-			ui.Row(c).FillWidth().Wrap().AlignItems(ui.Center).Gap(8).Children(func() {
-				ui.Text(c, item.ID).Font("monospace").FontSize(fontBody).
-					TextColor(p.text).Grow(1).MinWidth(120).Wrap()
-				color := p.successText
-				if item.Action == channelMergePreserve {
-					color = p.muted
-				}
-				s.channelSettingsBadge(c, p, channelMergeActionLabel(item.Action), color)
-			})
-		}
-	})
-}
-
-func (s *appState) channelSettingsNotice(
-	c *ui.Context,
-	p palette,
-	notice ChannelNotice,
-) {
-	ui.Row(c).Key("channel-notice-"+notice.Code+"-"+notice.Path).FillWidth().
-		Wrap().AlignItems(ui.Center).Gap(8).Padding(8, 9).Radius(v12InputRadius).
-		Background(p.background).Children(func() {
-		s.channelSettingsBadge(c, p, channelNoticeLabel(notice.Code), p.muted)
-		ui.Text(c, notice.Path).Font("monospace").FontSize(fontSmall).
-			TextColor(p.muted).Grow(1).MinWidth(150).Wrap()
-		ui.Text(c, channelMergeActionLabel(notice.Action)).FontSize(fontSmall).
-			TextColor(p.muted).Wrap()
-	})
-}
-
-func (s *appState) channelSettingsBadge(
-	c *ui.Context,
-	p palette,
-	label string,
-	color ui.Color,
-) {
-	ui.Row(c).Shrink(0).Padding(3, 6).Radius(v12ChipRadius).
-		Background(p.surfaceSubtle).Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).FontWeight(650).TextColor(color).Wrap()
-	})
-}
-
-func (s *appState) channelSettingsResult(
+func (s *appState) channelSettingsModelList(
 	c *ui.Context,
 	p palette,
 	state *channelSettingsUIState,
+	models []string,
+	scrolled bool,
 ) {
-	if state.result == nil {
+	_ = scrolled
+	ui.Column(c).FillWidth().Children(func() {
+		for index, modelID := range models {
+			if index > 0 {
+				separator(c, "channel-available-sep-"+modelID, p)
+			}
+			ui.Row(c).Key("channel-available-"+modelID).FillWidth().
+				Padding(10, 16).AlignItems(ui.Center).Gap(8).Children(func() {
+				ui.Icon(c, icon("plus")).Size(14, 14).TextColor(p.muted)
+				ui.Text(c, modelID).FontSize(fontBody).TextColor(p.text).
+					Grow(1).MinWidth(0).Wrap()
+				add := ui.ButtonBase(c.Key("channel-available-add-" + modelID)).
+					Label(text("channelsEnableModel")).Padding(2).
+					Radius(v12ChipRadius).Cursor(ui.CursorPointer)
+				add.Children(func() {
+					ui.Icon(c, icon("plus")).Size(14, 14).TextColor(p.muted)
+				})
+				if add.Clicked() {
+					state.setModelEnabled(modelID, true)
+				}
+			})
+		}
+	})
+	ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Padding(10, 0, 0, 0).
+		Children(func() {
+			ui.TextInputBase(c.Key("channel-form-manual-id"), &state.form.manualID).
+				Grow(1).MinWidth(0).Height(32).Padding(0, 10).
+				Radius(v12InputRadius).Border(v12BorderWidth, p.border).
+				Background(p.surface).FontSize(fontSmall).TextColor(p.text).
+				Placeholder(text("channelsManualModelID"))
+			ui.TextInputBase(c.Key("channel-form-manual-name"), &state.form.manualName).
+				Grow(1).MinWidth(0).Height(32).Padding(0, 10).
+				Radius(v12InputRadius).Border(v12BorderWidth, p.border).
+				Background(p.surface).FontSize(fontSmall).TextColor(p.text).
+				Placeholder(text("channelsManualModelName"))
+			add := ui.ButtonBase(c.Key("channel-form-manual-add")).
+				Label(text("channelsManualAdd")).Width(32).Height(32).Padding(0).
+				Radius(v12ChipRadius).Cursor(ui.CursorPointer)
+			add.Children(func() {
+				ui.Icon(c, icon("plus")).Size(16, 16).TextColor(p.text)
+			})
+			if add.Clicked() {
+				state.addManualModel()
+			}
+		})
+}
+
+func channelFetchResultLabel(result ChannelModelsResult) string {
+	if result.Category == "ok" {
+		return textArgs("channelsFetchOK", map[string]any{"count": len(result.Models)})
+	}
+	if result.Category == "subscription" {
+		return text("channelsSubscriptionFetchHint")
+	}
+	return channelTestResultLabel(ChannelTestResult{Category: result.Category})
+}
+
+// channelSettingsDialogs renders the active dialog inline above the page.
+// Proma centers these in a 512px card with a 40% scrim; BYOP keeps the same
+// copy inside the settings column until a shared modal host exists.
+func (s *appState) channelSettingsDialogs(c *ui.Context, p palette, state *channelSettingsUIState) {
+	if state.dialogDelete != "" {
+		name := state.dialogDelete
+		if provider, ok := state.statusProvider(state.dialogDelete); ok {
+			name = fallback(provider.Name, provider.ID)
+		}
+		settingsCardV12(c, p, text("channelsDeleteConfirmTitle"),
+			textArgs("channelsDeleteConfirmBody", map[string]any{"name": name}), func() {
+				s.channelSettingsDialogButtons(c, p, state, "delete")
+			})
+	}
+	if state.dialogRemove != "" {
+		name := state.dialogRemove
+		if provider, ok := state.statusProvider(state.dialogRemove); ok {
+			name = fallback(provider.Name, provider.ID)
+		}
+		settingsCardV12(c, p, text("channelsRemoveConfirmTitle"),
+			textArgs("channelsRemoveConfirmBody", map[string]any{"name": name}), func() {
+				s.channelSettingsDialogButtons(c, p, state, "remove")
+			})
+	}
+	if state.dialogRisk != "" {
+		ui.Column(c).Key("channel-risk-dialog").FillWidth().Gap(8).
+			Padding(16).Radius(12).Border(v12BorderWidth, p.border).
+			Background(p.surface).Children(func() {
+			ui.Text(c, text("channelsRiskTitle")).FontSize(fontTitle).
+				FontWeight(650).TextColor(p.text)
+			for _, key := range []string{
+				"channelsRiskBody1", "channelsRiskBody2", "channelsRiskBody3",
+				"channelsRiskBody4",
+			} {
+				ui.Text(c, text(key)).FontSize(fontBody).LineHeight(1.4).
+					TextColor(p.muted).Wrap()
+			}
+			ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
+				cancel := ui.ButtonBase(c.Key("channel-risk-cancel")).
+					Label(text("channelsCancel")).Height(28).Padding(0, 12).
+					Radius(v12ChipRadius).Border(v12BorderWidth, p.border).
+					Background(p.surface).Cursor(ui.CursorPointer)
+				cancel.Children(func() {
+					ui.Text(c, text("channelsCancel")).FontSize(fontSmall).
+						TextColor(p.text)
+				})
+				if cancel.Clicked() {
+					state.dialogRisk = ""
+					state.dialogRiskAction = ""
+				}
+				accept := ui.ButtonBase(c.Key("channel-risk-accept")).
+					Label(text("channelsRiskAccept")).Height(28).Padding(0, 12).
+					Radius(v12ChipRadius).Background(p.danger).Cursor(ui.CursorPointer)
+				accept.Children(func() {
+					ui.Text(c, text("channelsRiskAccept")).FontSize(fontSmall).
+						FontWeight(600).TextColor(p.onAccent)
+				})
+				if accept.Clicked() {
+					action := state.dialogRiskAction
+					state.dialogRisk = ""
+					state.dialogRiskAction = ""
+					state.acknowledgeAndRun(s, action)
+				}
+			})
+		})
+	}
+	if state.dialogDiscard {
+		settingsCardV12(c, p, text("channelsDiscardTitle"),
+			text("channelsDiscardBodyNoModels"), func() {
+				s.channelSettingsDialogButtons(c, p, state, "discard")
+			})
+	}
+}
+
+func (s *appState) channelSettingsDialogButtons(
+	c *ui.Context,
+	p palette,
+	state *channelSettingsUIState,
+	kind string,
+) {
+	ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
+		cancelLabel := text("channelsCancel")
+		confirmLabel := text("channelsConfirmDelete")
+		switch kind {
+		case "remove":
+			confirmLabel = text("channelsConfirmRemove")
+		case "discard":
+			cancelLabel = text("channelsDiscard")
+			confirmLabel = text("channelsSaveAndClose")
+		}
+		cancel := ui.ButtonBase(c.Key("channel-dialog-cancel-"+kind)).
+			Label(cancelLabel).Height(28).Padding(0, 12).
+			Radius(v12ChipRadius).Border(v12BorderWidth, p.border).
+			Background(p.surface).Cursor(ui.CursorPointer)
+		cancel.Children(func() {
+			ui.Text(c, cancelLabel).FontSize(fontSmall).TextColor(p.text)
+		})
+		if cancel.Clicked() {
+			state.cancelDialog(kind)
+			if kind == "discard" {
+				state.closeForm(s)
+			}
+		}
+		confirm := ui.ButtonBase(c.Key("channel-dialog-confirm-"+kind)).
+			Label(confirmLabel).Height(28).Padding(0, 12).
+			Radius(v12ChipRadius).Background(p.danger).Cursor(ui.CursorPointer)
+		confirm.Children(func() {
+			ui.Text(c, confirmLabel).FontSize(fontSmall).FontWeight(600).
+				TextColor(p.onAccent)
+		})
+		if confirm.Clicked() {
+			if kind == "discard" {
+				if state.view == channelSettingsViewCreate {
+					state.submitCreate(s)
+				} else {
+					state.submitEdit(s)
+				}
+				state.closeForm(s)
+				return
+			}
+			state.confirmDialog(s, kind)
+		}
+	})
+}
+
+// channelSettingsBanner is the subscription success banner at the top of the
+// list, matching Proma's green card with a close button.
+func (s *appState) channelSettingsBanner(c *ui.Context, p palette, state *channelSettingsUIState) {
+	if state.loginBanner == "" {
 		return
 	}
-	settingsCardV12(c, p, text("channelApplyResultTitle"), "", func() {
-		label := text("channelApplyNoChanges")
-		if state.result.Changed {
-			label = text("channelApplySucceeded")
-		}
-		ui.Text(c, label).FontSize(fontBody).FontWeight(650).TextColor(p.successText).Wrap()
-		ui.Text(c, text("channelPendingRefreshDescription")).FontSize(fontSmall).
-			LineHeight(1.4).TextColor(p.muted).Wrap()
-		ui.Row(c).FillWidth().Wrap().Gap(8).Children(func() {
-			s.channelSettingsButton(c, p, "channel-new-import",
-				text("channelAddAnotherSource"), "plus", false, true,
-				func() {
-					state.resetForAnotherSource()
-				})
+	ui.Row(c).Key("channel-login-banner").FillWidth().Padding(12, 16).
+		Radius(12).Border(v12BorderWidth, p.success.Alpha(0.25)).
+		Background(p.success.Alpha(0.08)).AlignItems(ui.Center).Gap(8).Children(func() {
+		ui.Icon(c, icon("check")).Size(20, 20).TextColor(p.successText)
+		ui.Column(c).Grow(1).MinWidth(0).Children(func() {
+			ui.Text(c, textArgs("channelsBannerTitle", map[string]any{
+				"name": channelDisplayName(state.loginBanner),
+			})).FontSize(fontBody).FontWeight(500).TextColor(p.text)
+			ui.Text(c, text("channelsBannerBody")).FontSize(fontSmall).
+				TextColor(p.muted).Wrap()
 		})
+		close := ui.ButtonBase(c.Key("channel-banner-close")).
+			Label(text("channelsBannerClose")).Width(40).Height(40).Padding(0).
+			Radius(v12ChipRadius).Cursor(ui.CursorPointer)
+		close.Children(func() {
+			ui.Icon(c, icon("x")).Size(16, 16).TextColor(p.muted)
+		})
+		if close.Clicked() {
+			state.loginBanner = ""
+		}
 	})
+}
+
+func (s *appState) channelSettingsError(c *ui.Context, p palette, key, message string) {
+	ui.Row(c).Key(key).FillWidth().Padding(9, 10).Radius(v12InputRadius).
+		Border(v12BorderWidth, p.danger).Background(p.danger.Alpha(.08)).Children(func() {
+		ui.Text(c, message).FontSize(fontBody).LineHeight(1.4).
+			TextColor(p.dangerText).FillWidth().MinWidth(0).Wrap()
+	})
+}
+
+func (s *appState) channelSettingsTextField(
+	c *ui.Context,
+	p palette,
+	key, label, placeholder string,
+	value *string,
+) {
+	ui.Column(c).FillWidth().Gap(4).Children(func() {
+		ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(p.muted)
+		input := ui.TextInputBase(c.Key(key), value).FillWidth().Height(36).
+			Padding(0, 10).Radius(v12InputRadius).Border(v12BorderWidth, p.border).
+			Background(p.surface).FontSize(fontBody).TextColor(p.text).
+			Label(label).Placeholder(placeholder)
+		if input.Focused() {
+			input.BorderColor(p.focus)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// state transitions
+
+func (state *channelSettingsUIState) loadStatus() {
+	if state == nil || state.api == nil {
+		return
+	}
+	state.statusLoading = true
+	status, err := state.api.ConfigStatus()
+	state.statusLoading = false
+	state.statusLoaded = true
+	state.status = status
+	state.statusErr = ""
+	if err != nil {
+		state.statusErr = err.Error()
+	}
+}
+
+func (state *channelSettingsUIState) statusProvider(id string) (ChannelStatusProvider, bool) {
+	for _, provider := range state.status.Providers {
+		if provider.ID == id {
+			return provider, true
+		}
+	}
+	return ChannelStatusProvider{}, false
+}
+
+func (state *channelSettingsUIState) openCreate() {
+	state.view = channelSettingsViewCreate
+	state.form = channelSettingsFormState{enabled: true, loaded: true}
+	state.dialogDelete = ""
+	state.dialogRemove = ""
+	state.dialogRisk = ""
+	state.dialogRiskAction = ""
+	state.dialogDiscard = false
+}
+
+func (state *channelSettingsUIState) openEdit(provider ChannelStatusProvider) {
+	state.view = channelSettingsViewEdit
+	enabled := provider.CredentialConfigured
+	state.form = channelSettingsFormState{
+		providerID:    provider.ID,
+		name:          fallback(provider.Name, provider.ID),
+		enabled:       enabled,
+		loaded:        true,
+		enabledModels: map[string]bool{},
+	}
+	state.dialogDelete = ""
+	state.dialogRemove = ""
+	state.dialogRisk = ""
+	state.dialogRiskAction = ""
+	state.dialogDiscard = false
+}
+
+func (state *channelSettingsUIState) selectProviderType(id string) {
+	if state.form.providerID == id {
+		return
+	}
+	previous := state.form.providerID
+	state.form.providerID = id
+	if state.form.name == "" || state.form.name == channelDisplayName(previous) {
+		state.form.name = channelDisplayName(id)
+	}
+	state.form.acknowledged = ""
+}
+
+func (state *channelSettingsUIState) requestLeaveForm(app *appState) {
+	if state.view == channelSettingsViewCreate && state.formIsDirty() {
+		state.dialogDiscard = true
+		return
+	}
+	state.closeForm(app)
+}
+
+func (state *channelSettingsUIState) formIsDirty() bool {
+	return strings.TrimSpace(state.form.name) != "" ||
+		strings.TrimSpace(state.form.baseURL) != "" ||
+		strings.TrimSpace(state.form.apiKey) != "" ||
+		len(state.enabledModelIDs()) > 0
+}
+
+func (state *channelSettingsUIState) closeForm(app *appState) {
+	state.view = channelSettingsViewList
+	state.form = channelSettingsFormState{}
+	state.dialogDiscard = false
+	state.dialogRisk = ""
+	state.dialogRiskAction = ""
+	state.loginWatchActive = false
+	if state.api != nil {
+		state.loadStatus()
+	}
+	if state.refresh.MarkPending != nil {
+		state.refresh.MarkPending(app)
+	}
+}
+
+func (state *channelSettingsUIState) confirmDialog(app *appState, kind string) {
+	switch kind {
+	case "delete":
+		providerID := state.dialogDelete
+		state.dialogDelete = ""
+		if providerID == "" || state.deleteBusy[providerID] || state.api == nil {
+			return
+		}
+		state.deleteBusy[providerID] = true
+		_, err := state.api.DeleteChannel(providerID)
+		state.deleteBusy[providerID] = false
+		if err != nil {
+			state.statusErr = err.Error()
+			return
+		}
+		state.loadStatus()
+	case "remove":
+		providerID := state.dialogRemove
+		state.dialogRemove = ""
+		if providerID == "" || state.deleteBusy[providerID] || state.api == nil {
+			return
+		}
+		state.deleteBusy[providerID] = true
+		err := state.api.ClearAPIKey(providerID)
+		state.deleteBusy[providerID] = false
+		if err != nil {
+			state.statusErr = err.Error()
+			return
+		}
+		state.loadStatus()
+	case "discard":
+		state.dialogDiscard = false
+		state.closeForm(app)
+	}
+}
+
+func (state *channelSettingsUIState) cancelDialog(kind string) {
+	switch kind {
+	case "delete":
+		state.dialogDelete = ""
+	case "remove":
+		state.dialogRemove = ""
+	case "discard":
+		state.dialogDiscard = false
+	}
+}
+
+// requireRiskAcknowledgement returns true when the base URL deviates from the
+// acknowledged value and the risk dialog must run first.
+func (state *channelSettingsUIState) requireRiskAcknowledgement() bool {
+	baseURL := strings.TrimSpace(state.form.baseURL)
+	return baseURL != "" && state.form.acknowledged != baseURL
+}
+
+func (state *channelSettingsUIState) acknowledgeAndRun(app *appState, action string) {
+	state.form.acknowledged = strings.TrimSpace(state.form.baseURL)
+	switch action {
+	case "test":
+		state.runTest(app)
+	case "fetch":
+		state.fetchModels(app)
+	case "create":
+		state.submitCreate(app)
+	case "save":
+		state.submitEdit(app)
+	}
+}
+
+func (state *channelSettingsUIState) runTest(app *appState) {
+	if state.api == nil || state.form.providerID == "" {
+		return
+	}
+	if state.requireRiskAcknowledgement() {
+		state.dialogRisk = "test"
+		state.dialogRiskAction = "test"
+		return
+	}
+	providerID := state.form.providerID
+	if state.testBusy[providerID] {
+		return
+	}
+	state.testBusy[providerID] = true
+	result, err := state.api.TestConnection(providerID)
+	state.testBusy[providerID] = false
+	if err != nil {
+		result = ChannelTestResult{Category: "failed"}
+	}
+	state.testResults[providerID] = result
+}
+
+func (state *channelSettingsUIState) fetchModels(app *appState) {
+	if state.api == nil || state.form.providerID == "" {
+		return
+	}
+	if state.requireRiskAcknowledgement() {
+		state.dialogRisk = "fetch"
+		state.dialogRiskAction = "fetch"
+		return
+	}
+	providerID := state.form.providerID
+	if state.fetchBusy[providerID] {
+		return
+	}
+	state.fetchBusy[providerID] = true
+	result, err := state.api.FetchModels(providerID)
+	state.fetchBusy[providerID] = false
+	if err != nil {
+		result = ChannelModelsResult{Category: "failed"}
+	}
+	state.fetchResults[providerID] = result
+	state.mergeFetchedModels(providerID, result)
+}
+
+// mergeFetchedModels applies the Proma merge rule: the fetched list is
+// authoritative; manual models outside it are kept.
+func (state *channelSettingsUIState) mergeFetchedModels(providerID string, result ChannelModelsResult) {
+	if state.form.providerID != providerID || result.Category != "ok" {
+		return
+	}
+	merged := make([]string, 0, len(result.Models)+len(state.form.manualModels))
+	seen := map[string]bool{}
+	for _, modelID := range result.Models {
+		if !seen[modelID] {
+			merged = append(merged, modelID)
+			seen[modelID] = true
+		}
+	}
+	for _, modelID := range state.form.manualModels {
+		if !seen[modelID] {
+			merged = append(merged, modelID)
+			seen[modelID] = true
+		}
+	}
+	state.form.availableModels = merged
+}
+
+func (state *channelSettingsUIState) setModelEnabled(modelID string, enabled bool) {
+	if state.api == nil || state.form.providerID == "" || modelID == "" {
+		return
+	}
+	providerID := state.form.providerID
+	modelID = strings.TrimSpace(modelID)
+	updated, err := state.api.SetModelEnabled(providerID, modelID, enabled)
+	if err != nil {
+		state.statusErr = err.Error()
+		return
+	}
+	state.form.enabledModels = map[string]bool{}
+	for _, entry := range updated {
+		state.form.enabledModels[entry] = true
+	}
+}
+
+func (state *channelSettingsUIState) addManualModel() {
+	modelID := strings.TrimSpace(state.form.manualID)
+	if modelID == "" {
+		return
+	}
+	for _, existing := range state.form.availableModels {
+		if existing == modelID {
+			state.form.manualID = ""
+			state.form.manualName = ""
+			return
+		}
+	}
+	state.form.availableModels = append(state.form.availableModels, modelID)
+	state.form.manualModels = append(state.form.manualModels, modelID)
+	state.form.manualID = ""
+	state.form.manualName = ""
+}
+
+func (state *channelSettingsUIState) enabledModelIDs() []string {
+	ids := make([]string, 0, len(state.form.enabledModels))
+	for id, enabled := range state.form.enabledModels {
+		if enabled {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+func (state *channelSettingsUIState) unenabledModels() []string {
+	enabled := state.enabledModelIDs()
+	available := append([]string{}, state.form.availableModels...)
+	unenabled := make([]string, 0, len(available))
+	for _, modelID := range available {
+		found := false
+		for _, id := range enabled {
+			if id == modelID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			unenabled = append(unenabled, modelID)
+		}
+	}
+	sort.Strings(unenabled)
+	return unenabled
+}
+
+func (state *channelSettingsUIState) submitLabel() string {
+	if state.form.saving {
+		return text("channelsSaving")
+	}
+	if state.view == channelSettingsViewCreate {
+		return text("channelsCreate")
+	}
+	return text("channelsSave")
+}
+
+// submitCreate writes the provider identity via the validated custom merge,
+// then the literal API key. The key never reaches logs or the UI.
+func (state *channelSettingsUIState) submitCreate(app *appState) {
+	if state.api == nil || state.form.saving {
+		return
+	}
+	providerID := strings.TrimSpace(state.form.providerID)
+	if providerID == "" {
+		state.statusErr = text("channelsProviderRequired")
+		return
+	}
+	if state.requireRiskAcknowledgement() {
+		state.dialogRisk = "create"
+		state.dialogRiskAction = "create"
+		return
+	}
+	state.form.saving = true
+	err := state.writeProviderIdentity(providerID)
+	if err == nil && strings.TrimSpace(state.form.apiKey) != "" {
+		err = state.api.SetAPIKey(providerID, strings.TrimSpace(state.form.apiKey))
+	}
+	state.form.saving = false
+	if err != nil {
+		state.statusErr = text("channelsCreateFailed")
+		return
+	}
+	state.view = channelSettingsViewList
+	state.loadStatus()
+	if state.refresh.MarkPending != nil {
+		state.refresh.MarkPending(app)
+	}
+}
+
+// submitEdit is the edit-mode counterpart: an empty key means "leave
+// unchanged"; a new value replaces the stored literal and the file mode stays
+// 0600.
+func (state *channelSettingsUIState) submitEdit(app *appState) {
+	if state.api == nil || state.form.saving {
+		return
+	}
+	providerID := strings.TrimSpace(state.form.providerID)
+	if state.requireRiskAcknowledgement() {
+		state.dialogRisk = "save"
+		state.dialogRiskAction = "save"
+		return
+	}
+	state.form.saving = true
+	err := state.writeProviderIdentity(providerID)
+	if err == nil && strings.TrimSpace(state.form.apiKey) != "" {
+		err = state.api.SetAPIKey(providerID, strings.TrimSpace(state.form.apiKey))
+	}
+	state.form.saving = false
+	if err != nil {
+		state.statusErr = text("channelsSaveFailed")
+		return
+	}
+	state.loadStatus()
+	if state.refresh.MarkPending != nil {
+		state.refresh.MarkPending(app)
+	}
+}
+
+// writeProviderIdentity merges the name/base URL into models.json through the
+// existing digest-bound custom channel path, retrying once after a stale
+// preview.
+func (state *channelSettingsUIState) writeProviderIdentity(providerID string) error {
+	if state.api == nil {
+		return errors.New("channel config service is nil")
+	}
+	req := ChannelCustomRequest{
+		ProviderID: providerID,
+		Name:       strings.TrimSpace(state.form.name),
+		BaseURL:    strings.TrimSpace(state.form.baseURL),
+	}
+	plan, err := state.api.PrepareCustom(req)
+	if err != nil {
+		return err
+	}
+	if _, err := state.api.ApplyCustom(plan.Request); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (state *channelSettingsUIState) setChannelEnabled(providerID string, enabled bool) {
+	if state.api == nil {
+		return
+	}
+	if _, err := state.api.SetChannelEnabled(providerID, enabled); err != nil {
+		state.statusErr = err.Error()
+	}
+}
+
+// startLoginWatch opens the Pi terminal login and polls the credential state
+// every two seconds for up to 90 seconds. Tests drive pollLoginStep instead.
+func (state *channelSettingsUIState) startLoginWatch(app *appState, providerID string) {
+	if state.api == nil || providerID == "" {
+		return
+	}
+	if state.loginWatchActive {
+		return
+	}
+	state.loginWatchActive = true
+	state.loginWatchProviderID = providerID
+	interval := 2 * time.Second
+	deadline := time.Now().Add(90 * time.Second)
+	api := state.api
+	if state.openPiLogin == nil {
+		// P32 §4.4: the production default opens the Pi login session in the
+		// system terminal; tests replace the seam before the first click, so
+		// no real Terminal ever opens. Login errors stay silent here — the
+		// 90-second watch reports "not ready" as its own state.
+		state.openPiLogin = func(providerID string) {
+			_ = app.openPiLogin(providerID)
+		}
+	}
+	if state.openPiLogin != nil {
+		state.openPiLogin(providerID)
+	}
+	go func() {
+		for time.Now().Before(deadline) {
+			time.Sleep(interval)
+			status, err := api.CredentialStatus(providerID)
+			done := err == nil && status.Status == "ready"
+			app.postUI(func() {
+				state.credentials[providerID] = status
+				if done {
+					state.loginWatchActive = false
+					state.loginBanner = providerID
+				}
+			})
+			if done {
+				return
+			}
+		}
+		app.postUI(func() {
+			state.loginWatchActive = false
+			state.loginWatchTimedOut = true
+		})
+	}()
+}
+
+// pollLoginStep is the single polling step extracted for deterministic tests.
+func (state *channelSettingsUIState) pollLoginStep(providerID string) (bool, error) {
+	if state.api == nil {
+		return false, errors.New("channel config service is nil")
+	}
+	status, err := state.api.CredentialStatus(providerID)
+	if err != nil {
+		return false, err
+	}
+	state.credentials[providerID] = status
+	return status.Status == "ready", nil
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func channelBorderForSelection(p palette, selected bool) ui.Color {
+	if selected {
+		return p.accent
+	}
+	return p.border
+}
+
+func channelTextForSelection(p palette, selected bool) ui.Color {
+	if selected {
+		return p.accentText
+	}
+	return p.text
+}
+
+func channelDisplayName(id string) string {
+	for _, preset := range ChannelPresets() {
+		if preset.ID == id {
+			return preset.Name
+		}
+	}
+	return id
+}
+
+func channelPresetByID(id string) (ChannelPreset, bool) {
+	for _, preset := range ChannelPresets() {
+		if preset.ID == id {
+			return preset, true
+		}
+	}
+	return ChannelPreset{}, false
 }
 
 func (s *appState) channelSettingsRefresh(
@@ -831,9 +1580,8 @@ func (s *appState) channelSettingsRefresh(
 				LineHeight(1.4).TextColor(p.muted).Wrap()
 		}
 		if status.Retryable && state.refresh.Retry != nil {
-			s.channelSettingsButton(c, p, "channel-refresh-retry",
-				text("channelRefreshRetry"), "activity", false, true,
-				func() {
+			s.channelSettingsSmallButton(c, p, "channel-refresh-retry",
+				text("channelRefreshRetry"), "activity", false, func() {
 					state.refresh.Retry(s)
 				})
 		}
@@ -874,529 +1622,4 @@ func channelRefreshFailureLabel(failure ChannelRefreshFailure) string {
 		key = "channelRefreshFailureTranscript"
 	}
 	return text(key)
-}
-
-func (s *appState) channelSettingsError(
-	c *ui.Context,
-	p palette,
-	key, message string,
-) {
-	ui.Row(c).Key(key).FillWidth().Padding(9, 10).Radius(v12InputRadius).
-		Border(v12BorderWidth, p.danger).Background(p.danger.Alpha(.08)).Children(func() {
-		ui.Text(c, message).FontSize(fontBody).LineHeight(1.4).
-			TextColor(p.dangerText).FillWidth().MinWidth(0).Wrap()
-	})
-}
-
-func (s *appState) channelSettingsTextField(
-	c *ui.Context,
-	p palette,
-	key, label, placeholder string,
-	value *string,
-	state *channelSettingsUIState,
-) {
-	ui.Column(c).FillWidth().Gap(4).Children(func() {
-		ui.Text(c, label).FontSize(fontSmall).FontWeight(600).TextColor(p.muted)
-		input := ui.TextInputBase(c.Key(key), value).FillWidth().Height(36).
-			Padding(0, 10).Radius(v12InputRadius).Border(v12BorderWidth, p.border).
-			Background(p.surface).FontSize(fontBody).TextColor(p.text).
-			Label(label).Placeholder(placeholder)
-		if input.Focused() {
-			input.BorderColor(p.focus)
-		}
-		input.OnChange(func() {
-			if state != nil {
-				state.invalidatePreview()
-			}
-		})
-	})
-}
-
-func (s *appState) channelSettingsButton(
-	c *ui.Context,
-	p palette,
-	key, label, iconName string,
-	primary bool,
-	enabled bool,
-	click func(),
-) {
-	background := p.surface
-	foreground := p.text
-	border := p.border
-	if primary {
-		background = p.accent
-		foreground = p.onAccent
-		border = p.accent
-	}
-	if !enabled {
-		background = p.surfaceSubtle
-		foreground = p.muted
-	}
-	button := ui.ButtonBase(c.Key(key)).Label(label).Padding(7, 11).
-		Radius(v12InputRadius).Border(v12BorderWidth, border).
-		Background(background).Cursor(ui.CursorPointer).Disabled(!enabled)
-	if button.Hovered() && enabled {
-		if primary {
-			button.Background(p.accentHover)
-		} else {
-			button.Background(p.surfaceHover)
-		}
-	}
-	button.Children(func() {
-		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-			ui.Icon(c, icon(iconName)).Size(14, 14).TextColor(foreground)
-			ui.Text(c, label).FontSize(fontBody).FontWeight(650).
-				TextColor(foreground).Wrap()
-		})
-	})
-	if enabled && button.Clicked() {
-		click()
-	}
-}
-
-func channelBorderForSelection(p palette, selected bool) ui.Color {
-	if selected {
-		return p.accent
-	}
-	return p.border
-}
-
-func channelTextForSelection(p palette, selected bool) ui.Color {
-	if selected {
-		return p.accentText
-	}
-	return p.text
-}
-
-func (s *channelSettingsUIState) loadInventory() {
-	if s == nil || s.api == nil {
-		return
-	}
-	s.inventoryLoading = true
-	inventory, err := s.api.Inventory()
-	s.inventoryLoading = false
-	s.inventoryLoaded = true
-	s.inventory = inventory
-	s.inventoryErr = ""
-	if err != nil {
-		s.inventoryErr = err.Error()
-	}
-}
-
-func (s *channelSettingsUIState) inventoryStatusLabel() string {
-	if s.inventoryLoading {
-		return text("channelInventoryLoading")
-	}
-	if s.inventoryErr != "" {
-		return text("channelInventoryError")
-	}
-	if !s.inventory.Exists {
-		return text("channelInventoryMissing")
-	}
-	return textArgs("channelInventoryProviderCount", map[string]any{
-		"count": len(s.inventory.Providers),
-	})
-}
-
-func channelCredentialLabel(summary ChannelCredentialSummary) string {
-	if !summary.Configured || summary.Kind == channelCredentialNone {
-		return text("channelCredentialNone")
-	}
-	return text("channelConfiguredInPi")
-}
-
-func channelNoticeLabel(code string) string {
-	switch code {
-	case channelNoticeConfigureInPi:
-		return text("channelNoticeConfigureInPi")
-	case channelNoticeProviderEndpointConflict:
-		return text("channelNoticeProviderConflict")
-	case channelNoticeModelEndpointInherited:
-		return text("channelNoticeEndpointInherited")
-	case channelNoticeCommentsRemoved:
-		return text("channelNoticeCommentsRemoved")
-	case "providerPreserved":
-		return text("channelNoticeProviderPreserved")
-	case "modelConflictPreserved":
-		return text("channelNoticeModelPreserved")
-	case "modelOverrideConflictPreserved":
-		return text("channelNoticeOverridePreserved")
-	default:
-		return code
-	}
-}
-
-func (s *channelSettingsUIState) switchMode(mode channelSettingsSourceMode) {
-	if s.mode == mode {
-		return
-	}
-	s.mode = mode
-	s.invalidatePreview()
-	s.applyErr = ""
-	s.sourceErr = ""
-}
-
-// chooseModelsFile opens the picker off the UI thread; without a window,
-// focused tests drive the picker synchronously.
-func (s *channelSettingsUIState) chooseModelsFile(app *appState) {
-	if s.picker == nil {
-		s.sourceErr = text("channelPickerUnavailable")
-		return
-	}
-	if s.pickerBusy {
-		return
-	}
-	picker := s.picker
-	parent := app.window
-	if parent == nil {
-		path, err := picker(parent)
-		s.applyModelsFilePick(path, err)
-		return
-	}
-	s.pickerBusy = true
-	go func() {
-		path, err := picker(parent)
-		app.postUI(func() {
-			s.pickerBusy = false
-			s.applyModelsFilePick(path, err)
-		})
-	}()
-}
-
-// applyModelsFilePick continues the original picker result on the UI thread.
-// Cancelling leaves the current selection untouched.
-func (s *channelSettingsUIState) applyModelsFilePick(path string, err error) {
-	if err != nil {
-		s.sourceErr = err.Error()
-		return
-	}
-	if strings.TrimSpace(path) == "" {
-		return
-	}
-	s.sourcePath = path
-	s.inspectSourceFile()
-}
-
-func (s *channelSettingsUIState) inspectSourceFile() {
-	if s.api == nil {
-		s.sourceErr = text("channelBackendUnavailable")
-		return
-	}
-	inventory, err := s.api.InspectModelsFile(s.sourcePath)
-	s.sourceInventory = inventory
-	s.sourceErr = ""
-	s.selectedModels = map[string]bool{}
-	s.selectedOverrides = map[string]bool{}
-	s.sourceProviderID = ""
-	s.invalidatePreview()
-	if err != nil {
-		s.sourceErr = err.Error()
-		return
-	}
-	if len(inventory.Providers) > 0 {
-		s.sourceProviderID = inventory.Providers[0].ID
-	}
-}
-
-func (s *channelSettingsUIState) selectProvider(id string) {
-	if s.sourceProviderID == id {
-		return
-	}
-	s.sourceProviderID = id
-	s.selectedModels = map[string]bool{}
-	s.selectedOverrides = map[string]bool{}
-	s.invalidatePreview()
-}
-
-func (s *channelSettingsUIState) selectedSourceProvider() (ChannelProviderSummary, bool) {
-	for _, provider := range s.sourceInventory.Providers {
-		if provider.ID == s.sourceProviderID {
-			return provider, true
-		}
-	}
-	return ChannelProviderSummary{}, false
-}
-
-func (s *channelSettingsUIState) selectPreset(preset ChannelPreset) {
-	s.presetID = preset.ID
-	s.presetKeyEnv = preset.APIKeyEnvironment
-	s.invalidatePreview()
-}
-
-func channelPresetByID(id string) (ChannelPreset, bool) {
-	for _, preset := range ChannelPresets() {
-		if preset.ID == id {
-			return preset, true
-		}
-	}
-	return ChannelPreset{}, false
-}
-
-func (s *channelSettingsUIState) prepareImport() {
-	if s.api == nil {
-		s.previewErr = text("channelBackendUnavailable")
-		return
-	}
-	plan, err := s.api.PrepareImport(ChannelImportRequest{
-		SourcePath:  s.sourcePath,
-		ProviderID:  s.sourceProviderID,
-		ModelIDs:    selectedModelIDs(s.selectedModels),
-		OverrideIDs: selectedModelIDs(s.selectedOverrides),
-	})
-	s.previewErr = ""
-	s.previewErrDetail = ""
-	s.applyErr = ""
-	s.applyErrDetail = ""
-	s.stale = false
-	s.result = nil
-	if err != nil {
-		s.importPlan = nil
-		s.customPlan = nil
-		s.preview = nil
-		s.previewErr = text("channelPreviewFailedSummary")
-		s.previewErrDetail = err.Error()
-		return
-	}
-	s.previewErrDetail = ""
-	s.importPlan = &plan
-	s.customPlan = nil
-	s.preview = &plan.Preview
-	s.previewKind = channelSettingsPreviewImport
-}
-
-func (s *channelSettingsUIState) preparePreset() {
-	preset, ok := channelPresetByID(s.presetID)
-	if !ok {
-		s.previewErr = text("channelSelectPresetFirst")
-		return
-	}
-	req := s.formRequest()
-	req.ProviderID = preset.ID
-	req.Name = preset.Name
-	req.BaseURL = ""
-	req.API = ""
-	req.APIKeyEnv = s.presetKeyEnv
-	s.prepareCustomRequest(req)
-}
-
-func (s *channelSettingsUIState) prepareCustom() {
-	s.prepareCustomRequest(s.formRequest())
-}
-
-func (s *channelSettingsUIState) formRequest() ChannelCustomRequest {
-	authHeader := s.authHeader
-	req := ChannelCustomRequest{
-		ProviderID: strings.TrimSpace(s.providerID),
-		Name:       strings.TrimSpace(s.providerName),
-		BaseURL:    strings.TrimSpace(s.baseURL),
-		API:        strings.TrimSpace(s.apiName),
-		APIKeyEnv:  strings.TrimSpace(s.apiKeyEnv),
-		AuthHeader: &authHeader,
-	}
-	if id := strings.TrimSpace(s.modelID); id != "" {
-		req.Models = []ChannelCustomModel{{
-			ID:   id,
-			Name: strings.TrimSpace(s.modelName),
-		}}
-	}
-	if id := strings.TrimSpace(s.overrideID); id != "" {
-		req.ModelOverride = []ChannelCustomModelOverride{{
-			ID:   id,
-			Name: strings.TrimSpace(s.overrideName),
-		}}
-	}
-	return req
-}
-
-func (s *channelSettingsUIState) prepareCustomRequest(req ChannelCustomRequest) {
-	if s.api == nil {
-		s.previewErr = text("channelBackendUnavailable")
-		return
-	}
-	plan, err := s.api.PrepareCustom(req)
-	s.previewErr = ""
-	s.previewErrDetail = ""
-	s.applyErr = ""
-	s.applyErrDetail = ""
-	s.stale = false
-	s.result = nil
-	if err != nil {
-		s.importPlan = nil
-		s.customPlan = nil
-		s.preview = nil
-		s.previewErr = text("channelPreviewFailedSummary")
-		s.previewErrDetail = err.Error()
-		return
-	}
-	s.previewErrDetail = ""
-	s.customPlan = &plan
-	s.importPlan = nil
-	s.preview = &plan.Preview
-	s.previewKind = channelSettingsPreviewCustom
-}
-
-func (s *channelSettingsUIState) apply(app *appState) {
-	if !s.planBound() || s.api == nil {
-		s.applyErr = text("channelPreviewRequired")
-		return
-	}
-	var (
-		result ChannelMergeResult
-		err    error
-	)
-	switch s.previewKind {
-	case channelSettingsPreviewImport:
-		result, err = s.api.ApplyImport(s.importPlan.Request)
-	case channelSettingsPreviewCustom:
-		result, err = s.api.ApplyCustom(s.customPlan.Request)
-	default:
-		err = errors.New(text("channelPreviewRequired"))
-	}
-	if err != nil {
-		var stale *ChannelPreviewStaleError
-		if errors.As(err, &stale) {
-			s.importPlan = nil
-			s.customPlan = nil
-			s.stale = true
-			s.applyErr = ""
-			s.applyErrDetail = ""
-			s.previewErr = text("channelPreviewStaleDescription")
-			s.previewErrDetail = ""
-			return
-		}
-		s.applyErr = text("channelApplyFailedSummary")
-		s.applyErrDetail = err.Error()
-		return
-	}
-	if s.api != nil {
-		inventory, inventoryErr := s.api.Inventory()
-		s.inventory = inventory
-		s.inventoryLoaded = true
-		if inventoryErr != nil {
-			s.inventoryErr = inventoryErr.Error()
-		} else {
-			s.inventoryErr = ""
-		}
-	}
-	if s.refresh.MarkPending != nil {
-		s.refresh.MarkPending(app)
-	}
-	s.result = &result
-	s.applyErr = ""
-	s.applyErrDetail = ""
-	s.previewErr = ""
-	s.previewErrDetail = ""
-	s.stale = false
-}
-
-func (s *channelSettingsUIState) reprepare() {
-	switch s.previewKind {
-	case channelSettingsPreviewImport:
-		s.prepareImport()
-	case channelSettingsPreviewCustom:
-		if s.mode == channelSettingsSourcePreset {
-			s.preparePreset()
-		} else {
-			s.prepareCustom()
-		}
-	}
-}
-
-func (s *channelSettingsUIState) planBound() bool {
-	switch s.previewKind {
-	case channelSettingsPreviewImport:
-		return s.importPlan != nil
-	case channelSettingsPreviewCustom:
-		return s.customPlan != nil
-	default:
-		return false
-	}
-}
-
-func (s *channelSettingsUIState) invalidatePreview() {
-	s.importPlan = nil
-	s.customPlan = nil
-	s.preview = nil
-	s.previewKind = ""
-	s.previewErr = ""
-	s.previewErrDetail = ""
-	s.applyErr = ""
-	s.applyErrDetail = ""
-	s.stale = false
-}
-
-func (s *channelSettingsUIState) resetForAnotherSource() {
-	s.mode = channelSettingsSourceNone
-	s.sourcePath = ""
-	s.sourceInventory = ChannelInventory{}
-	s.sourceProviderID = ""
-	s.sourceErr = ""
-	s.selectedModels = map[string]bool{}
-	s.selectedOverrides = map[string]bool{}
-	s.importPlan = nil
-	s.customPlan = nil
-	s.preview = nil
-	s.previewKind = ""
-	s.previewErr = ""
-	s.previewErrDetail = ""
-	s.applyErr = ""
-	s.applyErrDetail = ""
-	s.stale = false
-	s.result = nil
-}
-
-func selectedModelIDs(values map[string]bool) []string {
-	result := make([]string, 0, len(values))
-	for id, selected := range values {
-		if selected {
-			result = append(result, id)
-		}
-	}
-	sort.Strings(result)
-	return result
-}
-
-func channelDisplayName(id string) string {
-	for _, preset := range ChannelPresets() {
-		if preset.ID == id {
-			return preset.Name
-		}
-	}
-	return id
-}
-
-func channelMergeActionLabel(action string) string {
-	switch action {
-	case channelMergeAdd:
-		return text("channelMergeActionAdd")
-	case channelMergePreserve:
-		return text("channelMergeActionPreserve")
-	case "inherit":
-		return text("channelMergeActionInherit")
-	case "removed":
-		return text("channelMergeActionRemoved")
-	default:
-		return text("channelMergeActionUnknown")
-	}
-}
-
-func channelShortDigest(digest string) string {
-	if digest == "" {
-		return text("channelDigestMissing")
-	}
-	if len(digest) <= 16 {
-		return digest
-	}
-	return digest[:16]
-}
-
-func channelSettingsErrorClassification(err error) string {
-	if err == nil {
-		return ""
-	}
-	var stale *ChannelPreviewStaleError
-	if errors.As(err, &stale) {
-		return channelErrorPreviewStale
-	}
-	return fmt.Sprintf("channelError:%T", err)
 }

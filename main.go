@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -235,15 +236,20 @@ type chatMessage struct {
 }
 
 type appState struct {
-	page                     pageID
-	themeMode                themeMode
-	uiLanguage               string
-	effectiveLocale          atomic.Pointer[string]
-	navCollapsed             bool
-	navWidth                 float32
-	jAgentNavWidth           float32
-	navResizeDragging        bool
-	tasksOpen                bool
+	page              pageID
+	themeMode         themeMode
+	uiLanguage        string
+	effectiveLocale   atomic.Pointer[string]
+	navCollapsed      bool
+	navWidth          float32
+	jAgentNavWidth    float32
+	navResizeDragging bool
+	tasksOpen         bool
+	// The plugin view's chat panel (P32 §6.5 G): visibility, the dragged
+	// width, and the drag flag that persists on release.
+	pluginChatOpen           bool
+	pluginChatWidth          float32
+	pluginChatDragging       bool
 	channelRefresh           channelRefreshCoordinator
 	configDir                string
 	preferences              byopPreferences
@@ -563,6 +569,8 @@ func newAppState() *appState {
 		navWidth:                 normalizeNavExpandedWidth(preferences.NavExpandedWidth),
 		jAgentNavWidth:           normalizeJAgentNavExpandedWidth(preferences.JAgentNavExpandedWidth),
 		tasksOpen:                preferences.TasksOpen,
+		pluginChatOpen:           preferences.PluginChatOpen,
+		pluginChatWidth:          normalizePluginChatWidth(preferences.PluginChatWidth),
 		configDir:                configDir,
 		modelLabels:              newModelLabelStore(configDir),
 		preferences:              preferences,
@@ -647,6 +655,22 @@ func newAppState() *appState {
 			s.postUI(func() {
 				s.openPluginChat(request)
 			})
+		}),
+		pluginHostChatPanelHandler(func(pluginID string, open bool) (map[string]any, *pluginRPCError) {
+			// The answer must carry the applied state, so the bridge call
+			// waits for the UI thread to run the change (review: never
+			// toggle from the host side).
+			type result struct {
+				value map[string]any
+				err   *pluginRPCError
+			}
+			done := make(chan result, 1)
+			s.postUI(func() {
+				value, err := s.applyPluginChatPanel(pluginID, open)
+				done <- result{value: value, err: err}
+			})
+			answered := <-done
+			return answered.value, answered.err
 		}),
 	)
 	s.setPluginRegistry(startupRegistry)
@@ -1019,6 +1043,87 @@ func (s *appState) setTasksOpen(open bool) {
 	}
 }
 
+// setPluginChatOpen opens or closes the plugin view's chat panel and
+// persists the visibility, rolling back both copies when the save fails
+// (P32 §6.5 G).
+func (s *appState) setPluginChatOpen(open bool) {
+	if s.pluginChatOpen == open {
+		return
+	}
+	previousOpen := s.pluginChatOpen
+	s.pluginChatOpen = open
+	s.preferences.PluginChatOpen = open
+	if err := s.persistPluginChatPanel(open, s.pluginChatWidth); err != nil {
+		s.pluginChatOpen = previousOpen
+		s.preferences.PluginChatOpen = previousOpen
+		s.showNotice(text("noticePreferenceSaveChatPanel"))
+	}
+	s.invalidateUI()
+}
+
+func (s *appState) persistPluginChatPanel(open bool, width float32) error {
+	return s.persistPreferencePatch(func(preferences *byopPreferences) {
+		preferences.PluginChatOpen = open
+		preferences.PluginChatWidth = normalizePluginChatWidth(width)
+	})
+}
+
+// openPiLogin runs `pi '/login <provider>'` in a new system Terminal window
+// (P32 §4.4): the subscription login stays inside Pi's own TUI — BYOP only
+// opens the door, while the settings page keeps polling `pi auth check`.
+// macOS drives Terminal.app through osascript; other platforms report the
+// capability gap without opening anything.
+func (s *appState) openPiLogin(providerID string) error {
+	if runtime.GOOS != "darwin" {
+		return errors.New("open Pi login: opening a system terminal is only supported on macOS")
+	}
+	providerID = strings.TrimSpace(providerID)
+	if !validPiLoginProviderID(providerID) {
+		// P32 review: the id reaches a shell and an AppleScript string
+		// literal. Both layers escape quotes, but a newline would still
+		// split the AppleScript statement, so only Pi's own id alphabet
+		// passes here and nothing else is handed to osascript.
+		return errors.New("open Pi login: provider id may only contain letters, digits, dot, dash, and underscore")
+	}
+	return exec.Command("osascript", "-e", piLoginTerminalScript(providerID)).Run()
+}
+
+// validPiLoginProviderID reports whether id is a provider identifier in Pi's
+// own alphabet: 1–64 characters of letters, digits, '.', '-', or '_'.
+func validPiLoginProviderID(id string) bool {
+	if id == "" || len(id) > 64 {
+		return false
+	}
+	for _, r := range id {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+		case r == '.' || r == '-' || r == '_':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// piLoginShellCommand quotes "/login <provider>" for the shell Terminal
+// runs: single quotes, with inner single quotes closed and escaped. The
+// provider is never word-split, re-expanded, or executed.
+func piLoginShellCommand(providerID string) string {
+	value := "/login " + providerID
+	return "pi '" + strings.ReplaceAll(value, "'", `'\''`) + "'"
+}
+
+// piLoginTerminalScript wraps the shell command in the AppleScript that
+// Terminal.app receives. Backslashes and double quotes are escaped for the
+// AppleScript string literal after the shell quoting, so every layer keeps
+// exactly the characters the provider id carried.
+func piLoginTerminalScript(providerID string) string {
+	escaped := strings.ReplaceAll(piLoginShellCommand(providerID), `\`, `\\`)
+	escaped = strings.ReplaceAll(escaped, `"`, `\"`)
+	return "tell application \"Terminal\" to activate\n" +
+		"tell application \"Terminal\" to do script \"" + escaped + "\""
+}
+
 func (s *appState) persistedPreferences() byopPreferences {
 	saved, _ := s.preferencesStore.load()
 	persisted := cloneByopPreferences(saved)
@@ -1033,6 +1138,8 @@ func (s *appState) persistedPreferences() byopPreferences {
 	if _, overridden := parsePreferenceBool(os.Getenv("BYOP_TASKS"), "open"); !overridden {
 		persisted.TasksOpen = current.TasksOpen
 	}
+	persisted.PluginChatOpen = current.PluginChatOpen
+	persisted.PluginChatWidth = normalizePluginChatWidth(current.PluginChatWidth)
 
 	persisted.NavExpandedWidth = normalizeNavExpandedWidth(current.NavExpandedWidth)
 	persisted.JAgentNavExpandedWidth = normalizeJAgentNavExpandedWidth(current.JAgentNavExpandedWidth)

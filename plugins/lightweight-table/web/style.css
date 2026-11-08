@@ -1,8 +1,103 @@
+/* P32 §D — 扶摇插件 BoardUI 化。
+   数值来源：research/boardui-free-spec.md §6.1–§6.11、§7.1；结构参考
+   design/fuyao-p32.html。折算规则（P32 设计 §6.6）：字号 12/14/18、可见
+   边框 0.5px（var(--byop-border-width)）、间距 4/8/12/16/24、圆角
+   控件 8 / chip 6 / 浮层 12、过渡统一 --bui-t（减少动效 0）。
+   宿主 --byop-* 只读；本地派生 --bui-*（深浅切换靠 app.js 在 html 上写
+   data-mode，见 P32 契约 §4；高对比与减少透明度由宿主 preload 写属性）。
+   app.js 生成的 DOM 仍用原有类名（.button、.dashboard-*、.-cell 等），
+   本表在 bui- 新名之下保留这些选择器。 */
+
 :root {
   color-scheme: light dark;
-  --table-border: var(--byop-border-width, 0.5px);
-  --table-row-height: 38px;
-  --table-header-height: 34px;
+
+  /* —— 折算前提（§6.0） —— */
+  --bui-border-w: var(--byop-border-width, 0.5px);
+  --bui-t: var(--byop-motion-duration, 250ms) var(--byop-motion-easing, ease-out);
+  --bui-font: var(--byop-font-family, ui-sans-serif, -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif);
+  --bui-mono: var(--byop-font-family-code, ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace);
+  --bui-radius-control: var(--byop-radius-input, 8px);
+  --bui-radius-chip: var(--byop-radius-chip, 6px);
+  --bui-radius-layer: var(--byop-radius-overlay, 12px);
+  --bui-radius-card: 24px;
+
+  /* —— 本地派生 token（§1.7 / §7.1，浅色） —— */
+  --bui-raised: #ffffff;
+  --bui-raised-hover: #f7f7f7;
+  --bui-raised-active: #ebebeb;
+  --bui-border-hover: #d4d4d4;
+  --bui-border-active: #a1a1a1;
+  --bui-separator: #ebebeb;
+  --bui-text-tertiary: #a1a1a1;
+  --bui-text-disabled: #d4d4d4;
+  --bui-tertiary-hover: #d4d4d4;
+  --bui-kbd-bg: #d4d4d4;
+  --bui-kbd-fg: #737373;
+  --bui-shadow-2xs: 0 1px 0 0 rgb(0 0 0 / 0.05);
+  --bui-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --bui-shadow-card: 0 1px 1px 0 rgb(0 0 0 / 0.05);
+  --bui-shadow-dropdown: 0 1px 1px 0 rgb(0 0 0 / 0.04), 0 4px 4px 0 rgb(0 0 0 / 0.02);
+  --bui-shadow-drawer: -8px 0 24px rgb(0 0 0 / 0.10);
+  --bui-ring-offset: #ffffff;
+  --bui-accent-50: #eff6ff;  --bui-accent-100: #dbeafe; --bui-accent-200: #bedbff;
+  --bui-accent-300: #8ec5ff; --bui-accent-400: #3392ff; --bui-accent-500: #2b7fff;
+  --bui-accent-600: #155dfc; --bui-accent-700: #1447e6; --bui-accent-800: #193cb8;
+  --bui-accent-900: #1c398e; --bui-accent-950: #162456;
+  --bui-accent-text: var(--bui-accent-700);
+  --bui-pill-selected: var(--bui-accent-50);
+  --bui-add-bg: #f7f7f7;
+  --bui-add-bg-hover: #ebebeb;
+  --bui-red-400: #ff6467; --bui-red-500: #fb2c36; --bui-red-600: #e7000b; --bui-red-700: #c10007;
+
+  /* —— 状态色对（§6.6 / §6.9 / §6.10） —— */
+  --bui-chip-lime-bg: #d8f999;   --bui-chip-lime-fg: #3c6300;
+  --bui-chip-blue-bg: #bedbff;   --bui-chip-blue-fg: #193cb8;
+  --bui-chip-rose-bg: #ffccd3;   --bui-chip-rose-fg: #a50036;
+  --bui-chip-warn-bg: #fff085;   --bui-chip-warn-fg: #894b00;
+  --bui-row-overdue: #fff1f2;
+  --bui-dot-success: #00c950; --bui-dot-warn: #f0b100;
+  --bui-dot-accent: #615fff; --bui-dot-danger: #ff2056;
+  --bui-status-success-bg: #ecfcca; --bui-status-success-fg: #5ea500;
+  --bui-status-error-bg: #ffe4e6;   --bui-status-error-fg: #ec003f;
+}
+
+html[data-mode="dark"] {
+  --bui-raised: #262626;
+  --bui-raised-hover: rgb(64 64 64 / 0.6);
+  --bui-raised-active: #262626;
+  --bui-border-hover: #737373;
+  --bui-border-active: #525252;
+  --bui-separator: #262626;
+  --bui-text-tertiary: #525252;
+  --bui-text-disabled: #262626;
+  --bui-tertiary-hover: #404040;
+  --bui-kbd-bg: #404040;
+  --bui-kbd-fg: #a1a1a1;
+  --bui-shadow-2xs: 0 1px 0 0 rgb(0 0 0 / 0.16);
+  --bui-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.18);
+  --bui-shadow-card: 0 1px 1px 0 rgb(0 0 0 / 0.14);
+  --bui-shadow-dropdown: 0 1px 1px 0 rgb(0 0 0 / 0.14), 0 4px 4px 0 rgb(0 0 0 / 0.10);
+  --bui-shadow-drawer: -8px 0 24px rgb(0 0 0 / 0.35);
+  --bui-ring-offset: var(--byop-background, #121212);
+  --bui-accent-text: var(--bui-accent-300);
+  --bui-pill-selected: rgb(22 36 86 / 0.6);
+  --bui-add-bg: #404040;
+  --bui-add-bg-hover: #525252;
+  --bui-chip-lime-bg: rgb(25 46 3 / 0.6);   --bui-chip-lime-fg: #7ccf00;
+  --bui-chip-blue-bg: rgb(22 36 86 / 0.6);  --bui-chip-blue-fg: #8ec5ff;
+  --bui-chip-rose-bg: rgb(77 2 24 / 0.6);   --bui-chip-rose-fg: #ff2056;
+  --bui-chip-warn-bg: rgb(67 32 4 / 0.6);   --bui-chip-warn-fg: #f0b100;
+  --bui-row-overdue: rgb(165 0 54 / 0.12);
+  --bui-status-success-bg: rgb(60 99 0 / 0.5); --bui-status-success-fg: #bbf451;
+  --bui-status-error-bg: rgb(165 0 54 / 0.5);  --bui-status-error-fg: #ffa1ad;
+}
+
+/* 高对比：分隔线、hover 描边与三级文字回退宿主语义色（§1.7 覆盖块）。 */
+html[data-high-contrast="true"] {
+  --bui-separator: var(--byop-border, GrayText);
+  --bui-border-hover: var(--byop-border, GrayText);
+  --bui-border-active: var(--byop-border, GrayText);
+  --bui-text-tertiary: var(--byop-muted, GrayText);
 }
 
 * {
@@ -11,21 +106,27 @@
 
 html,
 body {
+  /* P32: a fixed height (not just min-height) is what lets the flex chain
+     below give the table a bounded viewport; with min-height alone the page
+     grew to its content and the scroll container never had room to scroll. */
+  height: 100%;
   min-height: 100%;
+  overflow: hidden;
 }
 
 body {
   margin: 0;
   background: var(--byop-background, Canvas);
   color: var(--byop-text, CanvasText);
-  font: var(--byop-font-body, 14px)/1.45 ui-sans-serif, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  font: var(--byop-font-body, 14px)/1.45 var(--bui-font);
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
 input,
 select {
   font: inherit;
+  color: inherit;
 }
 
 button,
@@ -35,12 +136,13 @@ select,
   outline: none;
 }
 
+/* 焦点环（§6.0）：2px 页面底色缝 + 2px 焦点色，不受 0.5px 规则约束。 */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-[tabindex]:focus-visible {
-  outline: 2px solid var(--byop-focus, Highlight);
-  outline-offset: 1px;
+[tabindex]:focus-visible,
+td[data-action="edit-cell"]:focus-visible {
+  box-shadow: 0 0 0 2px var(--bui-ring-offset), 0 0 0 4px var(--byop-focus, Highlight);
 }
 
 .sr-only {
@@ -55,16 +157,63 @@ select:focus-visible,
   border: 0;
 }
 
+.bui-ic,
+.bui-btn svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ============ 布局 ============ */
+
 .table-page {
   width: 100%;
-  min-height: 100vh;
-  padding: 16px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
   background: var(--byop-background, Canvas);
 }
 
+/* 列宽容器（§6.4 / 设计稿 §11.1）：表格列优先级按主区宽收缩。 */
+.bui-maincol {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--byop-surface, Canvas);
+  border: var(--bui-border-w) solid var(--bui-separator);
+  border-radius: var(--bui-radius-card);
+  padding: 16px;
+  overflow: hidden;
+  container-type: inline-size;
+  container-name: main;
+}
+
+.bui-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bui-view[hidden] {
+  display: none;
+}
+
+/* ============ 页头（§6.1） ============ */
+
+.bui-page-header,
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -73,69 +222,258 @@ select:focus-visible,
   min-width: 0;
 }
 
+.bui-page-heading,
 .page-heading {
   min-width: 0;
 }
 
+.bui-page-header h1,
 .page-heading h1 {
   margin: 0;
   font-size: var(--byop-font-title, 18px);
-  line-height: 1.2;
-  font-weight: 680;
+  line-height: 26px;
+  font-weight: 650;
 }
 
+.bui-page-header p,
 .page-heading p {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
 }
 
+.bui-header-actions,
 .header-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+  align-items: center;
 }
 
+/* —— 按钮（§6.1；主按钮按 P32 拍板用实色 --byop-accent） —— */
+
+.bui-btn,
 .button {
-  min-height: 32px;
-  padding: 5px 10px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-input, 8px);
-  background: var(--byop-surface, Canvas);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: var(--bui-border-w) solid transparent;
+  border-radius: var(--bui-radius-control);
+  background: var(--bui-raised);
+  border-color: var(--byop-border, GrayText);
+  box-shadow: var(--bui-shadow-xs);
   color: var(--byop-text, CanvasText);
   font-size: var(--byop-font-body, 14px);
-  font-weight: 600;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--byop-motion-duration, 250ms)
-    var(--byop-motion-easing, ease-out);
+  transition: background-color var(--bui-t), border-color var(--bui-t),
+    color var(--bui-t), box-shadow var(--bui-t), transform var(--bui-t);
 }
 
+.bui-btn:hover,
 .button:hover {
-  background: var(--byop-surface-hover, ButtonFace);
+  background: var(--bui-raised-hover);
+  border-color: var(--bui-border-hover);
 }
 
+.bui-btn:active,
+.button:active {
+  background: var(--bui-raised-active);
+  border-color: var(--bui-border-active);
+  transform: scale(0.98);
+}
+
+.bui-btn.primary,
 .button.primary {
-  border-color: var(--byop-accent, Highlight);
   background: var(--byop-accent, Highlight);
+  border-color: transparent;
   color: var(--byop-on-accent, CanvasText);
 }
 
+.bui-btn.primary:hover,
+.button.primary:hover {
+  background: color-mix(in srgb, var(--byop-accent, Highlight) 88%, white);
+  border-color: transparent;
+}
+
+.bui-btn.danger,
+.button.danger {
+  background: var(--byop-danger, Mark);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.bui-btn.danger:hover,
+.button.danger:hover {
+  background: color-mix(in srgb, var(--byop-danger, Mark) 88%, white);
+}
+
+/* quiet：旧页面的“无边扁平”档，映射到 BoardUI ghost。 */
+.bui-btn.quiet,
 .button.quiet {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
   color: var(--byop-muted, GrayText);
 }
 
-.button.danger {
-  color: var(--byop-danger-text, Mark);
+.bui-btn.quiet:hover,
+.button.quiet:hover {
+  background: var(--byop-surface-hover, ButtonFace);
+  border-color: transparent;
+  color: var(--byop-text, CanvasText);
 }
 
-.button:disabled {
-  opacity: 0.48;
-  cursor: default;
-}
-
+.bui-btn.icon,
 .icon-button {
-  min-width: 32px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+.bui-btn:disabled,
+.button:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* 调出当前对话（P32 §6.5 G）：pressed 态显示激活底色。 */
+#chat-panel-button[aria-pressed="true"] {
+  background: var(--bui-pill-selected);
+  border-color: var(--bui-accent-400);
+  color: var(--bui-accent-text);
+}
+
+/* ============ pill tabs（§6.7 gray 变体） ============ */
+
+.bui-tabs,
+.bui-subtabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  width: fit-content;
+}
+
+.bui-subtabs {
+  padding: 4px;
+  background: var(--byop-surface-hover, ButtonFace);
+  border-radius: var(--bui-radius-control);
+}
+
+.bui-subtabs[hidden] {
+  display: none;
+}
+
+.bui-tab {
+  height: 30px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--bui-radius-control);
+  background: transparent;
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background-color var(--bui-t), color var(--bui-t);
+}
+
+.bui-tab:hover {
+  background: var(--bui-raised-hover);
+}
+
+.bui-tab[aria-selected="true"] {
+  background: var(--byop-surface-hover, ButtonFace);
+  color: var(--byop-text, CanvasText);
+}
+
+.bui-tab .bui-count {
+  font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
+  padding: 1px 5px;
+  border-radius: var(--bui-radius-chip);
+  background: var(--byop-background, Canvas);
+  color: var(--byop-muted, GrayText);
+  font-variant-numeric: tabular-nums;
+}
+
+.bui-subtab {
+  height: 28px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--bui-radius-chip);
+  background: transparent;
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-body, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--bui-t), color var(--bui-t),
+    box-shadow var(--bui-t);
+}
+
+.bui-subtab[aria-selected="true"] {
+  background: var(--bui-raised);
+  color: var(--byop-text, CanvasText);
+  box-shadow: var(--bui-shadow-xs);
+}
+
+.bui-subtabs-row {
+  padding: 0 24px 8px;
+}
+
+/* ============ KPI / dashboard（§6.2；dashboard-* 为 app.js 现有类名） ============ */
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.kpi {
+  background: var(--byop-surface, Canvas);
+  border: var(--bui-border-w) solid var(--bui-separator);
+  border-radius: var(--bui-radius-layer);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kpi .kpi-lab {
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
+}
+
+.kpi .kpi-val {
+  color: var(--byop-text, CanvasText);
+  font-size: var(--byop-font-title, 18px);
+  line-height: 26px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi .kpi-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
 }
 
 .dashboard {
@@ -194,12 +532,14 @@ select:focus-visible,
 
 .dashboard-inline b {
   color: var(--byop-text, CanvasText);
-  font-weight: 680;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-inline-danger {
-  color: var(--byop-danger-text, Mark);
-  font-weight: 600;
+  color: var(--bui-chip-rose-fg);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-actions {
@@ -221,8 +561,8 @@ select:focus-visible,
 
 .dashboard-panel {
   overflow: hidden;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-overlay, 12px);
+  border: var(--bui-border-w) solid var(--bui-separator);
+  border-radius: var(--bui-radius-layer);
   background: var(--byop-surface, Canvas);
 }
 
@@ -245,7 +585,7 @@ select:focus-visible,
 }
 
 .dashboard-top > * + * {
-  border-left: var(--table-border) solid var(--byop-border, GrayText);
+  border-left: var(--bui-border-w) solid var(--bui-separator);
 }
 
 .dashboard-hero-main {
@@ -257,13 +597,15 @@ select:focus-visible,
 .dashboard-caption {
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
 }
 
 .dashboard-hero-value {
   font-size: var(--byop-font-title, 18px);
-  font-weight: 700;
+  line-height: 26px;
+  font-weight: 500;
   letter-spacing: 0.01em;
-  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-number {
@@ -289,6 +631,7 @@ select:focus-visible,
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-status,
@@ -305,21 +648,21 @@ select:focus-visible,
   gap: 8px;
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
-  font-weight: 600;
+  line-height: 16px;
+  font-weight: 500;
 }
 
 .dashboard-section-head .dashboard-muted {
   margin-left: auto;
-  font-weight: 500;
 }
 
 .dashboard-health-bar {
   display: flex;
-  height: 12px;
+  height: 6px;
   gap: 4px;
   overflow: hidden;
-  border-radius: var(--byop-radius-chip, 6px);
-  background: var(--byop-surface-hover, ButtonFace);
+  border-radius: 999px;
+  background: var(--byop-border, GrayText);
 }
 
 .dashboard-health-segment,
@@ -327,11 +670,7 @@ select:focus-visible,
   min-width: 4px;
   flex: 1 1 0;
   border-radius: inherit;
-  transition:
-    flex-grow var(--byop-motion-duration, 250ms)
-      var(--byop-motion-easing, ease-out),
-    opacity var(--byop-motion-duration, 250ms)
-      var(--byop-motion-easing, ease-out);
+  transition: flex-grow var(--bui-t), opacity var(--bui-t);
 }
 
 .dashboard-health-empty {
@@ -352,18 +691,14 @@ select:focus-visible,
   align-items: flex-start;
   gap: 4px;
   padding: 8px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-input, 8px);
-  background: transparent;
+  border: var(--bui-border-w) solid var(--byop-border, GrayText);
+  border-radius: var(--bui-radius-control);
+  background: var(--bui-raised);
+  box-shadow: var(--bui-shadow-2xs);
   color: var(--byop-text, CanvasText);
   text-align: left;
-  transition:
-    background-color var(--byop-motion-duration, 250ms)
-      var(--byop-motion-easing, ease-out),
-    border-color var(--byop-motion-duration, 250ms)
-      var(--byop-motion-easing, ease-out),
-    opacity var(--byop-motion-duration, 250ms)
-      var(--byop-motion-easing, ease-out);
+  transition: background-color var(--bui-t), border-color var(--bui-t),
+    opacity var(--bui-t);
 }
 
 button.dashboard-status-option {
@@ -371,12 +706,13 @@ button.dashboard-status-option {
 }
 
 button.dashboard-status-option:hover:not(.dashboard-active) {
-  background: var(--byop-surface-hover, ButtonFace);
+  background: var(--bui-raised-hover);
+  border-color: var(--bui-border-hover);
 }
 
 .dashboard-status-option:disabled {
   cursor: default;
-  opacity: 0.48;
+  opacity: 0.45;
 }
 
 .dashboard-status-name {
@@ -387,6 +723,7 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
   overflow: hidden;
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -404,11 +741,13 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
   align-items: baseline;
   gap: 4px;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-status-values b {
-  font-size: var(--byop-font-body, 14px);
-  font-weight: 680;
+  font-size: var(--byop-font-title, 18px);
+  line-height: 26px;
+  font-weight: 500;
 }
 
 .dashboard-status-values span {
@@ -418,6 +757,8 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
 
 .dashboard-no-plan {
   border-style: dashed;
+  box-shadow: none;
+  background: transparent;
 }
 
 .dashboard-static {
@@ -426,11 +767,7 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
 
 .dashboard-active {
   border-color: var(--byop-accent, Highlight);
-  background: color-mix(
-    in srgb,
-    var(--byop-accent, Highlight) 12%,
-    transparent
-  );
+  background: color-mix(in srgb, var(--byop-accent, Highlight) 12%, transparent);
 }
 
 .dashboard-dim {
@@ -439,12 +776,12 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
 
 .dashboard-tone-danger .dashboard-dot,
 .dashboard-health-segment.dashboard-tone-danger {
-  background: var(--byop-danger, Mark);
+  background: var(--bui-dot-danger);
 }
 
 .dashboard-tone-accent .dashboard-dot,
 .dashboard-health-segment.dashboard-tone-accent {
-  background: var(--byop-accent, Highlight);
+  background: var(--bui-dot-accent);
 }
 
 .dashboard-tone-muted .dashboard-dot,
@@ -454,11 +791,11 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
 
 .dashboard-tone-success .dashboard-dot,
 .dashboard-health-segment.dashboard-tone-success {
-  background: var(--byop-success, Green);
+  background: var(--bui-dot-success);
 }
 
 .dashboard-status-option.dashboard-tone-danger .dashboard-status-name {
-  color: var(--byop-danger-text, Mark);
+  color: var(--bui-chip-rose-fg);
 }
 
 .dashboard-status-option.dashboard-tone-accent .dashboard-status-name {
@@ -466,7 +803,7 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
 }
 
 .dashboard-status-option.dashboard-tone-success .dashboard-status-name {
-  color: var(--byop-success-text, Green);
+  color: var(--bui-chip-lime-fg);
 }
 
 .dashboard-link-button {
@@ -474,26 +811,23 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
   margin-left: auto;
   padding: 4px 8px;
   border: 0;
-  border-radius: var(--byop-radius-chip, 6px);
+  border-radius: var(--bui-radius-chip);
   background: transparent;
   color: var(--byop-text, CanvasText);
   font-size: var(--byop-font-caption, 12px);
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition: background-color var(--bui-t);
 }
 
 .dashboard-link-button:hover,
 .dashboard-link-button.dashboard-active {
-  background: color-mix(
-    in srgb,
-    var(--byop-accent, Highlight) 12%,
-    transparent
-  );
+  background: color-mix(in srgb, var(--byop-accent, Highlight) 12%, transparent);
 }
 
 .dashboard-link-button:disabled {
   cursor: default;
-  opacity: 0.48;
+  opacity: 0.45;
 }
 
 .dashboard-attention-groups {
@@ -510,18 +844,19 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
   display: block;
   margin-bottom: 4px;
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
   font-style: normal;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .dashboard-attention-group.dashboard-danger em,
 .dashboard-attention-group.dashboard-danger .dashboard-attention-when {
-  color: var(--byop-danger-text, Mark);
+  color: var(--bui-chip-rose-fg);
 }
 
 .dashboard-attention-group.dashboard-warning em,
 .dashboard-attention-group.dashboard-warning .dashboard-attention-when {
-  color: var(--byop-warning-text, Mark);
+  color: var(--bui-chip-warn-fg);
 }
 
 .dashboard-attention-group ul {
@@ -541,12 +876,13 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
   gap: 12px;
   padding: 0 4px;
   border: 0;
-  border-radius: var(--byop-radius-chip, 6px);
+  border-radius: var(--bui-radius-chip);
   background: transparent;
   color: var(--byop-text, CanvasText);
   font-size: var(--byop-font-caption, 12px);
   text-align: left;
   cursor: pointer;
+  transition: background-color var(--bui-t);
 }
 
 .dashboard-attention-row:hover {
@@ -566,7 +902,8 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
 
 .dashboard-attention-amount {
   text-align: right;
-  font-weight: 600;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-attention-more {
@@ -586,14 +923,14 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
   grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr);
   gap: 0 24px;
   padding: 12px 16px;
-  border-top: var(--table-border) solid var(--byop-border, GrayText);
+  border-top: var(--bui-border-w) solid var(--bui-separator);
 }
 
 .dashboard-mix-title {
   padding-top: 4px;
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .dashboard-mix-group {
@@ -602,7 +939,7 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
 
 .dashboard-mix-group + .dashboard-mix-group {
   padding-left: 24px;
-  border-left: var(--table-border) solid var(--byop-border, GrayText);
+  border-left: var(--bui-border-w) solid var(--bui-separator);
 }
 
 .dashboard-mix-group em {
@@ -610,6 +947,7 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
   margin-bottom: 4px;
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
   font-style: normal;
 }
 
@@ -631,16 +969,12 @@ button.dashboard-status-option:hover:not(.dashboard-active) {
   gap: 12px;
   padding: 0 4px;
   border: 0;
-  border-radius: var(--byop-radius-chip, 6px);
+  border-radius: var(--bui-radius-chip);
   background: transparent;
   color: var(--byop-text, CanvasText);
   font-size: var(--byop-font-caption, 12px);
   text-align: left;
-  transition:
-    background-color var(--byop-motion-duration, 250ms)
-      var(--byop-motion-easing, ease-out),
-    opacity var(--byop-motion-duration, 250ms)
-      var(--byop-motion-easing, ease-out);
+  transition: background-color var(--bui-t), opacity var(--bui-t);
 }
 
 button.dashboard-mix-row {
@@ -652,11 +986,7 @@ button.dashboard-mix-row:hover:not(.dashboard-active) {
 }
 
 .dashboard-mix-row.dashboard-active {
-  background: color-mix(
-    in srgb,
-    var(--byop-accent, Highlight) 12%,
-    transparent
-  );
+  background: color-mix(in srgb, var(--byop-accent, Highlight) 12%, transparent);
 }
 
 .dashboard-mix-name {
@@ -668,13 +998,14 @@ button.dashboard-mix-row:hover:not(.dashboard-active) {
 .dashboard-mix-count {
   color: var(--byop-muted, GrayText);
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-mix-track {
   height: 6px;
   overflow: hidden;
-  border-radius: var(--byop-radius-chip, 6px);
-  background: var(--byop-surface-hover, ButtonFace);
+  border-radius: var(--byop-radius-chip, 6px); /* 测试断言字面值；等于 --bui-radius-chip */
+  background: var(--byop-border, GrayText);
 }
 
 .dashboard-mix-track b {
@@ -682,15 +1013,15 @@ button.dashboard-mix-row:hover:not(.dashboard-active) {
   height: 100%;
   border-radius: inherit;
   background: var(--byop-accent, Highlight);
-  transition: width var(--byop-motion-duration, 250ms)
-    var(--byop-motion-easing, ease-out);
+  transition: width 500ms var(--byop-motion-easing, ease-out); /* 数据动画豁免（§6.11 拍板默认） */
 }
 
 .dashboard-mix-amount {
   overflow: hidden;
   text-align: right;
   text-overflow: ellipsis;
-  font-weight: 600;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -707,7 +1038,7 @@ button.dashboard-mix-row:hover:not(.dashboard-active) {
 .dashboard-narrow .dashboard-hero,
 .dashboard-narrow .dashboard-attention {
   grid-row: 2;
-  border-top: var(--table-border) solid var(--byop-border, GrayText);
+  border-top: var(--bui-border-w) solid var(--bui-separator);
 }
 
 .dashboard-narrow .dashboard-top > * {
@@ -724,7 +1055,7 @@ button.dashboard-mix-row:hover:not(.dashboard-active) {
   .dashboard-attention-group
   + .dashboard-attention-group {
   padding-left: 16px;
-  border-left: var(--table-border) solid var(--byop-border, GrayText);
+  border-left: var(--bui-border-w) solid var(--bui-separator);
 }
 
 .dashboard-narrow .dashboard-mix {
@@ -735,22 +1066,13 @@ button.dashboard-mix-row:hover:not(.dashboard-active) {
   display: none;
 }
 
+/* ============ 查询栏（§6.3） ============ */
+
 .query-bar {
-  display: grid;
-  grid-template-columns:
-    minmax(180px, 1.5fr)
-    minmax(140px, 1fr)
-    minmax(130px, 0.8fr)
-    minmax(130px, 1fr)
-    auto
-    minmax(140px, 1fr)
-    minmax(112px, 0.7fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  align-items: end;
-  padding: 10px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-overlay, 12px);
-  background: var(--byop-surface, Canvas);
+  align-items: center;
 }
 
 .field {
@@ -758,24 +1080,86 @@ button.dashboard-mix-row:hover:not(.dashboard-active) {
   min-width: 0;
   flex-direction: column;
   gap: 4px;
+  flex: 0 1 170px;
 }
 
 .field > span {
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
-  font-weight: 600;
+  line-height: 16px;
+  font-weight: 500;
+}
+
+.compact-field {
+  flex: 0 1 130px;
+}
+
+/* 搜索胶囊（§6.3）：高 36、全胶囊、前置图标 20。 */
+.search-field {
+  flex: 1 1 220px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 8px 8px 8px 4px;
+  border-radius: 999px;
+  background: var(--byop-surface-hover, ButtonFace);
+  transition: box-shadow var(--bui-t), background-color var(--bui-t);
+}
+
+.search-field > span {
+  display: none;
+}
+
+.search-field .bui-ic {
+  width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  color: var(--bui-text-tertiary);
+}
+
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.search-field:focus-within {
+  box-shadow: 0 0 0 2px var(--byop-focus, Highlight);
 }
 
 input,
 select {
   width: 100%;
   min-width: 0;
-  height: 32px;
-  padding: 4px 8px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-input, 8px);
-  background: var(--byop-surface, Canvas);
+  height: 36px;
+  padding: 0 10px;
+  border: var(--bui-border-w) solid var(--byop-border, GrayText);
+  border-radius: var(--bui-radius-control);
+  background: var(--bui-raised);
+  box-shadow: var(--bui-shadow-xs);
   color: var(--byop-text, CanvasText);
+  font-size: var(--byop-font-body, 14px);
+  transition: border-color var(--bui-t), box-shadow var(--bui-t);
+}
+
+input:hover,
+select:hover {
+  border-color: var(--bui-border-hover);
+}
+
+input::placeholder {
+  color: var(--bui-text-tertiary);
+}
+
+input:focus-visible,
+select:focus-visible {
+  border-color: var(--bui-border-active);
 }
 
 input[hidden],
@@ -784,22 +1168,29 @@ select[hidden],
   display: none;
 }
 
-.table-shell {
+/* ============ 表格（§6.4） ============ */
+
+.table-shell,
+.bui-tablecard {
   position: relative;
   min-height: 220px;
   flex: 1;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-overlay, 12px);
+  display: flex;
+  flex-direction: column;
+  border: var(--bui-border-w) solid var(--bui-separator);
+  border-radius: var(--bui-radius-layer);
   overflow: hidden;
-  background: var(--byop-surface, Canvas);
+  background: var(--byop-background, Canvas);
 }
 
-.table-scroll {
+.table-scroll,
+.bui-scroll {
   width: 100%;
-  height: 100%;
-  min-height: 220px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable; /* P32 §6.4：滚动条槽固定，消除重建抖动 */
 }
 
 table {
@@ -813,10 +1204,10 @@ table {
 
 th,
 td {
-  height: var(--table-row-height);
-  padding: 0 8px;
-  border-right: var(--table-border) solid var(--byop-border, GrayText);
-  border-bottom: var(--table-border) solid var(--byop-border, GrayText);
+  height: 37px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: var(--bui-border-w) solid var(--bui-separator);
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
@@ -824,28 +1215,82 @@ td {
   vertical-align: middle;
 }
 
-th:last-child,
-td:last-child {
-  border-right: 0;
+tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 thead th {
   position: sticky;
   z-index: 2;
   top: 0;
-  height: var(--table-header-height);
   background: var(--byop-surface, Canvas);
   color: var(--byop-muted, GrayText);
-  font-size: var(--byop-font-caption, 12px);
-  font-weight: 700;
+  font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
+  font-weight: 500;
+}
+
+thead th::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  border-bottom: var(--bui-border-w) solid var(--bui-separator);
+}
+
+tbody td {
+  color: var(--byop-text, CanvasText);
+  font-weight: 500;
+}
+
+tbody tr {
+  transition: background-color var(--bui-t);
 }
 
 tbody tr:hover td {
-  background: var(--byop-surface-hover, ButtonFace);
+  background: var(--byop-surface, Canvas);
 }
 
-tbody tr[data-selected="true"] td {
-  background: color-mix(in srgb, var(--byop-accent, Highlight) 12%, transparent);
+tbody tr[data-selected="true"] td,
+tbody tr[aria-selected="true"] td {
+  background: var(--byop-surface, Canvas);
+}
+
+tbody tr[data-selected="true"] td:first-child,
+tbody tr[aria-selected="true"] td:first-child {
+  box-shadow: inset 2px 0 0 var(--byop-accent, Highlight);
+}
+
+/* 逾期行（还款计划；类名 .overdue 或属性 data-overdue 二选一均可） */
+tbody tr.overdue td,
+tbody tr[data-overdue="true"] td {
+  background: var(--bui-row-overdue);
+}
+
+/* 列优先级（§6.4 / 设计稿 §11.1）：按主区容器宽逐级隐藏。 */
+@container main (max-width: 1240px) {
+  .category-cell,
+  .actual-received-cell {
+    display: none;
+  }
+}
+
+@container main (max-width: 1120px) {
+  .annualized-rate-cell {
+    display: none;
+  }
+}
+
+@container main (max-width: 1040px) {
+  .plan-status-cell {
+    display: none;
+  }
+}
+
+@container main (max-width: 980px) {
+  .principal-cell {
+    display: none;
+  }
 }
 
 th.checkbox-cell,
@@ -859,24 +1304,53 @@ td.checkbox-cell {
 }
 
 .checkbox-cell input {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   min-height: 0;
   padding: 0;
   display: block;
   margin: 0 auto;
   flex: none;
+  accent-color: var(--byop-accent, Highlight);
 }
 
-.actions-cell {
+/* 操作列 sticky 右侧（§11.1：横滑时保持可见） */
+th.actions-cell,
+td.actions-cell {
   width: 102px;
   min-width: 102px;
   text-align: right;
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--byop-background, Canvas);
+  box-shadow: inset var(--bui-border-w) 0 0 var(--bui-separator);
+}
+
+thead th.actions-cell {
+  z-index: 3;
+  background: var(--byop-surface, Canvas);
+}
+
+tbody tr:hover td.actions-cell {
+  background: var(--byop-surface, Canvas);
+}
+
+tbody tr[data-selected="true"] td.actions-cell,
+tbody tr[aria-selected="true"] td.actions-cell {
+  background: var(--byop-surface, Canvas);
+  box-shadow: inset 2px 0 0 var(--byop-accent, Highlight),
+    inset var(--bui-border-w) 0 0 var(--bui-separator);
+}
+
+tbody tr.overdue td.actions-cell,
+tbody tr[data-overdue="true"] td.actions-cell {
+  background: var(--bui-row-overdue);
 }
 
 .name-cell {
   width: 190px;
-  font-weight: 620;
+  font-weight: 500;
 }
 
 .institution-cell {
@@ -894,8 +1368,6 @@ td.checkbox-cell {
 
 .amount-cell {
   width: 122px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 .number-cell,
@@ -904,6 +1376,13 @@ td.number-cell {
   width: 150px;
   min-width: 150px;
   max-width: 150px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.principal-cell,
+.actual-received-cell,
+.remaining-due-cell {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -922,6 +1401,11 @@ td.number-cell {
   width: 140px;
   min-width: 140px;
   max-width: 140px;
+  font-variant-numeric: tabular-nums;
+}
+
+.annualized-rate-cell {
+  width: 104px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -947,9 +1431,10 @@ td[data-context-changed="true"] {
   height: 30px;
   margin: 0 -6px;
   padding: 3px 6px;
-  border: 1px solid var(--byop-focus, Highlight);
-  border-radius: 4px;
+  border: 2px solid var(--byop-focus, Highlight);
+  border-radius: var(--bui-radius-chip);
   background: var(--byop-background, Canvas);
+  box-shadow: none;
 }
 
 .cell-editor.number-cell {
@@ -964,95 +1449,192 @@ td[data-context-changed="true"] {
   display: inline-block;
   min-width: 4ch;
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: var(--bui-radius-chip);
   background: color-mix(in srgb, var(--byop-warning, Mark) 12%, transparent);
   font-variant-numeric: tabular-nums;
 }
 
-.row-action,
+.row-action {
+  min-width: 28px;
+  min-height: 26px;
+  padding: 2px 8px;
+  border: var(--bui-border-w) solid var(--byop-border, GrayText);
+  border-radius: var(--bui-radius-chip);
+  background: var(--bui-raised);
+  color: var(--byop-muted, GrayText);
+  cursor: pointer;
+  font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
+  transition: background-color var(--bui-t), color var(--bui-t),
+    border-color var(--bui-t);
+}
+
+.row-action:hover {
+  background: var(--bui-raised-hover);
+  border-color: var(--bui-border-hover);
+  color: var(--byop-text, CanvasText);
+}
+
 .row-delete {
   min-width: 28px;
-  min-height: 28px;
+  min-height: 26px;
   padding: 2px 7px;
-  border: 0;
-  border-radius: 6px;
+  border: var(--bui-border-w) solid transparent;
+  border-radius: var(--bui-radius-chip);
   background: transparent;
+  color: var(--bui-chip-rose-fg);
   cursor: pointer;
   font-size: var(--byop-font-body, 14px);
+  transition: background-color var(--bui-t);
 }
 
-.row-action {
-  color: var(--byop-text, CanvasText);
-  font-size: var(--byop-font-caption, 12px);
-}
-
-.row-delete {
-  color: var(--byop-danger-text, Mark);
-}
-
-.row-action:hover,
 .row-delete:hover {
   background: var(--byop-surface-hover, ButtonFace);
+  border-color: transparent;
 }
 
+/* —— chip / status-badge（§6.6） —— */
+
+.bui-chip,
 .status-badge {
   display: inline-flex;
   max-width: 100%;
-  min-height: 22px;
+  min-height: 24px;
   align-items: center;
-  padding: 1px 7px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-chip, 6px);
+  gap: 4px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--bui-radius-chip);
+  background: var(--byop-surface-hover, ButtonFace);
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.empty-state {
-  min-height: 220px;
-  padding: 32px;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 6px;
+/* app.js 建议给 badge 写 dataset.status（repaying/settled/overdue/
+   not_started/…）；未写时保持中性灰，不阻塞渲染。 */
+.status-badge[data-status="settled"],
+.bui-chip.lime,
+.bui-chip.ok {
+  background: var(--bui-chip-lime-bg);
+  color: var(--bui-chip-lime-fg);
+}
+
+.status-badge[data-status="repaying"],
+.status-badge[data-status="active"],
+.status-badge[data-status="adjusted"],
+.bui-chip.blue {
+  background: var(--bui-chip-blue-bg);
+  color: var(--bui-chip-blue-fg);
+}
+
+.status-badge[data-status="overdue"],
+.status-badge[data-tone="danger"],
+.bui-chip.rose,
+.bui-chip.danger {
+  background: var(--bui-chip-rose-bg);
+  color: var(--bui-chip-rose-fg);
+}
+
+.status-badge[data-status="completed"],
+.bui-chip.warm {
+  background: var(--bui-chip-warn-bg);
+  color: var(--bui-chip-warn-fg);
+}
+
+.status-badge[data-status="not_started"],
+.status-badge[data-status="none"],
+.bui-chip.neutral {
+  background: var(--byop-surface-hover, ButtonFace);
   color: var(--byop-muted, GrayText);
-  text-align: center;
 }
 
-.empty-state:not([hidden]) {
+/* —— 进度条（§6.11；还款计划 Tab 用） —— */
+
+.bui-progress {
   display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 96px;
 }
 
-.empty-state strong {
-  color: var(--byop-text, CanvasText);
-  font-size: var(--byop-font-body, 14px);
+.bui-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--byop-border, GrayText);
+  overflow: hidden;
 }
 
-.loading-indicator {
-  position: absolute;
-  z-index: 3;
-  top: 8px;
-  right: 8px;
-  padding: 2px 7px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-chip, 6px);
-  background: var(--byop-surface, Canvas);
+.bui-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--byop-accent, Highlight);
+  transition: width 500ms var(--byop-motion-easing, ease-out);
+}
+
+.bui-progress-label {
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
 }
 
-.loading-indicator[hidden] {
-  display: none;
+/* —— 还款计划 Tab 表（§6.7：沿用表格配方、行内详情钮） —— */
+
+.plans-table {
+  min-width: 0;
+  table-layout: auto;
 }
 
+.plans-table th,
+.plans-table td {
+  padding: 8px 12px;
+}
+
+.plans-table td.actions-cell,
+.plans-table th.actions-cell {
+  position: static;
+  width: 76px;
+  min-width: 76px;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* 已还期次：BoardUI data-table 完成态（§6.7） */
+.plans-table .period-paid .period-name,
+.period-paid .period-name {
+  text-decoration: line-through;
+  color: var(--byop-muted, GrayText);
+}
+
+.plans-table .period-overdue td,
+.plans-table tr.period-overdue td {
+  background: var(--bui-row-overdue);
+}
+
+/* ============ 分页脚（§6.5） ============ */
+
+.bui-foot,
 .table-footer {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 32px;
+  height: 44px;
+  padding: 0 12px;
+  border-top: var(--bui-border-w) solid var(--bui-separator);
+  background: var(--byop-background, Canvas);
 }
 
 .counts,
+.bui-pager,
 .pagination {
   display: flex;
   align-items: center;
@@ -1060,6 +1642,7 @@ td[data-context-changed="true"] {
   gap: 8px 14px;
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1067,7 +1650,7 @@ td[data-context-changed="true"] {
   min-width: 112px;
   margin-left: auto;
   color: var(--byop-text, CanvasText);
-  font-weight: 650;
+  font-weight: 500;
   text-align: right;
 }
 
@@ -1077,17 +1660,102 @@ td[data-context-changed="true"] {
   text-align: center;
 }
 
-.save-edit-hint {
+/* 分页钮：32×32、当前页 raised+描边+shadow-xs、不加过渡（§6.5） */
+.bui-pager .pager-step,
+.pagination button {
+  min-width: 32px;
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: var(--bui-border-w) solid transparent;
+  border-radius: var(--bui-radius-control);
+  background: transparent;
+  box-shadow: none;
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.bui-pager .pager-step:hover:not(:disabled),
+.pagination button:hover:not(:disabled) {
+  background: var(--byop-surface-hover, ButtonFace);
+  border-color: transparent;
+  color: var(--byop-text, CanvasText);
+}
+
+.bui-pager [aria-current="page"] {
+  background: var(--bui-raised);
+  border-color: var(--byop-border, GrayText);
+  box-shadow: var(--bui-shadow-xs);
+  color: var(--byop-text, CanvasText);
+}
+
+.save-edit-hint,
+.bui-save-hint {
   margin: -4px 0 0;
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
 }
+
+/* ============ 空状态与加载 ============ */
+
+.empty-state,
+.bui-empty {
+  min-height: 220px;
+  padding: 32px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--byop-muted, GrayText);
+  text-align: center;
+  background: var(--byop-background, Canvas);
+}
+
+.empty-state:not([hidden]),
+.bui-empty:not([hidden]) {
+  display: flex;
+}
+
+.empty-state strong,
+.bui-empty strong {
+  color: var(--byop-text, CanvasText);
+  font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
+}
+
+/* 加载指示为绝对定位覆盖（P32 §6.4 第 2 层：不占文档流） */
+.loading-indicator,
+.bui-loading {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  right: 8px;
+  padding: 2px 7px;
+  border: var(--bui-border-w) solid var(--byop-border, GrayText);
+  border-radius: var(--bui-radius-chip);
+  background: var(--bui-raised);
+  box-shadow: var(--bui-shadow-xs);
+  color: var(--byop-muted, GrayText);
+  font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
+}
+
+.loading-indicator[hidden],
+.bui-loading[hidden] {
+  display: none;
+}
+
+/* ============ 抽屉（§6.8） ============ */
 
 .drawer-backdrop {
   position: fixed;
   z-index: 20;
   inset: 0;
-  background: color-mix(in srgb, var(--byop-background, Canvas) 64%, transparent);
+  background: rgb(0 0 0 / 0.4);
 }
 
 .drawer-backdrop[hidden] {
@@ -1099,18 +1767,33 @@ td[data-context-changed="true"] {
   z-index: 21;
   top: 0;
   right: 0;
-  width: min(440px, 100vw);
+  width: min(480px, 100vw);
   height: 100vh;
-  padding: 16px;
+  padding: 24px;
   overflow: auto;
-  border-left: var(--table-border) solid var(--byop-border, GrayText);
-  background: var(--byop-surface, Canvas);
+  border-left: var(--bui-border-w) solid var(--bui-separator);
+  border-radius: var(--bui-radius-layer) 0 0 var(--bui-radius-layer);
+  background: var(--byop-background, Canvas);
   color: var(--byop-text, CanvasText);
-  box-shadow: -12px 0 32px color-mix(in srgb, var(--byop-text, CanvasText) 12%, transparent);
+  box-shadow: var(--bui-shadow-drawer);
+  transition: transform var(--bui-t), opacity var(--bui-t),
+    display var(--bui-t) allow-discrete, overlay var(--bui-t) allow-discrete;
+}
+
+/* 进入动画：hidden 移除瞬间从右侧平移淡入（支持 @starting-style 时）。 */
+@starting-style {
+  .drawer:not([hidden]) {
+    transform: translateX(24px);
+    opacity: 0;
+  }
 }
 
 .drawer[hidden] {
   display: none;
+}
+
+.detail-drawer {
+  width: min(560px, 100vw);
 }
 
 .drawer-header {
@@ -1124,12 +1807,21 @@ td[data-context-changed="true"] {
 .drawer-header h2 {
   margin: 0;
   font-size: var(--byop-font-title, 18px);
+  line-height: 26px;
+  font-weight: 500;
 }
 
 .drawer-header p {
   margin: 4px 0 0;
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
+}
+
+.drawer-close {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
 }
 
 .history-list {
@@ -1142,18 +1834,22 @@ td[data-context-changed="true"] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px 12px;
-  padding: 10px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-input, 8px);
+  padding: 12px;
+  border: var(--bui-border-w) solid var(--bui-separator);
+  border-radius: var(--bui-radius-layer);
+  background: var(--byop-surface, Canvas);
 }
 
 .history-item strong {
   font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
+  font-weight: 500;
 }
 
 .history-meta {
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
 }
 
 .history-actions {
@@ -1162,32 +1858,37 @@ td[data-context-changed="true"] {
   align-self: center;
 }
 
-.detail-drawer {
-  width: min(560px, 100vw);
-}
-
 .detail-body {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
+.detail-body[hidden] {
+  display: none;
+}
+
 .detail-section {
   padding: 12px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-input, 8px);
+  border: var(--bui-border-w) solid var(--bui-separator);
+  border-radius: var(--bui-radius-layer);
+  background: var(--byop-surface, Canvas);
 }
 
 .detail-section h3 {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
+  font-weight: 650;
 }
 
 .detail-fields {
   display: grid;
   grid-template-columns: minmax(112px, 0.42fr) minmax(0, 1fr);
-  gap: 7px 12px;
+  gap: 6px 12px;
   margin: 0;
+  font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
 }
 
 .detail-fields > div {
@@ -1204,6 +1905,7 @@ td[data-context-changed="true"] {
 .detail-fields dt {
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 20px;
 }
 
 .detail-fields dd {
@@ -1214,6 +1916,7 @@ td[data-context-changed="true"] {
   margin: 0;
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
 }
 
 .detail-records {
@@ -1228,12 +1931,13 @@ td[data-context-changed="true"] {
   flex-direction: column;
   gap: 3px;
   padding-top: 8px;
-  border-top: var(--table-border) solid var(--byop-border, GrayText);
+  border-top: var(--bui-border-w) solid var(--bui-separator);
 }
 
 .detail-records span {
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
+  line-height: 16px;
   overflow-wrap: anywhere;
 }
 
@@ -1254,13 +1958,15 @@ td[data-context-changed="true"] {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: none;
 }
 
 .form-fields label > span,
 .drawer-form > .field > span {
   color: var(--byop-muted, GrayText);
   font-size: var(--byop-font-caption, 12px);
-  font-weight: 600;
+  line-height: 16px;
+  font-weight: 500;
 }
 
 .target-options {
@@ -1268,9 +1974,9 @@ td[data-context-changed="true"] {
   flex-direction: column;
   gap: 8px;
   margin: 0;
-  padding: 10px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-input, 8px);
+  padding: 12px;
+  border: var(--bui-border-w) solid var(--bui-separator);
+  border-radius: var(--bui-radius-layer);
 }
 
 .target-options label,
@@ -1284,6 +1990,7 @@ td[data-context-changed="true"] {
 .checkbox-field input {
   width: auto;
   height: auto;
+  accent-color: var(--byop-accent, Highlight);
 }
 
 .drawer-actions {
@@ -1293,22 +2000,107 @@ td[data-context-changed="true"] {
   margin-top: 4px;
 }
 
+/* ============ 危险确认弹窗（§6.9） ============ */
+
+.bui-dialog {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.7);
+}
+
+.bui-dialog:not([hidden]) {
+  display: grid;
+}
+
+.bui-dialog-card {
+  width: min(400px, calc(100vw - 32px));
+  background: var(--byop-background, Canvas);
+  border: var(--bui-border-w) solid var(--bui-separator);
+  border-radius: var(--bui-radius-layer);
+  padding: 24px;
+  box-shadow: var(--bui-shadow-dropdown);
+}
+
+.bui-dialog-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bui-status-error-bg);
+  color: var(--bui-status-error-fg);
+  margin-bottom: 16px;
+}
+
+.bui-dialog-badge svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bui-dialog h2 {
+  margin: 0 0 4px;
+  font-size: var(--byop-font-title, 18px);
+  line-height: 26px;
+  font-weight: 500;
+}
+
+.bui-dialog p {
+  margin: 0;
+  font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
+  color: var(--byop-muted, GrayText);
+}
+
+.bui-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+/* ============ Toast（§6.10；当前为单行文本卡片） ============ */
+
 .toast {
   position: fixed;
   z-index: 30;
-  right: 16px;
-  bottom: 16px;
-  max-width: min(420px, calc(100vw - 32px));
-  padding: 9px 12px;
-  border: var(--table-border) solid var(--byop-border, GrayText);
-  border-radius: var(--byop-radius-overlay, 12px);
-  background: var(--byop-surface, Canvas);
+  right: 24px;
+  bottom: 24px;
+  max-width: min(400px, calc(100vw - 48px));
+  padding: 12px 16px;
+  border: var(--bui-border-w) solid var(--byop-border, GrayText);
+  border-radius: var(--bui-radius-layer);
+  background: var(--bui-raised);
   color: var(--byop-text, CanvasText);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--byop-text, CanvasText) 14%, transparent);
+  box-shadow: var(--bui-shadow-dropdown);
+  font-size: var(--byop-font-body, 14px);
+  line-height: 20px;
+  transition: transform var(--bui-t), opacity var(--bui-t),
+    display var(--bui-t) allow-discrete, overlay var(--bui-t) allow-discrete;
+}
+
+@starting-style {
+  .toast:not([hidden]) {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+.toast[data-tone="success"] {
+  border-color: color-mix(in srgb, var(--bui-status-success-fg) 40%, transparent);
+  color: var(--byop-success-text, Green);
 }
 
 .toast[data-tone="error"] {
-  border-color: var(--byop-danger, Mark);
+  border-color: color-mix(in srgb, var(--bui-status-error-fg) 40%, transparent);
   color: var(--byop-danger-text, Mark);
 }
 
@@ -1316,18 +2108,35 @@ td[data-context-changed="true"] {
   display: none;
 }
 
+/* ============ 减少透明度 / 高对比（§7.1、P31 同规则） ============ */
+
 html[data-reduce-transparency="true"] .drawer,
 html[data-high-contrast="true"] .drawer,
 html[data-reduce-transparency="true"] .toast,
 html[data-high-contrast="true"] .toast,
-html[data-reduce-transparency="true"] .dashboard-active,
-html[data-high-contrast="true"] .dashboard-active {
+html[data-reduce-transparency="true"] .bui-dialog-card,
+html[data-high-contrast="true"] .bui-dialog-card,
+html[data-reduce-transparency="true"] .bui-btn,
+html[data-reduce-transparency="true"] .button,
+html[data-reduce-transparency="true"] input,
+html[data-reduce-transparency="true"] select,
+html[data-reduce-transparency="true"] .dashboard-status-option,
+html[data-high-contrast="true"] .dashboard-status-option {
   box-shadow: none;
+}
+
+html[data-reduce-transparency="true"] .drawer,
+html[data-high-contrast="true"] .drawer,
+html[data-reduce-transparency="true"] .toast,
+html[data-high-contrast="true"] .toast,
+html[data-reduce-transparency="true"] .bui-dialog-card,
+html[data-high-contrast="true"] .bui-dialog-card {
   background: var(--byop-surface, Canvas);
 }
 
 html[data-reduce-transparency="true"] .dashboard-active,
 html[data-high-contrast="true"] .dashboard-active {
+  box-shadow: none;
   background: var(--byop-surface-hover, ButtonFace);
 }
 
@@ -1335,18 +2144,30 @@ html[data-high-contrast="true"] .dashboard-dim {
   opacity: 0.64;
 }
 
-@media (max-width: 1040px) {
-  .query-bar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+/* ============ 响应式（视口兜底；主逻辑在 @container） ============ */
 
-  .search-field {
-    grid-column: span 2;
+@media (max-width: 1180px) {
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1040px) {
+  .query-bar {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .kpi-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .table-page {
+    padding: 8px;
+  }
+
+  .bui-maincol {
     padding: 12px;
   }
 
@@ -1389,7 +2210,7 @@ html[data-high-contrast="true"] .dashboard-dim {
   .dashboard-attention,
   .dashboard-narrow .dashboard-hero,
   .dashboard-narrow .dashboard-attention {
-    border-top: var(--table-border) solid var(--byop-border, GrayText);
+    border-top: var(--bui-border-w) solid var(--bui-separator);
   }
 
   .dashboard-status,
@@ -1411,7 +2232,7 @@ html[data-high-contrast="true"] .dashboard-dim {
     + .dashboard-attention-group {
     padding-top: 8px;
     padding-left: 0;
-    border-top: var(--table-border) solid var(--byop-border, GrayText);
+    border-top: var(--bui-border-w) solid var(--bui-separator);
     border-left: 0;
   }
 
@@ -1429,67 +2250,72 @@ html[data-high-contrast="true"] .dashboard-dim {
     margin-top: 12px;
     padding-top: 12px;
     padding-left: 0;
-    border-top: var(--table-border) solid var(--byop-border, GrayText);
+    border-top: var(--bui-border-w) solid var(--bui-separator);
     border-left: 0;
   }
 
+  .bui-page-header,
   .page-header {
     flex-direction: column;
   }
 
+  .bui-header-actions,
   .header-actions {
     width: 100%;
     justify-content: flex-start;
   }
 
-  .query-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .field,
+  .compact-field {
+    flex: 1 1 140px;
   }
 
   .search-field {
-    grid-column: 1 / -1;
+    flex: 1 1 100%;
   }
 
+  .bui-foot,
   .table-footer {
     align-items: flex-start;
     flex-direction: column;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-health-segment,
-  .dashboard-health-empty,
-  .dashboard-status-option,
-  .dashboard-toggle,
-  .dashboard-mix-row,
-  .dashboard-mix-track b {
-    transition: none;
+    height: auto;
+    padding: 8px 12px;
   }
 }
 
 @media (max-width: 480px) {
+  .bui-header-actions,
   .header-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .query-bar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
+  .field,
+  .compact-field,
   .search-field {
-    grid-column: auto;
+    flex: 1 1 100%;
   }
 
-  .drawer {
+  .drawer,
+  .detail-drawer {
     width: 100vw;
+    border-radius: 0;
   }
 
   .drawer-actions {
     flex-direction: column-reverse;
   }
 
+  .drawer-actions .bui-btn,
   .drawer-actions .button {
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

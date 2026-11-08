@@ -7,13 +7,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 const piModelsSchemaURL = "https://pi.dev/schemas/models.schema.json"
@@ -43,6 +47,10 @@ type ChannelConfigService struct {
 	mu         sync.Mutex
 	agentDir   string
 	configPath string
+	// authCheckCommand and httpClient are test seams for the P32 credential
+	// status and direct connectivity probes; production leaves them nil.
+	authCheckCommand func(providerID string) ([]byte, error)
+	httpClient       *http.Client
 }
 
 // ChannelInventory is the credential-blind schema consumed by model settings UI.
@@ -2292,4 +2300,674 @@ func modelPath(providerID, modelID string) string {
 
 func overridePath(providerID, modelID string) string {
 	return providerPath(providerID) + ".modelOverrides." + modelID
+}
+
+// ---------------------------------------------------------------- P32 data layer
+
+// ChannelConfigStatus is the read-only Pi state shown by the P32 channel
+// settings page. It never contains credential values.
+type ChannelConfigStatus struct {
+	AgentDir     string                  `json:"agentDir"`
+	ModelsPath   string                  `json:"modelsPath"`
+	ModelsExists bool                    `json:"modelsExists"`
+	AuthPath     string                  `json:"authPath"`
+	AuthExists   bool                    `json:"authExists"`
+	Providers    []ChannelStatusProvider `json:"providers"`
+}
+
+// ChannelStatusProvider describes one models.json provider for the list view.
+// APIKeyMasked is the only permitted credential echo (first 4 + last 4).
+type ChannelStatusProvider struct {
+	ID                   string `json:"id"`
+	Name                 string `json:"name,omitempty"`
+	ModelCount           int    `json:"modelCount"`
+	CredentialConfigured bool   `json:"credentialConfigured"`
+	APIKeyMasked         string `json:"apiKeyMasked,omitempty"`
+	BuiltIn              bool   `json:"builtIn"`
+}
+
+// ChannelCredentialStatus mirrors `pi auth check --provider <id> --json --no-refresh`.
+type ChannelCredentialStatus struct {
+	Status   string `json:"status"`
+	AuthType string `json:"authType,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+}
+
+// ChannelTestResult classifies a BYOP-direct connectivity probe. Detail never
+// contains the API key.
+type ChannelTestResult struct {
+	OK        bool   `json:"ok"`
+	LatencyMS int64  `json:"latencyMs"`
+	Category  string `json:"category"`
+	Detail    string `json:"detail,omitempty"`
+}
+
+// ChannelModelsResult carries fetched model IDs and a coarse error category.
+type ChannelModelsResult struct {
+	Models   []string `json:"models"`
+	Category string   `json:"category"`
+}
+
+// Test and model fetch use this timeout, matching Proma's 15s budget.
+const channelHTTPTimeout = 15 * time.Second
+
+// maskedAPIKey renders the only credential echo allowed in UI: first four and
+// last four characters separated by an ellipsis.
+func maskedAPIKey(key string) string {
+	key = strings.TrimSpace(key)
+	if key == "" || isPiEnvironmentReference(key) || strings.HasPrefix(key, "!") {
+		return ""
+	}
+	if len(key) <= 9 {
+		return "\u2026"
+	}
+	return key[:4] + "\u2026" + key[len(key)-4:]
+}
+
+// ConfigStatus reports the Pi agent directory, models.json and auth.json
+// presence, plus credential-blind provider summaries.
+func (s *ChannelConfigService) ConfigStatus() (ChannelConfigStatus, error) {
+	if s == nil {
+		return ChannelConfigStatus{}, errors.New("channel config service is nil")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, inventory, err := readChannelInventory(s.agentDir, s.configPath)
+	status := ChannelConfigStatus{
+		AgentDir:   s.agentDir,
+		ModelsPath: s.configPath,
+		AuthPath:   filepath.Join(s.agentDir, "auth.json"),
+		Providers:  []ChannelStatusProvider{},
+	}
+	if err != nil {
+		return status, err
+	}
+	if authInfo, authErr := os.Stat(filepath.Join(s.agentDir, "auth.json")); authErr == nil {
+		status.AuthExists = !authInfo.IsDir()
+	}
+	status.ModelsExists = inventory.Exists
+	for _, provider := range inventory.Providers {
+		masked := ""
+		if provider.Credential.Configured && provider.Credential.Kind == channelCredentialLiteral {
+			masked = providerMaskedAPIKey(s.configPath, provider.ID)
+		}
+		status.Providers = append(status.Providers, ChannelStatusProvider{
+			ID:                   provider.ID,
+			Name:                 provider.Name,
+			ModelCount:           len(provider.Models),
+			CredentialConfigured: provider.Credential.Configured,
+			APIKeyMasked:         masked,
+			BuiltIn:              isBuiltInPiProvider(provider.ID),
+		})
+	}
+	return status, nil
+}
+
+// providerMaskedAPIKey reads the literal apiKey of one provider and returns
+// only its masked form. The full value never leaves the service.
+func providerMaskedAPIKey(path, providerID string) string {
+	readPath, err := resolvePiModelsReadPath(path)
+	if err != nil {
+		return ""
+	}
+	data, err := os.ReadFile(readPath)
+	if err != nil {
+		return ""
+	}
+	document, err := parseModelsDocument(data)
+	if err != nil {
+		return ""
+	}
+	providers, err := providersObject(document)
+	if err != nil {
+		return ""
+	}
+	provider, ok := providers[providerID].(map[string]any)
+	if !ok {
+		return ""
+	}
+	return maskedAPIKey(channelStringValue(provider["apiKey"]))
+}
+
+// CredentialStatus wraps `pi auth check --provider <id> --json --no-refresh`.
+// The pi binary is resolved through authCheckCommand for test injection.
+func (s *ChannelConfigService) CredentialStatus(providerID string) (ChannelCredentialStatus, error) {
+	if s == nil {
+		return ChannelCredentialStatus{}, errors.New("channel config service is nil")
+	}
+	providerID = strings.TrimSpace(providerID)
+	if providerID == "" {
+		return ChannelCredentialStatus{}, errors.New("providerId is required")
+	}
+	if s.authCheckCommand == nil {
+		s.authCheckCommand = defaultAuthCheckCommand
+	}
+	output, err := s.authCheckCommand(providerID)
+	if err != nil {
+		return ChannelCredentialStatus{Status: "unknown", Reason: "auth_check_failed"}, nil
+	}
+	return parseCredentialStatus(output)
+}
+
+func parseCredentialStatus(output []byte) (ChannelCredentialStatus, error) {
+	var parsed struct {
+		Status   string `json:"status"`
+		AuthType string `json:"authType"`
+		Reason   string `json:"reason"`
+	}
+	if err := json.Unmarshal(bytes.TrimSpace(output), &parsed); err != nil {
+		return ChannelCredentialStatus{Status: "unknown", Reason: "auth_check_unparseable"}, nil
+	}
+	if parsed.Status == "" {
+		parsed.Status = "unknown"
+	}
+	return ChannelCredentialStatus{Status: parsed.Status, AuthType: parsed.AuthType, Reason: parsed.Reason}, nil
+}
+
+func defaultAuthCheckCommand(providerID string) ([]byte, error) {
+	piBinary, err := exec.LookPath("pi")
+	if err != nil {
+		return nil, fmt.Errorf("resolve pi binary: %w", err)
+	}
+	command := exec.Command(piBinary, "auth", "check", "--provider", providerID, "--json", "--no-refresh")
+	output, err := command.Output()
+	if err != nil {
+		return nil, fmt.Errorf("run pi auth check: %w", err)
+	}
+	return output, nil
+}
+
+// SetAPIKey stores a literal apiKey under providers.<id>.apiKey in the Pi
+// models.json via the existing atomic version writer, then tightens the file
+// mode to 0600. The key never appears in errors or logs.
+func (s *ChannelConfigService) SetAPIKey(providerID, apiKey string) error {
+	if s == nil {
+		return errors.New("channel config service is nil")
+	}
+	providerID = strings.TrimSpace(providerID)
+	apiKey = strings.TrimSpace(apiKey)
+	if providerID == "" {
+		return errors.New("providerId is required")
+	}
+	if apiKey == "" {
+		return errors.New("apiKey must not be empty")
+	}
+	if strings.ContainsAny(apiKey, "\n\r") {
+		return errors.New("apiKey must be a single line")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, version, _, err := readModelsSnapshot(s.configPath, true)
+	if err != nil {
+		return fmt.Errorf("read models.json: %w", err)
+	}
+	document, _, err := readModelsDocumentIfPresent(s.configPath)
+	if err != nil {
+		return fmt.Errorf("read models.json: %w", err)
+	}
+	providers, err := ensureProvidersObject(document)
+	if err != nil {
+		return err
+	}
+	provider, ok := providers[providerID].(map[string]any)
+	if !ok {
+		provider = make(map[string]any)
+	}
+	provider["apiKey"] = apiKey
+	providers[providerID] = provider
+	if _, err := writePiModelsAtomicVersion(s.configPath, document, version.Digest, nil); err != nil {
+		return fmt.Errorf("write models.json: %w", err)
+	}
+	if err := os.Chmod(s.configPath, 0o600); err != nil {
+		return fmt.Errorf("tighten models.json permissions: %w", err)
+	}
+	return nil
+}
+
+// ClearAPIKey removes providers.<id>.apiKey and keeps the file at mode 0600.
+func (s *ChannelConfigService) ClearAPIKey(providerID string) error {
+	if s == nil {
+		return errors.New("channel config service is nil")
+	}
+	providerID = strings.TrimSpace(providerID)
+	if providerID == "" {
+		return errors.New("providerId is required")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, version, _, err := readModelsSnapshot(s.configPath, true)
+	if err != nil {
+		return fmt.Errorf("read models.json: %w", err)
+	}
+	document, _, err := readModelsDocumentIfPresent(s.configPath)
+	if err != nil {
+		return fmt.Errorf("read models.json: %w", err)
+	}
+	providers, err := ensureProvidersObject(document)
+	if err != nil {
+		return err
+	}
+	provider, ok := providers[providerID].(map[string]any)
+	if !ok {
+		return nil
+	}
+	delete(provider, "apiKey")
+	providers[providerID] = provider
+	if _, err := writePiModelsAtomicVersion(s.configPath, document, version.Digest, nil); err != nil {
+		return fmt.Errorf("write models.json: %w", err)
+	}
+	if err := os.Chmod(s.configPath, 0o600); err != nil {
+		return fmt.Errorf("tighten models.json permissions: %w", err)
+	}
+	return nil
+}
+
+// DeleteChannel removes a BYOP-created provider entry. Pi built-in providers
+// are refused; their credentials must be cleared instead.
+func (s *ChannelConfigService) DeleteChannel(providerID string) (bool, error) {
+	if s == nil {
+		return false, errors.New("channel config service is nil")
+	}
+	providerID = strings.TrimSpace(providerID)
+	if providerID == "" {
+		return false, errors.New("providerId is required")
+	}
+	if isBuiltInPiProvider(providerID) {
+		return false, errors.New("built-in providers cannot be deleted; clear the credential instead")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, version, _, err := readModelsSnapshot(s.configPath, true)
+	if err != nil {
+		return false, fmt.Errorf("read models.json: %w", err)
+	}
+	document, _, err := readModelsDocumentIfPresent(s.configPath)
+	if err != nil {
+		return false, fmt.Errorf("read models.json: %w", err)
+	}
+	providers, err := ensureProvidersObject(document)
+	if err != nil {
+		return false, err
+	}
+	if _, exists := providers[providerID]; !exists {
+		return false, nil
+	}
+	delete(providers, providerID)
+	if _, err := writePiModelsAtomicVersion(s.configPath, document, version.Digest, nil); err != nil {
+		return false, fmt.Errorf("write models.json: %w", err)
+	}
+	if err := os.Chmod(s.configPath, 0o600); err != nil {
+		return false, fmt.Errorf("tighten models.json permissions: %w", err)
+	}
+	return true, nil
+}
+
+// TestConnection probes the provider endpoint directly from BYOP with a 15s
+// timeout. It never writes credentials and strips the key from diagnostics.
+func (s *ChannelConfigService) TestConnection(providerID string) (ChannelTestResult, error) {
+	provider, err := s.providerDocumentForHTTP(providerID)
+	if err != nil {
+		return ChannelTestResult{}, err
+	}
+	baseURL := channelStringValue(provider["baseUrl"])
+	if baseURL == "" {
+		return ChannelTestResult{}, errors.New("provider has no baseUrl")
+	}
+	request, err := channelHTTPRequest(baseURL, provider)
+	if err != nil {
+		return ChannelTestResult{}, err
+	}
+	started := time.Now()
+	response, err := s.channelHTTPClient().Do(request)
+	if err != nil {
+		return ChannelTestResult{
+			LatencyMS: time.Since(started).Milliseconds(),
+			Category:  classifyChannelHTTPOpError(err),
+		}, nil
+	}
+	defer response.Body.Close()
+	result := ChannelTestResult{
+		LatencyMS: time.Since(started).Milliseconds(),
+	}
+	result.Category = classifyChannelHTTPStatus(response.StatusCode)
+	result.OK = result.Category == "ok"
+	return result, nil
+}
+
+// FetchModels asks the provider for its model catalog. Subscription providers
+// report the subscription category; the caller shows the Pi login flow.
+func (s *ChannelConfigService) FetchModels(providerID string) (ChannelModelsResult, error) {
+	provider, err := s.providerDocumentForHTTP(providerID)
+	if err != nil {
+		return ChannelModelsResult{}, err
+	}
+	baseURL := channelStringValue(provider["baseUrl"])
+	if baseURL == "" {
+		return ChannelModelsResult{}, errors.New("provider has no baseUrl")
+	}
+	if channelStringValue(provider["oauth"]) != "" {
+		return ChannelModelsResult{Category: "subscription"}, nil
+	}
+	endpoint := channelModelsEndpoint(baseURL, channelStringValue(provider["api"]))
+	request, err := channelHTTPRequest(endpoint, provider)
+	if err != nil {
+		return ChannelModelsResult{}, err
+	}
+	response, err := s.channelHTTPClient().Do(request)
+	if err != nil {
+		return ChannelModelsResult{Category: classifyChannelHTTPOpError(err)}, nil
+	}
+	defer response.Body.Close()
+	if category := classifyChannelHTTPStatus(response.StatusCode); category != "ok" {
+		return ChannelModelsResult{Category: category}, nil
+	}
+	models, err := parseChannelModelsPayload(response.Body)
+	if err != nil {
+		return ChannelModelsResult{Category: "invalid"}, nil
+	}
+	return ChannelModelsResult{Models: models, Category: "ok"}, nil
+}
+
+func (s *ChannelConfigService) providerDocumentForHTTP(providerID string) (map[string]any, error) {
+	if s == nil {
+		return nil, errors.New("channel config service is nil")
+	}
+	providerID = strings.TrimSpace(providerID)
+	if providerID == "" {
+		return nil, errors.New("providerId is required")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	providers, err := providerObjects(s.configPath)
+	if err != nil {
+		return nil, err
+	}
+	provider, ok := providers[providerID].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("provider %q was not found in models.json", providerID)
+	}
+	return provider, nil
+}
+
+func providerObjects(path string) (map[string]any, error) {
+	readPath, err := resolvePiModelsReadPath(path)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(readPath)
+	if err != nil {
+		return nil, fmt.Errorf("read models.json: %w", err)
+	}
+	document, err := parseModelsDocument(data)
+	if err != nil {
+		return nil, fmt.Errorf("parse models.json: %w", err)
+	}
+	providers, err := providersObject(document)
+	if err != nil {
+		return nil, err
+	}
+	return providers, nil
+}
+
+func (s *ChannelConfigService) channelHTTPClient() *http.Client {
+	if s.httpClient != nil {
+		return s.httpClient
+	}
+	return &http.Client{Timeout: channelHTTPTimeout}
+}
+
+// channelHTTPRequest builds the probe request. A literal apiKey from
+// models.json authenticates the request; environment references and commands
+// are never resolved here, matching the credential-blind inventory.
+func channelHTTPRequest(endpoint string, provider map[string]any) (*http.Request, error) {
+	request, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	request.Header.Set("User-Agent", "BYOP/0.25 channel-settings")
+	request.Header.Set("Accept", "application/json")
+	if apiKey := channelStringValue(provider["apiKey"]); apiKey != "" &&
+		!isPiEnvironmentReference(apiKey) && !strings.HasPrefix(apiKey, "!") {
+		api := channelStringValue(provider["api"])
+		if strings.Contains(strings.ToLower(api), "anthropic") {
+			request.Header.Set("x-api-key", apiKey)
+		} else {
+			request.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+	}
+	return request, nil
+}
+
+func channelModelsEndpoint(baseURL, api string) string {
+	baseURL = strings.TrimRight(baseURL, "/")
+	if strings.Contains(strings.ToLower(api), "anthropic") {
+		if strings.HasSuffix(baseURL, "/v1/messages") {
+			return strings.TrimSuffix(baseURL, "/v1/messages") + "/v1/models"
+		}
+		if strings.HasSuffix(baseURL, "/v1") {
+			return baseURL + "/models"
+		}
+		return baseURL + "/v1/models"
+	}
+	if strings.HasSuffix(baseURL, "/v1") {
+		return baseURL + "/models"
+	}
+	return baseURL + "/models"
+}
+
+func parseChannelModelsPayload(body io.Reader) ([]string, error) {
+	var payload any
+	if err := json.NewDecoder(body).Decode(&payload); err != nil {
+		return nil, fmt.Errorf("parse model catalog: %w", err)
+	}
+	entries, ok := payload.([]any)
+	if list, isMap := payload.(map[string]any); isMap {
+		entries, ok = list["data"].([]any)
+	}
+	if !ok {
+		return nil, errors.New("model catalog has no data array")
+	}
+	models := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		item, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		if id := channelStringValue(item["id"]); id != "" {
+			models = append(models, id)
+		}
+	}
+	return models, nil
+}
+
+func classifyChannelHTTPStatus(status int) string {
+	switch {
+	case status >= 200 && status < 400:
+		return "ok"
+	case status == 401:
+		return "auth"
+	case status == 403:
+		return "forbidden"
+	case status == 402:
+		return "quota"
+	case status == 404 || status == 410:
+		return "not_found"
+	case status == 429:
+		return "rate_limited"
+	case status == 400:
+		return "invalid"
+	case status >= 500:
+		return "server"
+	default:
+		return "failed"
+	}
+}
+
+func classifyChannelHTTPOpError(err error) string {
+	if err == nil {
+		return "ok"
+	}
+	var timeoutErr net.Error
+	if errors.As(err, &timeoutErr) && timeoutErr.Timeout() {
+		return "timeout"
+	}
+	return "network"
+}
+
+// SetModelEnabled toggles the settings.json enabledModels pattern
+// "provider/model" and returns the resulting pattern list.
+func (s *ChannelConfigService) SetModelEnabled(providerID, modelID string, enabled bool) ([]string, error) {
+	if s == nil {
+		return nil, errors.New("channel config service is nil")
+	}
+	providerID = strings.TrimSpace(providerID)
+	modelID = strings.TrimSpace(modelID)
+	if providerID == "" || modelID == "" {
+		return nil, errors.New("providerId and modelId are required")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	document, err := readPiSettingsDocument(filepath.Join(s.agentDir, "settings.json"))
+	if err != nil {
+		return nil, err
+	}
+	pattern := providerID + "/" + modelID
+	updated := make([]string, 0, len(piEnabledModelsList(document))+1)
+	for _, entry := range piEnabledModelsList(document) {
+		if entry == pattern {
+			continue
+		}
+		updated = append(updated, entry)
+	}
+	if enabled {
+		updated = append(updated, pattern)
+	}
+	document["enabledModels"] = toAnySlice(updated)
+	if err := writePiSettingsAtomic(filepath.Join(s.agentDir, "settings.json"), document); err != nil {
+		return nil, fmt.Errorf("write settings.json: %w", err)
+	}
+	return updated, nil
+}
+
+// SetChannelEnabled disables a channel by removing every enabledModels pattern
+// that belongs to it. Re-enabling cannot re-add individual models, so it is a
+// no-op on the pattern list; models are enabled individually.
+func (s *ChannelConfigService) SetChannelEnabled(providerID string, enabled bool) ([]string, error) {
+	if s == nil {
+		return nil, errors.New("channel config service is nil")
+	}
+	providerID = strings.TrimSpace(providerID)
+	if providerID == "" {
+		return nil, errors.New("providerId is required")
+	}
+	if enabled {
+		return nil, nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	document, err := readPiSettingsDocument(filepath.Join(s.agentDir, "settings.json"))
+	if err != nil {
+		return nil, err
+	}
+	prefix := providerID + "/"
+	updated := make([]string, 0, len(piEnabledModelsList(document)))
+	for _, entry := range piEnabledModelsList(document) {
+		if strings.HasPrefix(entry, prefix) {
+			continue
+		}
+		updated = append(updated, entry)
+	}
+	document["enabledModels"] = toAnySlice(updated)
+	if err := writePiSettingsAtomic(filepath.Join(s.agentDir, "settings.json"), document); err != nil {
+		return nil, fmt.Errorf("write settings.json: %w", err)
+	}
+	return updated, nil
+}
+
+func piEnabledModelsList(document map[string]any) []string {
+	list, ok := document["enabledModels"].([]any)
+	if !ok {
+		return nil
+	}
+	result := make([]string, 0, len(list))
+	for _, entry := range list {
+		if value := channelStringValue(entry); value != "" {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func toAnySlice(values []string) []any {
+	result := make([]any, 0, len(values))
+	for _, value := range values {
+		result = append(result, value)
+	}
+	return result
+}
+
+func readPiSettingsDocument(path string) (map[string]any, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return make(map[string]any), nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read settings.json: %w", err)
+	}
+	normalized, err := normalizePiJSONC(data)
+	if err != nil {
+		return nil, fmt.Errorf("parse settings.json: %w", err)
+	}
+	var document map[string]any
+	if err := json.Unmarshal(normalized, &document); err != nil {
+		return nil, fmt.Errorf("parse settings.json: %w", err)
+	}
+	if document == nil {
+		document = make(map[string]any)
+	}
+	return document, nil
+}
+
+func writePiSettingsAtomic(path string, document map[string]any) error {
+	data, err := json.MarshalIndent(document, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode settings.json: %w", err)
+	}
+	data = append(data, '\n')
+	info, statErr := os.Stat(path)
+	mode := os.FileMode(0o600)
+	if statErr == nil {
+		mode = info.Mode().Perm()
+	} else if !errors.Is(statErr, os.ErrNotExist) {
+		return fmt.Errorf("inspect settings.json: %w", statErr)
+	}
+	temp, err := os.CreateTemp(filepath.Dir(path), ".settings-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create temporary settings.json: %w", err)
+	}
+	tempName := temp.Name()
+	remove := true
+	defer func() {
+		_ = temp.Close()
+		if remove {
+			_ = os.Remove(tempName)
+		}
+	}()
+	if err := temp.Chmod(mode); err != nil {
+		return fmt.Errorf("set temporary settings.json mode: %w", err)
+	}
+	if _, err := temp.Write(data); err != nil {
+		return fmt.Errorf("write temporary settings.json: %w", err)
+	}
+	if err := temp.Sync(); err != nil {
+		return fmt.Errorf("sync temporary settings.json: %w", err)
+	}
+	if err := temp.Close(); err != nil {
+		return fmt.Errorf("close temporary settings.json: %w", err)
+	}
+	if err := os.Rename(tempName, path); err != nil {
+		return fmt.Errorf("replace settings.json: %w", err)
+	}
+	remove = false
+	return nil
 }

@@ -5706,6 +5706,96 @@ func (msgs Messages) SettingsAppearancePresetBoardUI() string {
 	return Catalog.Format(msgs.locale, "settingsAppearancePresetBoardUI", nil)
 }
 
+// SettingsAppearancePresetDefaultBadge says "Default"
+// in the language the app shows.
+//
+// Small badge marking the preset that ships as the default since P32.
+func SettingsAppearancePresetDefaultBadge() string {
+	return In(i18n.Locale()).SettingsAppearancePresetDefaultBadge()
+}
+
+// SettingsAppearancePresetDefaultBadge says "Default"
+// in the language of msgs.
+//
+// Small badge marking the preset that ships as the default since P32.
+func (msgs Messages) SettingsAppearancePresetDefaultBadge() string {
+	return Catalog.Format(msgs.locale, "settingsAppearancePresetDefaultBadge", nil)
+}
+
+// PluginChatPanelTitle says "Current chat"
+// in the language the app shows.
+//
+// Header title of the chat panel next to a plugin view (P32 §6.5 G).
+func PluginChatPanelTitle() string { return In(i18n.Locale()).PluginChatPanelTitle() }
+
+// PluginChatPanelTitle says "Current chat"
+// in the language of msgs.
+//
+// Header title of the chat panel next to a plugin view (P32 §6.5 G).
+func (msgs Messages) PluginChatPanelTitle() string {
+	return Catalog.Format(msgs.locale, "pluginChatPanelTitle", nil)
+}
+
+// PluginChatPanelSameSessionHint says "Same conversation as the Chat page."
+// in the language the app shows.
+//
+// Tooltip explaining the plugin chat panel shows the main conversation.
+func PluginChatPanelSameSessionHint() string {
+	return In(i18n.Locale()).PluginChatPanelSameSessionHint()
+}
+
+// PluginChatPanelSameSessionHint says "Same conversation as the Chat page."
+// in the language of msgs.
+//
+// Tooltip explaining the plugin chat panel shows the main conversation.
+func (msgs Messages) PluginChatPanelSameSessionHint() string {
+	return Catalog.Format(msgs.locale, "pluginChatPanelSameSessionHint", nil)
+}
+
+// PluginChatPanelCollapse says "Collapse chat panel"
+// in the language the app shows.
+//
+// Accessible label for the button that hides the plugin chat panel.
+func PluginChatPanelCollapse() string { return In(i18n.Locale()).PluginChatPanelCollapse() }
+
+// PluginChatPanelCollapse says "Collapse chat panel"
+// in the language of msgs.
+//
+// Accessible label for the button that hides the plugin chat panel.
+func (msgs Messages) PluginChatPanelCollapse() string {
+	return Catalog.Format(msgs.locale, "pluginChatPanelCollapse", nil)
+}
+
+// PluginChatPanelResize says "Resize chat panel"
+// in the language the app shows.
+//
+// Accessible label for the handle that resizes the plugin chat panel.
+func PluginChatPanelResize() string { return In(i18n.Locale()).PluginChatPanelResize() }
+
+// PluginChatPanelResize says "Resize chat panel"
+// in the language of msgs.
+//
+// Accessible label for the handle that resizes the plugin chat panel.
+func (msgs Messages) PluginChatPanelResize() string {
+	return Catalog.Format(msgs.locale, "pluginChatPanelResize", nil)
+}
+
+// NoticePreferenceSaveChatPanel says "Chat panel changed, but preferences could not be saved."
+// in the language the app shows.
+//
+// Notice when the plugin chat panel state changed but could not be
+// persisted.
+func NoticePreferenceSaveChatPanel() string { return In(i18n.Locale()).NoticePreferenceSaveChatPanel() }
+
+// NoticePreferenceSaveChatPanel says "Chat panel changed, but preferences could not be saved."
+// in the language of msgs.
+//
+// Notice when the plugin chat panel state changed but could not be
+// persisted.
+func (msgs Messages) NoticePreferenceSaveChatPanel() string {
+	return Catalog.Format(msgs.locale, "noticePreferenceSaveChatPanel", nil)
+}
+
 // SettingsThemeTitle says "Theme"
 // in the language the app shows.
 //
@@ -14416,4 +14506,1346 @@ func P29UserLabel() string { return In(i18n.Locale()).P29UserLabel() }
 // Label standing in for the account holder on a user message header.
 func (msgs Messages) P29UserLabel() string {
 	return Catalog.Format(msgs.locale, "p29UserLabel", nil)
+}
+
+// ChannelsSectionTitle says "Model configuration"
+// in the language the app shows.
+//
+// Title of the model configuration section.
+func ChannelsSectionTitle() string { return In(i18n.Locale()).ChannelsSectionTitle() }
+
+// ChannelsSectionTitle says "Model configuration"
+// in the language of msgs.
+//
+// Title of the model configuration section.
+func (msgs Messages) ChannelsSectionTitle() string {
+	return Catalog.Format(msgs.locale, "channelsSectionTitle", nil)
+}
+
+// ChannelsSectionDescription says "Manage AI provider connections, API keys and available models."
+// in the language the app shows.
+//
+// Description of the model configuration section.
+func ChannelsSectionDescription() string { return In(i18n.Locale()).ChannelsSectionDescription() }
+
+// ChannelsSectionDescription says "Manage AI provider connections, API keys and available models."
+// in the language of msgs.
+//
+// Description of the model configuration section.
+func (msgs Messages) ChannelsSectionDescription() string {
+	return Catalog.Format(msgs.locale, "channelsSectionDescription", nil)
+}
+
+// ChannelsAdd says "Add configuration"
+// in the language the app shows.
+//
+// Button that starts a new channel configuration.
+func ChannelsAdd() string { return In(i18n.Locale()).ChannelsAdd() }
+
+// ChannelsAdd says "Add configuration"
+// in the language of msgs.
+//
+// Button that starts a new channel configuration.
+func (msgs Messages) ChannelsAdd() string {
+	return Catalog.Format(msgs.locale, "channelsAdd", nil)
+}
+
+// ChannelsPiStatusLine says "Pi: models.json loaded · {channels} channels · credentials {ready}/{total} ready"
+// in the language the app shows.
+//
+// One-line Pi status summary shown under the section header.
+func ChannelsPiStatusLine(channels string, ready string, total string) string {
+	return In(i18n.Locale()).ChannelsPiStatusLine(channels, ready, total)
+}
+
+// ChannelsPiStatusLine says "Pi: models.json loaded · {channels} channels · credentials {ready}/{total} ready"
+// in the language of msgs.
+//
+// One-line Pi status summary shown under the section header.
+func (msgs Messages) ChannelsPiStatusLine(channels string, ready string, total string) string {
+	return Catalog.Format(msgs.locale, "channelsPiStatusLine", map[string]any{"channels": channels, "ready": ready, "total": total})
+}
+
+// ChannelsStatusLineMissing says "Pi: models.json has not been created yet"
+// in the language the app shows.
+//
+// Pi status line when models.json does not exist yet.
+func ChannelsStatusLineMissing() string { return In(i18n.Locale()).ChannelsStatusLineMissing() }
+
+// ChannelsStatusLineMissing says "Pi: models.json has not been created yet"
+// in the language of msgs.
+//
+// Pi status line when models.json does not exist yet.
+func (msgs Messages) ChannelsStatusLineMissing() string {
+	return Catalog.Format(msgs.locale, "channelsStatusLineMissing", nil)
+}
+
+// ChannelsEmpty says "No model configured yet. Click \"Add configuration\" above to start."
+// in the language the app shows.
+//
+// Empty state of the channel list.
+func ChannelsEmpty() string { return In(i18n.Locale()).ChannelsEmpty() }
+
+// ChannelsEmpty says "No model configured yet. Click \"Add configuration\" above to start."
+// in the language of msgs.
+//
+// Empty state of the channel list.
+func (msgs Messages) ChannelsEmpty() string {
+	return Catalog.Format(msgs.locale, "channelsEmpty", nil)
+}
+
+// ChannelsLoading says "Loading..."
+// in the language the app shows.
+//
+// Loading state of the channel list.
+func ChannelsLoading() string { return In(i18n.Locale()).ChannelsLoading() }
+
+// ChannelsLoading says "Loading..."
+// in the language of msgs.
+//
+// Loading state of the channel list.
+func (msgs Messages) ChannelsLoading() string {
+	return Catalog.Format(msgs.locale, "channelsLoading", nil)
+}
+
+// ChannelsRowDescription says "{name} · {count} models enabled"
+// in the language the app shows.
+//
+// Description line of one channel row.
+func ChannelsRowDescription(name string, count string) string {
+	return In(i18n.Locale()).ChannelsRowDescription(name, count)
+}
+
+// ChannelsRowDescription says "{name} · {count} models enabled"
+// in the language of msgs.
+//
+// Description line of one channel row.
+func (msgs Messages) ChannelsRowDescription(name string, count string) string {
+	return Catalog.Format(msgs.locale, "channelsRowDescription", map[string]any{"name": name, "count": count})
+}
+
+// ChannelsEdit says "Edit"
+// in the language the app shows.
+//
+// Accessible label of the hover edit button.
+func ChannelsEdit() string { return In(i18n.Locale()).ChannelsEdit() }
+
+// ChannelsEdit says "Edit"
+// in the language of msgs.
+//
+// Accessible label of the hover edit button.
+func (msgs Messages) ChannelsEdit() string {
+	return Catalog.Format(msgs.locale, "channelsEdit", nil)
+}
+
+// ChannelsDelete says "Delete"
+// in the language the app shows.
+//
+// Accessible label of the hover delete button for BYOP-created channels.
+func ChannelsDelete() string { return In(i18n.Locale()).ChannelsDelete() }
+
+// ChannelsDelete says "Delete"
+// in the language of msgs.
+//
+// Accessible label of the hover delete button for BYOP-created channels.
+func (msgs Messages) ChannelsDelete() string {
+	return Catalog.Format(msgs.locale, "channelsDelete", nil)
+}
+
+// ChannelsRemoveCredential says "Remove credential"
+// in the language the app shows.
+//
+// Accessible label replacing delete for built-in Pi providers.
+func ChannelsRemoveCredential() string { return In(i18n.Locale()).ChannelsRemoveCredential() }
+
+// ChannelsRemoveCredential says "Remove credential"
+// in the language of msgs.
+//
+// Accessible label replacing delete for built-in Pi providers.
+func (msgs Messages) ChannelsRemoveCredential() string {
+	return Catalog.Format(msgs.locale, "channelsRemoveCredential", nil)
+}
+
+// ChannelsEnableSwitchAria says "Enable \"{name}\""
+// in the language the app shows.
+//
+// Accessible label of the per-channel enable switch.
+func ChannelsEnableSwitchAria(name string) string {
+	return In(i18n.Locale()).ChannelsEnableSwitchAria(name)
+}
+
+// ChannelsEnableSwitchAria says "Enable \"{name}\""
+// in the language of msgs.
+//
+// Accessible label of the per-channel enable switch.
+func (msgs Messages) ChannelsEnableSwitchAria(name string) string {
+	return Catalog.Format(msgs.locale, "channelsEnableSwitchAria", map[string]any{"name": name})
+}
+
+// ChannelsCreateTitle says "Add model configuration"
+// in the language the app shows.
+//
+// Title of the create form.
+func ChannelsCreateTitle() string { return In(i18n.Locale()).ChannelsCreateTitle() }
+
+// ChannelsCreateTitle says "Add model configuration"
+// in the language of msgs.
+//
+// Title of the create form.
+func (msgs Messages) ChannelsCreateTitle() string {
+	return Catalog.Format(msgs.locale, "channelsCreateTitle", nil)
+}
+
+// ChannelsEditTitle says "Edit model configuration"
+// in the language the app shows.
+//
+// Title of the edit form.
+func ChannelsEditTitle() string { return In(i18n.Locale()).ChannelsEditTitle() }
+
+// ChannelsEditTitle says "Edit model configuration"
+// in the language of msgs.
+//
+// Title of the edit form.
+func (msgs Messages) ChannelsEditTitle() string {
+	return Catalog.Format(msgs.locale, "channelsEditTitle", nil)
+}
+
+// ChannelsBack says "Back"
+// in the language the app shows.
+//
+// Accessible label of the form back button.
+func ChannelsBack() string { return In(i18n.Locale()).ChannelsBack() }
+
+// ChannelsBack says "Back"
+// in the language of msgs.
+//
+// Accessible label of the form back button.
+func (msgs Messages) ChannelsBack() string {
+	return Catalog.Format(msgs.locale, "channelsBack", nil)
+}
+
+// ChannelsCreate says "Create"
+// in the language the app shows.
+//
+// Primary submit button of the create form.
+func ChannelsCreate() string { return In(i18n.Locale()).ChannelsCreate() }
+
+// ChannelsCreate says "Create"
+// in the language of msgs.
+//
+// Primary submit button of the create form.
+func (msgs Messages) ChannelsCreate() string {
+	return Catalog.Format(msgs.locale, "channelsCreate", nil)
+}
+
+// ChannelsSave says "Save"
+// in the language the app shows.
+//
+// Primary submit button of the edit form.
+func ChannelsSave() string { return In(i18n.Locale()).ChannelsSave() }
+
+// ChannelsSave says "Save"
+// in the language of msgs.
+//
+// Primary submit button of the edit form.
+func (msgs Messages) ChannelsSave() string {
+	return Catalog.Format(msgs.locale, "channelsSave", nil)
+}
+
+// ChannelsSaving says "Saving..."
+// in the language the app shows.
+//
+// Submit button label while saving.
+func ChannelsSaving() string { return In(i18n.Locale()).ChannelsSaving() }
+
+// ChannelsSaving says "Saving..."
+// in the language of msgs.
+//
+// Submit button label while saving.
+func (msgs Messages) ChannelsSaving() string {
+	return Catalog.Format(msgs.locale, "channelsSaving", nil)
+}
+
+// ChannelsBasicInfoTitle says "Basic information"
+// in the language the app shows.
+//
+// Title of the first form card.
+func ChannelsBasicInfoTitle() string { return In(i18n.Locale()).ChannelsBasicInfoTitle() }
+
+// ChannelsBasicInfoTitle says "Basic information"
+// in the language of msgs.
+//
+// Title of the first form card.
+func (msgs Messages) ChannelsBasicInfoTitle() string {
+	return Catalog.Format(msgs.locale, "channelsBasicInfoTitle", nil)
+}
+
+// ChannelsProviderType says "Provider type"
+// in the language the app shows.
+//
+// Label of the provider type selector.
+func ChannelsProviderType() string { return In(i18n.Locale()).ChannelsProviderType() }
+
+// ChannelsProviderType says "Provider type"
+// in the language of msgs.
+//
+// Label of the provider type selector.
+func (msgs Messages) ChannelsProviderType() string {
+	return Catalog.Format(msgs.locale, "channelsProviderType", nil)
+}
+
+// ChannelsProviderPlaceholder says "Select a provider"
+// in the language the app shows.
+//
+// Placeholder shown before a provider type is picked.
+func ChannelsProviderPlaceholder() string { return In(i18n.Locale()).ChannelsProviderPlaceholder() }
+
+// ChannelsProviderPlaceholder says "Select a provider"
+// in the language of msgs.
+//
+// Placeholder shown before a provider type is picked.
+func (msgs Messages) ChannelsProviderPlaceholder() string {
+	return Catalog.Format(msgs.locale, "channelsProviderPlaceholder", nil)
+}
+
+// ChannelsProviderRequired says "Pick a provider type first"
+// in the language the app shows.
+//
+// Inline error when submitting without a provider type.
+func ChannelsProviderRequired() string { return In(i18n.Locale()).ChannelsProviderRequired() }
+
+// ChannelsProviderRequired says "Pick a provider type first"
+// in the language of msgs.
+//
+// Inline error when submitting without a provider type.
+func (msgs Messages) ChannelsProviderRequired() string {
+	return Catalog.Format(msgs.locale, "channelsProviderRequired", nil)
+}
+
+// ChannelsProviderName says "Provider name"
+// in the language the app shows.
+//
+// Label of the provider name input.
+func ChannelsProviderName() string { return In(i18n.Locale()).ChannelsProviderName() }
+
+// ChannelsProviderName says "Provider name"
+// in the language of msgs.
+//
+// Label of the provider name input.
+func (msgs Messages) ChannelsProviderName() string {
+	return Catalog.Format(msgs.locale, "channelsProviderName", nil)
+}
+
+// ChannelsProviderNamePlaceholder says "e.g. My Anthropic"
+// in the language the app shows.
+//
+// Placeholder of the provider name input.
+func ChannelsProviderNamePlaceholder() string {
+	return In(i18n.Locale()).ChannelsProviderNamePlaceholder()
+}
+
+// ChannelsProviderNamePlaceholder says "e.g. My Anthropic"
+// in the language of msgs.
+//
+// Placeholder of the provider name input.
+func (msgs Messages) ChannelsProviderNamePlaceholder() string {
+	return Catalog.Format(msgs.locale, "channelsProviderNamePlaceholder", nil)
+}
+
+// ChannelsBaseURLLabel says "Base URL"
+// in the language the app shows.
+//
+// Label of the base URL input.
+func ChannelsBaseURLLabel() string { return In(i18n.Locale()).ChannelsBaseURLLabel() }
+
+// ChannelsBaseURLLabel says "Base URL"
+// in the language of msgs.
+//
+// Label of the base URL input.
+func (msgs Messages) ChannelsBaseURLLabel() string {
+	return Catalog.Format(msgs.locale, "channelsBaseURLLabel", nil)
+}
+
+// ChannelsBaseURLPlaceholder says "https://api.example.com"
+// in the language the app shows.
+//
+// Placeholder of the base URL input.
+func ChannelsBaseURLPlaceholder() string { return In(i18n.Locale()).ChannelsBaseURLPlaceholder() }
+
+// ChannelsBaseURLPlaceholder says "https://api.example.com"
+// in the language of msgs.
+//
+// Placeholder of the base URL input.
+func (msgs Messages) ChannelsBaseURLPlaceholder() string {
+	return Catalog.Format(msgs.locale, "channelsBaseURLPlaceholder", nil)
+}
+
+// ChannelsBaseURLPreview says "Preview: {url}"
+// in the language the app shows.
+//
+// Live endpoint preview under the base URL input.
+func ChannelsBaseURLPreview(url string) string { return In(i18n.Locale()).ChannelsBaseURLPreview(url) }
+
+// ChannelsBaseURLPreview says "Preview: {url}"
+// in the language of msgs.
+//
+// Live endpoint preview under the base URL input.
+func (msgs Messages) ChannelsBaseURLPreview(url string) string {
+	return Catalog.Format(msgs.locale, "channelsBaseURLPreview", map[string]any{"url": url})
+}
+
+// ChannelsAPIKeyLabel says "API Key"
+// in the language the app shows.
+//
+// Label of the API key input.
+func ChannelsAPIKeyLabel() string { return In(i18n.Locale()).ChannelsAPIKeyLabel() }
+
+// ChannelsAPIKeyLabel says "API Key"
+// in the language of msgs.
+//
+// Label of the API key input.
+func (msgs Messages) ChannelsAPIKeyLabel() string {
+	return Catalog.Format(msgs.locale, "channelsAPIKeyLabel", nil)
+}
+
+// ChannelsAPIKeyPlaceholderCreate says "Enter API Key"
+// in the language the app shows.
+//
+// Placeholder of the API key input in create mode.
+func ChannelsAPIKeyPlaceholderCreate() string {
+	return In(i18n.Locale()).ChannelsAPIKeyPlaceholderCreate()
+}
+
+// ChannelsAPIKeyPlaceholderCreate says "Enter API Key"
+// in the language of msgs.
+//
+// Placeholder of the API key input in create mode.
+func (msgs Messages) ChannelsAPIKeyPlaceholderCreate() string {
+	return Catalog.Format(msgs.locale, "channelsAPIKeyPlaceholderCreate", nil)
+}
+
+// ChannelsAPIKeyPlaceholderEdit says "Leave empty to keep the current key"
+// in the language the app shows.
+//
+// Placeholder of the API key input in edit mode.
+func ChannelsAPIKeyPlaceholderEdit() string { return In(i18n.Locale()).ChannelsAPIKeyPlaceholderEdit() }
+
+// ChannelsAPIKeyPlaceholderEdit says "Leave empty to keep the current key"
+// in the language of msgs.
+//
+// Placeholder of the API key input in edit mode.
+func (msgs Messages) ChannelsAPIKeyPlaceholderEdit() string {
+	return Catalog.Format(msgs.locale, "channelsAPIKeyPlaceholderEdit", nil)
+}
+
+// ChannelsToggleKeyVisibility says "Show or hide the key"
+// in the language the app shows.
+//
+// Accessible label of the key visibility toggle.
+func ChannelsToggleKeyVisibility() string { return In(i18n.Locale()).ChannelsToggleKeyVisibility() }
+
+// ChannelsToggleKeyVisibility says "Show or hide the key"
+// in the language of msgs.
+//
+// Accessible label of the key visibility toggle.
+func (msgs Messages) ChannelsToggleKeyVisibility() string {
+	return Catalog.Format(msgs.locale, "channelsToggleKeyVisibility", nil)
+}
+
+// ChannelsKeyMasked says "Stored key: {mask}"
+// in the language the app shows.
+//
+// Masked echo of the stored key (first 4 + last 4).
+func ChannelsKeyMasked(mask string) string { return In(i18n.Locale()).ChannelsKeyMasked(mask) }
+
+// ChannelsKeyMasked says "Stored key: {mask}"
+// in the language of msgs.
+//
+// Masked echo of the stored key (first 4 + last 4).
+func (msgs Messages) ChannelsKeyMasked(mask string) string {
+	return Catalog.Format(msgs.locale, "channelsKeyMasked", map[string]any{"mask": mask})
+}
+
+// ChannelsPlaintextNote says "The key is stored as plaintext in ~/.pi/agent/models.json (mode 600). Do not commit it to version control or sync it …"
+// in the language the app shows.
+//
+// Fixed plaintext storage warning required by the P32 design.
+func ChannelsPlaintextNote() string { return In(i18n.Locale()).ChannelsPlaintextNote() }
+
+// ChannelsPlaintextNote says "The key is stored as plaintext in ~/.pi/agent/models.json (mode 600). Do not commit it to version control or sync it …"
+// in the language of msgs.
+//
+// Fixed plaintext storage warning required by the P32 design.
+func (msgs Messages) ChannelsPlaintextNote() string {
+	return Catalog.Format(msgs.locale, "channelsPlaintextNote", nil)
+}
+
+// ChannelsTestConnection says "Test connection"
+// in the language the app shows.
+//
+// Button that probes the provider endpoint from BYOP.
+func ChannelsTestConnection() string { return In(i18n.Locale()).ChannelsTestConnection() }
+
+// ChannelsTestConnection says "Test connection"
+// in the language of msgs.
+//
+// Button that probes the provider endpoint from BYOP.
+func (msgs Messages) ChannelsTestConnection() string {
+	return Catalog.Format(msgs.locale, "channelsTestConnection", nil)
+}
+
+// ChannelsTestRunning says "Testing..."
+// in the language the app shows.
+//
+// Inline label while the connection probe runs.
+func ChannelsTestRunning() string { return In(i18n.Locale()).ChannelsTestRunning() }
+
+// ChannelsTestRunning says "Testing..."
+// in the language of msgs.
+//
+// Inline label while the connection probe runs.
+func (msgs Messages) ChannelsTestRunning() string {
+	return Catalog.Format(msgs.locale, "channelsTestRunning", nil)
+}
+
+// ChannelsTestResultOK says "Connection successful"
+// in the language the app shows.
+//
+// Successful probe result line.
+func ChannelsTestResultOK() string { return In(i18n.Locale()).ChannelsTestResultOK() }
+
+// ChannelsTestResultOK says "Connection successful"
+// in the language of msgs.
+//
+// Successful probe result line.
+func (msgs Messages) ChannelsTestResultOK() string {
+	return Catalog.Format(msgs.locale, "channelsTestResultOK", nil)
+}
+
+// ChannelsTestAuth says "Authentication failed. Check the API Key."
+// in the language the app shows.
+//
+// Probe failure: authentication.
+func ChannelsTestAuth() string { return In(i18n.Locale()).ChannelsTestAuth() }
+
+// ChannelsTestAuth says "Authentication failed. Check the API Key."
+// in the language of msgs.
+//
+// Probe failure: authentication.
+func (msgs Messages) ChannelsTestAuth() string {
+	return Catalog.Format(msgs.locale, "channelsTestAuth", nil)
+}
+
+// ChannelsTestForbidden says "Insufficient permissions for the current key."
+// in the language the app shows.
+//
+// Probe failure: forbidden.
+func ChannelsTestForbidden() string { return In(i18n.Locale()).ChannelsTestForbidden() }
+
+// ChannelsTestForbidden says "Insufficient permissions for the current key."
+// in the language of msgs.
+//
+// Probe failure: forbidden.
+func (msgs Messages) ChannelsTestForbidden() string {
+	return Catalog.Format(msgs.locale, "channelsTestForbidden", nil)
+}
+
+// ChannelsTestQuota says "Quota exhausted. Check the account balance."
+// in the language the app shows.
+//
+// Probe failure: quota.
+func ChannelsTestQuota() string { return In(i18n.Locale()).ChannelsTestQuota() }
+
+// ChannelsTestQuota says "Quota exhausted. Check the account balance."
+// in the language of msgs.
+//
+// Probe failure: quota.
+func (msgs Messages) ChannelsTestQuota() string {
+	return Catalog.Format(msgs.locale, "channelsTestQuota", nil)
+}
+
+// ChannelsTestNotFound says "Resource not found. Check the Base URL or model."
+// in the language the app shows.
+//
+// Probe failure: not found.
+func ChannelsTestNotFound() string { return In(i18n.Locale()).ChannelsTestNotFound() }
+
+// ChannelsTestNotFound says "Resource not found. Check the Base URL or model."
+// in the language of msgs.
+//
+// Probe failure: not found.
+func (msgs Messages) ChannelsTestNotFound() string {
+	return Catalog.Format(msgs.locale, "channelsTestNotFound", nil)
+}
+
+// ChannelsTestRateLimited says "Rate limited. Try again later."
+// in the language the app shows.
+//
+// Probe failure: rate limited.
+func ChannelsTestRateLimited() string { return In(i18n.Locale()).ChannelsTestRateLimited() }
+
+// ChannelsTestRateLimited says "Rate limited. Try again later."
+// in the language of msgs.
+//
+// Probe failure: rate limited.
+func (msgs Messages) ChannelsTestRateLimited() string {
+	return Catalog.Format(msgs.locale, "channelsTestRateLimited", nil)
+}
+
+// ChannelsTestInvalid says "Invalid request. Check the channel configuration."
+// in the language the app shows.
+//
+// Probe failure: invalid request.
+func ChannelsTestInvalid() string { return In(i18n.Locale()).ChannelsTestInvalid() }
+
+// ChannelsTestInvalid says "Invalid request. Check the channel configuration."
+// in the language of msgs.
+//
+// Probe failure: invalid request.
+func (msgs Messages) ChannelsTestInvalid() string {
+	return Catalog.Format(msgs.locale, "channelsTestInvalid", nil)
+}
+
+// ChannelsTestServer says "Provider service error. Try again later."
+// in the language the app shows.
+//
+// Probe failure: server error.
+func ChannelsTestServer() string { return In(i18n.Locale()).ChannelsTestServer() }
+
+// ChannelsTestServer says "Provider service error. Try again later."
+// in the language of msgs.
+//
+// Probe failure: server error.
+func (msgs Messages) ChannelsTestServer() string {
+	return Catalog.Format(msgs.locale, "channelsTestServer", nil)
+}
+
+// ChannelsTestNetwork says "Network connection failed. Check the network or proxy."
+// in the language the app shows.
+//
+// Probe failure: network.
+func ChannelsTestNetwork() string { return In(i18n.Locale()).ChannelsTestNetwork() }
+
+// ChannelsTestNetwork says "Network connection failed. Check the network or proxy."
+// in the language of msgs.
+//
+// Probe failure: network.
+func (msgs Messages) ChannelsTestNetwork() string {
+	return Catalog.Format(msgs.locale, "channelsTestNetwork", nil)
+}
+
+// ChannelsTestTimeout says "Connection timed out. Check the network or proxy."
+// in the language the app shows.
+//
+// Probe failure: timeout.
+func ChannelsTestTimeout() string { return In(i18n.Locale()).ChannelsTestTimeout() }
+
+// ChannelsTestTimeout says "Connection timed out. Check the network or proxy."
+// in the language of msgs.
+//
+// Probe failure: timeout.
+func (msgs Messages) ChannelsTestTimeout() string {
+	return Catalog.Format(msgs.locale, "channelsTestTimeout", nil)
+}
+
+// ChannelsTestFailed says "Connection test failed"
+// in the language the app shows.
+//
+// Probe failure fallback.
+func ChannelsTestFailed() string { return In(i18n.Locale()).ChannelsTestFailed() }
+
+// ChannelsTestFailed says "Connection test failed"
+// in the language of msgs.
+//
+// Probe failure fallback.
+func (msgs Messages) ChannelsTestFailed() string {
+	return Catalog.Format(msgs.locale, "channelsTestFailed", nil)
+}
+
+// ChannelsFetchModels says "Fetch from provider"
+// in the language the app shows.
+//
+// Button that fetches the provider model catalog.
+func ChannelsFetchModels() string { return In(i18n.Locale()).ChannelsFetchModels() }
+
+// ChannelsFetchModels says "Fetch from provider"
+// in the language of msgs.
+//
+// Button that fetches the provider model catalog.
+func (msgs Messages) ChannelsFetchModels() string {
+	return Catalog.Format(msgs.locale, "channelsFetchModels", nil)
+}
+
+// ChannelsFetching says "Fetching..."
+// in the language the app shows.
+//
+// Inline label while the catalog fetch runs.
+func ChannelsFetching() string { return In(i18n.Locale()).ChannelsFetching() }
+
+// ChannelsFetching says "Fetching..."
+// in the language of msgs.
+//
+// Inline label while the catalog fetch runs.
+func (msgs Messages) ChannelsFetching() string {
+	return Catalog.Format(msgs.locale, "channelsFetching", nil)
+}
+
+// ChannelsFetchOK says "Fetched {count} models"
+// in the language the app shows.
+//
+// Successful fetch result line.
+func ChannelsFetchOK(count string) string { return In(i18n.Locale()).ChannelsFetchOK(count) }
+
+// ChannelsFetchOK says "Fetched {count} models"
+// in the language of msgs.
+//
+// Successful fetch result line.
+func (msgs Messages) ChannelsFetchOK(count string) string {
+	return Catalog.Format(msgs.locale, "channelsFetchOK", map[string]any{"count": count})
+}
+
+// ChannelsSubscriptionFetchHint says "Subscription provider: the model catalog is available after logging in inside Pi."
+// in the language the app shows.
+//
+// Fetch hint shown for subscription providers.
+func ChannelsSubscriptionFetchHint() string { return In(i18n.Locale()).ChannelsSubscriptionFetchHint() }
+
+// ChannelsSubscriptionFetchHint says "Subscription provider: the model catalog is available after logging in inside Pi."
+// in the language of msgs.
+//
+// Fetch hint shown for subscription providers.
+func (msgs Messages) ChannelsSubscriptionFetchHint() string {
+	return Catalog.Format(msgs.locale, "channelsSubscriptionFetchHint", nil)
+}
+
+// ChannelsSubscriptionLoginLabel says "Log in via Pi"
+// in the language the app shows.
+//
+// Button that hands subscription login to the Pi terminal.
+func ChannelsSubscriptionLoginLabel() string {
+	return In(i18n.Locale()).ChannelsSubscriptionLoginLabel()
+}
+
+// ChannelsSubscriptionLoginLabel says "Log in via Pi"
+// in the language of msgs.
+//
+// Button that hands subscription login to the Pi terminal.
+func (msgs Messages) ChannelsSubscriptionLoginLabel() string {
+	return Catalog.Format(msgs.locale, "channelsSubscriptionLoginLabel", nil)
+}
+
+// ChannelsSubscriptionReloginLabel says "Log in via Pi again"
+// in the language the app shows.
+//
+// Login button label once a credential exists.
+func ChannelsSubscriptionReloginLabel() string {
+	return In(i18n.Locale()).ChannelsSubscriptionReloginLabel()
+}
+
+// ChannelsSubscriptionReloginLabel says "Log in via Pi again"
+// in the language of msgs.
+//
+// Login button label once a credential exists.
+func (msgs Messages) ChannelsSubscriptionReloginLabel() string {
+	return Catalog.Format(msgs.locale, "channelsSubscriptionReloginLabel", nil)
+}
+
+// ChannelsLoginWaiting says "Waiting for Pi to finish authorization..."
+// in the language the app shows.
+//
+// Inline label while polling the Pi credential state.
+func ChannelsLoginWaiting() string { return In(i18n.Locale()).ChannelsLoginWaiting() }
+
+// ChannelsLoginWaiting says "Waiting for Pi to finish authorization..."
+// in the language of msgs.
+//
+// Inline label while polling the Pi credential state.
+func (msgs Messages) ChannelsLoginWaiting() string {
+	return Catalog.Format(msgs.locale, "channelsLoginWaiting", nil)
+}
+
+// ChannelsLoginReady says "Logged in (Pi credential ready)"
+// in the language the app shows.
+//
+// Credential status line when Pi reports ready.
+func ChannelsLoginReady() string { return In(i18n.Locale()).ChannelsLoginReady() }
+
+// ChannelsLoginReady says "Logged in (Pi credential ready)"
+// in the language of msgs.
+//
+// Credential status line when Pi reports ready.
+func (msgs Messages) ChannelsLoginReady() string {
+	return Catalog.Format(msgs.locale, "channelsLoginReady", nil)
+}
+
+// ChannelsLoginNotLoggedIn says "Not logged in (refreshes automatically once authorized inside Pi)"
+// in the language the app shows.
+//
+// Credential status line when Pi reports not ready.
+func ChannelsLoginNotLoggedIn() string { return In(i18n.Locale()).ChannelsLoginNotLoggedIn() }
+
+// ChannelsLoginNotLoggedIn says "Not logged in (refreshes automatically once authorized inside Pi)"
+// in the language of msgs.
+//
+// Credential status line when Pi reports not ready.
+func (msgs Messages) ChannelsLoginNotLoggedIn() string {
+	return Catalog.Format(msgs.locale, "channelsLoginNotLoggedIn", nil)
+}
+
+// ChannelsLoginTimeout says "Timed out waiting for Pi. You can log in via Pi again later."
+// in the language the app shows.
+//
+// Inline message when the 90s login poll expires.
+func ChannelsLoginTimeout() string { return In(i18n.Locale()).ChannelsLoginTimeout() }
+
+// ChannelsLoginTimeout says "Timed out waiting for Pi. You can log in via Pi again later."
+// in the language of msgs.
+//
+// Inline message when the 90s login poll expires.
+func (msgs Messages) ChannelsLoginTimeout() string {
+	return Catalog.Format(msgs.locale, "channelsLoginTimeout", nil)
+}
+
+// ChannelsEnableSwitchLabel says "Enable this configuration"
+// in the language the app shows.
+//
+// Label of the enable-this-configuration row.
+func ChannelsEnableSwitchLabel() string { return In(i18n.Locale()).ChannelsEnableSwitchLabel() }
+
+// ChannelsEnableSwitchLabel says "Enable this configuration"
+// in the language of msgs.
+//
+// Label of the enable-this-configuration row.
+func (msgs Messages) ChannelsEnableSwitchLabel() string {
+	return Catalog.Format(msgs.locale, "channelsEnableSwitchLabel", nil)
+}
+
+// ChannelsEnableSwitchDescription says "When off, the models of this configuration disappear from the picker."
+// in the language the app shows.
+//
+// Description of the enable row.
+func ChannelsEnableSwitchDescription() string {
+	return In(i18n.Locale()).ChannelsEnableSwitchDescription()
+}
+
+// ChannelsEnableSwitchDescription says "When off, the models of this configuration disappear from the picker."
+// in the language of msgs.
+//
+// Description of the enable row.
+func (msgs Messages) ChannelsEnableSwitchDescription() string {
+	return Catalog.Format(msgs.locale, "channelsEnableSwitchDescription", nil)
+}
+
+// ChannelsEnabledModelsTitle says "Enabled models"
+// in the language the app shows.
+//
+// Title of the enabled models card.
+func ChannelsEnabledModelsTitle() string { return In(i18n.Locale()).ChannelsEnabledModelsTitle() }
+
+// ChannelsEnabledModelsTitle says "Enabled models"
+// in the language of msgs.
+//
+// Title of the enabled models card.
+func (msgs Messages) ChannelsEnabledModelsTitle() string {
+	return Catalog.Format(msgs.locale, "channelsEnabledModelsTitle", nil)
+}
+
+// ChannelsEnabledCount says "{count} models"
+// in the language the app shows.
+//
+// Description of the enabled models card with a count.
+func ChannelsEnabledCount(count string) string { return In(i18n.Locale()).ChannelsEnabledCount(count) }
+
+// ChannelsEnabledCount says "{count} models"
+// in the language of msgs.
+//
+// Description of the enabled models card with a count.
+func (msgs Messages) ChannelsEnabledCount(count string) string {
+	return Catalog.Format(msgs.locale, "channelsEnabledCount", map[string]any{"count": count})
+}
+
+// ChannelsEnabledEmpty says "No models enabled yet. Pick them from the available models below."
+// in the language the app shows.
+//
+// Empty state of the enabled models card.
+func ChannelsEnabledEmpty() string { return In(i18n.Locale()).ChannelsEnabledEmpty() }
+
+// ChannelsEnabledEmpty says "No models enabled yet. Pick them from the available models below."
+// in the language of msgs.
+//
+// Empty state of the enabled models card.
+func (msgs Messages) ChannelsEnabledEmpty() string {
+	return Catalog.Format(msgs.locale, "channelsEnabledEmpty", nil)
+}
+
+// ChannelsDisableModel says "Disable"
+// in the language the app shows.
+//
+// Accessible label of the per-model disable button.
+func ChannelsDisableModel() string { return In(i18n.Locale()).ChannelsDisableModel() }
+
+// ChannelsDisableModel says "Disable"
+// in the language of msgs.
+//
+// Accessible label of the per-model disable button.
+func (msgs Messages) ChannelsDisableModel() string {
+	return Catalog.Format(msgs.locale, "channelsDisableModel", nil)
+}
+
+// ChannelsAvailableModelsTitle says "Available models"
+// in the language the app shows.
+//
+// Title of the available models card.
+func ChannelsAvailableModelsTitle() string { return In(i18n.Locale()).ChannelsAvailableModelsTitle() }
+
+// ChannelsAvailableModelsTitle says "Available models"
+// in the language of msgs.
+//
+// Title of the available models card.
+func (msgs Messages) ChannelsAvailableModelsTitle() string {
+	return Catalog.Format(msgs.locale, "channelsAvailableModelsTitle", nil)
+}
+
+// ChannelsAvailableCount says "{count} available models"
+// in the language the app shows.
+//
+// Count line of the available models card.
+func ChannelsAvailableCount(count string) string {
+	return In(i18n.Locale()).ChannelsAvailableCount(count)
+}
+
+// ChannelsAvailableCount says "{count} available models"
+// in the language of msgs.
+//
+// Count line of the available models card.
+func (msgs Messages) ChannelsAvailableCount(count string) string {
+	return Catalog.Format(msgs.locale, "channelsAvailableCount", map[string]any{"count": count})
+}
+
+// ChannelsEnableModel says "Enable"
+// in the language the app shows.
+//
+// Accessible label of the per-model enable button.
+func ChannelsEnableModel() string { return In(i18n.Locale()).ChannelsEnableModel() }
+
+// ChannelsEnableModel says "Enable"
+// in the language of msgs.
+//
+// Accessible label of the per-model enable button.
+func (msgs Messages) ChannelsEnableModel() string {
+	return Catalog.Format(msgs.locale, "channelsEnableModel", nil)
+}
+
+// ChannelsSearchPlaceholder says "Search available models..."
+// in the language the app shows.
+//
+// Placeholder of the model search box.
+func ChannelsSearchPlaceholder() string { return In(i18n.Locale()).ChannelsSearchPlaceholder() }
+
+// ChannelsSearchPlaceholder says "Search available models..."
+// in the language of msgs.
+//
+// Placeholder of the model search box.
+func (msgs Messages) ChannelsSearchPlaceholder() string {
+	return Catalog.Format(msgs.locale, "channelsSearchPlaceholder", nil)
+}
+
+// ChannelsSearchEmpty says "No matching model"
+// in the language the app shows.
+//
+// Search with no matches.
+func ChannelsSearchEmpty() string { return In(i18n.Locale()).ChannelsSearchEmpty() }
+
+// ChannelsSearchEmpty says "No matching model"
+// in the language of msgs.
+//
+// Search with no matches.
+func (msgs Messages) ChannelsSearchEmpty() string {
+	return Catalog.Format(msgs.locale, "channelsSearchEmpty", nil)
+}
+
+// ChannelsAllEnabled says "All models are enabled"
+// in the language the app shows.
+//
+// Shown when every fetched model is enabled.
+func ChannelsAllEnabled() string { return In(i18n.Locale()).ChannelsAllEnabled() }
+
+// ChannelsAllEnabled says "All models are enabled"
+// in the language of msgs.
+//
+// Shown when every fetched model is enabled.
+func (msgs Messages) ChannelsAllEnabled() string {
+	return Catalog.Format(msgs.locale, "channelsAllEnabled", nil)
+}
+
+// ChannelsManualModelID says "Model ID (e.g. claude-opus-4-6)"
+// in the language the app shows.
+//
+// Placeholder of the manual model ID input.
+func ChannelsManualModelID() string { return In(i18n.Locale()).ChannelsManualModelID() }
+
+// ChannelsManualModelID says "Model ID (e.g. claude-opus-4-6)"
+// in the language of msgs.
+//
+// Placeholder of the manual model ID input.
+func (msgs Messages) ChannelsManualModelID() string {
+	return Catalog.Format(msgs.locale, "channelsManualModelID", nil)
+}
+
+// ChannelsManualModelName says "Display name (optional)"
+// in the language the app shows.
+//
+// Placeholder of the manual model name input.
+func ChannelsManualModelName() string { return In(i18n.Locale()).ChannelsManualModelName() }
+
+// ChannelsManualModelName says "Display name (optional)"
+// in the language of msgs.
+//
+// Placeholder of the manual model name input.
+func (msgs Messages) ChannelsManualModelName() string {
+	return Catalog.Format(msgs.locale, "channelsManualModelName", nil)
+}
+
+// ChannelsManualAdd says "Add manually"
+// in the language the app shows.
+//
+// Accessible label of the manual add button.
+func ChannelsManualAdd() string { return In(i18n.Locale()).ChannelsManualAdd() }
+
+// ChannelsManualAdd says "Add manually"
+// in the language of msgs.
+//
+// Accessible label of the manual add button.
+func (msgs Messages) ChannelsManualAdd() string {
+	return Catalog.Format(msgs.locale, "channelsManualAdd", nil)
+}
+
+// ChannelsDeleteConfirmTitle says "Delete this channel?"
+// in the language the app shows.
+//
+// Title of the delete confirmation dialog.
+func ChannelsDeleteConfirmTitle() string { return In(i18n.Locale()).ChannelsDeleteConfirmTitle() }
+
+// ChannelsDeleteConfirmTitle says "Delete this channel?"
+// in the language of msgs.
+//
+// Title of the delete confirmation dialog.
+func (msgs Messages) ChannelsDeleteConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "channelsDeleteConfirmTitle", nil)
+}
+
+// ChannelsDeleteConfirmBody says "Delete channel \"{name}\"? This cannot be undone."
+// in the language the app shows.
+//
+// Body of the delete confirmation dialog.
+func ChannelsDeleteConfirmBody(name string) string {
+	return In(i18n.Locale()).ChannelsDeleteConfirmBody(name)
+}
+
+// ChannelsDeleteConfirmBody says "Delete channel \"{name}\"? This cannot be undone."
+// in the language of msgs.
+//
+// Body of the delete confirmation dialog.
+func (msgs Messages) ChannelsDeleteConfirmBody(name string) string {
+	return Catalog.Format(msgs.locale, "channelsDeleteConfirmBody", map[string]any{"name": name})
+}
+
+// ChannelsConfirmDelete says "Delete channel"
+// in the language the app shows.
+//
+// Confirm button of the delete dialog.
+func ChannelsConfirmDelete() string { return In(i18n.Locale()).ChannelsConfirmDelete() }
+
+// ChannelsConfirmDelete says "Delete channel"
+// in the language of msgs.
+//
+// Confirm button of the delete dialog.
+func (msgs Messages) ChannelsConfirmDelete() string {
+	return Catalog.Format(msgs.locale, "channelsConfirmDelete", nil)
+}
+
+// ChannelsRemoveConfirmTitle says "Remove the stored credential?"
+// in the language the app shows.
+//
+// Title of the remove-credential dialog for built-in providers.
+func ChannelsRemoveConfirmTitle() string { return In(i18n.Locale()).ChannelsRemoveConfirmTitle() }
+
+// ChannelsRemoveConfirmTitle says "Remove the stored credential?"
+// in the language of msgs.
+//
+// Title of the remove-credential dialog for built-in providers.
+func (msgs Messages) ChannelsRemoveConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "channelsRemoveConfirmTitle", nil)
+}
+
+// ChannelsRemoveConfirmBody says "The stored API Key of \"{name}\" will be removed; the channel itself stays."
+// in the language the app shows.
+//
+// Body of the remove-credential dialog.
+func ChannelsRemoveConfirmBody(name string) string {
+	return In(i18n.Locale()).ChannelsRemoveConfirmBody(name)
+}
+
+// ChannelsRemoveConfirmBody says "The stored API Key of \"{name}\" will be removed; the channel itself stays."
+// in the language of msgs.
+//
+// Body of the remove-credential dialog.
+func (msgs Messages) ChannelsRemoveConfirmBody(name string) string {
+	return Catalog.Format(msgs.locale, "channelsRemoveConfirmBody", map[string]any{"name": name})
+}
+
+// ChannelsConfirmRemove says "Remove credential"
+// in the language the app shows.
+//
+// Confirm button of the remove dialog.
+func ChannelsConfirmRemove() string { return In(i18n.Locale()).ChannelsConfirmRemove() }
+
+// ChannelsConfirmRemove says "Remove credential"
+// in the language of msgs.
+//
+// Confirm button of the remove dialog.
+func (msgs Messages) ChannelsConfirmRemove() string {
+	return Catalog.Format(msgs.locale, "channelsConfirmRemove", nil)
+}
+
+// ChannelsCancel says "Cancel"
+// in the language the app shows.
+//
+// Cancel button of every dialog.
+func ChannelsCancel() string { return In(i18n.Locale()).ChannelsCancel() }
+
+// ChannelsCancel says "Cancel"
+// in the language of msgs.
+//
+// Cancel button of every dialog.
+func (msgs Messages) ChannelsCancel() string {
+	return Catalog.Format(msgs.locale, "channelsCancel", nil)
+}
+
+// ChannelsRiskTitle says "Use a third-party relay?"
+// in the language the app shows.
+//
+// Title of the third-party base URL risk dialog.
+func ChannelsRiskTitle() string { return In(i18n.Locale()).ChannelsRiskTitle() }
+
+// ChannelsRiskTitle says "Use a third-party relay?"
+// in the language of msgs.
+//
+// Title of the third-party base URL risk dialog.
+func (msgs Messages) ChannelsRiskTitle() string {
+	return Catalog.Format(msgs.locale, "channelsRiskTitle", nil)
+}
+
+// ChannelsRiskBody1 says "This address is not the provider's official default Base URL. A relay may tamper with conversation content and model …"
+// in the language the app shows.
+//
+// Risk dialog paragraph 1.
+func ChannelsRiskBody1() string { return In(i18n.Locale()).ChannelsRiskBody1() }
+
+// ChannelsRiskBody1 says "This address is not the provider's official default Base URL. A relay may tamper with conversation content and model …"
+// in the language of msgs.
+//
+// Risk dialog paragraph 1.
+func (msgs Messages) ChannelsRiskBody1() string {
+	return Catalog.Format(msgs.locale, "channelsRiskBody1", nil)
+}
+
+// ChannelsRiskBody2 says "Its protocol adaptation can also break context window, tool calls, multimodal input or streaming output. Only use ser…"
+// in the language the app shows.
+//
+// Risk dialog paragraph 2.
+func ChannelsRiskBody2() string { return In(i18n.Locale()).ChannelsRiskBody2() }
+
+// ChannelsRiskBody2 says "Its protocol adaptation can also break context window, tool calls, multimodal input or streaming output. Only use ser…"
+// in the language of msgs.
+//
+// Risk dialog paragraph 2.
+func (msgs Messages) ChannelsRiskBody2() string {
+	return Catalog.Format(msgs.locale, "channelsRiskBody2", nil)
+}
+
+// ChannelsRiskBody3 says "BYOP acts only as a local Agent environment: configuration, sessions and other local data stay on your device, and BY…"
+// in the language the app shows.
+//
+// Risk dialog paragraph 3, adapted from Proma to BYOP per design §4.1.
+func ChannelsRiskBody3() string { return In(i18n.Locale()).ChannelsRiskBody3() }
+
+// ChannelsRiskBody3 says "BYOP acts only as a local Agent environment: configuration, sessions and other local data stay on your device, and BY…"
+// in the language of msgs.
+//
+// Risk dialog paragraph 3, adapted from Proma to BYOP per design §4.1.
+func (msgs Messages) ChannelsRiskBody3() string {
+	return Catalog.Format(msgs.locale, "channelsRiskBody3", nil)
+}
+
+// ChannelsRiskBody4 says "Connection tests and model fetches are sent by BYOP directly to this address; the key never leaves this machine's files."
+// in the language the app shows.
+//
+// Risk dialog paragraph 4, replacing the Proma commercial promo line per
+// design §4.1.
+func ChannelsRiskBody4() string { return In(i18n.Locale()).ChannelsRiskBody4() }
+
+// ChannelsRiskBody4 says "Connection tests and model fetches are sent by BYOP directly to this address; the key never leaves this machine's files."
+// in the language of msgs.
+//
+// Risk dialog paragraph 4, replacing the Proma commercial promo line per
+// design §4.1.
+func (msgs Messages) ChannelsRiskBody4() string {
+	return Catalog.Format(msgs.locale, "channelsRiskBody4", nil)
+}
+
+// ChannelsRiskAccept says "I understand and accept the risk"
+// in the language the app shows.
+//
+// Confirm button of the risk dialog.
+func ChannelsRiskAccept() string { return In(i18n.Locale()).ChannelsRiskAccept() }
+
+// ChannelsRiskAccept says "I understand and accept the risk"
+// in the language of msgs.
+//
+// Confirm button of the risk dialog.
+func (msgs Messages) ChannelsRiskAccept() string {
+	return Catalog.Format(msgs.locale, "channelsRiskAccept", nil)
+}
+
+// ChannelsDiscardTitle says "Discard unsaved changes?"
+// in the language the app shows.
+//
+// Title of the discard-changes dialog.
+func ChannelsDiscardTitle() string { return In(i18n.Locale()).ChannelsDiscardTitle() }
+
+// ChannelsDiscardTitle says "Discard unsaved changes?"
+// in the language of msgs.
+//
+// Title of the discard-changes dialog.
+func (msgs Messages) ChannelsDiscardTitle() string {
+	return Catalog.Format(msgs.locale, "channelsDiscardTitle", nil)
+}
+
+// ChannelsDiscardBodyNoModels says "No model is configured yet. Configure a model before saving."
+// in the language the app shows.
+//
+// Body of the discard dialog when no model is configured.
+func ChannelsDiscardBodyNoModels() string { return In(i18n.Locale()).ChannelsDiscardBodyNoModels() }
+
+// ChannelsDiscardBodyNoModels says "No model is configured yet. Configure a model before saving."
+// in the language of msgs.
+//
+// Body of the discard dialog when no model is configured.
+func (msgs Messages) ChannelsDiscardBodyNoModels() string {
+	return Catalog.Format(msgs.locale, "channelsDiscardBodyNoModels", nil)
+}
+
+// ChannelsDiscard says "Discard edits"
+// in the language the app shows.
+//
+// Discard button of the discard dialog.
+func ChannelsDiscard() string { return In(i18n.Locale()).ChannelsDiscard() }
+
+// ChannelsDiscard says "Discard edits"
+// in the language of msgs.
+//
+// Discard button of the discard dialog.
+func (msgs Messages) ChannelsDiscard() string {
+	return Catalog.Format(msgs.locale, "channelsDiscard", nil)
+}
+
+// ChannelsSaveAndClose says "Save and close"
+// in the language the app shows.
+//
+// Save-and-close button of the discard dialog.
+func ChannelsSaveAndClose() string { return In(i18n.Locale()).ChannelsSaveAndClose() }
+
+// ChannelsSaveAndClose says "Save and close"
+// in the language of msgs.
+//
+// Save-and-close button of the discard dialog.
+func (msgs Messages) ChannelsSaveAndClose() string {
+	return Catalog.Format(msgs.locale, "channelsSaveAndClose", nil)
+}
+
+// ChannelsBannerTitle says "{name} authorized via Pi"
+// in the language the app shows.
+//
+// Title of the subscription login success banner.
+func ChannelsBannerTitle(name string) string { return In(i18n.Locale()).ChannelsBannerTitle(name) }
+
+// ChannelsBannerTitle says "{name} authorized via Pi"
+// in the language of msgs.
+//
+// Title of the subscription login success banner.
+func (msgs Messages) ChannelsBannerTitle(name string) string {
+	return Catalog.Format(msgs.locale, "channelsBannerTitle", map[string]any{"name": name})
+}
+
+// ChannelsBannerBody says "The credential is ready; the channel is now usable in Pi's model picker."
+// in the language the app shows.
+//
+// Body of the subscription login success banner.
+func ChannelsBannerBody() string { return In(i18n.Locale()).ChannelsBannerBody() }
+
+// ChannelsBannerBody says "The credential is ready; the channel is now usable in Pi's model picker."
+// in the language of msgs.
+//
+// Body of the subscription login success banner.
+func (msgs Messages) ChannelsBannerBody() string {
+	return Catalog.Format(msgs.locale, "channelsBannerBody", nil)
+}
+
+// ChannelsBannerClose says "Close the authorization notice"
+// in the language the app shows.
+//
+// Accessible label of the banner close button.
+func ChannelsBannerClose() string { return In(i18n.Locale()).ChannelsBannerClose() }
+
+// ChannelsBannerClose says "Close the authorization notice"
+// in the language of msgs.
+//
+// Accessible label of the banner close button.
+func (msgs Messages) ChannelsBannerClose() string {
+	return Catalog.Format(msgs.locale, "channelsBannerClose", nil)
+}
+
+// ChannelsStatusReadFailed says "Failed to read the Pi channel status: {detail}"
+// in the language the app shows.
+//
+// Inline error when the Pi status cannot be read.
+func ChannelsStatusReadFailed(detail string) string {
+	return In(i18n.Locale()).ChannelsStatusReadFailed(detail)
+}
+
+// ChannelsStatusReadFailed says "Failed to read the Pi channel status: {detail}"
+// in the language of msgs.
+//
+// Inline error when the Pi status cannot be read.
+func (msgs Messages) ChannelsStatusReadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "channelsStatusReadFailed", map[string]any{"detail": detail})
+}
+
+// ChannelsCreateFailed says "Channel creation failed. Check the configuration and retry."
+// in the language the app shows.
+//
+// Inline error when creating a channel fails.
+func ChannelsCreateFailed() string { return In(i18n.Locale()).ChannelsCreateFailed() }
+
+// ChannelsCreateFailed says "Channel creation failed. Check the configuration and retry."
+// in the language of msgs.
+//
+// Inline error when creating a channel fails.
+func (msgs Messages) ChannelsCreateFailed() string {
+	return Catalog.Format(msgs.locale, "channelsCreateFailed", nil)
+}
+
+// ChannelsSaveFailed says "Auto-save failed. Check and retry manually."
+// in the language the app shows.
+//
+// Inline error when saving edits fails.
+func ChannelsSaveFailed() string { return In(i18n.Locale()).ChannelsSaveFailed() }
+
+// ChannelsSaveFailed says "Auto-save failed. Check and retry manually."
+// in the language of msgs.
+//
+// Inline error when saving edits fails.
+func (msgs Messages) ChannelsSaveFailed() string {
+	return Catalog.Format(msgs.locale, "channelsSaveFailed", nil)
 }

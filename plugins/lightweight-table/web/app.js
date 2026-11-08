@@ -75,6 +75,31 @@ const dom = {
   bulkClear: document.querySelector("#bulk-clear-value"),
   bulkApply: document.querySelector("#bulk-apply-button"),
   toast: document.querySelector("#toast"),
+  // P32: tabs, plans view, detail sub-tabs, confirm dialog and chat panel.
+  tableScroll: document.querySelector("#table-scroll"),
+  viewLedger: document.querySelector("#view-ledger"),
+  viewPlans: document.querySelector("#view-plans"),
+  tabLedger: document.querySelector("#tab-ledger"),
+  tabPlans: document.querySelector("#tab-plans"),
+  viewTabs: document.querySelector("#view-tabs"),
+  plansTable: document.querySelector("#plans-table"),
+  plansHead: document.querySelector("#plans-head"),
+  plansBody: document.querySelector("#plans-body"),
+  plansScroll: document.querySelector("#plans-scroll"),
+  plansLoading: document.querySelector("#plans-loading"),
+  plansEmpty: document.querySelector("#plans-empty"),
+  plansEmptyTitle: document.querySelector("#plans-empty-title"),
+  plansEmptyBody: document.querySelector("#plans-empty-body"),
+  chatPanelButton: document.querySelector("#chat-panel-button"),
+  detailTabs: document.querySelector("#detail-tabs"),
+  detailTabRecord: document.querySelector("#detail-tab-record"),
+  detailTabPlan: document.querySelector("#detail-tab-plan"),
+  rowDetailPlanBody: document.querySelector("#row-detail-plan-body"),
+  confirmDialog: document.querySelector("#confirm-dialog"),
+  confirmDialogTitle: document.querySelector("#confirm-dialog-title"),
+  confirmDialogBody: document.querySelector("#confirm-dialog-body"),
+  confirmDialogCancel: document.querySelector("#confirm-dialog-cancel"),
+  confirmDialogConfirm: document.querySelector("#confirm-dialog-confirm"),
 };
 
 const state = {
@@ -109,6 +134,15 @@ const state = {
   bulkOpening: false,
   historyCommandIds: new Map(),
   openDrawer: null,
+  // P32 state.
+  activeView: "ledger",
+  plansLoading: false,
+  plansLoaded: false,
+  plansResult: null,
+  detailTab: "record",
+  renderedQuerySignature: null,
+  chatPanelBusy: false,
+  confirmRowID: null,
   dashboardCollapsed: readDashboardCollapsed(),
   dashboardMixOpen: false,
   dashboardNarrow: window.innerWidth < 1200,
@@ -213,7 +247,101 @@ async function callPlugin(action, payload = {}) {
 
 function setLoading(active) {
   state.loadingCount = Math.max(0, state.loadingCount + (active ? 1 : -1));
-  dom.loading.hidden = state.loadingCount === 0;
+  const busy = state.loadingCount > 0;
+  dom.loading.hidden = !busy;
+  // The indicator is absolutely positioned, so toggling the body flag must
+  // never shift the table layout; clicks stay live either way.
+  if (busy) {
+    document.body.dataset.loading = "true";
+  } else {
+    delete document.body.dataset.loading;
+  }
+}
+
+// P32 §F: the redraw must not throw away the reader's scroll position.
+// captureScroll/restoreScroll wrap every rebuild of both tables.
+function captureScroll(container) {
+  if (!container) {
+    return null;
+  }
+  return { top: container.scrollTop, left: container.scrollLeft };
+}
+
+function restoreScroll(container, saved) {
+  if (!container || !saved) {
+    return;
+  }
+  container.scrollTop = saved.top;
+  container.scrollLeft = saved.left;
+}
+
+function querySignature() {
+  return JSON.stringify({ query: currentQuery(), page: state.page });
+}
+
+function canReuseTableRows(rebaseDrafts, signature) {
+  return (
+    !rebaseDrafts &&
+    state.editors.size === 0 &&
+    state.renderedQuerySignature === signature &&
+    dom.head.children.length > 0 &&
+    dom.bodyRows.children.length > 0 &&
+    dom.bodyRows.children.length === (state.result?.rows.length ?? 0)
+  );
+}
+
+// Incremental path: the query did not change, so only the cell contents of
+// the existing rows refresh. The thead is never rebuilt and every row keeps
+// its element, which keeps the scroll container stable.
+function updateRowsIncrementally() {
+  if (dom.bodyRows.children.length !== state.result.rows.length) {
+    return false;
+  }
+  const rowsByID = new Map(state.result.rows.map((row) => [row.row_id, row]));
+  for (const tr of [...dom.bodyRows.children]) {
+    const row = rowsByID.get(tr.dataset.rowId);
+    if (!row) {
+      return false;
+    }
+    updateRowCells(tr, row);
+  }
+  return true;
+}
+
+function updateRowCells(tr, row) {
+  tr.dataset.selected = state.selected.has(row.row_id) ? "true" : "false";
+  const select = tr.querySelector("input[data-action='select-row']");
+  if (select) {
+    select.checked = state.selected.has(row.row_id);
+  }
+  for (const td of tr.querySelectorAll("td[data-column-id]")) {
+    const columnID = td.dataset.columnId;
+    const column = MAIN_COLUMN_BY_ID.get(columnID);
+    if (!column) {
+      continue;
+    }
+    const value = row.values[columnID];
+    td.dataset.contextChanged = row.context_changed ? "true" : "false";
+    const badge = td.querySelector(".status-badge");
+    const isBadge =
+      (columnID === "repayment_status" || columnID === "plan_status") && value;
+    if (isBadge) {
+      if (!badge) {
+        const span = document.createElement("span");
+        span.className = "status-badge";
+        td.replaceChildren(span);
+      }
+      const target = td.querySelector(".status-badge");
+      target.dataset.status = value;
+      target.textContent = localizedValue(columnID, value);
+    } else if (badge) {
+      td.replaceChildren();
+      td.textContent = cellText(column, value, row);
+    } else {
+      td.textContent = cellText(column, value, row);
+    }
+    td.title = value === null || value === undefined ? "" : String(value);
+  }
 }
 
 function showToast(text, tone = "info", dedupeKey = text) {
@@ -1192,6 +1320,22 @@ function applyStaticLocale() {
     message("refresh"),
   );
   document.querySelector("#refresh-button").title = message("refresh");
+  // P32: fill the elements the other seat left without text (tabs, detail
+  // sub-tabs, confirm dialog shell, chat panel button).
+  dom.tabLedger.textContent = message("tabLedger");
+  dom.tabPlans.textContent = message("tabPlans");
+  dom.viewTabs.setAttribute("aria-label", message("viewTabsLabel"));
+  dom.detailTabRecord.textContent = message("detailTabRecord");
+  dom.detailTabPlan.textContent = message("detailTabPlan");
+  dom.detailTabs.setAttribute("aria-label", message("detailTabsLabel"));
+  dom.confirmDialogTitle.textContent = message("confirmDeleteTitle");
+  dom.confirmDialogCancel.textContent = message("confirmCancel");
+  dom.confirmDialogConfirm.textContent = message("confirmConfirm");
+  dom.chatPanelButton.setAttribute("aria-label", message("chatPanelAria"));
+  dom.chatPanelButton.title = message("chatPanelAria");
+  dom.plansEmptyTitle.textContent = message("plansEmptyTitle");
+  dom.plansEmptyBody.textContent = message("plansEmptyBody");
+  dom.plansLoading.textContent = message("loading");
   renderControls();
   if (state.description && state.editors.size === 0) {
     renderTable();
@@ -1373,6 +1517,17 @@ function renderTable({ rebaseDrafts = false } = {}) {
   if (!state.description || !state.result) {
     return;
   }
+  // P32 §F: the reader's scroll position must survive every redraw. When the
+  // query, sort, filters and page are unchanged, update the existing rows in
+  // place and keep both the thead and the scroll container untouched.
+  const scroll = captureScroll(dom.tableScroll);
+  const signature = querySignature();
+  if (canReuseTableRows(rebaseDrafts, signature) && updateRowsIncrementally()) {
+    state.renderedQuerySignature = signature;
+    restoreScroll(dom.tableScroll, scroll);
+    renderTableTail();
+    return;
+  }
   const activeDraft = [...state.editors.values()].find(
     (draft) => draft.editing,
   );
@@ -1474,6 +1629,7 @@ function renderTable({ rebaseDrafts = false } = {}) {
       ) {
         const badge = document.createElement("span");
         badge.className = "status-badge";
+        badge.dataset.status = value;
         badge.textContent = localizedValue(column.column_id, value);
         td.append(badge);
       } else {
@@ -1518,7 +1674,15 @@ function renderTable({ rebaseDrafts = false } = {}) {
     state.pendingRefresh = true;
     showToast(message("draftConflict"), "error", "stale-draft");
   }
+  state.renderedQuerySignature = signature;
+  restoreScroll(dom.tableScroll, scroll);
 
+  renderTableTail();
+}
+
+// renderTableTail is the shared tail of both redraw paths: empty state,
+// footer counts, pager and the dashboard that follows the query.
+function renderTableTail() {
   const hasRows = state.result.rows.length > 0;
   dom.table.hidden = !hasRows;
   dom.empty.hidden = hasRows;
@@ -1559,6 +1723,278 @@ function renderTable({ rebaseDrafts = false } = {}) {
   dom.bulkTargetFilteredLabel.textContent = message("filteredCount", {
     count: bulkOpen ? state.bulkFilteredCount : state.result.matched_count,
   });
+}
+
+// ---- P32 §E: ledger/plans tabs, the plans table and the detail plan page ----
+
+function switchView(view) {
+  const next = view === "plans" ? "plans" : "ledger";
+  if (state.activeView === next) {
+    return;
+  }
+  state.activeView = next;
+  dom.viewLedger.hidden = next !== "ledger";
+  dom.viewPlans.hidden = next !== "plans";
+  dom.tabLedger.setAttribute("aria-selected", next === "ledger" ? "true" : "false");
+  dom.tabPlans.setAttribute("aria-selected", next === "plans" ? "true" : "false");
+  if (next === "plans") {
+    void loadPlans();
+  }
+}
+
+async function loadPlans() {
+  if (state.plansLoading) {
+    return;
+  }
+  state.plansLoading = true;
+  dom.plansLoading.hidden = false;
+  try {
+    const query = currentQuery();
+    state.plansResult = await callPlugin("table.plans", {
+      search: query.search,
+      filters: query.filters,
+    });
+    state.plansLoaded = true;
+    renderPlans();
+  } catch (error) {
+    showError(error);
+  } finally {
+    state.plansLoading = false;
+    dom.plansLoading.hidden = true;
+  }
+}
+
+const PLAN_COLUMNS = Object.freeze([
+  "name",
+  "method",
+  "periods",
+  "paid",
+  "pending",
+  "overdue",
+  "nextDue",
+  "nextAmount",
+  "progress",
+  "actions",
+]);
+
+function renderPlans() {
+  const plans = state.plansResult?.plans ?? [];
+  const hasRows = plans.length > 0;
+  dom.plansTable.hidden = !hasRows;
+  dom.plansEmpty.hidden = hasRows;
+  if (!hasRows) {
+    dom.plansEmptyTitle.textContent = message("plansEmptyTitle");
+    dom.plansEmptyBody.textContent = message("plansEmptyBody");
+    dom.plansHead.replaceChildren();
+    dom.plansBody.replaceChildren();
+    return;
+  }
+  dom.plansHead.replaceChildren();
+  const headerRow = document.createElement("tr");
+  for (const column of PLAN_COLUMNS) {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = message(`planColumn.${column}`);
+    headerRow.append(th);
+  }
+  dom.plansHead.append(headerRow);
+  dom.plansBody.replaceChildren();
+  for (const plan of plans) {
+    dom.plansBody.append(buildPlanRow(plan));
+  }
+}
+
+function buildPlanRow(plan) {
+  const tr = document.createElement("tr");
+  tr.dataset.rowId = plan.row_id;
+  if (plan.overdue > 0) {
+    tr.classList.add("overdue");
+    tr.dataset.overdue = "true";
+  }
+  const addCell = (className) => {
+    const td = document.createElement("td");
+    if (className) {
+      td.className = className;
+    }
+    tr.append(td);
+    return td;
+  };
+  const nameCell = addCell("name-cell");
+  const name = document.createElement("span");
+  name.className = "period-name";
+  name.textContent = plan.name ?? "—";
+  nameCell.append(name);
+  if (plan.institution) {
+    const institution = document.createElement("span");
+    institution.className = "plans-institution";
+    institution.textContent = plan.institution;
+    nameCell.append(institution);
+  }
+  addCell().textContent = plan.method ? label("method", plan.method) : "—";
+  addCell().textContent = String(plan.periods);
+  addCell().textContent = String(plan.paid);
+  addCell().textContent = String(plan.pending);
+  addCell().textContent = String(plan.overdue);
+  addCell("date-cell").textContent = plan.next_due ?? "—";
+  addCell("number-cell").textContent = plan.next_amount ?? "—";
+  const progressCell = addCell("progress-cell");
+  const progress = document.createElement("div");
+  progress.className = "bui-progress";
+  const track = document.createElement("div");
+  track.className = "bui-progress-track";
+  const fill = document.createElement("div");
+  fill.className = "bui-progress-fill";
+  const pct = Math.max(0, Math.min(100, plan.progress_pct ?? 0));
+  fill.style.width = `${pct}%`;
+  const progressLabel = document.createElement("span");
+  progressLabel.className = "bui-progress-label";
+  progressLabel.textContent = message("plansProgressLabel", { pct });
+  track.append(fill);
+  progress.append(track, progressLabel);
+  progressCell.append(progress);
+  const actions = addCell("actions-cell");
+  const detailButton = document.createElement("button");
+  detailButton.className = "row-action";
+  detailButton.type = "button";
+  detailButton.dataset.action = "open-detail";
+  detailButton.dataset.rowId = plan.row_id;
+  detailButton.dataset.detailTab = "plan";
+  detailButton.textContent = message("detailShort");
+  detailButton.title = message("detailActionAria");
+  detailButton.setAttribute("aria-label", message("detailActionAria"));
+  actions.append(detailButton);
+  return tr;
+}
+
+function setDetailTab(tab) {
+  const next = tab === "plan" ? "plan" : "record";
+  state.detailTab = next;
+  dom.detailTabRecord.setAttribute("aria-selected", next === "record" ? "true" : "false");
+  dom.detailTabPlan.setAttribute("aria-selected", next === "plan" ? "true" : "false");
+  dom.detailBody.hidden = next !== "record";
+  dom.rowDetailPlanBody.hidden = next !== "plan";
+}
+
+function renderPlanSubpage(data) {
+  dom.rowDetailPlanBody.replaceChildren();
+  const plan = data.current_plan;
+  if (!plan) {
+    dom.rowDetailPlanBody.append(detailNote(message("detailNoPlan")));
+    return;
+  }
+  const summary = detailSection("detailPlanSection");
+  appendDetailFields(summary, [
+    ["plan_status", label("plan_status", plan.status)],
+    ["plan_method", label("method", plan.method)],
+    ["effective_on", plan.effective_on],
+    ["first_due_on", plan.first_due_on],
+    ["plan_principal", plan.plan_principal],
+    ["confirmed_remaining", plan.confirmed_remaining],
+  ]);
+  dom.rowDetailPlanBody.append(summary);
+  const table = document.createElement("table");
+  table.className = "plans-table detail-periods";
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  for (const column of ["no", "due", "principal", "interest", "fee", "total", "status", "paidOn"]) {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = message(`periodColumn.${column}`);
+    headerRow.append(th);
+  }
+  thead.append(headerRow);
+  const tbody = document.createElement("tbody");
+  const today = localTodayISO();
+  for (const entry of plan.installment_rows ?? []) {
+    const tr = document.createElement("tr");
+    const isPaid = entry.actual_paid_on !== null || entry.status === "paid";
+    const isOverdue = !isPaid && (entry.status === "overdue" || entry.due_on < today);
+    if (isPaid) {
+      tr.classList.add("period-paid");
+    }
+    if (isOverdue) {
+      tr.classList.add("overdue");
+      tr.dataset.overdue = "true";
+    }
+    const cells = [
+      String(entry.installment_no ?? ""),
+      entry.due_on ?? "—",
+      formatDecimal(entry.principal),
+      formatDecimal(entry.interest),
+      formatDecimal(entry.new_fee),
+      formatDecimal(entry.total),
+      null,
+      entry.actual_paid_on ?? "—",
+    ];
+    for (const value of cells) {
+      const td = document.createElement("td");
+      if (value !== null) {
+        td.textContent = value;
+      }
+      tr.append(td);
+    }
+    const statusCell = tr.lastElementChild.previousElementSibling;
+    const badge = document.createElement("span");
+    badge.className = "status-badge";
+    badge.dataset.status = entry.status ?? "";
+    badge.textContent = label("installment", entry.status);
+    statusCell.replaceChildren(badge);
+    tbody.append(tr);
+  }
+  table.append(thead, tbody);
+  dom.rowDetailPlanBody.append(table);
+}
+
+function localTodayISO() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+// ---- P32: deletion goes through the BoardUI confirm dialog ----
+
+function openDeleteConfirm(rowID) {
+  const row = rowByID(rowID);
+  if (!row || !state.description) {
+    return;
+  }
+  state.confirmRowID = rowID;
+  dom.confirmDialogTitle.textContent = message("confirmDeleteTitle");
+  dom.confirmDialogBody.textContent = message("confirmDeleteBody", {
+    name: row.values.name ?? rowID,
+  });
+  dom.confirmDialog.hidden = false;
+  dom.confirmDialog.setAttribute("aria-hidden", "false");
+}
+
+function closeDeleteConfirm() {
+  state.confirmRowID = null;
+  dom.confirmDialog.hidden = true;
+  dom.confirmDialog.setAttribute("aria-hidden", "true");
+}
+
+// ---- P32 §G: surface the current main conversation next to the plugin ----
+
+async function toggleChatPanel() {
+  if (state.chatPanelBusy) {
+    return;
+  }
+  state.chatPanelBusy = true;
+  const pressed = dom.chatPanelButton.getAttribute("aria-pressed") === "true";
+  try {
+    const bridge = window.byop;
+    if (!bridge || typeof bridge.call !== "function") {
+      throw Object.assign(new Error(message("chatPanelError")), { code: "preview" });
+    }
+    const result = await bridge.call("host.setChatPanel", { open: !pressed });
+    const open = result?.open === true;
+    dom.chatPanelButton.setAttribute("aria-pressed", open ? "true" : "false");
+  } catch (error) {
+    showToast(message("chatPanelError"), "error", "chat-panel");
+  } finally {
+    state.chatPanelBusy = false;
+  }
 }
 
 function resetFilterInputs() {
@@ -1718,6 +2154,7 @@ function closeCellEdit(draft, { triggerRefresh = true } = {}) {
     ) {
       const badge = document.createElement("span");
       badge.className = "status-badge";
+      badge.dataset.status = value;
       badge.textContent = localizedValue(column.column_id, value);
       td.replaceChildren(badge);
     } else {
@@ -2178,12 +2615,16 @@ function renderDetail(data) {
     eventSection.append(recent);
   }
   dom.detailBody.append(eventSection);
+  dom.detailTabs.hidden = !data.current_plan;
+  renderPlanSubpage(data);
+  setDetailTab(state.detailTab);
 }
 
-async function openDetail(rowID) {
+async function openDetail(rowID, preferredTab = null) {
   if (!rowID) {
     return;
   }
+  state.detailTab = preferredTab === "plan" ? "plan" : "record";
   openDrawer(dom.detailDrawer);
   dom.detailBody.replaceChildren(detailNote(message("loading")));
   setLoading(true);
@@ -2684,7 +3125,9 @@ document.addEventListener("click", (event) => {
     ? null
     : event.target.closest("td[data-action='edit-cell']");
   if (cell) {
-    cell.focus({ preventScroll: true });
+    // P32 §F: single click only toggles the selection. Giving the cell
+    // keyboard focus makes WKWebView retarget scrolling to the focused
+    // element, which froze the table; the scroll container keeps focus.
     const draft = state.editors.values().next().value;
     const sameDraft =
       draft &&
@@ -2697,11 +3140,28 @@ document.addEventListener("click", (event) => {
       cancelPendingCellClick(cell);
     } else {
       scheduleRowSelectionToggle(cell);
+      // A mouse click focuses a tabindex cell by itself, and WKWebView then
+      // routes PageDown/wheel through that element's scroll chain, so the
+      // table stopped scrolling after a row was selected. Moving the focus to
+      // the scroll container only moved the problem: a focused container has
+      // its own chain too. Hand the focus back to the document instead, which
+      // restores the default wheel target; keyboard users still Tab into a
+      // cell because the cells keep their tabindex.
+      setTimeout(() => {
+        const active = document.activeElement;
+        if (active && active !== document.body && typeof active.blur === "function") {
+          active.blur();
+        }
+      }, 0);
     }
   } else if (
     !event.target.closest("button, input, select, label, aside, [role='toolbar']")
   ) {
     settleCellDraft();
+  }
+  const tabElement = event.target.closest("[data-tab]");
+  if (tabElement) {
+    switchView(tabElement.dataset.tab);
   }
   const actionElement = event.target.closest("[data-action]");
   if (!actionElement) {
@@ -2744,9 +3204,19 @@ document.addEventListener("click", (event) => {
     state.page += 1;
     void loadQuery();
   } else if (action === "delete-row") {
-    void deleteRow(actionElement.dataset.rowId);
+    openDeleteConfirm(actionElement.dataset.rowId);
   } else if (action === "open-detail") {
-    void openDetail(actionElement.dataset.rowId);
+    void openDetail(actionElement.dataset.rowId, actionElement.dataset.detailTab);
+  } else if (action === "set-detail-tab") {
+    setDetailTab(actionElement.dataset.detailTab);
+  } else if (action === "close-confirm-dialog") {
+    closeDeleteConfirm();
+  } else if (action === "confirm-delete-row") {
+    const confirmedRowID = state.confirmRowID;
+    closeDeleteConfirm();
+    void deleteRow(confirmedRowID);
+  } else if (action === "toggle-chat-panel") {
+    void toggleChatPanel();
   } else if (action === "close-drawer") {
     closeDrawer();
   } else if (action === "undo-operation") {
@@ -2850,6 +3320,21 @@ if (initialBridge && typeof initialBridge.onLocale === "function") {
       showPageError(error);
     });
   });
+}
+
+// P32 §4 (contract): the plugin page follows the host theme by writing
+// data-mode on the root element; style.css keys its palette off it.
+if (initialBridge && typeof initialBridge.onTheme === "function") {
+  // P32 §4: the host delivers the theme payload object ({mode, colors, ...}),
+  // not the mode string, so read `.mode` and keep accepting a bare string for
+  // older preloads. Without this the page kept its light palette while the
+  // host text colour stayed dark, which rendered raised controls white-on-white.
+  const applyHostTheme = (theme) => {
+    const mode = typeof theme === "string" ? theme : theme && theme.mode;
+    document.documentElement.dataset.mode = mode === "dark" ? "dark" : "light";
+  };
+  initialBridge.onTheme(applyHostTheme);
+  if (initialBridge.theme) applyHostTheme(initialBridge.theme);
 }
 
 async function resolveInitialLocale() {

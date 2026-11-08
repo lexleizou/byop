@@ -61,6 +61,15 @@ func (s *appState) view(c *ui.Context) {
 	c.OnShortcut(workspaceMods, ui.KeyG, func() {
 		s.toggleWorkspaceChanges()
 	})
+	// P32 §6.5 G: ⌘⌥C / Ctrl+Alt+C opens or closes the plugin view's chat
+	// panel. It only acts while the plugin view page is on screen, so the
+	// binding is inert on every other page and collides with nothing.
+	c.OnShortcut(workspaceMods, ui.KeyC, func() {
+		if s.page != pagePluginView {
+			return
+		}
+		s.setPluginChatOpen(!s.pluginChatOpen)
+	})
 	// The command palette is available on every page in both appearances, so the
 	// binding sits with the other panel shortcuts. Cmd is the platform's own
 	// modifier, which is ⌘ on macOS and Ctrl elsewhere.
