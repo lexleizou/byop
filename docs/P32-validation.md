@@ -38,6 +38,7 @@
 |---|---|---|---|
 | 1 | 页头按钮、查询栏下拉全是白块、无文字 | `app.js` 的 `onTheme` 回调把 payload 当字符串比较（`theme === "dark"`），实际收到的是 `{mode, colors, …}` 对象，`data-mode` 永远写成 `light`，于是 `--bui-raised` 保持浅色 #fff，而文字色来自宿主深色 → 白底白字 | 改读 `theme.mode`（兼容裸字符串），并在注册后主动应用一次 `byop.theme` |
 | 2 | 列隐藏阈值对插件页过于激进（1366 窗口只显示 4–6 列） | `@container main` 用 1320/1150/1060/1000，而插件页容器只有约 1030 | 下调为 1240/1120/1040/980 |
+| 5 | 用中文输入法打字时，输入框里出现两层文字重叠（用户 2026-11-09 12:57 附截图反馈） | 输入法组合期间不提交 `draft`，`followUpSuggestionVisible` 仍返回真，ghost 建议就画在输入法的预编辑行下面 | BYOP 与 J Agent 两条 Composer 路径都改为 `TextAreaBase.Composing()` 为真时不绘制 ghost；`TestP32GhostSuggestionHiddenWhileComposing` 用 `tt.Compose` 复现组合态，去掉该判断即失败 |
 | 4 | 1000 宽窗口下插件对话列强行并排，表格被压到 430 DIP、布局崩坏 | 覆盖式判断用窗口宽（<980）而不用剩余空间 | 改为按“主区宽 − 面板宽 − 分隔条 < 640”判断，不足时面板浮在 WebView 之上 |
 | 3 | 选中一行后**滚轮**不再滚动（用户 19:26 直接反馈，是核心诉求） | 三处叠加：① `html/body/.table-page` 只有 `min-height`，flex 链撑不出受限高度，`#table-scroll` 实际没有可滚空间（**主因**）；② `td` 带 `tabindex=0`，鼠标点击本身就会聚焦它，WKWebView 把滚动目标改到该单元格；③ 上一版把焦点回交给 `#table-scroll`，容器持有焦点后同样走自己的滚动链 | ① `html,body{height:100%}`、`.table-page{height:100%;overflow:hidden}` 建立确定高度链；② 单击后 `blur()` 把焦点还给文档（`document.body`）；③ 容器 `tabindex` 改为 `-1`，不再进入 Tab 序列 |
 
@@ -64,7 +65,18 @@
 | 「在 Pi 中登录」 | 会打开系统 Terminal，未在验收中触发 |
 | 打包与安装 | 本次未构建 DMG |
 
-## 打包与安装（2026-11-08 23:45）
+## 打包与安装（2026-11-08 23:45，2026-11-09 13:10 重建）
+
+最近一次（输入法重叠修复后）：
+
+| 项 | 值 |
+|---|---|
+| 产物 | `dist/darwin-arm64/BYOP 0.25.0 arm64.dmg`，28,560,764 字节 |
+| SHA-256 | `0f98d0aa56a51182ce65bdd4a40477e16a47a863e97b7befa240423f1a5fa9d6` |
+| 校验 | 安装后二进制与构建产物逐字节一致，`Info.plist` = 0.25.0 |
+| 旧包 | 依次移入 `~/.Trash/BYOP-0.25.0-*` |
+
+首次（23:45）：
 
 | 项 | 值 |
 |---|---|
