@@ -278,7 +278,10 @@ func jAgentComposerV12(
 					Border(0, ui.Color{}).Background(ui.Color{}).Padding(0).
 					FixedLineHeight(ghostLine).
 					FontSize(p.bodyFont).TextColor(t.Text)
-				if empty && len(placeholderOverlays) > 0 {
+				// P32: an input method keeps the draft empty while it shows
+				// its own composed text, so the ghost suggestion used to paint
+				// underneath the IME's pre-edit line. Hide it while composing.
+				if empty && len(placeholderOverlays) > 0 && !result.Input.Composing() {
 					ui.Row(c).Absolute().Top(0).Left(0).Right(0).Height(ghostLine).
 						AlignItems(ui.Center).PassThrough().Children(func() {
 						placeholderOverlays[0](c)

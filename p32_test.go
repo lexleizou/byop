@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/oneo-me/onevra/source/components"
+	"github.com/oneo-me/onevra/source/components/chat"
 )
 
 // TestP32DefaultPresetIsBoardUI fixes P32 §3: a fresh install — no
@@ -364,5 +366,38 @@ func TestP32OpenPiLoginBuildsEscapedScript(t *testing.T) {
 		if err := state.openPiLogin("anthropic"); err == nil {
 			t.Fatal("openPiLogin claimed success on a non-macOS platform")
 		}
+	}
+}
+
+// TestP32GhostSuggestionHiddenWhileComposing covers the report that typing
+// Chinese made two layers of text overlap in the composer: an input method
+// keeps the draft empty while it renders its own pre-edit line, so the ghost
+// suggestion must yield to it instead of painting underneath.
+func TestP32GhostSuggestionHiddenWhileComposing(t *testing.T) {
+	draft := ""
+	suggestion := "帮我写一份产品 BOM 表模板"
+	drawGhost := func(c *ui.Context) {
+		components.Text(c, suggestion).FontSize(fontBody)
+	}
+	tt := ui.NewTester(func(c *ui.Context) {
+		p := themePaletteForAppearance(appearancePresetBoardUI, c.Theme().Dark, false, false)
+		opaqueComposerV12(c, p, &draft, chat.ComposerOptions{
+			Label:       "Message",
+			Placeholder: "Message",
+			SendLabel:   "Send",
+			StopLabel:   "Stop",
+		}, false, nil, drawGhost)
+	}, 520, 220)
+
+	join := func() string { return strings.Join(tt.Texts(), "|") }
+	if !strings.Contains(join(), suggestion) {
+		t.Fatalf("ghost suggestion missing before composing: %#v", tt.Texts())
+	}
+	if err := tt.Click("Message"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Compose("bang", 4)
+	if strings.Contains(join(), suggestion) {
+		t.Fatalf("ghost suggestion still drawn while an input method composes: %#v", tt.Texts())
 	}
 }
